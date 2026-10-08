@@ -12,5 +12,7 @@ for (const name of fs.readdirSync(path.join(root, "packages"))) {
     [path.join(root, "node_modules/typescript/bin/tsc"), "-p", dir],
     { stdio: "inherit" },
   );
-  fs.copyFileSync(path.join(root, "../NOTICE"), path.join(dir, "NOTICE"));
+  for (const name of ["LICENSE", "NOTICE"]) {
+    fs.copyFileSync(path.join(root, "..", name), path.join(dir, name));
+  }
 }

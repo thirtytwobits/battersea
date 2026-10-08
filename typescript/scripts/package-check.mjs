@@ -37,6 +37,17 @@ try {
       ],
       { cwd: consumer, stdio: "inherit" },
     );
+    const installed = path.join(consumer, "node_modules", pack.name);
+    for (const name of ["LICENSE", "NOTICE"]) {
+      assert.equal(
+        fs.readFileSync(path.join(installed, name), "utf8"),
+        fs.readFileSync(path.join(root, "..", name), "utf8"),
+      );
+    }
+    assert.equal(
+      JSON.parse(fs.readFileSync(path.join(installed, "package.json"))).license,
+      release.license,
+    );
     const source = `import * as flow from ${JSON.stringify(pack.name)};\nvoid flow;\n`;
     fs.writeFileSync(path.join(consumer, "index.mjs"), source);
     fs.writeFileSync(path.join(consumer, "index.ts"), source);

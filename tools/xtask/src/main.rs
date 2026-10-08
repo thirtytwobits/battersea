@@ -250,6 +250,19 @@ fn package(root: &Path) -> Result<()> {
             .ok_or("Cargo returned no target directory")?,
     );
     for (name, required) in release["crates"].as_object().unwrap() {
+        let manifest_path = metadata["packages"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|package| package["name"] == *name)
+            .and_then(|package| package["manifest_path"].as_str())
+            .ok_or("release crate has no manifest")?;
+        let crate_dir = Path::new(manifest_path)
+            .parent()
+            .ok_or("manifest has no directory")?;
+        for asset in ["LICENSE", "NOTICE"] {
+            fs::copy(root.join(asset), crate_dir.join(asset))?;
+        }
         run(
             root,
             "cargo",
@@ -266,6 +279,16 @@ fn package(root: &Path) -> Result<()> {
             if !unpacked.join(required).is_file() {
                 return Err(format!("{name} package omits {required}").into());
             }
+        }
+        for asset in ["LICENSE", "NOTICE"] {
+            if fs::read(unpacked.join(asset))? != fs::read(root.join(asset))? {
+                return Err(format!("{name} package changed {asset}").into());
+            }
+        }
+        if toml(unpacked.join("Cargo.toml"))?["package"]["license"].as_str()
+            != release["license"].as_str()
+        {
+            return Err(format!("{name} package licence differs from release.json").into());
         }
         let consumer = temp.path().join("consumer");
         fs::create_dir_all(consumer.join("src"))?;

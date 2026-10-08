@@ -6,7 +6,8 @@ resolver = "2"
 version = "0.1.0"
 edition = "2021"
 rust-version = "1.85"
-license-file = "NOTICE"
+license = "MIT"
+repository = "https://github.com/thirtytwobits/battersea"
 
 [workspace.dependencies]
 clap = { version = "4.5", features = ["derive"] }

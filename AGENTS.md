@@ -11,7 +11,6 @@ Use `cargo xtask --help` and `npm run` for the available gates. Add behaviour te
 Record source commits, paths and copyright notices when extracting code. Read the relevant
 contract before changing behaviour. Reads cannot upgrade stored formats.
 
-`release.json` records publication decisions. Null values block publishing. Draft licence texts
-are proposals, not grants. Keep package versions synchronised; review public API snapshots when
-the contract changes. Registry publication is disabled; releases deliver tagged Cargo sources
-and npm tarballs.
+`release.json` records release metadata. Keep the MIT licence and source notices in every
+package. Keep package versions synchronised; review public API snapshots when the contract changes.
+Registry publication is disabled; releases deliver tagged Cargo sources and npm tarballs.

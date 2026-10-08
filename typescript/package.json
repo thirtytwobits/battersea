@@ -19,5 +19,11 @@
   },
   "devDependencies": {
     "typescript": "5.9.3"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/thirtytwobits/battersea.git",
+    "directory": "typescript"
   }
 }

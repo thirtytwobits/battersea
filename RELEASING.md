@@ -3,9 +3,9 @@
 A release has one version across Cargo, npm and `release.json`. Rust consumers use its Git tag;
 npm consumers install tarballs attached to that release. Registry publication is a separate decision.
 
-Before the first publication, confirm the repository, licence and private security-report route in
-`release.json`, apply the selected licence texts and package metadata, and enable GitHub private
-vulnerability reporting. `cargo xtask release-check` refuses unresolved publication decisions.
+`release.json` records the repository, MIT licence and private security-report route.
+`cargo xtask release-check` checks these against the package metadata before publication.
+Keep GitHub private vulnerability reporting enabled.
 
 Every release runs CI, both API gates and package-install checks before creating assets. The tag
 must match the checked version. The workflow creates a draft release containing npm tarballs,

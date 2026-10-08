@@ -2,6 +2,7 @@
 
 ## 0.1.0 — unreleased
 
+- Adopt the MIT licence for the project and distributed packages.
 - Establish the Cargo and TypeScript workspaces, dependency guards and package validation.
 - Establish API snapshots and the draft GitHub release workflow.
 

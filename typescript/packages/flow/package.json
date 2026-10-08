@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "description": "Battersea flow contract package scaffold",
   "type": "module",
-  "license": "UNLICENSED",
+  "license": "MIT",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
@@ -13,7 +13,13 @@
   "files": [
     "dist",
     "NOTICE",
-    "README.md"
+    "README.md",
+    "LICENSE"
   ],
-  "sideEffects": false
+  "sideEffects": false,
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/thirtytwobits/battersea.git",
+    "directory": "typescript/packages/flow"
+  }
 }

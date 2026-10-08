@@ -1,13 +1,11 @@
 Battersea
 Copyright (c) 2026 Scott A Dixon
 
-Publication and licensing are pending the copyright owner's decision.
-The proposed licence texts are in licences/proposed/.
+Licensed under the MIT License. See LICENSE.
 
 Extraction source: Primrose Hill
 https://github.com/scottdarch/primrosehill
 Baseline: e4f5683128cd614c15156fec7d4022ea62c8b2f6
 M0 contract and evidence: 06a4a7348143018c4ebb802d97670f85b862cd30
 
-This scaffold contains no extracted Primrose implementation.
 Each extraction records its source commit and paths in provenance.json.

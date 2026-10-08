@@ -1,14 +1,15 @@
 {
   "version": "0.1.0",
-  "repository": null,
-  "license": null,
-  "security_contact": null,
+  "repository": "https://github.com/thirtytwobits/battersea",
+  "license": "MIT",
+  "security_contact": "https://github.com/thirtytwobits/battersea/security/advisories/new",
   "crates": {
     "battersea-flow": [
       "Cargo.toml",
       "src/lib.rs",
       "README.md",
-      "NOTICE"
+      "NOTICE",
+      "LICENSE"
     ]
   },
   "npm": {
@@ -17,7 +18,8 @@
       "dist/index.js",
       "dist/index.d.ts",
       "NOTICE",
-      "README.md"
+      "README.md",
+      "LICENSE"
     ]
   }
 }
