@@ -1,0 +1,25 @@
+{
+  "battersea-flow": [],
+  "battersea-runtime": [
+    "battersea-flow"
+  ],
+  "battersea-model": [],
+  "battersea-providers": [
+    "battersea-model"
+  ],
+  "battersea-config": [
+    "battersea-flow",
+    "battersea-model"
+  ],
+  "battersea-nodes": [
+    "battersea-flow",
+    "battersea-runtime",
+    "battersea-model"
+  ],
+  "battersea-pianola": [
+    "battersea-flow",
+    "battersea-runtime",
+    "battersea-model"
+  ],
+  "battersea-guard": []
+}

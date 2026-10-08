@@ -1,0 +1,7 @@
+/target/
+/dist/
+/typescript/node_modules/
+/typescript/packages/*/dist/
+/typescript/packages/*/NOTICE
+*.tgz
+.DS_Store

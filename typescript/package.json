@@ -1,0 +1,23 @@
+{
+  "name": "battersea-typescript",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "node --test scripts/*.test.mjs",
+    "check": "npm run build && npm run typecheck && npm test && node scripts/check.mjs",
+    "api:update": "npm run build && node scripts/check.mjs --update-api",
+    "package:check": "npm run check && node scripts/package-check.mjs"
+  },
+  "devDependencies": {
+    "typescript": "5.9.3"
+  }
+}

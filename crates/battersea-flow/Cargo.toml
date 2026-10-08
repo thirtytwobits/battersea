@@ -1,0 +1,10 @@
+[package]
+name = "battersea-flow"
+description = "Battersea flow contract package scaffold"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license-file.workspace = true
+readme = "../../README.md"
+publish = false
+include = ["src/**", "Cargo.toml"]

@@ -1,0 +1,19 @@
+{
+  "name": "@battersea/flow",
+  "version": "0.1.0",
+  "description": "Battersea flow contract package scaffold",
+  "type": "module",
+  "license": "UNLICENSED",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "NOTICE",
+    "README.md"
+  ],
+  "sideEffects": false
+}

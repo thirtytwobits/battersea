@@ -1,0 +1,23 @@
+{
+  "version": "0.1.0",
+  "repository": null,
+  "license": null,
+  "security_contact": null,
+  "crates": {
+    "battersea-flow": [
+      "Cargo.toml",
+      "src/lib.rs",
+      "README.md",
+      "NOTICE"
+    ]
+  },
+  "npm": {
+    "@battersea/flow": [
+      "package.json",
+      "dist/index.js",
+      "dist/index.d.ts",
+      "NOTICE",
+      "README.md"
+    ]
+  }
+}

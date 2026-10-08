@@ -1,0 +1,56 @@
+name: CI
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_call:
+permissions:
+  contents: read
+jobs:
+  rust:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    strategy:
+      matrix:
+        rust: ['1.85.0', '1.99.0']
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install Rust
+        run: rustup toolchain install '${{ matrix.rust }}' --profile minimal --component rustfmt --component clippy
+      - name: Select Rust
+        run: rustup default '${{ matrix.rust }}'
+      - name: Refuse Node invocations in the Rust lane
+        run: |
+          mkdir "$RUNNER_TEMP/no-node"
+          for tool in node npm npx yarn pnpm; do
+            printf '#!/bin/sh\necho "Rust invoked Node tooling" >&2\nexit 1\n' > "$RUNNER_TEMP/no-node/$tool"
+            chmod +x "$RUNNER_TEMP/no-node/$tool"
+          done
+          echo "$RUNNER_TEMP/no-node" >> "$GITHUB_PATH"
+      - run: cargo xtask check
+      - run: cargo xtask package
+  typescript:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: typescript
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: typescript/package-lock.json
+      - run: npm ci --ignore-scripts
+      - run: npm run package:check
+  api:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - run: rustup toolchain install nightly-2025-08-02 --profile minimal
+      - run: rustup toolchain install 1.99.0 --profile minimal
+      - run: rustup default 1.99.0
+      - run: cargo install cargo-public-api --version 0.50.2 --locked
+      - run: cargo xtask api

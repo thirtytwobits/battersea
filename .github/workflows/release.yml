@@ -1,0 +1,46 @@
+name: Draft release
+on:
+  push:
+    tags: ['v*']
+permissions:
+  contents: read
+jobs:
+  gate:
+    uses: ./.github/workflows/ci.yml
+  package:
+    needs: gate
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+      - run: rustup toolchain install 1.99.0 --profile minimal
+      - run: rustup default 1.99.0
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: typescript/package-lock.json
+      - name: Validate publication metadata and tag
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: cargo xtask release-check "$RELEASE_TAG"
+      - run: cargo xtask package
+      - run: npm ci --ignore-scripts
+        working-directory: typescript
+      - run: npm run package:check
+        working-directory: typescript
+      - name: Assemble release assets
+        run: |
+          mkdir dist
+          cp target/package/*.crate dist/
+          cd typescript
+          npm pack --workspaces --pack-destination ../dist
+          cd ../dist
+          sha256sum *.crate *.tgz > SHA256SUMS
+      - name: Create a draft release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: gh release create "$RELEASE_TAG" --verify-tag --draft --title "$RELEASE_TAG" --notes-file CHANGELOG.md dist/*
