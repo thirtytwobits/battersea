@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.1.0 — unreleased
+## 0.1.0 — 2026-10-08
 
 - Adopt the MIT licence for the project and distributed packages.
 - Establish the Cargo and TypeScript workspaces, dependency guards and package validation.
