@@ -3,5 +3,20 @@
   "source_repository": "https://github.com/scottdarch/primrosehill",
   "baseline_commit": "e4f5683128cd614c15156fec7d4022ea62c8b2f6",
   "contract_commit": "06a4a7348143018c4ebb802d97670f85b862cd30",
-  "extractions": []
+  "extractions": [
+    {
+      "milestone": "M2",
+      "source_commit": "9e4a4106983962bdc757fe4f7af9b4f6531ec7ba",
+      "source_paths": [
+        "engine/crates/primrose-protocol/src/flow.rs",
+        "engine/crates/primrose-engine-core/src/flow",
+        "engine/crates/primrose-engine-core/src/workspace_api.rs",
+        "engine/crates/primrose-engine-core/src/template_engine.rs",
+        "engine/crates/primrose-engine-core/src/output_encoding.rs",
+        "engine/crates/primrose-engine-core/src/prompt_markdown.rs",
+        "engine/bindings/fixtures/token-type-compatibility.json",
+        "gui/apps/engine-editor/src/tabs/dataflow/flow-node-ports.ts"
+      ]
+    }
+  ]
 }

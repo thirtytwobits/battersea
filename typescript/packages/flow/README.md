@@ -1,3 +1,6 @@
 # @battersea/flow
 
-M1 package scaffold. The flow contract is introduced in M2.
+Generated flow, catalogue, port and template contracts, plus token-connection compatibility.
+The `schema` export contains JSON Schema generated from the Rust `battersea-flow` contract;
+`fixtures/*` contains the cross-language corpus. Applications own their nominal parameter
+and token schemas, editor namespaces and product validation.

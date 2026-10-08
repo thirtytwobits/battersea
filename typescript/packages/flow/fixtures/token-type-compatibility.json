@@ -1,0 +1,93 @@
+{
+  "description": "Nominal token compatibility shared by Rust and TypeScript. Auto outputs inherit the union of their node input types; an empty union defers validation until emission.",
+  "cases": [
+    {
+      "name": "concrete source exactly matches target",
+      "source_token_type": "chat.raw",
+      "source_node_input_accepted": [],
+      "target_accepted": [
+        "chat.raw"
+      ],
+      "expected": true
+    },
+    {
+      "name": "concrete source mismatched with strict target",
+      "source_token_type": "chat.raw",
+      "source_node_input_accepted": [],
+      "target_accepted": [
+        "chat.response_metadata"
+      ],
+      "expected": false
+    },
+    {
+      "name": "concrete source accepted by a multi-type (oneof) target",
+      "source_token_type": "chat.raw",
+      "source_node_input_accepted": [],
+      "target_accepted": [
+        "prompt.fragment",
+        "chat.raw",
+        "chat.response"
+      ],
+      "expected": true
+    },
+    {
+      "name": "concrete source not in a multi-type target's accepted set",
+      "source_token_type": "prompt.fragmentArray",
+      "source_node_input_accepted": [],
+      "target_accepted": [
+        "prompt.fragment",
+        "chat.raw",
+        "chat.response"
+      ],
+      "expected": false
+    },
+    {
+      "name": "auto source bounded by node inputs is rejected by the strict response_metadata port",
+      "source_token_type": "auto",
+      "source_node_input_accepted": [
+        "prompt.fragment",
+        "chat.raw",
+        "chat.response"
+      ],
+      "target_accepted": [
+        "chat.response_metadata"
+      ],
+      "expected": false
+    },
+    {
+      "name": "auto source bounded by node inputs is accepted by a chat.raw port",
+      "source_token_type": "auto",
+      "source_node_input_accepted": [
+        "prompt.fragment",
+        "chat.raw",
+        "chat.response"
+      ],
+      "target_accepted": [
+        "chat.raw"
+      ],
+      "expected": true
+    },
+    {
+      "name": "auto source bounded by node inputs is accepted by a prompt.fragment port",
+      "source_token_type": "auto",
+      "source_node_input_accepted": [
+        "prompt.fragment",
+        "chat.raw",
+        "chat.response"
+      ],
+      "target_accepted": [
+        "prompt.fragment"
+      ],
+      "expected": true
+    },
+    {
+      "name": "auto source with no typed inputs carries no static info and is deferred",
+      "source_token_type": "auto",
+      "source_node_input_accepted": [],
+      "target_accepted": [
+        "chat.response_metadata"
+      ],
+      "expected": true
+    }
+  ]
+}

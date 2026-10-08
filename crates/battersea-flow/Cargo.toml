@@ -1,6 +1,6 @@
 [package]
 name = "battersea-flow"
-description = "Battersea flow contract package scaffold"
+description = "Flow documents, extensible catalogues and pure validation"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -8,4 +8,13 @@ license.workspace = true
 repository.workspace = true
 readme = "../../README.md"
 publish = false
-include = ["src/**", "Cargo.toml", "LICENSE", "NOTICE"]
+include = ["src/**", "fixtures/**", "schemas/**", "Cargo.toml", "LICENSE", "NOTICE"]
+
+[dependencies]
+anyhow = "1"
+regex-lite = "0.1"
+schemars = { version = "1", features = ["derive"] }
+serde = { version = "1", features = ["derive"] }
+serde_json.workspace = true
+serde_yaml = "0.9"
+jsonschema = { version = "0.30", default-features = false }

@@ -1,0 +1,991 @@
+{
+  "$defs": {
+    "FlowActionPortDefinition": {
+      "additionalProperties": false,
+      "properties": {
+        "display_class": {
+          "$ref": "#/$defs/FlowPortDisplayClass"
+        },
+        "long_description": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "short_description": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "type": "object"
+    },
+    "FlowAutomationPortDefinition": {
+      "additionalProperties": false,
+      "description": "A typed sink port that delivers a token's value into one of the host\nnode's `parameter_values` *after* the upstream node activates. Unlike an\ninput port, an automation write does not drive activation; it is a\npost-activation side-channel write that downstream activations and UI\nbindings observe via the next flow-document broadcast.",
+      "properties": {
+        "accepted_token_types": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "display_class": {
+          "$ref": "#/$defs/FlowPortDisplayClass"
+        },
+        "long_description": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "parameter_name": {
+          "description": "The host-node parameter that this port writes to on token delivery.",
+          "type": "string"
+        },
+        "short_description": {
+          "type": "string"
+        },
+        "token_type": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "parameter_name",
+        "token_type"
+      ],
+      "type": "object"
+    },
+    "FlowControllerActionDefinition": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "type": "string"
+        },
+        "long_description": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "short_description": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "kind"
+      ],
+      "type": "object"
+    },
+    "FlowControllerOutputDefinition": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "type": "string"
+        },
+        "long_description": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "short_description": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "kind"
+      ],
+      "type": "object"
+    },
+    "FlowDocument": {
+      "additionalProperties": false,
+      "properties": {
+        "description": {
+          "type": "string"
+        },
+        "edges": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/FlowEdge"
+          },
+          "type": "array"
+        },
+        "flow_key": {
+          "type": "string"
+        },
+        "layout": {
+          "additionalProperties": true,
+          "description": "Opaque per-client canvas state, keyed by writer namespace.\nEach client controls its own namespace.",
+          "type": "object"
+        },
+        "metadata": true,
+        "nodes": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/FlowNode"
+          },
+          "type": "array"
+        },
+        "output_encoding": {
+          "default": "xml",
+          "description": "Flow-wide rendering encoding for nodes whose `output_encoding`\nparameter is set to `\"inherit\"` (the per-node default). One of\n`\"markdown\"`, `\"xml\"`, or `\"plain\"`. Missing values (legacy flows\nauthored before this field existed) fall back to `\"xml\"` via\n[`default_flow_output_encoding`], matching the substrate's\nhistorical default.",
+          "type": "string"
+        },
+        "plain_fragment_delimiter": {
+          "default": "blank_line",
+          "description": "Flow-wide field delimiter used when a node emits the `plain`\nencoding and that encoding came from inheriting the flow's choice.\nCatalog enum token: `comma`, `blank_line`, `newline`, `space`, or\n`none`. Defaults to `blank_line` for legacy flows.",
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "version": {
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "whitespace_mode": {
+          "default": "trim",
+          "description": "Flow-wide whitespace handling for nodes whose `whitespace_mode`\nparameter is set to `\"inherit\"` (the per-node default). One of\n`\"trim\"`, `\"preserve\"`, or `\"compact\"`. Missing values (legacy flows\nauthored before this field existed) fall back to `\"trim\"` via\n[`default_flow_whitespace_mode`], matching Concatenate's historical\ndefault.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "version",
+        "flow_key",
+        "title",
+        "output_encoding",
+        "plain_fragment_delimiter",
+        "whitespace_mode",
+        "nodes",
+        "edges"
+      ],
+      "type": "object"
+    },
+    "FlowDynamicPortGroup": {
+      "additionalProperties": false,
+      "properties": {
+        "accepted_token_types": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "count_parameter": {
+          "type": "string"
+        },
+        "display_class": {
+          "$ref": "#/$defs/FlowPortDisplayClass"
+        },
+        "long_description": {
+          "type": "string"
+        },
+        "name_template": {
+          "type": "string"
+        },
+        "parameters": {
+          "description": "Per-port parameter editors. Each port expanded from this group inherits\nthe same set of parameter declarations; values are stored per-port name\nunder `FlowNode::port_parameter_values.input[port_name]` (or\n`.output[port_name]` for dynamic output groups).",
+          "items": {
+            "$ref": "#/$defs/FlowParameterDefinition"
+          },
+          "type": "array"
+        },
+        "short_description": {
+          "type": "string"
+        },
+        "token_type": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "count_parameter",
+        "name_template",
+        "token_type"
+      ],
+      "type": "object"
+    },
+    "FlowDynamicSignalPortGroup": {
+      "additionalProperties": false,
+      "properties": {
+        "count_parameter": {
+          "type": "string"
+        },
+        "display_class": {
+          "$ref": "#/$defs/FlowPortDisplayClass"
+        },
+        "long_description": {
+          "type": "string"
+        },
+        "name_template": {
+          "type": "string"
+        },
+        "short_description": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "count_parameter",
+        "name_template"
+      ],
+      "type": "object"
+    },
+    "FlowEdge": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "kind": {
+          "$ref": "#/$defs/FlowEdgeKind",
+          "default": "token"
+        },
+        "order": {
+          "default": 0,
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "source_node_id": {
+          "type": "string"
+        },
+        "source_port": {
+          "type": "string"
+        },
+        "target_node_id": {
+          "type": "string"
+        },
+        "target_port": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "kind",
+        "source_node_id",
+        "source_port",
+        "target_node_id",
+        "target_port",
+        "order"
+      ],
+      "type": "object"
+    },
+    "FlowEdgeKind": {
+      "enum": [
+        "token",
+        "signal"
+      ],
+      "type": "string"
+    },
+    "FlowNode": {
+      "additionalProperties": false,
+      "properties": {
+        "definition_name": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "instance_name": {
+          "type": "string"
+        },
+        "parameter_values": {
+          "additionalProperties": true,
+          "default": {},
+          "type": "object"
+        },
+        "port_names": {
+          "$ref": "#/$defs/FlowNodePortNames"
+        },
+        "port_order": {
+          "$ref": "#/$defs/FlowNodePortOrder"
+        },
+        "port_parameter_values": {
+          "$ref": "#/$defs/FlowNodePortParameterValues"
+        }
+      },
+      "required": [
+        "id",
+        "definition_name",
+        "instance_name",
+        "parameter_values"
+      ],
+      "type": "object"
+    },
+    "FlowNodeClass": {
+      "enum": [
+        "source",
+        "control",
+        "hybrid",
+        "instrument",
+        "inline",
+        "logic",
+        "sink"
+      ],
+      "type": "string"
+    },
+    "FlowNodeDefinition": {
+      "additionalProperties": false,
+      "properties": {
+        "action_ports": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/FlowActionPortDefinition"
+          },
+          "type": "array"
+        },
+        "activation_parameters": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "automation_ports": {
+          "items": {
+            "$ref": "#/$defs/FlowAutomationPortDefinition"
+          },
+          "type": "array"
+        },
+        "class_name": {
+          "type": "string"
+        },
+        "controller_actions": {
+          "items": {
+            "$ref": "#/$defs/FlowControllerActionDefinition"
+          },
+          "type": "array"
+        },
+        "controller_outputs": {
+          "items": {
+            "$ref": "#/$defs/FlowControllerOutputDefinition"
+          },
+          "type": "array"
+        },
+        "dynamic_action_ports": {
+          "items": {
+            "$ref": "#/$defs/FlowDynamicSignalPortGroup"
+          },
+          "type": "array"
+        },
+        "dynamic_input_ports": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/FlowDynamicPortGroup"
+          },
+          "type": "array"
+        },
+        "dynamic_output_ports": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/FlowDynamicPortGroup"
+          },
+          "type": "array"
+        },
+        "dynamic_signal_ports": {
+          "items": {
+            "$ref": "#/$defs/FlowDynamicSignalPortGroup"
+          },
+          "type": "array"
+        },
+        "handler_id": {
+          "type": "string"
+        },
+        "input_ports": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/FlowPort"
+          },
+          "type": "array"
+        },
+        "interfaces": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "kind": {
+          "$ref": "#/$defs/FlowNodeClass"
+        },
+        "long_description": {
+          "type": "string"
+        },
+        "output_ports": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/FlowPort"
+          },
+          "type": "array"
+        },
+        "parameters": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/FlowParameterDefinition"
+          },
+          "type": "array"
+        },
+        "short_description": {
+          "type": "string"
+        },
+        "signal_ports": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/FlowSignalPortDefinition"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "class_name",
+        "short_description",
+        "long_description",
+        "kind",
+        "handler_id",
+        "interfaces",
+        "activation_parameters",
+        "parameters",
+        "input_ports",
+        "output_ports",
+        "dynamic_input_ports",
+        "dynamic_output_ports",
+        "action_ports",
+        "signal_ports"
+      ],
+      "type": "object"
+    },
+    "FlowNodePortNames": {
+      "additionalProperties": false,
+      "properties": {
+        "action": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object"
+        },
+        "automation": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object"
+        },
+        "input": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object"
+        },
+        "output": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object"
+        },
+        "signal": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object"
+        }
+      },
+      "type": "object"
+    },
+    "FlowNodePortOrder": {
+      "additionalProperties": false,
+      "properties": {
+        "action": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "automation": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "input": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "output": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "signal": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "type": "object"
+    },
+    "FlowNodePortParameterValues": {
+      "additionalProperties": false,
+      "properties": {
+        "input": {
+          "additionalProperties": {
+            "additionalProperties": true,
+            "type": "object"
+          },
+          "type": "object"
+        },
+        "output": {
+          "additionalProperties": {
+            "additionalProperties": true,
+            "type": "object"
+          },
+          "type": "object"
+        }
+      },
+      "type": "object"
+    },
+    "FlowParameterDataType": {
+      "additionalProperties": false,
+      "description": "A nominal datatype registered by the host, or a recursive list/map of datatypes.",
+      "properties": {
+        "item_type": {
+          "$ref": "#/$defs/FlowParameterDataType"
+        },
+        "kind": {
+          "type": "string"
+        },
+        "value_type": {
+          "$ref": "#/$defs/FlowParameterDataType"
+        }
+      },
+      "required": [
+        "kind"
+      ],
+      "type": "object"
+    },
+    "FlowParameterDefinition": {
+      "additionalProperties": false,
+      "properties": {
+        "controller": {
+          "$ref": "#/$defs/FlowParameterEditor"
+        },
+        "datatype": {
+          "$ref": "#/$defs/FlowParameterDataType"
+        },
+        "editor": {
+          "$ref": "#/$defs/FlowParameterEditor"
+        },
+        "long_description": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "short_description": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "datatype",
+        "editor"
+      ],
+      "type": "object"
+    },
+    "FlowParameterEditor": {
+      "additionalProperties": false,
+      "properties": {
+        "default_value": true,
+        "kind": {
+          "$ref": "#/$defs/FlowParameterEditorKind"
+        },
+        "max": {
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "min": {
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "source": {
+          "type": "string"
+        },
+        "values": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "kind"
+      ],
+      "type": "object"
+    },
+    "FlowParameterEditorKind": {
+      "enum": [
+        "boolean",
+        "unsigned",
+        "input_port_count",
+        "output_port_count",
+        "enum",
+        "list",
+        "media_preview",
+        "string",
+        "text",
+        "text_input",
+        "properties",
+        "query"
+      ],
+      "type": "string"
+    },
+    "FlowPort": {
+      "additionalProperties": false,
+      "properties": {
+        "accepted_token_types": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "display_class": {
+          "$ref": "#/$defs/FlowPortDisplayClass"
+        },
+        "formatter": {
+          "$ref": "#/$defs/FlowPortFormatter"
+        },
+        "kind": {
+          "$ref": "#/$defs/FlowPortKind"
+        },
+        "long_description": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "parameters": {
+          "items": {
+            "$ref": "#/$defs/FlowParameterDefinition"
+          },
+          "type": "array"
+        },
+        "short_description": {
+          "type": "string"
+        },
+        "token_type": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "kind",
+        "token_type"
+      ],
+      "type": "object"
+    },
+    "FlowPortDisplayClass": {
+      "enum": [
+        "source",
+        "inline",
+        "sink"
+      ],
+      "type": "string"
+    },
+    "FlowPortFormatter": {
+      "additionalProperties": false,
+      "properties": {
+        "default": {
+          "$ref": "#/$defs/FlowPromptTemplateDefinition"
+        },
+        "kind": {
+          "$ref": "#/$defs/FlowPortFormatterKind"
+        },
+        "variants": {
+          "additionalProperties": {
+            "$ref": "#/$defs/FlowPromptTemplateDefinition"
+          },
+          "type": "object"
+        }
+      },
+      "required": [
+        "kind"
+      ],
+      "type": "object"
+    },
+    "FlowPortFormatterKind": {
+      "enum": [
+        "prompt_template"
+      ],
+      "type": "string"
+    },
+    "FlowPortKind": {
+      "enum": [
+        "input",
+        "output"
+      ],
+      "type": "string"
+    },
+    "FlowPromptListTemplateNode": {
+      "additionalProperties": false,
+      "properties": {
+        "binding": {
+          "type": "string"
+        },
+        "item_bindings": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "separator": {
+          "default": "",
+          "type": "string"
+        },
+        "template": {
+          "$ref": "#/$defs/FlowPromptTemplateNode"
+        }
+      },
+      "required": [
+        "binding",
+        "separator",
+        "template"
+      ],
+      "type": "object"
+    },
+    "FlowPromptOptionalTemplateNode": {
+      "additionalProperties": false,
+      "properties": {
+        "binding": {
+          "type": "string"
+        },
+        "template": {
+          "$ref": "#/$defs/FlowPromptTemplateNode"
+        }
+      },
+      "required": [
+        "binding",
+        "template"
+      ],
+      "type": "object"
+    },
+    "FlowPromptSequenceTemplateNode": {
+      "additionalProperties": false,
+      "properties": {
+        "items": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/FlowPromptTemplateNode"
+          },
+          "type": "array"
+        },
+        "separator": {
+          "default": "",
+          "type": "string"
+        }
+      },
+      "required": [
+        "separator",
+        "items"
+      ],
+      "type": "object"
+    },
+    "FlowPromptTemplateDefinition": {
+      "additionalProperties": false,
+      "properties": {
+        "bindings": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "template": {
+          "$ref": "#/$defs/FlowPromptTemplateNode"
+        }
+      },
+      "required": [
+        "template"
+      ],
+      "type": "object"
+    },
+    "FlowPromptTemplateNode": {
+      "oneOf": [
+        {
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "const": "text",
+              "type": "string"
+            },
+            "text": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "kind",
+            "text"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "items": {
+              "default": [],
+              "items": {
+                "$ref": "#/$defs/FlowPromptTemplateNode"
+              },
+              "type": "array"
+            },
+            "kind": {
+              "const": "sequence",
+              "type": "string"
+            },
+            "separator": {
+              "default": "",
+              "type": "string"
+            }
+          },
+          "required": [
+            "kind",
+            "separator",
+            "items"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "binding": {
+              "type": "string"
+            },
+            "kind": {
+              "const": "optional",
+              "type": "string"
+            },
+            "template": {
+              "$ref": "#/$defs/FlowPromptTemplateNode"
+            }
+          },
+          "required": [
+            "kind",
+            "binding",
+            "template"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "binding": {
+              "type": "string"
+            },
+            "item_bindings": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "kind": {
+              "const": "list",
+              "type": "string"
+            },
+            "separator": {
+              "default": "",
+              "type": "string"
+            },
+            "template": {
+              "$ref": "#/$defs/FlowPromptTemplateNode"
+            }
+          },
+          "required": [
+            "kind",
+            "binding",
+            "separator",
+            "template"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    "FlowPromptTextTemplateNode": {
+      "additionalProperties": false,
+      "properties": {
+        "text": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "text"
+      ],
+      "type": "object"
+    },
+    "FlowSignalPortDefinition": {
+      "additionalProperties": false,
+      "properties": {
+        "display_class": {
+          "$ref": "#/$defs/FlowPortDisplayClass"
+        },
+        "long_description": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "short_description": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "type": "object"
+    },
+    "FlowValidationIssue": {
+      "additionalProperties": false,
+      "properties": {
+        "edge_id": {
+          "type": "string"
+        },
+        "message": {
+          "type": "string"
+        },
+        "node_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "message"
+      ],
+      "type": "object"
+    },
+    "FlowValidationResult": {
+      "additionalProperties": false,
+      "properties": {
+        "issues": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/FlowValidationIssue"
+          },
+          "type": "array"
+        },
+        "valid": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "valid",
+        "issues"
+      ],
+      "type": "object"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

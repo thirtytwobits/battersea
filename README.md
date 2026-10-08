@@ -2,8 +2,17 @@
 
 Battersea is being extracted from Primrose Hill as an embeddable dataflow framework.
 
-Status: M1 scaffold. `battersea-flow` and `@battersea/flow` establish the build, package and
-API-checking paths. M2 introduces their flow contract.
+`battersea-flow` provides flow documents, ports, templates, extensible catalogues and pure
+graph validation. Applications register their handlers, nominal token schemas, parameter
+schemas and product validators. `examples/catalogue` is an independent host application.
+
+`@battersea/flow` carries the generated TypeScript contract, JSON Schema, shared fixtures
+and token-connection compatibility. Rust types own the contract; `cargo xtask bindings`
+generates its distributable forms.
+
+Document inspection reports unsupported versions before interpreting graph fields. Loading
+and canonical saving preserve opaque editor namespaces. Format upgrades are explicitly
+registered transformations; the host owns their invocation and persistence.
 
 Battersea is licensed under the [MIT License](LICENSE).
 

@@ -1,3 +1,4 @@
+mod bindings;
 use clap::{Parser, Subcommand};
 use serde_json::Value;
 use std::{
@@ -22,6 +23,12 @@ enum Task {
     Check,
     /// Check dependency direction and synchronised Cargo/npm versions.
     Boundaries,
+    /// Generate JSON Schema, TypeScript types and shared fixtures from the Rust contract.
+    Bindings {
+        /// Refuse stale generated files without writing them.
+        #[arg(long)]
+        check: bool,
+    },
     /// Verify public Rust APIs with the pinned cargo-public-api and nightly toolchain.
     Api {
         /// Accept and write an intentional API change.
@@ -292,12 +299,21 @@ fn package(root: &Path) -> Result<()> {
         }
         let consumer = temp.path().join("consumer");
         fs::create_dir_all(consumer.join("src"))?;
-        fs::write(consumer.join("Cargo.toml"), format!("[package]\nname = \"package-consumer\"\nversion = \"0.0.0\"\nedition = \"2021\"\n[dependencies]\n{name} = {{ path = {:?} }}\n", unpacked))?;
+        fs::write(consumer.join("Cargo.toml"), format!("[package]\nname = \"package-consumer\"\nversion = \"0.0.0\"\nedition = \"2021\"\n[dependencies]\n{name} = {{ path = {:?} }}\nserde_json = \"1\"\n", unpacked))?;
         fs::write(
             consumer.join("src/main.rs"),
-            format!("extern crate {};\nfn main() {{}}\n", name.replace('-', "_")),
+            fs::read_to_string(root.join("examples/catalogue/src/main.rs"))?,
         )?;
-        run(&consumer, "cargo", &["check", "--offline"])?;
+        run(
+            &consumer,
+            "cargo",
+            &[
+                "run",
+                "--offline",
+                "--config",
+                "resolver.incompatible-rust-versions=\"fallback\"",
+            ],
+        )?;
     }
     Ok(())
 }
@@ -335,10 +351,12 @@ fn release_check(root: &Path, tag: &str) -> Result<()> {
 fn main() -> Result<()> {
     let root = root();
     match Cli::parse().command {
+        Task::Bindings { check } => bindings::generate(&root, check),
         Task::Boundaries => boundaries(&root),
         Task::Check => {
             run(&root, "cargo", &["fmt", "--all", "--check"])?;
             boundaries(&root)?;
+            bindings::generate(&root, true)?;
             run(
                 &root,
                 "cargo",

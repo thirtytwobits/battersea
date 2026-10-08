@@ -1,0 +1,40 @@
+[
+{
+  "edges": [],
+  "flow_key": "example",
+  "layout": {
+    "editor.example": {
+      "position": [
+        12,
+        34
+      ],
+      "viewport": {
+        "zoom": 1.5
+      }
+    }
+  },
+  "metadata": {
+    "application": {
+      "tags": [
+        "contract",
+        "roundtrip"
+      ]
+    }
+  },
+  "nodes": [
+    {
+      "definition_name": "Echo",
+      "id": "source",
+      "instance_name": "Source",
+      "parameter_values": {
+        "label": "example"
+      }
+    }
+  ],
+  "output_encoding": "xml",
+  "plain_fragment_delimiter": "blank_line",
+  "title": "Independent application",
+  "version": 1,
+  "whitespace_mode": "preserve"
+}
+]

@@ -1,2 +1,2 @@
-// The flow contract is introduced in M2.
-export {};
+export type * from "./contract.js";
+export { tokenConnectionCompatible } from "./ports.js";
