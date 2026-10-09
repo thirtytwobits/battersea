@@ -6,6 +6,7 @@ pub fn battersea_flow::catalog::Catalog::definitions(&self) -> &std::collections
 pub fn battersea_flow::catalog::Catalog::entries(&self) -> impl core::iter::traits::iterator::Iterator<Item = &battersea_flow::FlowNodeDefinition>
 pub fn battersea_flow::catalog::Catalog::from_definitions(entries: alloc::vec::Vec<battersea_flow::FlowNodeDefinition>, registry: battersea_flow::registry::Registry) -> anyhow::Result<Self>
 pub fn battersea_flow::catalog::Catalog::from_manifest(source: &str, registry: battersea_flow::registry::Registry) -> anyhow::Result<Self>
+pub fn battersea_flow::catalog::Catalog::from_manifests(sources: &[(&str, &str)], registry: battersea_flow::registry::Registry) -> anyhow::Result<Self>
 pub fn battersea_flow::catalog::Catalog::into_definitions(self) -> std::collections::hash::map::HashMap<alloc::string::String, battersea_flow::FlowNodeDefinition>
 pub fn battersea_flow::catalog::Catalog::registry(&self) -> &battersea_flow::registry::Registry
 pub fn battersea_flow::catalog::Catalog::validate(&self, flow: &battersea_flow::FlowDocument) -> battersea_flow::FlowValidationResult
@@ -39,6 +40,7 @@ pub const battersea_flow::catalog::FLOW_INSTRUMENT_INTERFACE: &str
 pub const battersea_flow::catalog::FLOW_NODE_ACTIVATE_INTERFACE: &str
 pub fn battersea_flow::catalog::node_definition<'a>(definitions: &'a std::collections::hash::map::HashMap<alloc::string::String, battersea_flow::FlowNodeDefinition>, node: &battersea_flow::FlowNode) -> core::option::Option<&'a battersea_flow::FlowNodeDefinition>
 pub fn battersea_flow::catalog::node_implements_interface(definitions: &std::collections::hash::map::HashMap<alloc::string::String, battersea_flow::FlowNodeDefinition>, node: &battersea_flow::FlowNode, interface_name: &str) -> bool
+pub fn battersea_flow::catalog::parse_definition_manifest(registry: &battersea_flow::registry::Registry, source: &str) -> core::result::Result<alloc::vec::Vec<battersea_flow::FlowNodeDefinition>, alloc::string::String>
 pub mod battersea_flow::document
 pub enum battersea_flow::document::DocumentInspection
 pub battersea_flow::document::DocumentInspection::Incompatible

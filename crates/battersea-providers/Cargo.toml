@@ -1,0 +1,46 @@
+[package]
+name = "battersea-providers"
+description = "Battersea providers contracts and implementation"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+readme = "../../README.md"
+publish = false
+include = ["src/**", "Cargo.toml", "LICENSE", "NOTICE"]
+
+[features]
+default = ["openai", "anthropic", "google", "runway", "mock"]
+openai = ["dep:async-openai"]
+anthropic = []
+google = []
+runway = []
+mock = ["dep:ab_glyph", "dep:png"]
+
+[dependencies]
+battersea-model = { path = "../battersea-model", version = "0.4.0" }
+ab_glyph = { version = "0.2.32", optional = true }
+anyhow.workspace = true
+async-openai = { workspace = true, optional = true }
+async-trait.workspace = true
+base64 = "0.22.1"
+chrono.workspace = true
+eventsource-stream.workspace = true
+futures-util.workspace = true
+png = { version = "0.17.16", optional = true }
+reqwest.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+tokio.workspace = true
+tokio-stream.workspace = true
+tokio-util.workspace = true
+tracing.workspace = true
+
+[dev-dependencies]
+axum.workspace = true
+
+[[test]]
+name = "tool_conversations"
+required-features = ["openai", "anthropic", "google"]

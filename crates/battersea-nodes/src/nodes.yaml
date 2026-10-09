@@ -1,0 +1,348 @@
+formatter_blocks:
+  # ------------------------------------------------------------------
+  # concatenate.{encoding} formatter family. Used by Concatenate.output.
+  # Rust supplies one item per effective input port block. Markdown owns
+  # the heading structure here so prompt section shape stays configurable.
+  # ------------------------------------------------------------------
+  concatenate.markdown:
+    bindings:
+      - items
+    template:
+      kind: list
+      binding: items
+      separator: "\n\n"
+      item_bindings:
+        - port_label
+        - text
+      template:
+        kind: sequence
+        separator: "\n\n"
+        items:
+          - kind: text
+            text: "## {port_label}"
+          - kind: text
+            text: "{text}"
+  concatenate.xml:
+    bindings:
+      - items
+    template:
+      kind: sequence
+      separator: "\n"
+      items:
+        - kind: text
+          text: "<concatenate>"
+        - kind: list
+          binding: items
+          separator: "\n"
+          item_bindings:
+            - xml_element_name
+            - xml_text
+          template:
+            kind: text
+            text: "<{xml_element_name}>{xml_text}</{xml_element_name}>"
+        - kind: text
+          text: "</concatenate>"
+  concatenate.plain:
+    bindings:
+      - items
+      - plain_fragment_delimiter
+    template:
+      kind: list
+      binding: items
+      separator: "{plain_fragment_delimiter}"
+      item_bindings:
+        - text
+      template:
+        kind: text
+        text: "{text}"
+
+node_definitions:
+  - class_name: Concatenate
+    handler_id: battersea.concatenate
+    short_description: Combines inputs into a single output.
+    long_description: Concatenates N prompt fragments with configurable ordering, whitespace cleanup, and output formatting.
+    kind: inline
+    parameters:
+      - name: input_ports
+        datatype:
+          kind: int
+        editor:
+          kind: input_port_count
+          min: 1
+          default_value: 2
+      - name: ordering
+        datatype:
+          kind: string
+        editor:
+          kind: enum
+          values:
+            - descending
+            - ascending
+          default_value: descending
+      - name: whitespace_mode
+        short_description: Choose how whitespace is cleaned before the combined text is emitted (defaults to the flow's mode).
+        long_description: |
+          `inherit` (the default) tracks the surrounding flow document's
+          `whitespace_mode`. Trim removes leading and trailing whitespace
+          around each fragment. Preserve keeps each fragment's original
+          spacing and line breaks. Compact collapses excess whitespace and
+          blank runs into tighter output. Compact is disabled when the
+          effective output encoding is Markdown because Markdown relies on
+          line structure.
+        datatype:
+          kind: string
+        editor:
+          kind: enum
+          values:
+            - inherit
+            - trim
+            - preserve
+            - compact
+          default_value: inherit
+      - name: output_encoding
+        short_description: Choose the structure of the emitted text (defaults to the flow's encoding).
+        long_description: |
+          `inherit` (the default) tracks the surrounding flow document's
+          `output_encoding`. The three concrete options override the flow
+          choice for this node: Markdown wraps each input as a `##`-headed
+          section, XML wraps each as a tagged element, and Plain joins the
+          inputs directly with the configured `plain_fragment_delimiter`.
+        datatype:
+          kind: string
+        editor:
+          kind: enum
+          values:
+            - inherit
+            - markdown
+            - xml
+            - plain
+          default_value: inherit
+      - name: plain_fragment_delimiter
+        short_description: Field delimiter for Plain emissions (only active when the effective encoding is Plain).
+        long_description: |
+          Used as the separator between per-port blocks when this node
+          emits the `plain` encoding (either explicitly or via inherit
+          when the flow is set to plain). Ignored when the effective
+          encoding is Markdown or XML. When this node inherits its
+          encoding, the delimiter is inherited from the flow too — the
+          per-node value applies only when the encoding is explicit.
+        datatype:
+          kind: string
+        editor:
+          kind: enum
+          values:
+            - comma
+            - blank_line
+            - newline
+            - space
+            - none
+          default_value: blank_line
+      - name: empty_input_rule
+        datatype:
+          kind: string
+        editor:
+          kind: enum
+          values:
+            - skip
+            - keep
+          default_value: skip
+    dynamic_input_ports:
+      - count_parameter: input_ports
+        name_template: input-{index}
+        token_type: oneof
+        accepted_token_types:
+          - prompt.fragment
+          - prompt.fragmentArray
+          - chat.raw
+        short_description: Ordered text input. Accepts prompt.fragment, prompt.fragmentArray, or chat.raw.
+        parameters:
+          - name: array_delimiter
+            short_description: Separator between elements when this port receives an array.
+            long_description: |
+              Only applies when the connected source emits a `prompt.fragmentArray`
+              (e.g. a RulesQuery in markdown mode). Joins the sibling fragments
+              from that array into one block before this Concatenate's
+              between-port joining runs. Defaults to "\n\n" (a blank line), which
+              gives a stable markdown paragraph gap regardless of whether each
+              fragment happens to carry its own trailing newline.
+            datatype:
+              kind: string
+            editor:
+              kind: string
+              default_value: "\n\n"
+    output_ports:
+      - name: output
+        kind: output
+        token_type: auto
+        short_description: The combined text. Type adopts the kind of the connected inputs.
+        formatter:
+          kind: prompt_template
+          variants:
+            concatenate.markdown:
+              ref: concatenate.markdown
+            concatenate.xml:
+              ref: concatenate.xml
+            concatenate.plain:
+              ref: concatenate.plain
+
+  - class_name: Multiplexer
+    handler_id: battersea.multiplexer
+    short_description: Duplicates one input to many outputs.
+    long_description: Copies the incoming text payload to every configured output port. Output type adopts the kind of the connected input.
+    kind: inline
+    parameters:
+      - name: output_ports
+        datatype:
+          kind: int
+        editor:
+          kind: output_port_count
+          min: 1
+          default_value: 2
+    input_ports:
+      - name: input
+        kind: input
+        token_type: oneof
+        accepted_token_types:
+          - prompt.fragment
+          - chat.raw
+        short_description: The text payload to duplicate.
+    dynamic_output_ports:
+      - count_parameter: output_ports
+        name_template: output-{index}
+        token_type: auto
+        short_description: A duplicated copy of the input. Type adopts the kind of the connected input.
+
+  - class_name: SignalMultiplexer
+    handler_id: battersea.logic.multiplexer
+    short_description: Route one signal to many signal outputs.
+    long_description: Signal-only logic node that forwards one input signal to every configured output signal when enabled.
+    kind: logic
+    parameters:
+      - name: output_ports
+        datatype:
+          kind: int
+        short_description: Number of output signal branches created by this multiplexer.
+        long_description: Increase this when one signal should fan out to more downstream action ports. Each branch is still an ordinary signal output and may connect to one action port.
+        editor:
+          kind: output_port_count
+          min: 2
+          default_value: 2
+    action_ports:
+      - name: input
+        short_description: Signal to forward when the multiplexer is enabled.
+      - name: enable
+        short_description: Optional activation-local enable signal.
+        long_description: Leave this disconnected to keep the multiplexer enabled. When connected, the enable signal must arrive during the same activation before the input can be forwarded.
+    dynamic_signal_ports:
+      - count_parameter: output_ports
+        name_template: output-{index}
+        short_description: Forwarded signal branch.
+
+  - class_name: SignalDemultiplexer
+    handler_id: battersea.logic.demultiplexer
+    short_description: Merge many signal inputs into one output.
+    long_description: Signal-only logic node that emits one output signal when any configured input signal fires and the node is enabled.
+    kind: logic
+    parameters:
+      - name: input_ports
+        datatype:
+          kind: int
+        short_description: Number of input signal branches accepted by this demultiplexer.
+        long_description: Increase this when several alternative signal paths should converge into one downstream action.
+        editor:
+          kind: input_port_count
+          min: 2
+          default_value: 2
+    dynamic_action_ports:
+      - count_parameter: input_ports
+        name_template: input-{index}
+        short_description: Signal branch that may trigger the output.
+    action_ports:
+      - name: enable
+        short_description: Optional activation-local enable signal.
+        long_description: Leave this disconnected to keep the demultiplexer enabled. When connected, the enable signal must arrive during the same activation before any input can be forwarded.
+    signal_ports:
+      - name: output
+        short_description: Emits when any input fires while enabled.
+
+  - class_name: AndGate
+    handler_id: battersea.logic.and
+    short_description: Emit when every input signal is present.
+    long_description: Signal-only logic gate that emits after its connected inputs settle, using activation-local signal latches.
+    kind: logic
+    parameters:
+      - name: input_ports
+        datatype:
+          kind: int
+        short_description: Number of input signals required by this gate.
+        long_description: AND emits when every configured input signal fires during the activation. NAND emits when the connected inputs settle and at least one configured input did not fire.
+        editor:
+          kind: input_port_count
+          min: 2
+          default_value: 2
+      - name: not
+        datatype:
+          kind: boolean
+        short_description: Invert the gate so it behaves as NAND.
+        long_description: When enabled, the canvas glyph shows NAND with the standard inversion circle and the output fires for the settled inverse of AND.
+        editor:
+          kind: boolean
+          default_value: false
+    dynamic_action_ports:
+      - count_parameter: input_ports
+        name_template: input-{index}
+        short_description: Input signal latch.
+    signal_ports:
+      - name: output
+        short_description: Logic gate output signal.
+
+  - class_name: OrGate
+    handler_id: battersea.logic.or
+    short_description: Emit when any input signal is present.
+    long_description: Signal-only logic gate that can behave as OR, NOR, XOR, or XNOR using activation-local signal latches.
+    kind: logic
+    parameters:
+      - name: input_ports
+        datatype:
+          kind: int
+        short_description: Number of input signals considered by this gate.
+        long_description: OR emits when any configured input signal fires. XOR emits when exactly one configured input fires.
+        editor:
+          kind: input_port_count
+          min: 2
+          default_value: 2
+      - name: exclusive
+        datatype:
+          kind: boolean
+        short_description: Switch the gate from OR/NOR to XOR/XNOR.
+        long_description: When enabled, the canvas glyph shows the standard extra exclusivity bar and the gate emits only when exactly one input fired before the inputs settled.
+        editor:
+          kind: boolean
+          default_value: false
+      - name: not
+        datatype:
+          kind: boolean
+        short_description: Invert the OR or XOR result.
+        long_description: When enabled, the canvas glyph shows the standard inversion circle and the node behaves as NOR or XNOR depending on the exclusive setting.
+        editor:
+          kind: boolean
+          default_value: false
+    dynamic_action_ports:
+      - count_parameter: input_ports
+        name_template: input-{index}
+        short_description: Input signal latch.
+    signal_ports:
+      - name: output
+        short_description: Logic gate output signal.
+
+  - class_name: InvertGate
+    handler_id: battersea.logic.invert
+    short_description: Emit when one input signal is absent.
+    long_description: Signal-only NOT gate that emits after its connected input settles without firing during the activation.
+    kind: logic
+    action_ports:
+      - name: input
+        short_description: Input signal latch to invert.
+    signal_ports:
+      - name: output
+        short_description: Emits when the input settles false.

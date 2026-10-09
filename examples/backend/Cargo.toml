@@ -1,0 +1,15 @@
+[package]
+name = "backend-example"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish = false
+[dependencies]
+battersea-model = { path = "../../crates/battersea-model" }
+battersea-providers = { path = "../../crates/battersea-providers", default-features = false, features = ["mock"] }
+async-trait.workspace = true
+serde_json.workspace = true
+futures-util.workspace = true
+tokio.workspace = true
+tokio-util.workspace = true

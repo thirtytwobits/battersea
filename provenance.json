@@ -26,6 +26,28 @@
         "engine/crates/primrose-engine-core/src/flow_api.rs",
         "engine/crates/primrose-engine-core/src/flow_runtime/mod.rs"
       ]
+    },
+    {
+      "milestone": "M4",
+      "source_commit": "9bfab402c1d4b70c00fa6eaffd2529c1eef724ca",
+      "source_paths": [
+        "engine/crates/primrose-engine-adapters",
+        "engine/crates/primrose-protocol/src/engine.rs",
+        "engine/crates/primrose-protocol/src/media.rs",
+        "engine/crates/primrose-protocol/src/session.rs",
+        "engine/crates/primrose-engine-core/src/config/mod.rs",
+        "engine/crates/primrose-engine-core/src/chat_parameters.rs",
+        "engine/crates/primrose-engine-core/src/mock_chat.rs",
+        "engine/crates/primrose-engine-core/src/flow_runtime/concatenate.rs",
+        "engine/crates/primrose-engine-core/src/flow_runtime/multiplexer.rs",
+        "engine/crates/primrose-engine-core/src/flow_runtime/logic.rs",
+        "engine/crates/primrose-engine-core/src/flow_runtime/in_memory_buffer.rs",
+        "engine/crates/primrose-engine-core/src/flow_runtime/static_prompt.rs",
+        "engine/crates/primrose-engine-core/src/flow_runtime/user_prompt.rs",
+        "engine/crates/xtask/src/prompt_trojans.rs",
+        "engine/config/flow-config.yaml",
+        "engine/schemas/engine-config.schema.yaml"
+      ]
     }
   ]
 }

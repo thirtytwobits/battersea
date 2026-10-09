@@ -1,0 +1,391 @@
+$defs:
+  mediaBackend:
+    type: object
+    additionalProperties: false
+    required:
+      - provider
+      - capability
+      - model
+      - capabilities
+    properties:
+      provider:
+        type: string
+      capability:
+        type: string
+        enum: [image-generation, prompt-planner, video-generation]
+      label:
+        type: string
+      enabled:
+        type: boolean
+      endpoint:
+        type: string
+      model:
+        type: string
+      capabilities:
+        $ref: "#/$defs/mediaBackendCapabilities"
+      auth:
+        $ref: "#/$defs/auth"
+      options:
+        type: object
+        additionalProperties: true
+      short_description:
+        $ref: "#/$defs/shortDescription"
+      long_description:
+        $ref: "#/$defs/longDescription"
+
+  auth:
+    type: object
+    additionalProperties: false
+    properties:
+      type:
+        type: string
+      apiKey:
+        type: string
+      apiKeyEnv:
+        type: string
+      header:
+        type: string
+      versionHeader:
+        type: string
+      version:
+        type: string
+
+  backend:
+    type: object
+    additionalProperties: false
+    required:
+      - provider
+      - model
+      - contextWindowTokens
+      - capabilities
+    properties:
+      provider:
+        type: string
+      label:
+        type: string
+      enabled:
+        type: boolean
+      endpoint:
+        type: string
+      auth:
+        $ref: "#/$defs/auth"
+      model:
+        type: string
+      displayOrder:
+        type: integer
+        minimum: 0
+      contextWindowTokens:
+        type: integer
+        minimum: 1
+      capabilities:
+        $ref: "#/$defs/backendCapabilities"
+      properties:
+        $ref: "#/$defs/chatProperties"
+      options:
+        type: object
+        additionalProperties: true
+      short_description:
+        $ref: "#/$defs/shortDescription"
+      long_description:
+        $ref: "#/$defs/longDescription"
+
+  shortDescription:
+    type: string
+    maxLength: 100
+    description: |
+      Single-line summary of the backend, capped at 100 characters.
+      Surfaces in compact UI affordances (model picker rows, status
+      labels). Authors override it per concrete backend; family bases
+      and mixins do NOT contribute to short_description — the concrete
+      entry's value wins.
+
+  longDescription:
+    type: string
+    description: |
+      Multi-line markdown description of the backend. Family bases and
+      mixins may each contribute a `long_description` section; the
+      engine concatenates them in merge order (every parent in
+      declaration order, child last) joined by a blank line so the
+      assembled text reads as a stack of markdown sections. Authors
+      should write each section with its own heading so the seams are
+      explicit when sections combine.
+
+  chatProperties:
+    type: object
+    additionalProperties: false
+    propertyOrder:
+      - stream
+      - maxOutputTokens
+      - temperature
+      - topP
+      - topK
+      - stopSequences
+      - toolExecution
+      - maxToolRounds
+      - toolChoice
+      - parallelToolCalls
+      - strictToolInputs
+      - serviceTier
+      - safetyIdentifier
+      - requestMetadata
+      - reasoningEffort
+      - reasoningSummary
+      - thinkingBudgetTokens
+      - thinkingVisibility
+      - responseVerbosity
+      - contextOverflow
+      - promptCacheKey
+      - promptCacheRetention
+      - storeResponse
+      - maxProviderToolCalls
+      - logprobs
+      - topLogprobs
+    properties:
+      stream:
+        type: boolean
+        short_description: Stream response deltas while the provider is generating. Required — the engine applies no default.
+      maxOutputTokens:
+        type: integer
+        minimum: 1
+        short_description: Maximum number of output tokens the provider may generate.
+        long_description: This is the per-response output cap, not the model context-window size. Optional; when omitted the engine does not send the field. Anthropic backends must configure it because Messages requests require max_tokens — the engine supplies no default.
+      temperature:
+        type: number
+        minimum: 0
+        maximum: 2
+        short_description: Controls sampling randomness for model output. Required — the engine applies no default.
+        long_description: Lower values make responses more deterministic. Higher values allow more variation, subject to provider support and any model-specific constraints.
+      topP:
+        type: number
+        minimum: 0
+        maximum: 1
+        short_description: Limits sampling to the highest-probability token mass.
+      topK:
+        type: integer
+        minimum: 1
+        short_description: Limits sampling to the highest-probability tokens when supported.
+      stopSequences:
+        type: array
+        items:
+          type: string
+        short_description: Provider stop strings that end generation early.
+      toolExecution:
+        type: string
+        enum: [engine-orchestrated]
+        short_description: Selects where ChatAPI tool calls are executed. Required — the engine applies no default.
+        long_description: The engine runs the tool-loop locally for every backend. `engine-orchestrated` is the only supported value; the field is kept in the schema so saved configs round-trip cleanly.
+      maxToolRounds:
+        type: integer
+        minimum: 1
+        maximum: 32
+        short_description: Maximum tool-call rounds allowed for one ChatAPI activation. Required — the engine applies no default.
+      toolChoice:
+        $ref: "#/$defs/toolChoice"
+        short_description: Sets whether the model may, must, or must not call tools.
+      parallelToolCalls:
+        type: boolean
+        short_description: Allows providers to issue multiple tool calls in the same round.
+      strictToolInputs:
+        type: boolean
+        short_description: Requests strict tool input validation when the provider supports it.
+      serviceTier:
+        type: string
+        short_description: Provider service tier hint for request handling.
+      safetyIdentifier:
+        type: string
+        short_description: Optional provider safety identifier associated with requests.
+      requestMetadata:
+        type: object
+        additionalProperties: true
+        short_description: Provider metadata attached to ChatAPI requests.
+      reasoningEffort:
+        type: string
+        enum: [none, minimal, low, medium, high, xhigh, max]
+        short_description: Requests a reasoning effort level when supported by the model.
+      reasoningSummary:
+        type: string
+        enum: [none, auto, concise, detailed]
+        short_description: Controls provider reasoning-summary output when available.
+      thinkingBudgetTokens:
+        type: integer
+        minimum: 1
+        short_description: Token budget for provider thinking features when supported.
+      thinkingVisibility:
+        type: string
+        enum: [summarized, omitted]
+        short_description: Controls whether supported providers expose thinking summaries.
+      responseVerbosity:
+        type: string
+        enum: [low, medium, high]
+        short_description: Requests response verbosity when the provider supports it.
+      contextOverflow:
+        type: string
+        enum: [error, provider-truncate]
+        short_description: Chooses behaviour when a prompt exceeds the context window. Required — the engine applies no default.
+        long_description: Error mode fails loudly so authors can fix memory and history flow behaviour. Provider truncate allows supported providers to trim context, which is convenient but can hide lost information.
+      promptCacheKey:
+        type: string
+        short_description: Stable key for provider prompt-cache reuse when supported.
+      promptCacheRetention:
+        type: string
+        enum: [in-memory, 24h]
+        short_description: Requested provider prompt-cache retention period.
+      storeResponse:
+        type: boolean
+        short_description: Asks providers to store responses when their API supports it.
+      maxProviderToolCalls:
+        type: integer
+        minimum: 1
+        short_description: Provider-side maximum tool-call count when supported.
+      logprobs:
+        type: boolean
+        short_description: Requests token log probabilities when supported.
+      topLogprobs:
+        type: integer
+        minimum: 1
+        short_description: Number of alternate token log probabilities to request.
+
+  toolChoice:
+    type: object
+    additionalProperties: false
+    required:
+      - mode
+    allOf:
+      - if:
+          properties:
+            mode:
+              const: tool
+          required:
+            - mode
+        then:
+          required:
+            - toolName
+    properties:
+      mode:
+        type: string
+        enum: [auto, none, required, any, tool]
+      toolName:
+        type: string
+
+  backendCapabilities:
+    type: object
+    additionalProperties: false
+    required:
+      - supportedChatParameters
+      - supportedToolExecutionModes
+      - supportedToolChoices
+      - supportedReasoningEfforts
+      - temperatureDispatch
+    properties:
+      supportedChatParameters:
+        type: array
+        items:
+          type: string
+      supportedToolExecutionModes:
+        type: array
+        items:
+          type: string
+          enum: [engine-orchestrated]
+      supportedToolChoices:
+        type: array
+        minItems: 1
+        uniqueItems: true
+        items:
+          type: string
+          enum: [auto, none, required, any, tool]
+      temperatureDispatch:
+        type: string
+        enum: [always, never]
+      supportedReasoningEfforts:
+        type: array
+        uniqueItems: true
+        items:
+          type: string
+          enum: [none, minimal, low, medium, high, xhigh, max]
+      reasoningEffortWhenUnset:
+        type: string
+        enum: [none, minimal, low, medium, high, xhigh, max]
+      anthropicThinking:
+        $ref: "#/$defs/anthropicThinkingCapabilities"
+      googleThinking:
+        $ref: "#/$defs/googleThinkingCapabilities"
+
+  anthropicThinkingCapabilities:
+    type: object
+    additionalProperties: false
+    required:
+      - mode
+      - disableSupported
+      - manualBudgetSupported
+    properties:
+      mode:
+        type: string
+        enum: [adaptive, budget]
+      disableSupported:
+        type: boolean
+      manualBudgetSupported:
+        type: boolean
+      outputEffort:
+        type: object
+        additionalProperties:
+          type: string
+      budgetTokensByEffort:
+        type: object
+        additionalProperties:
+          type: integer
+          minimum: 0
+
+  googleThinkingCapabilities:
+    type: object
+    additionalProperties: false
+    required:
+      - effortField
+      - effortValues
+    properties:
+      effortField:
+        type: string
+        enum: [thinkingLevel, thinkingBudget]
+      effortValues:
+        type: object
+        additionalProperties:
+          oneOf:
+            - type: string
+            - type: integer
+
+  mediaBackendCapabilities:
+    type: object
+    additionalProperties: false
+    required:
+      - supportedMediaParameters
+      - supportsPartialImageStreaming
+      - estimatedGenerationSeconds
+    properties:
+      supportedMediaParameters:
+        type: array
+        items:
+          type: string
+      aspectRatioOptions:
+        type: array
+        items:
+          $ref: "#/$defs/mediaApiOption"
+      sizeOptions:
+        type: array
+        items:
+          $ref: "#/$defs/mediaApiOption"
+      supportsPartialImageStreaming:
+        type: boolean
+      estimatedGenerationSeconds:
+        type: number
+        exclusiveMinimum: 0
+
+  mediaApiOption:
+    type: object
+    additionalProperties: false
+    required:
+      - value
+      - label
+    properties:
+      value:
+        type: string
+      label:
+        type: string

@@ -344,7 +344,7 @@ mod tests {
             short_description: String::new(),
             long_description: String::new(),
             kind: FlowNodeClass::Inline,
-            handler_id: "primrose.concatenate".to_string(),
+            handler_id: "battersea.concatenate".to_string(),
             interfaces: Vec::new(),
             activation_parameters: Vec::new(),
             parameters: vec![

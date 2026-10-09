@@ -1,5 +1,5 @@
 {
-  "version": "0.3.0",
+  "version": "0.4.0",
   "repository": "https://github.com/thirtytwobits/battersea",
   "license": "MIT",
   "security_contact": "https://github.com/thirtytwobits/battersea/security/advisories/new",
@@ -14,6 +14,43 @@
       "fixtures/token-type-compatibility.json"
     ],
     "battersea-runtime": [
+      "Cargo.toml",
+      "src/lib.rs",
+      "README.md",
+      "LICENSE",
+      "NOTICE"
+    ],
+    "battersea-model": [
+      "Cargo.toml",
+      "src/lib.rs",
+      "README.md",
+      "LICENSE",
+      "NOTICE"
+    ],
+    "battersea-providers": [
+      "Cargo.toml",
+      "src/lib.rs",
+      "README.md",
+      "LICENSE",
+      "NOTICE"
+    ],
+    "battersea-config": [
+      "Cargo.toml",
+      "src/lib.rs",
+      "README.md",
+      "LICENSE",
+      "NOTICE",
+      "src/backend.schema.yaml"
+    ],
+    "battersea-nodes": [
+      "Cargo.toml",
+      "src/lib.rs",
+      "README.md",
+      "LICENSE",
+      "NOTICE",
+      "src/nodes.yaml"
+    ],
+    "battersea-guard": [
       "Cargo.toml",
       "src/lib.rs",
       "README.md",

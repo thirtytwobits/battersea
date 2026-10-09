@@ -1,0 +1,118 @@
+pub mod battersea_guard
+pub struct battersea_guard::AllowlistEntry
+pub battersea_guard::AllowlistEntry::excerpt: alloc::string::String
+pub battersea_guard::AllowlistEntry::path: alloc::string::String
+pub battersea_guard::AllowlistEntry::reason: alloc::string::String
+pub battersea_guard::AllowlistEntry::rule: alloc::string::String
+impl core::clone::Clone for battersea_guard::AllowlistEntry
+pub fn battersea_guard::AllowlistEntry::clone(&self) -> battersea_guard::AllowlistEntry
+impl core::cmp::Eq for battersea_guard::AllowlistEntry
+impl core::cmp::PartialEq for battersea_guard::AllowlistEntry
+pub fn battersea_guard::AllowlistEntry::eq(&self, other: &battersea_guard::AllowlistEntry) -> bool
+impl core::fmt::Debug for battersea_guard::AllowlistEntry
+pub fn battersea_guard::AllowlistEntry::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for battersea_guard::AllowlistEntry
+impl<'de> serde_core::de::Deserialize<'de> for battersea_guard::AllowlistEntry
+pub fn battersea_guard::AllowlistEntry::deserialize<__D>(__deserializer: __D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for battersea_guard::AllowlistEntry
+impl core::marker::Send for battersea_guard::AllowlistEntry
+impl core::marker::Sync for battersea_guard::AllowlistEntry
+impl core::marker::Unpin for battersea_guard::AllowlistEntry
+impl core::panic::unwind_safe::RefUnwindSafe for battersea_guard::AllowlistEntry
+impl core::panic::unwind_safe::UnwindSafe for battersea_guard::AllowlistEntry
+impl<T, U> core::convert::Into<U> for battersea_guard::AllowlistEntry where U: core::convert::From<T>
+pub fn battersea_guard::AllowlistEntry::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_guard::AllowlistEntry where U: core::convert::Into<T>
+pub type battersea_guard::AllowlistEntry::Error = core::convert::Infallible
+pub fn battersea_guard::AllowlistEntry::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for battersea_guard::AllowlistEntry where U: core::convert::TryFrom<T>
+pub type battersea_guard::AllowlistEntry::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_guard::AllowlistEntry::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for battersea_guard::AllowlistEntry where T: core::clone::Clone
+pub type battersea_guard::AllowlistEntry::Owned = T
+pub fn battersea_guard::AllowlistEntry::clone_into(&self, target: &mut T)
+pub fn battersea_guard::AllowlistEntry::to_owned(&self) -> T
+impl<T> core::any::Any for battersea_guard::AllowlistEntry where T: 'static + ?core::marker::Sized
+pub fn battersea_guard::AllowlistEntry::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_guard::AllowlistEntry where T: ?core::marker::Sized
+pub fn battersea_guard::AllowlistEntry::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_guard::AllowlistEntry where T: ?core::marker::Sized
+pub fn battersea_guard::AllowlistEntry::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for battersea_guard::AllowlistEntry where T: core::clone::Clone
+pub unsafe fn battersea_guard::AllowlistEntry::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for battersea_guard::AllowlistEntry
+pub fn battersea_guard::AllowlistEntry::from(t: T) -> T
+impl<T> serde_core::de::DeserializeOwned for battersea_guard::AllowlistEntry where T: for<'de> serde_core::de::Deserialize<'de>
+pub struct battersea_guard::PromptPolicy
+impl battersea_guard::PromptPolicy
+pub fn battersea_guard::PromptPolicy::is_candidate(&self, path: &str) -> bool
+pub fn battersea_guard::PromptPolicy::is_prompt_source(&self, path: &str) -> bool
+pub fn battersea_guard::PromptPolicy::new(roots: &[&str], source_patterns: &[&str]) -> anyhow::Result<Self>
+impl core::marker::Freeze for battersea_guard::PromptPolicy
+impl core::marker::Send for battersea_guard::PromptPolicy
+impl core::marker::Sync for battersea_guard::PromptPolicy
+impl core::marker::Unpin for battersea_guard::PromptPolicy
+impl core::panic::unwind_safe::RefUnwindSafe for battersea_guard::PromptPolicy
+impl core::panic::unwind_safe::UnwindSafe for battersea_guard::PromptPolicy
+impl<T, U> core::convert::Into<U> for battersea_guard::PromptPolicy where U: core::convert::From<T>
+pub fn battersea_guard::PromptPolicy::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_guard::PromptPolicy where U: core::convert::Into<T>
+pub type battersea_guard::PromptPolicy::Error = core::convert::Infallible
+pub fn battersea_guard::PromptPolicy::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for battersea_guard::PromptPolicy where U: core::convert::TryFrom<T>
+pub type battersea_guard::PromptPolicy::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_guard::PromptPolicy::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> core::any::Any for battersea_guard::PromptPolicy where T: 'static + ?core::marker::Sized
+pub fn battersea_guard::PromptPolicy::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_guard::PromptPolicy where T: ?core::marker::Sized
+pub fn battersea_guard::PromptPolicy::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_guard::PromptPolicy where T: ?core::marker::Sized
+pub fn battersea_guard::PromptPolicy::borrow_mut(&mut self) -> &mut T
+impl<T> core::convert::From<T> for battersea_guard::PromptPolicy
+pub fn battersea_guard::PromptPolicy::from(t: T) -> T
+pub struct battersea_guard::Violation
+pub battersea_guard::Violation::excerpt: alloc::string::String
+pub battersea_guard::Violation::line: usize
+pub battersea_guard::Violation::message: alloc::string::String
+pub battersea_guard::Violation::path: alloc::string::String
+pub battersea_guard::Violation::rule: alloc::string::String
+impl core::clone::Clone for battersea_guard::Violation
+pub fn battersea_guard::Violation::clone(&self) -> battersea_guard::Violation
+impl core::cmp::Eq for battersea_guard::Violation
+impl core::cmp::PartialEq for battersea_guard::Violation
+pub fn battersea_guard::Violation::eq(&self, other: &battersea_guard::Violation) -> bool
+impl core::fmt::Debug for battersea_guard::Violation
+pub fn battersea_guard::Violation::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for battersea_guard::Violation
+impl core::marker::Freeze for battersea_guard::Violation
+impl core::marker::Send for battersea_guard::Violation
+impl core::marker::Sync for battersea_guard::Violation
+impl core::marker::Unpin for battersea_guard::Violation
+impl core::panic::unwind_safe::RefUnwindSafe for battersea_guard::Violation
+impl core::panic::unwind_safe::UnwindSafe for battersea_guard::Violation
+impl<T, U> core::convert::Into<U> for battersea_guard::Violation where U: core::convert::From<T>
+pub fn battersea_guard::Violation::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_guard::Violation where U: core::convert::Into<T>
+pub type battersea_guard::Violation::Error = core::convert::Infallible
+pub fn battersea_guard::Violation::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for battersea_guard::Violation where U: core::convert::TryFrom<T>
+pub type battersea_guard::Violation::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_guard::Violation::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for battersea_guard::Violation where T: core::clone::Clone
+pub type battersea_guard::Violation::Owned = T
+pub fn battersea_guard::Violation::clone_into(&self, target: &mut T)
+pub fn battersea_guard::Violation::to_owned(&self) -> T
+impl<T> core::any::Any for battersea_guard::Violation where T: 'static + ?core::marker::Sized
+pub fn battersea_guard::Violation::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_guard::Violation where T: ?core::marker::Sized
+pub fn battersea_guard::Violation::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_guard::Violation where T: ?core::marker::Sized
+pub fn battersea_guard::Violation::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for battersea_guard::Violation where T: core::clone::Clone
+pub unsafe fn battersea_guard::Violation::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for battersea_guard::Violation
+pub fn battersea_guard::Violation::from(t: T) -> T
+pub fn battersea_guard::is_test_source_path(file_path: &str) -> bool
+pub fn battersea_guard::parse_allowlist(raw_json: &str) -> anyhow::Result<alloc::vec::Vec<battersea_guard::AllowlistEntry>>
+pub fn battersea_guard::render_report(policy: &battersea_guard::PromptPolicy, violations: &[battersea_guard::Violation]) -> alloc::string::String
+pub fn battersea_guard::scan_content(policy: &battersea_guard::PromptPolicy, file_path: &str, content: &str, allowlist: &[battersea_guard::AllowlistEntry]) -> alloc::vec::Vec<battersea_guard::Violation>

@@ -389,7 +389,8 @@ fn normalize_manifest_definition_with_blocks(
     })
 }
 
-fn parse_definition_manifest(
+/// Parse an explicit manifest for host composition before `Catalog` validates the combined definitions.
+pub fn parse_definition_manifest(
     registry: &Registry,
     source: &str,
 ) -> Result<Vec<FlowNodeDefinition>, String> {
@@ -418,6 +419,16 @@ pub struct Catalog {
 impl Catalog {
     pub fn from_manifest(source: &str, registry: Registry) -> anyhow::Result<Self> {
         let entries = parse_definition_manifest(&registry, source).map_err(anyhow::Error::msg)?;
+        Self::from_definitions(entries, registry)
+    }
+    pub fn from_manifests(sources: &[(&str, &str)], registry: Registry) -> anyhow::Result<Self> {
+        let mut entries = Vec::new();
+        for (name, source) in sources {
+            entries.extend(
+                parse_definition_manifest(&registry, source)
+                    .map_err(|error| anyhow::anyhow!("{name}: {error}"))?,
+            );
+        }
         Self::from_definitions(entries, registry)
     }
     pub fn from_definitions(

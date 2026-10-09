@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.4.0 — 2026-10-09
+
+- Extract message contracts, open provider/tool registries and the shared tool runner.
+- Add explicit provider features, typed admission errors, request deadlines and stream watchdogs.
+- Preserve native tool continuation payloads, including signed reasoning.
+- Add synchronous media results and cancellable remote jobs.
+- Extract backend configuration/schema composition, generic node handlers and declared-root prompt scanning.
+- Exercise mock chat, a registered tool and media from an independent packaged application.
+
 ## 0.3.0 — 2026-10-08
 
 - Add the public node SDK, immutable executable catalogues and host execution contract.

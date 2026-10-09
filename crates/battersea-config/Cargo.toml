@@ -1,0 +1,19 @@
+[package]
+name = "battersea-config"
+description = "Battersea config contracts and implementation"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+readme = "../../README.md"
+publish = false
+include = ["src/**", "Cargo.toml", "LICENSE", "NOTICE"]
+
+[dependencies]
+battersea-model = { path = "../battersea-model", version = "0.4.0" }
+battersea-flow = { path = "../battersea-flow", version = "0.4.0" }
+anyhow.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+serde_yaml.workspace = true

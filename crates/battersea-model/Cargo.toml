@@ -1,0 +1,24 @@
+[package]
+name = "battersea-model"
+description = "Battersea model contracts and implementation"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+readme = "../../README.md"
+publish = false
+include = ["src/**", "Cargo.toml", "LICENSE", "NOTICE"]
+
+[dependencies]
+async-trait.workspace = true
+chrono.workspace = true
+futures-util.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+schemars.workspace = true
+thiserror.workspace = true
+tokio.workspace = true
+tokio-stream.workspace = true
+tokio-util.workspace = true
+jsonschema = { version = "0.30", default-features = false }

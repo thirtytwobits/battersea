@@ -1,0 +1,299 @@
+pub mod battersea_nodes
+pub mod battersea_nodes::concatenate
+pub struct battersea_nodes::concatenate::ConcatenateHandler
+impl<H: battersea_runtime::host::ExecutionHost> battersea_runtime::handler::NodeHandler<H> for battersea_nodes::concatenate::ConcatenateHandler
+pub fn battersea_nodes::concatenate::ConcatenateHandler::execute_node<'life0, 'life1, 'life2, 'life3, 'life4, 'life5, 'life6, 'async_trait>(&'life0 self, core: &'life1 H, runtime: &'life2 mut <H as battersea_runtime::host::ExecutionHost>::State, node: &'life3 battersea_flow::types::FlowNode, definition: &'life4 battersea_flow::types::FlowNodeDefinition, _activation_values: core::option::Option<&'life5 std::collections::hash::map::HashMap<alloc::string::String, serde_json::value::Value>>, token: &'life6 tokio_util::sync::cancellation_token::CancellationToken) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<(), <H as battersea_runtime::host::ExecutionHost>::Error>> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait, 'life1: 'async_trait, 'life2: 'async_trait, 'life3: 'async_trait, 'life4: 'async_trait, 'life5: 'async_trait, 'life6: 'async_trait
+pub fn battersea_nodes::concatenate::ConcatenateHandler::handler_id(&self) -> &'static str
+impl core::marker::Freeze for battersea_nodes::concatenate::ConcatenateHandler
+impl core::marker::Send for battersea_nodes::concatenate::ConcatenateHandler
+impl core::marker::Sync for battersea_nodes::concatenate::ConcatenateHandler
+impl core::marker::Unpin for battersea_nodes::concatenate::ConcatenateHandler
+impl core::panic::unwind_safe::RefUnwindSafe for battersea_nodes::concatenate::ConcatenateHandler
+impl core::panic::unwind_safe::UnwindSafe for battersea_nodes::concatenate::ConcatenateHandler
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_nodes::concatenate::ConcatenateHandler where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_nodes::concatenate::ConcatenateHandler where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<T, U> core::convert::Into<U> for battersea_nodes::concatenate::ConcatenateHandler where U: core::convert::From<T>
+pub fn battersea_nodes::concatenate::ConcatenateHandler::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_nodes::concatenate::ConcatenateHandler where U: core::convert::Into<T>
+pub type battersea_nodes::concatenate::ConcatenateHandler::Error = core::convert::Infallible
+pub fn battersea_nodes::concatenate::ConcatenateHandler::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for battersea_nodes::concatenate::ConcatenateHandler where U: core::convert::TryFrom<T>
+pub type battersea_nodes::concatenate::ConcatenateHandler::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_nodes::concatenate::ConcatenateHandler::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> core::any::Any for battersea_nodes::concatenate::ConcatenateHandler where T: 'static + ?core::marker::Sized
+pub fn battersea_nodes::concatenate::ConcatenateHandler::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_nodes::concatenate::ConcatenateHandler where T: ?core::marker::Sized
+pub fn battersea_nodes::concatenate::ConcatenateHandler::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_nodes::concatenate::ConcatenateHandler where T: ?core::marker::Sized
+pub fn battersea_nodes::concatenate::ConcatenateHandler::borrow_mut(&mut self) -> &mut T
+impl<T> core::convert::From<T> for battersea_nodes::concatenate::ConcatenateHandler
+pub fn battersea_nodes::concatenate::ConcatenateHandler::from(t: T) -> T
+impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_nodes::concatenate::ConcatenateHandler where T: ?core::marker::Sized
+pub fn battersea_nodes::concatenate::prepare_concatenate(flow: &battersea_flow::types::FlowDocument, node: &battersea_flow::types::FlowNode, definition: &battersea_flow::types::FlowNodeDefinition, inputs: &std::collections::hash::map::HashMap<alloc::string::String, battersea_runtime::Token>) -> battersea_nodes::NodeResult<battersea_runtime::Token>
+pub mod battersea_nodes::logic
+pub struct battersea_nodes::logic::AndGateHandler
+impl<H: battersea_runtime::host::ExecutionHost> battersea_runtime::handler::NodeHandler<H> for battersea_nodes::logic::AndGateHandler
+pub fn battersea_nodes::logic::AndGateHandler::execute_action<'life0, 'life1, 'life2, 'life3, 'life4, 'life5, 'async_trait>(&'life0 self, core: &'life1 H, runtime: &'life2 mut <H as battersea_runtime::host::ExecutionHost>::State, node: &'life3 battersea_flow::types::FlowNode, _definition: &'life4 battersea_flow::types::FlowNodeDefinition, action_port: &'life5 str) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<(), <H as battersea_runtime::host::ExecutionHost>::Error>> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait, 'life1: 'async_trait, 'life2: 'async_trait, 'life3: 'async_trait, 'life4: 'async_trait, 'life5: 'async_trait
+pub fn battersea_nodes::logic::AndGateHandler::handler_id(&self) -> &'static str
+impl core::marker::Freeze for battersea_nodes::logic::AndGateHandler
+impl core::marker::Send for battersea_nodes::logic::AndGateHandler
+impl core::marker::Sync for battersea_nodes::logic::AndGateHandler
+impl core::marker::Unpin for battersea_nodes::logic::AndGateHandler
+impl core::panic::unwind_safe::RefUnwindSafe for battersea_nodes::logic::AndGateHandler
+impl core::panic::unwind_safe::UnwindSafe for battersea_nodes::logic::AndGateHandler
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_nodes::logic::AndGateHandler where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_nodes::logic::AndGateHandler where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<T, U> core::convert::Into<U> for battersea_nodes::logic::AndGateHandler where U: core::convert::From<T>
+pub fn battersea_nodes::logic::AndGateHandler::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_nodes::logic::AndGateHandler where U: core::convert::Into<T>
+pub type battersea_nodes::logic::AndGateHandler::Error = core::convert::Infallible
+pub fn battersea_nodes::logic::AndGateHandler::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for battersea_nodes::logic::AndGateHandler where U: core::convert::TryFrom<T>
+pub type battersea_nodes::logic::AndGateHandler::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_nodes::logic::AndGateHandler::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> core::any::Any for battersea_nodes::logic::AndGateHandler where T: 'static + ?core::marker::Sized
+pub fn battersea_nodes::logic::AndGateHandler::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_nodes::logic::AndGateHandler where T: ?core::marker::Sized
+pub fn battersea_nodes::logic::AndGateHandler::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_nodes::logic::AndGateHandler where T: ?core::marker::Sized
+pub fn battersea_nodes::logic::AndGateHandler::borrow_mut(&mut self) -> &mut T
+impl<T> core::convert::From<T> for battersea_nodes::logic::AndGateHandler
+pub fn battersea_nodes::logic::AndGateHandler::from(t: T) -> T
+impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_nodes::logic::AndGateHandler where T: ?core::marker::Sized
+pub struct battersea_nodes::logic::InvertGateHandler
+impl<H: battersea_runtime::host::ExecutionHost> battersea_runtime::handler::NodeHandler<H> for battersea_nodes::logic::InvertGateHandler
+pub fn battersea_nodes::logic::InvertGateHandler::execute_action<'life0, 'life1, 'life2, 'life3, 'life4, 'life5, 'async_trait>(&'life0 self, core: &'life1 H, runtime: &'life2 mut <H as battersea_runtime::host::ExecutionHost>::State, node: &'life3 battersea_flow::types::FlowNode, _definition: &'life4 battersea_flow::types::FlowNodeDefinition, action_port: &'life5 str) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<(), <H as battersea_runtime::host::ExecutionHost>::Error>> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait, 'life1: 'async_trait, 'life2: 'async_trait, 'life3: 'async_trait, 'life4: 'async_trait, 'life5: 'async_trait
+pub fn battersea_nodes::logic::InvertGateHandler::handler_id(&self) -> &'static str
+impl core::marker::Freeze for battersea_nodes::logic::InvertGateHandler
+impl core::marker::Send for battersea_nodes::logic::InvertGateHandler
+impl core::marker::Sync for battersea_nodes::logic::InvertGateHandler
+impl core::marker::Unpin for battersea_nodes::logic::InvertGateHandler
+impl core::panic::unwind_safe::RefUnwindSafe for battersea_nodes::logic::InvertGateHandler
+impl core::panic::unwind_safe::UnwindSafe for battersea_nodes::logic::InvertGateHandler
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_nodes::logic::InvertGateHandler where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_nodes::logic::InvertGateHandler where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<T, U> core::convert::Into<U> for battersea_nodes::logic::InvertGateHandler where U: core::convert::From<T>
+pub fn battersea_nodes::logic::InvertGateHandler::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_nodes::logic::InvertGateHandler where U: core::convert::Into<T>
+pub type battersea_nodes::logic::InvertGateHandler::Error = core::convert::Infallible
+pub fn battersea_nodes::logic::InvertGateHandler::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for battersea_nodes::logic::InvertGateHandler where U: core::convert::TryFrom<T>
+pub type battersea_nodes::logic::InvertGateHandler::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_nodes::logic::InvertGateHandler::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> core::any::Any for battersea_nodes::logic::InvertGateHandler where T: 'static + ?core::marker::Sized
+pub fn battersea_nodes::logic::InvertGateHandler::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_nodes::logic::InvertGateHandler where T: ?core::marker::Sized
+pub fn battersea_nodes::logic::InvertGateHandler::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_nodes::logic::InvertGateHandler where T: ?core::marker::Sized
+pub fn battersea_nodes::logic::InvertGateHandler::borrow_mut(&mut self) -> &mut T
+impl<T> core::convert::From<T> for battersea_nodes::logic::InvertGateHandler
+pub fn battersea_nodes::logic::InvertGateHandler::from(t: T) -> T
+impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_nodes::logic::InvertGateHandler where T: ?core::marker::Sized
+pub struct battersea_nodes::logic::LogicDemultiplexerHandler
+impl<H: battersea_runtime::host::ExecutionHost> battersea_runtime::handler::NodeHandler<H> for battersea_nodes::logic::LogicDemultiplexerHandler
+pub fn battersea_nodes::logic::LogicDemultiplexerHandler::execute_action<'life0, 'life1, 'life2, 'life3, 'life4, 'life5, 'async_trait>(&'life0 self, core: &'life1 H, runtime: &'life2 mut <H as battersea_runtime::host::ExecutionHost>::State, node: &'life3 battersea_flow::types::FlowNode, _definition: &'life4 battersea_flow::types::FlowNodeDefinition, action_port: &'life5 str) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<(), <H as battersea_runtime::host::ExecutionHost>::Error>> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait, 'life1: 'async_trait, 'life2: 'async_trait, 'life3: 'async_trait, 'life4: 'async_trait, 'life5: 'async_trait
+pub fn battersea_nodes::logic::LogicDemultiplexerHandler::handler_id(&self) -> &'static str
+impl core::marker::Freeze for battersea_nodes::logic::LogicDemultiplexerHandler
+impl core::marker::Send for battersea_nodes::logic::LogicDemultiplexerHandler
+impl core::marker::Sync for battersea_nodes::logic::LogicDemultiplexerHandler
+impl core::marker::Unpin for battersea_nodes::logic::LogicDemultiplexerHandler
+impl core::panic::unwind_safe::RefUnwindSafe for battersea_nodes::logic::LogicDemultiplexerHandler
+impl core::panic::unwind_safe::UnwindSafe for battersea_nodes::logic::LogicDemultiplexerHandler
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_nodes::logic::LogicDemultiplexerHandler where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_nodes::logic::LogicDemultiplexerHandler where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<T, U> core::convert::Into<U> for battersea_nodes::logic::LogicDemultiplexerHandler where U: core::convert::From<T>
+pub fn battersea_nodes::logic::LogicDemultiplexerHandler::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_nodes::logic::LogicDemultiplexerHandler where U: core::convert::Into<T>
+pub type battersea_nodes::logic::LogicDemultiplexerHandler::Error = core::convert::Infallible
+pub fn battersea_nodes::logic::LogicDemultiplexerHandler::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for battersea_nodes::logic::LogicDemultiplexerHandler where U: core::convert::TryFrom<T>
+pub type battersea_nodes::logic::LogicDemultiplexerHandler::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_nodes::logic::LogicDemultiplexerHandler::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> core::any::Any for battersea_nodes::logic::LogicDemultiplexerHandler where T: 'static + ?core::marker::Sized
+pub fn battersea_nodes::logic::LogicDemultiplexerHandler::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_nodes::logic::LogicDemultiplexerHandler where T: ?core::marker::Sized
+pub fn battersea_nodes::logic::LogicDemultiplexerHandler::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_nodes::logic::LogicDemultiplexerHandler where T: ?core::marker::Sized
+pub fn battersea_nodes::logic::LogicDemultiplexerHandler::borrow_mut(&mut self) -> &mut T
+impl<T> core::convert::From<T> for battersea_nodes::logic::LogicDemultiplexerHandler
+pub fn battersea_nodes::logic::LogicDemultiplexerHandler::from(t: T) -> T
+impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_nodes::logic::LogicDemultiplexerHandler where T: ?core::marker::Sized
+pub struct battersea_nodes::logic::LogicMultiplexerHandler
+impl<H: battersea_runtime::host::ExecutionHost> battersea_runtime::handler::NodeHandler<H> for battersea_nodes::logic::LogicMultiplexerHandler
+pub fn battersea_nodes::logic::LogicMultiplexerHandler::execute_action<'life0, 'life1, 'life2, 'life3, 'life4, 'life5, 'async_trait>(&'life0 self, core: &'life1 H, runtime: &'life2 mut <H as battersea_runtime::host::ExecutionHost>::State, node: &'life3 battersea_flow::types::FlowNode, _definition: &'life4 battersea_flow::types::FlowNodeDefinition, action_port: &'life5 str) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<(), <H as battersea_runtime::host::ExecutionHost>::Error>> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait, 'life1: 'async_trait, 'life2: 'async_trait, 'life3: 'async_trait, 'life4: 'async_trait, 'life5: 'async_trait
+pub fn battersea_nodes::logic::LogicMultiplexerHandler::handler_id(&self) -> &'static str
+impl core::marker::Freeze for battersea_nodes::logic::LogicMultiplexerHandler
+impl core::marker::Send for battersea_nodes::logic::LogicMultiplexerHandler
+impl core::marker::Sync for battersea_nodes::logic::LogicMultiplexerHandler
+impl core::marker::Unpin for battersea_nodes::logic::LogicMultiplexerHandler
+impl core::panic::unwind_safe::RefUnwindSafe for battersea_nodes::logic::LogicMultiplexerHandler
+impl core::panic::unwind_safe::UnwindSafe for battersea_nodes::logic::LogicMultiplexerHandler
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_nodes::logic::LogicMultiplexerHandler where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_nodes::logic::LogicMultiplexerHandler where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<T, U> core::convert::Into<U> for battersea_nodes::logic::LogicMultiplexerHandler where U: core::convert::From<T>
+pub fn battersea_nodes::logic::LogicMultiplexerHandler::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_nodes::logic::LogicMultiplexerHandler where U: core::convert::Into<T>
+pub type battersea_nodes::logic::LogicMultiplexerHandler::Error = core::convert::Infallible
+pub fn battersea_nodes::logic::LogicMultiplexerHandler::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for battersea_nodes::logic::LogicMultiplexerHandler where U: core::convert::TryFrom<T>
+pub type battersea_nodes::logic::LogicMultiplexerHandler::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_nodes::logic::LogicMultiplexerHandler::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> core::any::Any for battersea_nodes::logic::LogicMultiplexerHandler where T: 'static + ?core::marker::Sized
+pub fn battersea_nodes::logic::LogicMultiplexerHandler::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_nodes::logic::LogicMultiplexerHandler where T: ?core::marker::Sized
+pub fn battersea_nodes::logic::LogicMultiplexerHandler::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_nodes::logic::LogicMultiplexerHandler where T: ?core::marker::Sized
+pub fn battersea_nodes::logic::LogicMultiplexerHandler::borrow_mut(&mut self) -> &mut T
+impl<T> core::convert::From<T> for battersea_nodes::logic::LogicMultiplexerHandler
+pub fn battersea_nodes::logic::LogicMultiplexerHandler::from(t: T) -> T
+impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_nodes::logic::LogicMultiplexerHandler where T: ?core::marker::Sized
+pub struct battersea_nodes::logic::OrGateHandler
+impl<H: battersea_runtime::host::ExecutionHost> battersea_runtime::handler::NodeHandler<H> for battersea_nodes::logic::OrGateHandler
+pub fn battersea_nodes::logic::OrGateHandler::execute_action<'life0, 'life1, 'life2, 'life3, 'life4, 'life5, 'async_trait>(&'life0 self, core: &'life1 H, runtime: &'life2 mut <H as battersea_runtime::host::ExecutionHost>::State, node: &'life3 battersea_flow::types::FlowNode, _definition: &'life4 battersea_flow::types::FlowNodeDefinition, action_port: &'life5 str) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<(), <H as battersea_runtime::host::ExecutionHost>::Error>> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait, 'life1: 'async_trait, 'life2: 'async_trait, 'life3: 'async_trait, 'life4: 'async_trait, 'life5: 'async_trait
+pub fn battersea_nodes::logic::OrGateHandler::handler_id(&self) -> &'static str
+impl core::marker::Freeze for battersea_nodes::logic::OrGateHandler
+impl core::marker::Send for battersea_nodes::logic::OrGateHandler
+impl core::marker::Sync for battersea_nodes::logic::OrGateHandler
+impl core::marker::Unpin for battersea_nodes::logic::OrGateHandler
+impl core::panic::unwind_safe::RefUnwindSafe for battersea_nodes::logic::OrGateHandler
+impl core::panic::unwind_safe::UnwindSafe for battersea_nodes::logic::OrGateHandler
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_nodes::logic::OrGateHandler where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_nodes::logic::OrGateHandler where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<T, U> core::convert::Into<U> for battersea_nodes::logic::OrGateHandler where U: core::convert::From<T>
+pub fn battersea_nodes::logic::OrGateHandler::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_nodes::logic::OrGateHandler where U: core::convert::Into<T>
+pub type battersea_nodes::logic::OrGateHandler::Error = core::convert::Infallible
+pub fn battersea_nodes::logic::OrGateHandler::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for battersea_nodes::logic::OrGateHandler where U: core::convert::TryFrom<T>
+pub type battersea_nodes::logic::OrGateHandler::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_nodes::logic::OrGateHandler::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> core::any::Any for battersea_nodes::logic::OrGateHandler where T: 'static + ?core::marker::Sized
+pub fn battersea_nodes::logic::OrGateHandler::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_nodes::logic::OrGateHandler where T: ?core::marker::Sized
+pub fn battersea_nodes::logic::OrGateHandler::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_nodes::logic::OrGateHandler where T: ?core::marker::Sized
+pub fn battersea_nodes::logic::OrGateHandler::borrow_mut(&mut self) -> &mut T
+impl<T> core::convert::From<T> for battersea_nodes::logic::OrGateHandler
+pub fn battersea_nodes::logic::OrGateHandler::from(t: T) -> T
+impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_nodes::logic::OrGateHandler where T: ?core::marker::Sized
+pub fn battersea_nodes::logic::prepare_logic_outputs(node: &battersea_flow::types::FlowNode, definition: &battersea_flow::types::FlowNodeDefinition, action_ports: &[battersea_flow::types::FlowActionPortDefinition], signal_ports: &[battersea_flow::types::FlowSignalPortDefinition], fired_ports: &std::collections::hash::set::HashSet<alloc::string::String>, enabled: bool) -> battersea_nodes::NodeResult<alloc::vec::Vec<alloc::string::String>>
+pub mod battersea_nodes::multiplexer
+pub struct battersea_nodes::multiplexer::MultiplexerHandler
+impl<H: battersea_runtime::host::ExecutionHost> battersea_runtime::handler::NodeHandler<H> for battersea_nodes::multiplexer::MultiplexerHandler
+pub fn battersea_nodes::multiplexer::MultiplexerHandler::execute_node<'life0, 'life1, 'life2, 'life3, 'life4, 'life5, 'life6, 'async_trait>(&'life0 self, core: &'life1 H, runtime: &'life2 mut <H as battersea_runtime::host::ExecutionHost>::State, node: &'life3 battersea_flow::types::FlowNode, _definition: &'life4 battersea_flow::types::FlowNodeDefinition, _activation_values: core::option::Option<&'life5 std::collections::hash::map::HashMap<alloc::string::String, serde_json::value::Value>>, token: &'life6 tokio_util::sync::cancellation_token::CancellationToken) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<(), <H as battersea_runtime::host::ExecutionHost>::Error>> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait, 'life1: 'async_trait, 'life2: 'async_trait, 'life3: 'async_trait, 'life4: 'async_trait, 'life5: 'async_trait, 'life6: 'async_trait
+pub fn battersea_nodes::multiplexer::MultiplexerHandler::handler_id(&self) -> &'static str
+impl core::marker::Freeze for battersea_nodes::multiplexer::MultiplexerHandler
+impl core::marker::Send for battersea_nodes::multiplexer::MultiplexerHandler
+impl core::marker::Sync for battersea_nodes::multiplexer::MultiplexerHandler
+impl core::marker::Unpin for battersea_nodes::multiplexer::MultiplexerHandler
+impl core::panic::unwind_safe::RefUnwindSafe for battersea_nodes::multiplexer::MultiplexerHandler
+impl core::panic::unwind_safe::UnwindSafe for battersea_nodes::multiplexer::MultiplexerHandler
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_nodes::multiplexer::MultiplexerHandler where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_nodes::multiplexer::MultiplexerHandler where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<T, U> core::convert::Into<U> for battersea_nodes::multiplexer::MultiplexerHandler where U: core::convert::From<T>
+pub fn battersea_nodes::multiplexer::MultiplexerHandler::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_nodes::multiplexer::MultiplexerHandler where U: core::convert::Into<T>
+pub type battersea_nodes::multiplexer::MultiplexerHandler::Error = core::convert::Infallible
+pub fn battersea_nodes::multiplexer::MultiplexerHandler::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for battersea_nodes::multiplexer::MultiplexerHandler where U: core::convert::TryFrom<T>
+pub type battersea_nodes::multiplexer::MultiplexerHandler::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_nodes::multiplexer::MultiplexerHandler::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> core::any::Any for battersea_nodes::multiplexer::MultiplexerHandler where T: 'static + ?core::marker::Sized
+pub fn battersea_nodes::multiplexer::MultiplexerHandler::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_nodes::multiplexer::MultiplexerHandler where T: ?core::marker::Sized
+pub fn battersea_nodes::multiplexer::MultiplexerHandler::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_nodes::multiplexer::MultiplexerHandler where T: ?core::marker::Sized
+pub fn battersea_nodes::multiplexer::MultiplexerHandler::borrow_mut(&mut self) -> &mut T
+impl<T> core::convert::From<T> for battersea_nodes::multiplexer::MultiplexerHandler
+pub fn battersea_nodes::multiplexer::MultiplexerHandler::from(t: T) -> T
+impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_nodes::multiplexer::MultiplexerHandler where T: ?core::marker::Sized
+pub mod battersea_nodes::text
+pub struct battersea_nodes::text::RingBuffer
+impl battersea_nodes::text::RingBuffer
+pub fn battersea_nodes::text::RingBuffer::append(&mut self, delta: &str)
+pub fn battersea_nodes::text::RingBuffer::capacity(&self) -> u32
+pub fn battersea_nodes::text::RingBuffer::dropped_chars(&self) -> u64
+pub fn battersea_nodes::text::RingBuffer::new(capacity: u32) -> Self
+pub fn battersea_nodes::text::RingBuffer::set_capacity(&mut self, capacity: u32)
+pub fn battersea_nodes::text::RingBuffer::text(&self) -> &str
+impl core::clone::Clone for battersea_nodes::text::RingBuffer
+pub fn battersea_nodes::text::RingBuffer::clone(&self) -> battersea_nodes::text::RingBuffer
+impl core::fmt::Debug for battersea_nodes::text::RingBuffer
+pub fn battersea_nodes::text::RingBuffer::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Freeze for battersea_nodes::text::RingBuffer
+impl core::marker::Send for battersea_nodes::text::RingBuffer
+impl core::marker::Sync for battersea_nodes::text::RingBuffer
+impl core::marker::Unpin for battersea_nodes::text::RingBuffer
+impl core::panic::unwind_safe::RefUnwindSafe for battersea_nodes::text::RingBuffer
+impl core::panic::unwind_safe::UnwindSafe for battersea_nodes::text::RingBuffer
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_nodes::text::RingBuffer where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_nodes::text::RingBuffer where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<T, U> core::convert::Into<U> for battersea_nodes::text::RingBuffer where U: core::convert::From<T>
+pub fn battersea_nodes::text::RingBuffer::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_nodes::text::RingBuffer where U: core::convert::Into<T>
+pub type battersea_nodes::text::RingBuffer::Error = core::convert::Infallible
+pub fn battersea_nodes::text::RingBuffer::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for battersea_nodes::text::RingBuffer where U: core::convert::TryFrom<T>
+pub type battersea_nodes::text::RingBuffer::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_nodes::text::RingBuffer::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for battersea_nodes::text::RingBuffer where T: core::clone::Clone
+pub type battersea_nodes::text::RingBuffer::Owned = T
+pub fn battersea_nodes::text::RingBuffer::clone_into(&self, target: &mut T)
+pub fn battersea_nodes::text::RingBuffer::to_owned(&self) -> T
+impl<T> core::any::Any for battersea_nodes::text::RingBuffer where T: 'static + ?core::marker::Sized
+pub fn battersea_nodes::text::RingBuffer::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_nodes::text::RingBuffer where T: ?core::marker::Sized
+pub fn battersea_nodes::text::RingBuffer::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_nodes::text::RingBuffer where T: ?core::marker::Sized
+pub fn battersea_nodes::text::RingBuffer::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for battersea_nodes::text::RingBuffer where T: core::clone::Clone
+pub unsafe fn battersea_nodes::text::RingBuffer::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for battersea_nodes::text::RingBuffer
+pub fn battersea_nodes::text::RingBuffer::from(t: T) -> T
+impl<T> dyn_clone::DynClone for battersea_nodes::text::RingBuffer where T: core::clone::Clone
+pub fn battersea_nodes::text::RingBuffer::__clone_box(&self, _: dyn_clone::sealed::Private) -> *mut ()
+impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_nodes::text::RingBuffer where T: ?core::marker::Sized
+pub fn battersea_nodes::text::activation_text(values: core::option::Option<&std::collections::hash::map::HashMap<alloc::string::String, serde_json::value::Value>>, name: &str) -> battersea_nodes::NodeResult<alloc::string::String>
+pub fn battersea_nodes::text::prepare_static_prompt(node: &battersea_flow::types::FlowNode, definition: &battersea_flow::types::FlowNodeDefinition) -> battersea_runtime::Token
+pub enum battersea_nodes::NodeError
+pub battersea_nodes::NodeError::Internal(alloc::string::String)
+pub battersea_nodes::NodeError::InvalidRequest(alloc::string::String)
+impl battersea_nodes::NodeError
+pub fn battersea_nodes::NodeError::internal(message: impl core::convert::Into<alloc::string::String>) -> Self
+pub fn battersea_nodes::NodeError::invalid_request(message: impl core::convert::Into<alloc::string::String>) -> Self
+impl core::error::Error for battersea_nodes::NodeError
+impl core::fmt::Debug for battersea_nodes::NodeError
+pub fn battersea_nodes::NodeError::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for battersea_nodes::NodeError
+pub fn battersea_nodes::NodeError::fmt(&self, __formatter: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Freeze for battersea_nodes::NodeError
+impl core::marker::Send for battersea_nodes::NodeError
+impl core::marker::Sync for battersea_nodes::NodeError
+impl core::marker::Unpin for battersea_nodes::NodeError
+impl core::panic::unwind_safe::RefUnwindSafe for battersea_nodes::NodeError
+impl core::panic::unwind_safe::UnwindSafe for battersea_nodes::NodeError
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_nodes::NodeError where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_nodes::NodeError where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<T, U> core::convert::Into<U> for battersea_nodes::NodeError where U: core::convert::From<T>
+pub fn battersea_nodes::NodeError::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_nodes::NodeError where U: core::convert::Into<T>
+pub type battersea_nodes::NodeError::Error = core::convert::Infallible
+pub fn battersea_nodes::NodeError::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for battersea_nodes::NodeError where U: core::convert::TryFrom<T>
+pub type battersea_nodes::NodeError::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_nodes::NodeError::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::string::ToString for battersea_nodes::NodeError where T: core::fmt::Display + ?core::marker::Sized
+pub fn battersea_nodes::NodeError::to_string(&self) -> alloc::string::String
+impl<T> core::any::Any for battersea_nodes::NodeError where T: 'static + ?core::marker::Sized
+pub fn battersea_nodes::NodeError::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_nodes::NodeError where T: ?core::marker::Sized
+pub fn battersea_nodes::NodeError::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_nodes::NodeError where T: ?core::marker::Sized
+pub fn battersea_nodes::NodeError::borrow_mut(&mut self) -> &mut T
+impl<T> core::convert::From<T> for battersea_nodes::NodeError
+pub fn battersea_nodes::NodeError::from(t: T) -> T
+impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_nodes::NodeError where T: ?core::marker::Sized
+pub const battersea_nodes::MANIFEST: &str
+pub fn battersea_nodes::register_handlers<H: battersea_runtime::host::ExecutionHost>(builder: &mut battersea_runtime::registry::RegistryBuilder<H>) -> core::result::Result<(), alloc::string::String>
+pub fn battersea_nodes::register_token_types(registry: &mut battersea_flow::registry::Registry) -> core::result::Result<(), alloc::string::String>
+pub type battersea_nodes::NodeResult<T> = core::result::Result<T, battersea_nodes::NodeError>

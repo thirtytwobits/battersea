@@ -108,7 +108,7 @@ impl NodeHandler<Application> for Source {
                 token_type: if value == json!("wrong-type") {
                     "invalid".into()
                 } else {
-                    "example.text".into()
+                    "prompt.fragment".into()
                 },
                 value,
             },
@@ -184,12 +184,11 @@ impl ExecutionHost for Application {
 impl ActivationHost for Application {
     fn validate_activation(&self, run: &Run) -> Result<(), Error> {
         let mut registry = Registry::default();
+        battersea_nodes::register_token_types(&mut registry).unwrap();
         for id in self.handlers.ids() {
             registry.register_handler(id).unwrap();
         }
-        registry
-            .register_token_type("example.text", json!({"type":"string"}))
-            .unwrap();
+
         let validation =
             battersea_flow::validation::validate_document(&run.flow, &run.definitions, &registry);
         if validation.valid {
@@ -241,6 +240,7 @@ fn application() -> Application {
     let mut builder = RegistryBuilder::default();
     builder.register(Source).unwrap();
     builder.register(Sink).unwrap();
+    battersea_nodes::register_handlers(&mut builder).unwrap();
     Application {
         handlers: builder.build(),
         phases: Mutex::default(),
@@ -251,15 +251,19 @@ fn application() -> Application {
 }
 fn run(id: &str) -> Run {
     let mut registry = Registry::default();
+    battersea_nodes::register_token_types(&mut registry).unwrap();
     registry.register_handler("example.source").unwrap();
     registry.register_handler("example.sink").unwrap();
-    registry
-        .register_token_type("example.text", json!({"type":"string"}))
-        .unwrap();
-    let catalog = Catalog::from_manifest(&json!({"node_definitions":[
-        {"class_name":"Source","short_description":"Source","long_description":"Source","handler_id":"example.source","kind":"source","output_ports":[{"name":"text","kind":"output","token_type":"example.text"}]},
-        {"class_name":"Sink","short_description":"Sink","long_description":"Sink","handler_id":"example.sink","kind":"sink","input_ports":[{"name":"text","kind":"input","token_type":"example.text"}]}
-    ]}).to_string(), registry).unwrap();
+    for id in application().handlers.ids() {
+        if id != "example.source" && id != "example.sink" {
+            registry.register_handler(id).unwrap();
+        }
+    }
+
+    let catalog = Catalog::from_manifests(&[("generic", battersea_nodes::MANIFEST), ("application", &json!({"node_definitions":[
+        {"class_name":"Source","short_description":"Source","long_description":"Source","handler_id":"example.source","kind":"source","output_ports":[{"name":"text","kind":"output","token_type":"prompt.fragment"}]},
+        {"class_name":"Sink","short_description":"Sink","long_description":"Sink","handler_id":"example.sink","kind":"sink","input_ports":[{"name":"text","kind":"input","token_type":"prompt.fragment"}]}
+    ]}).to_string())], registry).unwrap();
     let flow = battersea_flow::document::load_document(&json!({"version":1,"flow_key":"example","title":"Example","nodes":[{"id":"source","definition_name":"Source","instance_name":"Source"},{"id":"sink","definition_name":"Sink","instance_name":"Sink"}],"edges":[{"id":"delivery","source_node_id":"source","source_port":"text","target_node_id":"sink","target_port":"text","kind":"token","order":0}]}).to_string()).unwrap();
     let catalog = application().handlers.bind_catalog(catalog).unwrap();
     assert!(catalog.validate(&flow).valid);
@@ -268,6 +272,37 @@ fn run(id: &str) -> Run {
         output: vec![],
         order: vec![],
     }
+}
+fn fanout_run(id: &str) -> Run {
+    let mut state = run(id);
+    let mut flow = serde_json::to_value(&state.flow).unwrap();
+    flow["nodes"].as_array_mut().unwrap().push(json!({"id":"copy", "definition_name":"Multiplexer", "instance_name":"Copy", "parameter_values":{"output_ports":2}}));
+    flow["nodes"]
+        .as_array_mut()
+        .unwrap()
+        .push(json!({"id":"second", "definition_name":"Sink", "instance_name":"Second"}));
+    flow["edges"] = json!([
+        {"id":"input", "source_node_id":"source", "source_port":"text", "target_node_id":"copy", "target_port":"input", "kind":"token", "order":0},
+        {"id":"first", "source_node_id":"copy", "source_port":"output-0", "target_node_id":"sink", "target_port":"text", "kind":"token", "order":0},
+        {"id":"second", "source_node_id":"copy", "source_port":"output-1", "target_node_id":"second", "target_port":"text", "kind":"token", "order":1}
+    ]);
+    let flow = battersea_flow::document::load_document(&flow.to_string()).unwrap();
+    state.scheduler = SchedulerState::new(id.into(), &flow, state.definitions.clone()).unwrap();
+    state
+}
+async fn demonstrate_generic_fanout() -> Result<(), Error> {
+    let app = application();
+    let mut state = fanout_run("generic-fanout");
+    let payload = json!("Application-owned content");
+    app.run_activation(
+        &mut state,
+        "source",
+        HashMap::from([("text".into(), payload.clone())]),
+        CancellationToken::new(),
+    )
+    .await?;
+    assert_eq!(state.output, vec![payload.clone(), payload]);
+    Ok(())
 }
 #[tokio::main(flavor = "current_thread")]
 async fn main() -> Result<(), Error> {
@@ -282,11 +317,16 @@ async fn main() -> Result<(), Error> {
     )
     .await?;
     assert_eq!(run.output, vec![payload]);
+    demonstrate_generic_fanout().await?;
     Ok(())
 }
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[tokio::test]
+    async fn generic_multiplexer_preserves_each_routed_payload() {
+        demonstrate_generic_fanout().await.unwrap();
+    }
     #[tokio::test]
     async fn a_separately_compiled_node_runs_without_a_product_session() {
         let app = application();

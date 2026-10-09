@@ -1,0 +1,19 @@
+[package]
+name = "battersea-nodes"
+description = "Battersea nodes contracts and implementation"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+readme = "../../README.md"
+publish = false
+include = ["src/**", "Cargo.toml", "LICENSE", "NOTICE"]
+
+[dependencies]
+battersea-flow = { path = "../battersea-flow", version = "0.4.0" }
+battersea-runtime = { path = "../battersea-runtime", version = "0.4.0" }
+async-trait.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+tokio-util.workspace = true

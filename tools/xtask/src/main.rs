@@ -23,6 +23,8 @@ enum Task {
     Check,
     /// Check dependency direction and synchronised Cargo/npm versions.
     Boundaries,
+    /// Scan AI-facing source against declared prompt roots.
+    ScanPrompts,
     /// Generate JSON Schema, TypeScript types and shared fixtures from the Rust contract.
     Bindings {
         /// Refuse stale generated files without writing them.
@@ -326,10 +328,10 @@ fn package(root: &Path) -> Result<()> {
             return Err(format!("{name} package licence differs from release.json").into());
         }
     }
-    for example in ["catalogue", "custom-node"] {
+    for example in ["catalogue", "custom-node", "backend"] {
         let consumer = unpack_root.path().join(example);
         fs::create_dir_all(consumer.join("src"))?;
-        let mut manifest = format!("[package]\nname = \"package-{example}\"\nversion = \"0.0.0\"\nedition = \"2021\"\n[dependencies]\nserde_json = \"1\"\nasync-trait = \"0.1\"\ntokio = {{ version = \"1\", features = [\"macros\", \"rt\"] }}\ntokio-util = \"0.7\"\n");
+        let mut manifest = format!("[package]\nname = \"package-{example}\"\nversion = \"0.0.0\"\nedition = \"2021\"\n[dependencies]\nserde_json = \"1\"\nfutures-util = \"0.3\"\nasync-trait = \"0.1\"\ntokio = {{ version = \"1\", features = [\"macros\", \"rt\"] }}\ntokio-util = \"0.7\"\n");
         for name in crates.keys() {
             manifest.push_str(&format!(
                 "{name} = {{ path = {:?} }}\n",
@@ -354,6 +356,8 @@ fn package(root: &Path) -> Result<()> {
             &[
                 "run",
                 "--offline",
+                "--target-dir",
+                unpack_root.path().join("consumer-target").to_str().unwrap(),
                 "--config",
                 "resolver.incompatible-rust-versions=\"fallback\"",
             ],
@@ -392,15 +396,87 @@ fn release_check(root: &Path, tag: &str) -> Result<()> {
     println!("{tag}");
     Ok(())
 }
+fn scan_prompts(root: &Path) -> Result<()> {
+    let policy = battersea_guard::PromptPolicy::new(
+        &["crates/battersea-nodes/src/nodes.yaml"],
+        &[
+            r"^crates/(battersea-model|battersea-providers|battersea-config|battersea-nodes)/src/.*\.(rs|yaml)$",
+        ],
+    )?;
+    fn visit(
+        root: &Path,
+        directory: &Path,
+        policy: &battersea_guard::PromptPolicy,
+        violations: &mut Vec<battersea_guard::Violation>,
+    ) -> Result<()> {
+        for entry in fs::read_dir(directory)? {
+            let entry = entry?;
+            let path = entry.path();
+            if entry.file_type()?.is_dir() {
+                visit(root, &path, policy, violations)?;
+            } else {
+                let name = path
+                    .strip_prefix(root)?
+                    .to_string_lossy()
+                    .replace('\\', "/");
+                if policy.is_candidate(&name) {
+                    violations.extend(battersea_guard::scan_content(
+                        policy,
+                        &name,
+                        &fs::read_to_string(&path)?,
+                        &[],
+                    ));
+                }
+            }
+        }
+        Ok(())
+    }
+    let mut violations = Vec::new();
+    visit(root, &root.join("crates"), &policy, &mut violations)?;
+    if violations.is_empty() {
+        Ok(())
+    } else {
+        Err(battersea_guard::render_report(&policy, &violations).into())
+    }
+}
+
 fn main() -> Result<()> {
     let root = root();
     match Cli::parse().command {
         Task::Bindings { check } => bindings::generate(&root, check),
         Task::Boundaries => boundaries(&root),
+        Task::ScanPrompts => scan_prompts(&root),
         Task::Check => {
             run(&root, "cargo", &["fmt", "--all", "--check"])?;
             boundaries(&root)?;
             bindings::generate(&root, true)?;
+            scan_prompts(&root)?;
+            run(
+                &root,
+                "cargo",
+                &[
+                    "check",
+                    "-p",
+                    "battersea-providers",
+                    "--no-default-features",
+                    "--locked",
+                ],
+            )?;
+            for feature in ["openai", "anthropic", "google", "runway", "mock"] {
+                run(
+                    &root,
+                    "cargo",
+                    &[
+                        "check",
+                        "-p",
+                        "battersea-providers",
+                        "--no-default-features",
+                        "--features",
+                        feature,
+                        "--locked",
+                    ],
+                )?;
+            }
             run(
                 &root,
                 "cargo",

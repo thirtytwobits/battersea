@@ -1,0 +1,237 @@
+pub mod battersea_config
+pub struct battersea_config::EngineAuthConfigFile
+pub battersea_config::EngineAuthConfigFile::api_key: core::option::Option<alloc::string::String>
+pub battersea_config::EngineAuthConfigFile::api_key_env: core::option::Option<alloc::string::String>
+pub battersea_config::EngineAuthConfigFile::header: core::option::Option<alloc::string::String>
+pub battersea_config::EngineAuthConfigFile::type: core::option::Option<alloc::string::String>
+pub battersea_config::EngineAuthConfigFile::version: core::option::Option<alloc::string::String>
+pub battersea_config::EngineAuthConfigFile::version_header: core::option::Option<alloc::string::String>
+impl core::clone::Clone for battersea_config::EngineAuthConfigFile
+pub fn battersea_config::EngineAuthConfigFile::clone(&self) -> battersea_config::EngineAuthConfigFile
+impl core::default::Default for battersea_config::EngineAuthConfigFile
+pub fn battersea_config::EngineAuthConfigFile::default() -> battersea_config::EngineAuthConfigFile
+impl core::fmt::Debug for battersea_config::EngineAuthConfigFile
+pub fn battersea_config::EngineAuthConfigFile::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl<'de> serde_core::de::Deserialize<'de> for battersea_config::EngineAuthConfigFile
+pub fn battersea_config::EngineAuthConfigFile::deserialize<__D>(__deserializer: __D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for battersea_config::EngineAuthConfigFile
+impl core::marker::Send for battersea_config::EngineAuthConfigFile
+impl core::marker::Sync for battersea_config::EngineAuthConfigFile
+impl core::marker::Unpin for battersea_config::EngineAuthConfigFile
+impl core::panic::unwind_safe::RefUnwindSafe for battersea_config::EngineAuthConfigFile
+impl core::panic::unwind_safe::UnwindSafe for battersea_config::EngineAuthConfigFile
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_config::EngineAuthConfigFile where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_config::EngineAuthConfigFile where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<T, U> core::convert::Into<U> for battersea_config::EngineAuthConfigFile where U: core::convert::From<T>
+pub fn battersea_config::EngineAuthConfigFile::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_config::EngineAuthConfigFile where U: core::convert::Into<T>
+pub type battersea_config::EngineAuthConfigFile::Error = core::convert::Infallible
+pub fn battersea_config::EngineAuthConfigFile::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for battersea_config::EngineAuthConfigFile where U: core::convert::TryFrom<T>
+pub type battersea_config::EngineAuthConfigFile::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_config::EngineAuthConfigFile::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for battersea_config::EngineAuthConfigFile where T: core::clone::Clone
+pub type battersea_config::EngineAuthConfigFile::Owned = T
+pub fn battersea_config::EngineAuthConfigFile::clone_into(&self, target: &mut T)
+pub fn battersea_config::EngineAuthConfigFile::to_owned(&self) -> T
+impl<T> core::any::Any for battersea_config::EngineAuthConfigFile where T: 'static + ?core::marker::Sized
+pub fn battersea_config::EngineAuthConfigFile::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_config::EngineAuthConfigFile where T: ?core::marker::Sized
+pub fn battersea_config::EngineAuthConfigFile::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_config::EngineAuthConfigFile where T: ?core::marker::Sized
+pub fn battersea_config::EngineAuthConfigFile::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for battersea_config::EngineAuthConfigFile where T: core::clone::Clone
+pub unsafe fn battersea_config::EngineAuthConfigFile::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for battersea_config::EngineAuthConfigFile
+pub fn battersea_config::EngineAuthConfigFile::from(t: T) -> T
+impl<T> dyn_clone::DynClone for battersea_config::EngineAuthConfigFile where T: core::clone::Clone
+pub fn battersea_config::EngineAuthConfigFile::__clone_box(&self, _: dyn_clone::sealed::Private) -> *mut ()
+impl<T> serde_core::de::DeserializeOwned for battersea_config::EngineAuthConfigFile where T: for<'de> serde_core::de::Deserialize<'de>
+impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_config::EngineAuthConfigFile where T: ?core::marker::Sized
+pub struct battersea_config::EngineBackendConfigFile
+pub battersea_config::EngineBackendConfigFile::auth: core::option::Option<battersea_config::EngineAuthConfigFile>
+pub battersea_config::EngineBackendConfigFile::capabilities: battersea_model::engine::EngineBackendCapabilities
+pub battersea_config::EngineBackendConfigFile::context_window_tokens: core::option::Option<u64>
+pub battersea_config::EngineBackendConfigFile::display_order: core::option::Option<u32>
+pub battersea_config::EngineBackendConfigFile::enabled: bool
+pub battersea_config::EngineBackendConfigFile::endpoint: core::option::Option<alloc::string::String>
+pub battersea_config::EngineBackendConfigFile::label: core::option::Option<alloc::string::String>
+pub battersea_config::EngineBackendConfigFile::long_description: core::option::Option<alloc::string::String>
+pub battersea_config::EngineBackendConfigFile::model: core::option::Option<alloc::string::String>
+pub battersea_config::EngineBackendConfigFile::options: core::option::Option<battersea_model::adapter::EngineBackendOptions>
+pub battersea_config::EngineBackendConfigFile::properties: core::option::Option<battersea_config::EngineChatConfigFile>
+pub battersea_config::EngineBackendConfigFile::provider: alloc::string::String
+pub battersea_config::EngineBackendConfigFile::short_description: core::option::Option<alloc::string::String>
+impl core::clone::Clone for battersea_config::EngineBackendConfigFile
+pub fn battersea_config::EngineBackendConfigFile::clone(&self) -> battersea_config::EngineBackendConfigFile
+impl core::fmt::Debug for battersea_config::EngineBackendConfigFile
+pub fn battersea_config::EngineBackendConfigFile::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl<'de> serde_core::de::Deserialize<'de> for battersea_config::EngineBackendConfigFile
+pub fn battersea_config::EngineBackendConfigFile::deserialize<__D>(__deserializer: __D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for battersea_config::EngineBackendConfigFile
+impl core::marker::Send for battersea_config::EngineBackendConfigFile
+impl core::marker::Sync for battersea_config::EngineBackendConfigFile
+impl core::marker::Unpin for battersea_config::EngineBackendConfigFile
+impl core::panic::unwind_safe::RefUnwindSafe for battersea_config::EngineBackendConfigFile
+impl core::panic::unwind_safe::UnwindSafe for battersea_config::EngineBackendConfigFile
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_config::EngineBackendConfigFile where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_config::EngineBackendConfigFile where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<T, U> core::convert::Into<U> for battersea_config::EngineBackendConfigFile where U: core::convert::From<T>
+pub fn battersea_config::EngineBackendConfigFile::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_config::EngineBackendConfigFile where U: core::convert::Into<T>
+pub type battersea_config::EngineBackendConfigFile::Error = core::convert::Infallible
+pub fn battersea_config::EngineBackendConfigFile::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for battersea_config::EngineBackendConfigFile where U: core::convert::TryFrom<T>
+pub type battersea_config::EngineBackendConfigFile::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_config::EngineBackendConfigFile::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for battersea_config::EngineBackendConfigFile where T: core::clone::Clone
+pub type battersea_config::EngineBackendConfigFile::Owned = T
+pub fn battersea_config::EngineBackendConfigFile::clone_into(&self, target: &mut T)
+pub fn battersea_config::EngineBackendConfigFile::to_owned(&self) -> T
+impl<T> core::any::Any for battersea_config::EngineBackendConfigFile where T: 'static + ?core::marker::Sized
+pub fn battersea_config::EngineBackendConfigFile::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_config::EngineBackendConfigFile where T: ?core::marker::Sized
+pub fn battersea_config::EngineBackendConfigFile::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_config::EngineBackendConfigFile where T: ?core::marker::Sized
+pub fn battersea_config::EngineBackendConfigFile::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for battersea_config::EngineBackendConfigFile where T: core::clone::Clone
+pub unsafe fn battersea_config::EngineBackendConfigFile::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for battersea_config::EngineBackendConfigFile
+pub fn battersea_config::EngineBackendConfigFile::from(t: T) -> T
+impl<T> dyn_clone::DynClone for battersea_config::EngineBackendConfigFile where T: core::clone::Clone
+pub fn battersea_config::EngineBackendConfigFile::__clone_box(&self, _: dyn_clone::sealed::Private) -> *mut ()
+impl<T> serde_core::de::DeserializeOwned for battersea_config::EngineBackendConfigFile where T: for<'de> serde_core::de::Deserialize<'de>
+impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_config::EngineBackendConfigFile where T: ?core::marker::Sized
+pub struct battersea_config::EngineChatConfigFile
+pub battersea_config::EngineChatConfigFile::context_overflow: core::option::Option<battersea_model::engine::EngineContextOverflow>
+pub battersea_config::EngineChatConfigFile::logprobs: core::option::Option<bool>
+pub battersea_config::EngineChatConfigFile::max_output_tokens: core::option::Option<u32>
+pub battersea_config::EngineChatConfigFile::max_provider_tool_calls: core::option::Option<u32>
+pub battersea_config::EngineChatConfigFile::max_tool_rounds: core::option::Option<u32>
+pub battersea_config::EngineChatConfigFile::parallel_tool_calls: core::option::Option<bool>
+pub battersea_config::EngineChatConfigFile::prompt_cache_key: core::option::Option<alloc::string::String>
+pub battersea_config::EngineChatConfigFile::prompt_cache_retention: core::option::Option<battersea_model::engine::EnginePromptCacheRetention>
+pub battersea_config::EngineChatConfigFile::reasoning_effort: core::option::Option<battersea_model::engine::EngineReasoningEffort>
+pub battersea_config::EngineChatConfigFile::reasoning_summary: core::option::Option<battersea_model::engine::EngineReasoningSummary>
+pub battersea_config::EngineChatConfigFile::request_metadata: core::option::Option<serde_json::value::Value>
+pub battersea_config::EngineChatConfigFile::response_verbosity: core::option::Option<battersea_model::engine::EngineResponseVerbosity>
+pub battersea_config::EngineChatConfigFile::safety_identifier: core::option::Option<alloc::string::String>
+pub battersea_config::EngineChatConfigFile::service_tier: core::option::Option<alloc::string::String>
+pub battersea_config::EngineChatConfigFile::stop_sequences: core::option::Option<alloc::vec::Vec<alloc::string::String>>
+pub battersea_config::EngineChatConfigFile::store_response: core::option::Option<bool>
+pub battersea_config::EngineChatConfigFile::stream: core::option::Option<bool>
+pub battersea_config::EngineChatConfigFile::strict_tool_inputs: core::option::Option<bool>
+pub battersea_config::EngineChatConfigFile::temperature: core::option::Option<f64>
+pub battersea_config::EngineChatConfigFile::thinking_budget_tokens: core::option::Option<u32>
+pub battersea_config::EngineChatConfigFile::thinking_visibility: core::option::Option<battersea_model::engine::EngineThinkingVisibility>
+pub battersea_config::EngineChatConfigFile::tool_choice: core::option::Option<battersea_model::engine::EngineChatToolChoice>
+pub battersea_config::EngineChatConfigFile::tool_execution: core::option::Option<battersea_model::engine::EngineToolExecutionMode>
+pub battersea_config::EngineChatConfigFile::top_k: core::option::Option<u32>
+pub battersea_config::EngineChatConfigFile::top_logprobs: core::option::Option<u32>
+pub battersea_config::EngineChatConfigFile::top_p: core::option::Option<f64>
+impl core::clone::Clone for battersea_config::EngineChatConfigFile
+pub fn battersea_config::EngineChatConfigFile::clone(&self) -> battersea_config::EngineChatConfigFile
+impl core::default::Default for battersea_config::EngineChatConfigFile
+pub fn battersea_config::EngineChatConfigFile::default() -> battersea_config::EngineChatConfigFile
+impl core::fmt::Debug for battersea_config::EngineChatConfigFile
+pub fn battersea_config::EngineChatConfigFile::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl<'de> serde_core::de::Deserialize<'de> for battersea_config::EngineChatConfigFile
+pub fn battersea_config::EngineChatConfigFile::deserialize<__D>(__deserializer: __D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for battersea_config::EngineChatConfigFile
+impl core::marker::Send for battersea_config::EngineChatConfigFile
+impl core::marker::Sync for battersea_config::EngineChatConfigFile
+impl core::marker::Unpin for battersea_config::EngineChatConfigFile
+impl core::panic::unwind_safe::RefUnwindSafe for battersea_config::EngineChatConfigFile
+impl core::panic::unwind_safe::UnwindSafe for battersea_config::EngineChatConfigFile
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_config::EngineChatConfigFile where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_config::EngineChatConfigFile where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<T, U> core::convert::Into<U> for battersea_config::EngineChatConfigFile where U: core::convert::From<T>
+pub fn battersea_config::EngineChatConfigFile::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_config::EngineChatConfigFile where U: core::convert::Into<T>
+pub type battersea_config::EngineChatConfigFile::Error = core::convert::Infallible
+pub fn battersea_config::EngineChatConfigFile::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for battersea_config::EngineChatConfigFile where U: core::convert::TryFrom<T>
+pub type battersea_config::EngineChatConfigFile::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_config::EngineChatConfigFile::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for battersea_config::EngineChatConfigFile where T: core::clone::Clone
+pub type battersea_config::EngineChatConfigFile::Owned = T
+pub fn battersea_config::EngineChatConfigFile::clone_into(&self, target: &mut T)
+pub fn battersea_config::EngineChatConfigFile::to_owned(&self) -> T
+impl<T> core::any::Any for battersea_config::EngineChatConfigFile where T: 'static + ?core::marker::Sized
+pub fn battersea_config::EngineChatConfigFile::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_config::EngineChatConfigFile where T: ?core::marker::Sized
+pub fn battersea_config::EngineChatConfigFile::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_config::EngineChatConfigFile where T: ?core::marker::Sized
+pub fn battersea_config::EngineChatConfigFile::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for battersea_config::EngineChatConfigFile where T: core::clone::Clone
+pub unsafe fn battersea_config::EngineChatConfigFile::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for battersea_config::EngineChatConfigFile
+pub fn battersea_config::EngineChatConfigFile::from(t: T) -> T
+impl<T> dyn_clone::DynClone for battersea_config::EngineChatConfigFile where T: core::clone::Clone
+pub fn battersea_config::EngineChatConfigFile::__clone_box(&self, _: dyn_clone::sealed::Private) -> *mut ()
+impl<T> serde_core::de::DeserializeOwned for battersea_config::EngineChatConfigFile where T: for<'de> serde_core::de::Deserialize<'de>
+impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_config::EngineChatConfigFile where T: ?core::marker::Sized
+pub struct battersea_config::MediaBackendConfigFile
+pub battersea_config::MediaBackendConfigFile::auth: core::option::Option<battersea_config::EngineAuthConfigFile>
+pub battersea_config::MediaBackendConfigFile::capabilities: battersea_model::media::MediaBackendCapabilities
+pub battersea_config::MediaBackendConfigFile::capability: battersea_model::media::MediaCapability
+pub battersea_config::MediaBackendConfigFile::enabled: bool
+pub battersea_config::MediaBackendConfigFile::endpoint: core::option::Option<alloc::string::String>
+pub battersea_config::MediaBackendConfigFile::label: core::option::Option<alloc::string::String>
+pub battersea_config::MediaBackendConfigFile::long_description: core::option::Option<alloc::string::String>
+pub battersea_config::MediaBackendConfigFile::model: core::option::Option<alloc::string::String>
+pub battersea_config::MediaBackendConfigFile::options: core::option::Option<battersea_model::adapter::EngineBackendOptions>
+pub battersea_config::MediaBackendConfigFile::provider: alloc::string::String
+pub battersea_config::MediaBackendConfigFile::short_description: core::option::Option<alloc::string::String>
+impl core::clone::Clone for battersea_config::MediaBackendConfigFile
+pub fn battersea_config::MediaBackendConfigFile::clone(&self) -> battersea_config::MediaBackendConfigFile
+impl core::fmt::Debug for battersea_config::MediaBackendConfigFile
+pub fn battersea_config::MediaBackendConfigFile::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl<'de> serde_core::de::Deserialize<'de> for battersea_config::MediaBackendConfigFile
+pub fn battersea_config::MediaBackendConfigFile::deserialize<__D>(__deserializer: __D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for battersea_config::MediaBackendConfigFile
+impl core::marker::Send for battersea_config::MediaBackendConfigFile
+impl core::marker::Sync for battersea_config::MediaBackendConfigFile
+impl core::marker::Unpin for battersea_config::MediaBackendConfigFile
+impl core::panic::unwind_safe::RefUnwindSafe for battersea_config::MediaBackendConfigFile
+impl core::panic::unwind_safe::UnwindSafe for battersea_config::MediaBackendConfigFile
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_config::MediaBackendConfigFile where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_config::MediaBackendConfigFile where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<T, U> core::convert::Into<U> for battersea_config::MediaBackendConfigFile where U: core::convert::From<T>
+pub fn battersea_config::MediaBackendConfigFile::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_config::MediaBackendConfigFile where U: core::convert::Into<T>
+pub type battersea_config::MediaBackendConfigFile::Error = core::convert::Infallible
+pub fn battersea_config::MediaBackendConfigFile::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for battersea_config::MediaBackendConfigFile where U: core::convert::TryFrom<T>
+pub type battersea_config::MediaBackendConfigFile::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_config::MediaBackendConfigFile::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for battersea_config::MediaBackendConfigFile where T: core::clone::Clone
+pub type battersea_config::MediaBackendConfigFile::Owned = T
+pub fn battersea_config::MediaBackendConfigFile::clone_into(&self, target: &mut T)
+pub fn battersea_config::MediaBackendConfigFile::to_owned(&self) -> T
+impl<T> core::any::Any for battersea_config::MediaBackendConfigFile where T: 'static + ?core::marker::Sized
+pub fn battersea_config::MediaBackendConfigFile::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_config::MediaBackendConfigFile where T: ?core::marker::Sized
+pub fn battersea_config::MediaBackendConfigFile::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_config::MediaBackendConfigFile where T: ?core::marker::Sized
+pub fn battersea_config::MediaBackendConfigFile::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for battersea_config::MediaBackendConfigFile where T: core::clone::Clone
+pub unsafe fn battersea_config::MediaBackendConfigFile::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for battersea_config::MediaBackendConfigFile
+pub fn battersea_config::MediaBackendConfigFile::from(t: T) -> T
+impl<T> dyn_clone::DynClone for battersea_config::MediaBackendConfigFile where T: core::clone::Clone
+pub fn battersea_config::MediaBackendConfigFile::__clone_box(&self, _: dyn_clone::sealed::Private) -> *mut ()
+impl<T> serde_core::de::DeserializeOwned for battersea_config::MediaBackendConfigFile where T: for<'de> serde_core::de::Deserialize<'de>
+impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_config::MediaBackendConfigFile where T: ?core::marker::Sized
+pub fn battersea_config::compose_backend_schema(application: serde_json::value::Value) -> anyhow::Result<serde_json::value::Value>
+pub fn battersea_config::default_true() -> bool
+pub fn battersea_config::make_auth(auth_type: &str, api_key: core::option::Option<&str>, api_key_env: &str, header: core::option::Option<&str>, version_header: core::option::Option<&str>, version: core::option::Option<&str>) -> battersea_model::adapter::EngineAuthConfig
+pub fn battersea_config::merge_backend(id: &str, configured: battersea_config::EngineBackendConfigFile) -> anyhow::Result<battersea_model::adapter::EngineBackendConfig>
+pub fn battersea_config::merge_chat_parameters(_provider: &str, chat: battersea_model::engine::EngineChatParameters, configured: battersea_config::EngineChatConfigFile) -> core::result::Result<battersea_model::engine::EngineChatParameters, alloc::string::String>
+pub fn battersea_config::merge_media_backend(id: &str, configured: battersea_config::MediaBackendConfigFile) -> battersea_model::media::MediaBackendConfig
+pub fn battersea_config::non_empty_string(value: alloc::string::String) -> core::option::Option<alloc::string::String>
+pub fn battersea_config::normalize_backends(configured: &std::collections::hash::map::HashMap<alloc::string::String, battersea_config::EngineBackendConfigFile>) -> anyhow::Result<std::collections::hash::map::HashMap<alloc::string::String, battersea_model::adapter::EngineBackendConfig>>
+pub fn battersea_config::normalize_media_backends(configured: &std::collections::hash::map::HashMap<alloc::string::String, battersea_config::MediaBackendConfigFile>) -> std::collections::hash::map::HashMap<alloc::string::String, battersea_model::media::MediaBackendConfig>
+pub fn battersea_config::resolve_chat_parameters(configured: battersea_config::EngineChatConfigFile) -> core::result::Result<battersea_model::engine::EngineChatParameters, alloc::string::String>
+pub fn battersea_config::resolve_yaml_merge_keys(value: serde_yaml::value::Value) -> serde_yaml::value::Value
+pub fn battersea_config::validate_chat_parameters(chat: &battersea_model::engine::EngineChatParameters) -> core::result::Result<(), alloc::string::String>
