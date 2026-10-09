@@ -168,6 +168,13 @@ impl ToolConversation for MockConversation {
         {
             send_event(events, EngineTextStreamEvent::ReasoningDelta { text }).await?;
         }
+        let input_tokens: u64 = request
+            .shared
+            .messages
+            .iter()
+            .map(|message| estimate_mock_token_count(&message.text_content()))
+            .sum();
+        let mut output_tokens = 0;
         for (index, text) in chunk_text_for_mock_stream(&response)
             .into_iter()
             .enumerate()
@@ -185,7 +192,19 @@ impl ToolConversation for MockConversation {
                 serde_json::json!({"chars": text.chars().count()}),
             )
             .await;
+            output_tokens += estimate_mock_token_count(&text);
             send_event(events, EngineTextStreamEvent::TextDelta { text }).await?;
+            send_event(
+                events,
+                EngineTextStreamEvent::TokenUsage {
+                    usage: EngineTokenUsage {
+                        input_tokens: Some(input_tokens),
+                        output_tokens: Some(output_tokens),
+                        total_tokens: Some(input_tokens + output_tokens),
+                    },
+                },
+            )
+            .await?;
             if let Some(failure) = self
                 .options
                 .mock_failure

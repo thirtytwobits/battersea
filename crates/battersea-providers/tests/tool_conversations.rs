@@ -168,6 +168,45 @@ fn request(
 fn openai_response(output: Value) -> Value {
     json!({"id":"response-fixture", "created_at":1, "model":"fixture-model", "object":"response", "status":"completed", "output":output})
 }
+
+#[tokio::test]
+async fn mock_stream_reports_cumulative_usage_as_text_arrives() {
+    let mut backend = backend("mock", "", "stream");
+    backend.options.background_mode = None;
+    backend.options.mock_stream_delay_multiplier = Some(0.0);
+    let mut request = request(&backend, Arc::new(RecordingExecutor::default()));
+    let input = "A first sentence. Another sentence. A final sentence.";
+    request.shared.messages = vec![battersea_model::Message::text(
+        battersea_model::Role::User,
+        input.into(),
+    )];
+    let adapter = adapter(backend);
+    let input_tokens = adapter
+        .count_text_stream_input_tokens(request.clone())
+        .await
+        .unwrap();
+    let mut stream = adapter.stream_text(request).await.unwrap();
+    let mut output = String::new();
+    let mut last_output_tokens = 0;
+    let mut usage_updates = 0;
+    while let Some(event) = stream.next().await {
+        match event.unwrap() {
+            EngineTextStreamEvent::TextDelta { text } => output.push_str(&text),
+            EngineTextStreamEvent::TokenUsage { usage } => {
+                let output_tokens = usage.output_tokens.expect("streamed output usage");
+                assert!(output_tokens > last_output_tokens);
+                assert!(!output.is_empty());
+                assert_eq!(usage.input_tokens, Some(input_tokens));
+                assert_eq!(usage.total_tokens, Some(input_tokens + output_tokens));
+                last_output_tokens = output_tokens;
+                usage_updates += 1;
+            }
+            _ => {}
+        }
+    }
+    assert_eq!(output, input);
+    assert!(usage_updates > 1, "usage must update during the stream");
+}
 fn sse(response: &Value, terminal: bool) -> String {
     let mut events = String::new();
     if terminal {

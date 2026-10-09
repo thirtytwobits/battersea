@@ -2,6 +2,8 @@
 pub mod adapter;
 pub mod media;
 pub mod registry;
+#[cfg(feature = "mock")]
+pub use adapter::mock::estimate_mock_token_count;
 #[cfg(test)]
 #[path = "test_endpoints.rs"]
 mod test_endpoints;

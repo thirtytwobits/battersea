@@ -95,4 +95,5 @@ pub mod battersea_providers::registry
 pub fn battersea_providers::registry::builtin_registry() -> &'static battersea_model::registry::ProviderRegistry
 pub fn battersea_providers::registry::register_builtin_providers(registry: &mut battersea_model::registry::ProviderRegistry) -> core::result::Result<(), battersea_model::adapter::error::EngineAdapterRequestError>
 pub fn battersea_providers::builtin_registry() -> &'static battersea_model::registry::ProviderRegistry
+pub fn battersea_providers::estimate_mock_token_count(text: &str) -> u64
 pub fn battersea_providers::register_builtin_providers(registry: &mut battersea_model::registry::ProviderRegistry) -> core::result::Result<(), battersea_model::adapter::error::EngineAdapterRequestError>
