@@ -12,3 +12,6 @@ export * from "./components/flow-inspector.js";
 export * from "./hooks/use-dataflow-layout.js";
 export * from "./components/flow-editor.js";
 export * from "./hooks/use-flow-edge-activity.js";
+
+export * from "./components/flow-execution-settings.js";
+export * from "./core/flow-execution-settings.js";

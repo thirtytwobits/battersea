@@ -100,6 +100,24 @@ export interface FlowEditorProps {
 /** A complete unstyled editor. Hosts supply all I/O, prompts, notifications and specialised fields. */
 export declare function FlowEditor(props: FlowEditorProps): React.JSX.Element;
 
+// components/flow-execution-settings.d.ts
+/** Copyright (c) Scott A Dixon */
+import React from "react";
+import type { FlowDocument, FlowEdge, FlowExecutionPolicy } from "@battersea/flow";
+import { type FlowExecutionConnection } from "../core/flow-execution-settings.js";
+import { type ParameterPresentation } from "./flow-parameter-control.js";
+type SettingsPresentation = Pick<ParameterPresentation, "Field" | "Select">;
+export interface FlowExecutionSettingsProps {
+    document: FlowDocument;
+    connections: readonly FlowExecutionConnection[];
+    onExecutionChange: (execution: FlowExecutionPolicy) => void;
+    onConnectionChange: (id: string, change: Pick<FlowEdge, "order" | "queue">) => void;
+    presentation?: SettingsPresentation;
+}
+/** Editable scheduler policy with catalogue-owned mode and phase displayed read-only. */
+export declare function FlowExecutionSettings(props: FlowExecutionSettingsProps): React.JSX.Element;
+export {};
+
 // components/flow-inspector.d.ts
 /** Copyright (c) Scott A Dixon */
 import React from "react";
@@ -335,13 +353,14 @@ import type { FlowStudioWorkspaceState } from "./flow-persistence.js";
 export interface DataflowStructuralSnapshot {
     edges: FlowStudioEdge[];
     nodes: FlowStudioNode[];
+    execution: FlowStudioWorkspaceState["execution"];
 }
 export interface DataflowUndoHistoryState {
     restoreLayout: boolean;
     snapshot: DataflowStructuralSnapshot;
 }
 export declare function buildDataflowUndoHistoryState(snapshot: DataflowStructuralSnapshot, restoreLayout: boolean): DataflowUndoHistoryState;
-export declare function buildDataflowStructuralSnapshot(workspace: Pick<FlowStudioWorkspaceState, "edges" | "nodes">): DataflowStructuralSnapshot;
+export declare function buildDataflowStructuralSnapshot(workspace: Pick<FlowStudioWorkspaceState, "edges" | "nodes" | "execution">): DataflowStructuralSnapshot;
 export declare function areDataflowStructuralSnapshotsEqual(left: DataflowStructuralSnapshot, right: DataflowStructuralSnapshot): boolean;
 export declare function areDataflowStructuralSnapshotsExactlyEqual(left: DataflowStructuralSnapshot, right: DataflowStructuralSnapshot): boolean;
 /**
@@ -732,6 +751,24 @@ export interface FlowEnumOption {
 }
 export declare function flowEnumUsesSwitch(options: FlowEnumOption[]): boolean;
 
+// core/flow-execution-settings.d.ts
+/** Copyright (c) Scott A Dixon */
+import type { FlowEdge, FlowExecutionPolicy } from "@battersea/flow";
+import type { FlowStudioWorkspaceState } from "./flow-persistence.js";
+/** Source priority is independent of canvas layout and serialisation order. */
+export declare function reconcileFlowSourceOrder(policy: FlowExecutionPolicy, nodes: FlowStudioWorkspaceState["nodes"]): FlowExecutionPolicy;
+export declare function moveFlowSource(policy: FlowExecutionPolicy, id: string, direction: -1 | 1): FlowExecutionPolicy;
+/** Mirrors the capacity constraints in contracts/execution.md; server validation is authoritative. */
+export declare function validateFlowExecutionSettings(policy: FlowExecutionPolicy, edges: readonly Pick<FlowEdge, "id" | "order" | "queue">[]): string[];
+export interface FlowExecutionConnection {
+    id: string;
+    label: string;
+    mode: string;
+    sourcePhase: string;
+    targetPhase: string;
+}
+export declare function buildFlowExecutionConnections(workspace: FlowStudioWorkspaceState, edges: readonly FlowEdge[]): FlowExecutionConnection[];
+
 // core/flow-layout.d.ts
 /** Copyright (c) Scott A Dixon */
 import type { LayoutGraph, LayoutPositions } from "../graph/layout/types.js";
@@ -1000,6 +1037,7 @@ export interface FlowStudioWorkspaceState {
     description: string;
     draftFlowKey: string;
     edges: FlowStudioEdge[];
+    execution: WireFlowDocument["execution"];
     nodes: Array<Node<FlowStudioNodeData>>;
     /**
      * Flow-wide rendering encoding. Nodes with their per-node
@@ -1058,6 +1096,7 @@ export declare function buildFlowDocumentFromWorkspace(params: {
     description: string;
     draftFlowKey: string;
     edges: FlowStudioEdge[];
+    execution: WireFlowDocument["execution"];
     nodes: Array<Node<FlowStudioNodeData>>;
     /** Optional override; defaults to {@link DEFAULT_FLOW_OUTPUT_ENCODING}. */
     outputEncoding?: string;
@@ -1068,11 +1107,11 @@ export declare function buildFlowDocumentFromWorkspace(params: {
     title: string;
 }): WireFlowDocument;
 export declare function buildFlowValidationDocument(params: {
-    workspace: Pick<FlowStudioWorkspaceState, "description" | "draftFlowKey" | "edges" | "nodes" | "title"> & Partial<Pick<FlowStudioWorkspaceState, "baselineFlow" | "outputEncoding" | "plainFragmentDelimiter" | "whitespaceMode">>;
+    workspace: Pick<FlowStudioWorkspaceState, "description" | "draftFlowKey" | "edges" | "execution" | "nodes" | "title"> & Partial<Pick<FlowStudioWorkspaceState, "baselineFlow" | "outputEncoding" | "plainFragmentDelimiter" | "whitespaceMode">>;
 }): WireFlowDocument;
 export declare function buildFlowSaveDocument(params: {
     titleOverride?: string;
-    workspace: Pick<FlowStudioWorkspaceState, "description" | "draftFlowKey" | "edges" | "nodes" | "title"> & Partial<Pick<FlowStudioWorkspaceState, "baselineFlow" | "outputEncoding" | "plainFragmentDelimiter" | "whitespaceMode">>;
+    workspace: Pick<FlowStudioWorkspaceState, "description" | "draftFlowKey" | "edges" | "execution" | "nodes" | "title"> & Partial<Pick<FlowStudioWorkspaceState, "baselineFlow" | "outputEncoding" | "plainFragmentDelimiter" | "whitespaceMode">>;
 }): WireFlowDocument | null;
 export declare function buildFlowWorkspaceFromDocument(params: {
     definitions: WireFlowNodeDefinition[];
@@ -2426,6 +2465,8 @@ export * from "./components/flow-inspector.js";
 export * from "./hooks/use-dataflow-layout.js";
 export * from "./components/flow-editor.js";
 export * from "./hooks/use-flow-edge-activity.js";
+export * from "./components/flow-execution-settings.js";
+export * from "./core/flow-execution-settings.js";
 
 // interaction-ports.d.ts
 /** Copyright (c) Scott A Dixon */

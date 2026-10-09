@@ -61,6 +61,68 @@
           "phase": "execution"
         }
       ]
+    },
+    {
+      "class_name": "TextStream",
+      "short_description": "Emit uppercase text through a stream",
+      "long_description": "A custom application node with cancellable work.",
+      "handler_id": "example.text",
+      "kind": "source",
+      "interfaces": [
+        "IFlowNodeActivate"
+      ],
+      "activation_parameters": [
+        "text"
+      ],
+      "parameters": [
+        {
+          "name": "text",
+          "datatype": {
+            "kind": "string"
+          },
+          "editor": {
+            "kind": "string",
+            "default_value": ""
+          }
+        },
+        {
+          "name": "delay_ms",
+          "datatype": {
+            "kind": "int"
+          },
+          "editor": {
+            "kind": "unsigned",
+            "min": 0,
+            "max": 10000,
+            "default_value": 0
+          }
+        }
+      ],
+      "output_ports": [
+        {
+          "name": "text",
+          "kind": "output",
+          "token_type": "prompt.fragment",
+          "mode": "stream",
+          "phase": "execution"
+        }
+      ]
+    },
+    {
+      "class_name": "StreamOutput",
+      "short_description": "Collect stream events",
+      "long_description": "The application stores collected output with the activation record.",
+      "handler_id": "example.output",
+      "kind": "sink",
+      "input_ports": [
+        {
+          "name": "text",
+          "kind": "input",
+          "token_type": "prompt.fragment",
+          "mode": "stream",
+          "phase": "execution"
+        }
+      ]
     }
   ]
 }

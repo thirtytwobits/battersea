@@ -178,3 +178,42 @@ output {
 .battersea-editor__workspace aside output {
   overflow-wrap: anywhere;
 }
+
+.battersea-execution-settings {
+  border-bottom: 1px solid #c3ccd8;
+  padding-bottom: 12px;
+  margin-bottom: 12px;
+}
+.battersea-execution-settings summary {
+  cursor: pointer;
+  font-weight: 650;
+}
+.battersea-execution-settings h3 {
+  font-size: 16px;
+  margin: 16px 0 8px;
+}
+.battersea-execution-settings p {
+  font-size: 13px;
+  margin: 8px 0;
+}
+.battersea-execution-settings label {
+  margin: 8px 0;
+}
+.battersea-execution-settings input,
+.battersea-execution-settings select {
+  box-sizing: border-box;
+  display: block;
+  max-width: 100%;
+  width: 100%;
+}
+.battersea-editor__workspace aside .battersea-execution-settings ol {
+  font-size: 14px;
+}
+.battersea-execution-settings li {
+  margin-bottom: 8px;
+}
+.battersea-execution-settings [role="alert"] {
+  color: #a12420;
+  padding-left: 18px;
+  font-size: 13px;
+}

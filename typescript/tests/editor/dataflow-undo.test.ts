@@ -4,6 +4,7 @@
  * Exercises dataflow structural snapshot comparison and restore behaviour
  * backed by react-amnesia.
  */
+import { createFlowExecutionPolicy } from "@battersea/flow";
 import assert from "node:assert/strict";
 import test from "node:test";
 
@@ -148,10 +149,12 @@ function readLastPastLabel(amnesia: Amnesia): string | undefined {
 
 test("areDataflowStructuralSnapshotsEqual ignores layout-only node and edge geometry changes", () => {
   const baseline = buildDataflowStructuralSnapshot({
+    execution: createFlowExecutionPolicy(),
     edges: [buildEdge()],
     nodes: [buildNode()]
   });
   const layoutOnly = buildDataflowStructuralSnapshot({
+    execution: createFlowExecutionPolicy(),
     edges: [buildEdge({
       data: {
         bridges: [{
@@ -194,6 +197,7 @@ test("restoreDataflowStructuralWorkspace preserves the current node position whi
     })]
   };
   const targetSnapshot = buildDataflowStructuralSnapshot({
+    execution: createFlowExecutionPolicy(),
     edges: [],
     nodes: [buildNode({
       data: {
@@ -222,6 +226,7 @@ test("restoreDataflowStructuralWorkspace restores deleted nodes at their capture
   const restored = restoreDataflowStructuralWorkspace({
     currentWorkspace: buildDefaultFlowWorkspace(),
     snapshot: buildDataflowStructuralSnapshot({
+      execution: createFlowExecutionPolicy(),
       edges: [],
       nodes: [buildNode({
         position: {
@@ -277,6 +282,7 @@ test("restoreDataflowStructuralWorkspace preserves current waypoints and bridges
     } as const
   };
   const targetSnapshot = buildDataflowStructuralSnapshot({
+    execution: createFlowExecutionPolicy(),
     edges: [buildEdge({
       data: {
         kind: "token",
@@ -532,6 +538,7 @@ test("restoreDataflowStructuralWorkspace restores exact layout when requested", 
     },
     preserveLayout: false,
     snapshot: buildDataflowStructuralSnapshot({
+      execution: createFlowExecutionPolicy(),
       edges: [],
       nodes: [buildNode({
         position: {

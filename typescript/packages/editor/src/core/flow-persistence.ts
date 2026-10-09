@@ -4,6 +4,7 @@
  * Persists and restores flow persistence for the editor's dataflow workspace.
  */
 import type { Node } from "@xyflow/react";
+import { reconcileFlowSourceOrder } from "./flow-execution-settings.js";
 import { createFlowExecutionPolicy, FLOW_DOCUMENT_VERSION, requireSupportedFlowVersion } from "@battersea/flow";
 import type {
   FlowDocument as WireFlowDocument,
@@ -45,6 +46,7 @@ export interface FlowStudioWorkspaceState {
   description: string;
   draftFlowKey: string;
   edges: FlowStudioEdge[];
+  execution: WireFlowDocument["execution"];
   nodes: Array<Node<FlowStudioNodeData>>;
   /**
    * Flow-wide rendering encoding. Nodes with their per-node
@@ -114,6 +116,7 @@ export function buildDefaultFlowWorkspace(): FlowStudioWorkspaceState {
     description: "",
     draftFlowKey: "",
     edges: [],
+    execution: createFlowExecutionPolicy(),
     nodes: [],
     outputEncoding: DEFAULT_FLOW_OUTPUT_ENCODING,
     plainFragmentDelimiter: DEFAULT_FLOW_PLAIN_FRAGMENT_DELIMITER,
@@ -156,6 +159,9 @@ export function normalizeFlowWorkspaceState(
     baselineFlow: isFlowDocument(candidate.baselineFlow)
       ? candidate.baselineFlow
       : createBlankFlowDocument(),
+    execution: structuredClone(
+      candidate.execution ?? candidate.baselineFlow?.execution ?? createFlowExecutionPolicy(),
+    ),
     description:
       typeof candidate.description === "string" ? candidate.description : "",
     draftFlowKey:
@@ -346,6 +352,7 @@ function normalizeCanvasEdge(edge: FlowStudioEdge): FlowStudioEdge {
         : undefined,
       kind: edge.data?.kind === "signal" ? "signal" : "token",
       order: typeof edge.data?.order === "number" ? edge.data.order : 0,
+      queue: edge.data?.queue ? structuredClone(edge.data.queue) : undefined,
       waypoints: Array.isArray(edge.data?.waypoints)
         ? edge.data.waypoints
             .map(normalizeEdgeWaypoint)
@@ -389,6 +396,7 @@ export function buildFlowDocumentFromWorkspace(params: {
   description: string;
   draftFlowKey: string;
   edges: FlowStudioEdge[];
+  execution: WireFlowDocument["execution"];
   nodes: Array<Node<FlowStudioNodeData>>;
   /** Optional override; defaults to {@link DEFAULT_FLOW_OUTPUT_ENCODING}. */
   outputEncoding?: string;
@@ -407,16 +415,7 @@ export function buildFlowDocumentFromWorkspace(params: {
     left.id.localeCompare(right.id),
   );
 
-  const execution = structuredClone(
-    params.baselineFlow?.execution ?? createFlowExecutionPolicy(),
-  );
-  const sources = params.nodes
-    .filter(node => node.data.nodeClass === "source" || node.data.nodeClass === "hybrid")
-    .map(node => node.id);
-  execution.source_order = execution.source_order.filter(id => sources.includes(id));
-  for (const id of sources) {
-    if (!execution.source_order.includes(id)) execution.source_order.push(id);
-  }
+  const execution = reconcileFlowSourceOrder(params.execution, params.nodes);
   return {
     version: FLOW_DOCUMENT_VERSION,
     execution,
@@ -444,7 +443,7 @@ export function buildFlowDocumentFromWorkspace(params: {
 export function buildFlowValidationDocument(params: {
   workspace: Pick<
     FlowStudioWorkspaceState,
-    "description" | "draftFlowKey" | "edges" | "nodes" | "title"
+    "description" | "draftFlowKey" | "edges" | "execution" | "nodes" | "title"
   > &
     Partial<
       Pick<
@@ -461,6 +460,7 @@ export function buildFlowValidationDocument(params: {
     description: params.workspace.description,
     draftFlowKey: params.workspace.draftFlowKey,
     edges: params.workspace.edges,
+    execution: params.workspace.execution,
     nodes: params.workspace.nodes,
     outputEncoding: params.workspace.outputEncoding,
     plainFragmentDelimiter: params.workspace.plainFragmentDelimiter,
@@ -479,7 +479,7 @@ export function buildFlowSaveDocument(params: {
   titleOverride?: string;
   workspace: Pick<
     FlowStudioWorkspaceState,
-    "description" | "draftFlowKey" | "edges" | "nodes" | "title"
+    "description" | "draftFlowKey" | "edges" | "execution" | "nodes" | "title"
   > &
     Partial<
       Pick<
@@ -502,6 +502,7 @@ export function buildFlowSaveDocument(params: {
       description: params.workspace.description,
       draftFlowKey: params.workspace.draftFlowKey,
       edges: params.workspace.edges,
+      execution: params.workspace.execution,
       nodes: params.workspace.nodes,
       outputEncoding: params.workspace.outputEncoding,
       plainFragmentDelimiter: params.workspace.plainFragmentDelimiter,
@@ -552,6 +553,7 @@ export function buildFlowWorkspaceFromDocument(params: {
     description: params.document.description?.trim() ?? "",
     draftFlowKey: params.document.flow_key,
     edges: mappedEdges,
+    execution: structuredClone(params.document.execution),
     nodes,
     outputEncoding:
       params.document.output_encoding?.trim() || DEFAULT_FLOW_OUTPUT_ENCODING,
@@ -608,6 +610,10 @@ export function removeNodeFromWorkspace(
       (edge) => edge.source !== nodeId && edge.target !== nodeId,
     ),
     nodes: workspace.nodes.filter((node) => node.id !== nodeId),
+    execution: {
+      ...workspace.execution,
+      source_order: workspace.execution.source_order.filter((id) => id !== nodeId),
+    },
     selectedTarget:
       (workspace.selectedTarget.kind === "node" ||
         workspace.selectedTarget.kind === "port") &&

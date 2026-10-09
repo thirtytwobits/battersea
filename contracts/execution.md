@@ -105,6 +105,14 @@ signal cannot overtake that turn's data. Signal cycles fail with their causal pa
 Preflight control work drains before provider dispatch. Cancellation has priority over
 both queues and wakes producers waiting for capacity.
 
+## Authoring
+
+The editor exposes source priority, activation limits, provider capacity and connection
+order. Stream connections also expose item and byte capacities, maximum event size and
+an explicit overflow policy. Catalogue mode and phase are read-only. Invalid capacities
+remain in the form until corrected; applying valid settings participates in undo/redo.
+Draft restoration, validation, save, clone and reload preserve authored settings.
+
 ## Upgrade and verification
 
 The explicit upgrade records the source order produced by the v1 materialisation rule,

@@ -154,7 +154,7 @@ export function useDataflowStructuralUndo(options: {
         restoreState(updatedState);
       },
     });
-  }, [amnesia, options.workspace.edges, options.workspace.nodes, restoreState]);
+  }, [amnesia, options.workspace.edges, options.workspace.execution, options.workspace.nodes, restoreState]);
 
   const captureSnapshot = React.useCallback(
     () => buildDataflowStructuralSnapshot(workspaceRef.current),

@@ -43,6 +43,8 @@ import { useFlowCanvasEditing } from "../hooks/use-flow-canvas-editing.js";
 import { useDataflowLayout } from "../hooks/use-dataflow-layout.js";
 import { DataflowCanvas } from "./dataflow-canvas.js";
 import { DataflowNodePalette } from "./dataflow-node-palette.js";
+import { FlowExecutionSettings } from "./flow-execution-settings.js";
+import { buildFlowExecutionConnections } from "../core/flow-execution-settings.js";
 import { FlowInspector } from "./flow-inspector.js";
 import {
   FlowParameterEditor,
@@ -383,6 +385,33 @@ function FlowEditorBody({
           />
         </div>
         <aside aria-label="Inspector">
+          <FlowExecutionSettings
+            key={`${workspace.selectedFlowKey}:${lifecycle.refreshSuccessPunchToken}`}
+            document={currentDocument}
+            connections={buildFlowExecutionConnections(
+              workspace,
+              currentDocument.edges,
+            )}
+            onExecutionChange={(execution) =>
+              undo.commitStructuralChange(
+                "Edit execution policy",
+                (current) => ({ ...current, execution }),
+              )
+            }
+            onConnectionChange={(id, change) =>
+              undo.commitStructuralChange(
+                "Edit connection policy",
+                (current) => ({
+                  ...current,
+                  edges: current.edges.map((edge) =>
+                    edge.id === id
+                      ? { ...edge, data: { ...edge.data!, ...change } }
+                      : edge,
+                  ),
+                }),
+              )
+            }
+          />
           <h2>{selectedNode?.data.instanceName ?? "Inspector"}</h2>
           {selectedNode && selectedDefinition ? (
             <>

@@ -16,6 +16,7 @@ import type { FlowStudioWorkspaceState } from "./flow-persistence.js";
 export interface DataflowStructuralSnapshot {
   edges: FlowStudioEdge[];
   nodes: FlowStudioNode[];
+  execution: FlowStudioWorkspaceState["execution"];
 }
 
 export interface DataflowUndoHistoryState {
@@ -37,6 +38,7 @@ interface ComparableDataflowStructuralEdge {
   data: {
     kind: "signal" | "token";
     order: number;
+    queue: NonNullable<FlowStudioEdge["data"]>["queue"];
   };
   id: string;
   source: string;
@@ -140,6 +142,7 @@ function buildComparableStructuralEdge(
     data: {
       kind: edge.data?.kind ?? "token",
       order: typeof edge.data?.order === "number" ? edge.data.order : 0,
+      queue: cloneJsonValue(edge.data?.queue),
     },
     id: edge.id,
     source: edge.source,
@@ -163,9 +166,10 @@ function edgeStructureMatches(
 }
 
 export function buildDataflowStructuralSnapshot(
-  workspace: Pick<FlowStudioWorkspaceState, "edges" | "nodes">,
+  workspace: Pick<FlowStudioWorkspaceState, "edges" | "nodes" | "execution">,
 ): DataflowStructuralSnapshot {
   return {
+    execution: cloneJsonValue(workspace.execution),
     edges: workspace.edges.map((edge) => cloneFlowStudioEdge(edge)),
     nodes: workspace.nodes.map((node) => cloneFlowStudioNode(node)),
   };
@@ -177,6 +181,7 @@ export function areDataflowStructuralSnapshotsEqual(
 ): boolean {
   return (
     stableJsonStringify({
+      execution: left.execution,
       edges: [...left.edges]
         .sort((first, second) => first.id.localeCompare(second.id))
         .map((edge) => buildComparableStructuralEdge(edge)),
@@ -185,6 +190,7 @@ export function areDataflowStructuralSnapshotsEqual(
         .map((node) => buildComparableStructuralNode(node)),
     }) ===
     stableJsonStringify({
+      execution: right.execution,
       edges: [...right.edges]
         .sort((first, second) => first.id.localeCompare(second.id))
         .map((edge) => buildComparableStructuralEdge(edge)),
@@ -410,6 +416,7 @@ export function restoreDataflowStructuralWorkspace(options: {
 
   return {
     ...options.currentWorkspace,
+    execution: cloneJsonValue(options.snapshot.execution),
     edges,
     nodes,
     selectedTarget: { kind: "none" },

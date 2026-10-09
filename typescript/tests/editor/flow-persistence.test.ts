@@ -394,6 +394,7 @@ test("buildDefaultFlowWorkspace starts from a clean untitled draft", () => {
 
 test("buildFlowDocumentFromWorkspace preserves an empty title for dirty-state comparison", () => {
   const document = buildFlowDocumentFromWorkspace({
+    execution: createFlowExecutionPolicy(),
     description: "",
     draftFlowKey: "",
     edges: [],
@@ -572,6 +573,7 @@ test("query parameter values survive a workspace round trip unchanged", () => {
     document: flow
   });
   const rebuilt = buildFlowDocumentFromWorkspace({
+    execution: workspace.execution,
     description: workspace.description,
     draftFlowKey: workspace.draftFlowKey,
     edges: workspace.edges,
@@ -640,6 +642,7 @@ test("port parameter values survive a workspace round trip unchanged", () => {
     }
   });
   const rebuilt = buildFlowDocumentFromWorkspace({
+    execution: workspace.execution,
     description: workspace.description,
     draftFlowKey: workspace.draftFlowKey,
     edges: workspace.edges,
@@ -703,6 +706,7 @@ test("buildFlowDocumentFromWorkspace maps canvas handles back to manifest ports 
   });
 
   const document = buildFlowDocumentFromWorkspace({
+    execution: workspace.execution,
     description: workspace.description,
     draftFlowKey: workspace.draftFlowKey,
     edges: workspace.edges,
@@ -766,6 +770,7 @@ test("buildFlowDocumentFromWorkspace persists swapped controller port placement 
   });
 
   const document = buildFlowDocumentFromWorkspace({
+    execution: workspace.execution,
     description: workspace.description,
     draftFlowKey: workspace.draftFlowKey,
     edges: workspace.edges,
@@ -820,6 +825,7 @@ test("buildFlowDocumentFromWorkspace round-trips reversed logic direction throug
   });
 
   const document = buildFlowDocumentFromWorkspace({
+    execution: workspace.execution,
     description: workspace.description,
     draftFlowKey: workspace.draftFlowKey,
     edges: workspace.edges,
@@ -902,6 +908,7 @@ test("buildFlowDocumentFromWorkspace persists edge waypoints inside the canvas l
   });
 
   const document = buildFlowDocumentFromWorkspace({
+    execution: workspace.execution,
     description: workspace.description,
     draftFlowKey: workspace.draftFlowKey,
     edges: workspace.edges,
@@ -984,6 +991,7 @@ test("buildFlowDocumentFromWorkspace persists edge bridges inside the canvas lay
   });
 
   const document = buildFlowDocumentFromWorkspace({
+    execution: workspace.execution,
     description: workspace.description,
     draftFlowKey: workspace.draftFlowKey,
     edges: workspace.edges,
@@ -1222,6 +1230,7 @@ test("buildFlowDocumentFromWorkspace preserves numbered dynamic ports", () => {
   assert.equal(workspace.edges[0].targetHandle, "input-2");
 
   const document = buildFlowDocumentFromWorkspace({
+    execution: workspace.execution,
     description: workspace.description,
     draftFlowKey: workspace.draftFlowKey,
     edges: workspace.edges,
@@ -1327,6 +1336,7 @@ test("buildFlowDocumentFromWorkspace canonicalises flow ordering for stable roun
     document: flow
   });
   const firstRoundTrip = buildFlowDocumentFromWorkspace({
+    execution: firstWorkspace.execution,
     description: firstWorkspace.description,
     draftFlowKey: firstWorkspace.draftFlowKey,
     edges: firstWorkspace.edges,
@@ -1360,6 +1370,7 @@ test("buildFlowDocumentFromWorkspace canonicalises flow ordering for stable roun
     document: firstRoundTrip
   });
   const secondRoundTrip = buildFlowDocumentFromWorkspace({
+    execution: secondWorkspace.execution,
     description: secondWorkspace.description,
     draftFlowKey: secondWorkspace.draftFlowKey,
     edges: secondWorkspace.edges,
@@ -2037,6 +2048,7 @@ test("multiplexer output count survives a workspace round trip", () => {
   );
 
   const roundTripped = buildFlowDocumentFromWorkspace({
+    execution: workspace.execution,
     description: workspace.description,
     draftFlowKey: workspace.draftFlowKey,
     edges: workspace.edges,
@@ -2087,6 +2099,7 @@ test("node port order survives a document to workspace round trip without adding
   assert.equal(workspace.nodes[0]?.data.portOrder?.output, undefined);
 
   const roundTripped = buildFlowDocumentFromWorkspace({
+    execution: workspace.execution,
     description: workspace.description,
     draftFlowKey: workspace.draftFlowKey,
     edges: workspace.edges,
