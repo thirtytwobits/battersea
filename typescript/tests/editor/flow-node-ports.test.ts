@@ -202,7 +202,7 @@ test("pruneEdgesForNodeCardinality preserves non-matching handle families on the
   );
 });
 
-test("canAttachConnectionToPorts rejects a second edge on the same output handle", () => {
+test("canAttachConnectionToPorts permits token fan-out to different inputs", () => {
   assert.equal(
     canAttachConnectionToPorts([
       {
@@ -217,7 +217,7 @@ test("canAttachConnectionToPorts rejects a second edge on the same output handle
       target: "story-2",
       targetHandle: "input-0"
     }),
-    false
+    true
   );
 });
 
@@ -477,4 +477,20 @@ test("getFlowPortLabel names augment inputs and mux outputs", () => {
   assert.equal(getFlowPortLabel("input-1"), "Input 1");
   assert.equal(getFlowPortLabel("output-0"), "Output 0");
   assert.equal(getFlowPortLabel("output-2"), "Output 2");
+});
+
+
+test("connection compatibility checks consumption mode and snapshot ownership independently of nominal types", () => {
+  const source = buildResolvedFlowPort({id: "out", side: "output", tokenType: "text", mode: "stream", phase: "execution"});
+  const target = buildResolvedFlowPort({id: "in", side: "input", tokenType: "text", mode: "stream", phase: "execution"});
+  const nodes = [{id: "source", data: {outputPorts: [source]}}, {id: "sink", data: {inputPorts: [target]}}];
+  const connection = {source: "source", sourceHandle: "output-0", target: "sink", targetHandle: "input-0"};
+  assert.equal(connectionUsesCompatibleTokenTypes({nodes, connection}), true);
+  target.mode = "final_value";
+  assert.equal(connectionUsesCompatibleTokenTypes({nodes, connection}), false);
+  source.mode = "final_value";
+  target.phase = "snapshot";
+  assert.equal(connectionUsesCompatibleTokenTypes({nodes, connection}), false);
+  source.phase = "snapshot";
+  assert.equal(connectionUsesCompatibleTokenTypes({nodes, connection}), true);
 });

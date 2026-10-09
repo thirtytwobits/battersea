@@ -9,7 +9,7 @@ import test from "node:test";
 import type { FlowStudioEdge } from "@battersea/editor/core/dataflow-editor-state";
 import { hasStructuralEdgeRemovalChange, resolveConnectionAppendResult } from "@battersea/editor/hooks/use-dataflow-connections";
 
-test("resolveConnectionAppendResult keeps duplicate source and target port attachments out of the graph", () => {
+test("resolveConnectionAppendResult preserves the existing branch when adding token fan-out", () => {
   const edges: FlowStudioEdge[] = [{
     id: "chat-api-1-output-0-render-1-input-0-1",
     source: "chat-api-1",
@@ -28,8 +28,15 @@ test("resolveConnectionAppendResult keeps duplicate source and target port attac
     edges
   });
 
-  assert.equal(result.status, "duplicate-port");
-  assert.deepEqual(result.edges, edges);
+  assert.equal(result.status, "updated");
+  assert.deepEqual(result.edges.slice(0, 1), edges);
+  assert.equal(result.edges.length, edges.length + 1);
+  const duplicate = resolveConnectionAppendResult({
+    connection: { source: "other-source", sourceHandle: "output-0", target: edges[0].target, targetHandle: edges[0].targetHandle! },
+    edges: result.edges,
+  });
+  assert.equal(duplicate.status, "duplicate-port");
+  assert.deepEqual(duplicate.edges, result.edges);
 });
 
 test("resolveConnectionAppendResult appends valid edges using the current id and ordering scheme", () => {

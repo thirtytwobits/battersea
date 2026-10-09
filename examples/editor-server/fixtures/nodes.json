@@ -42,7 +42,7 @@
           "kind": "output",
           "token_type": "prompt.fragment",
           "mode": "final_value",
-          "phase": "snapshot"
+          "phase": "execution"
         }
       ]
     },

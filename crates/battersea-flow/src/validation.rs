@@ -56,7 +56,6 @@ pub fn validate_document(
 
     let mut adjacency = HashMap::<String, Vec<String>>::new();
     let mut indegree = HashMap::<String, usize>::new();
-    let mut token_sources = HashSet::<(String, String)>::new();
     let mut token_targets = HashSet::<(String, String)>::new();
     let mut signal_sources = HashSet::<(String, String)>::new();
     let mut action_targets = HashSet::<(String, String)>::new();
@@ -75,7 +74,6 @@ pub fn validate_document(
             &mut issues,
             &mut adjacency,
             &mut indegree,
-            &mut token_sources,
             &mut token_targets,
             &mut signal_sources,
             &mut action_targets,
@@ -487,7 +485,6 @@ fn validate_edge(
     issues: &mut Vec<FlowValidationIssue>,
     adjacency: &mut HashMap<String, Vec<String>>,
     indegree: &mut HashMap<String, usize>,
-    token_sources: &mut HashSet<(String, String)>,
     token_targets: &mut HashSet<(String, String)>,
     signal_sources: &mut HashSet<(String, String)>,
     action_targets: &mut HashSet<(String, String)>,
@@ -634,16 +631,6 @@ fn validate_edge(
                         edge.id
                     ),
                     node_id: None,
-                    edge_id: Some(edge.id.clone()),
-                });
-            }
-            if !token_sources.insert((edge.source_node_id.clone(), edge.source_port.clone())) {
-                issues.push(FlowValidationIssue {
-                    message: format!(
-                        "Output port \"{}\" on node \"{}\" already has an outgoing edge.",
-                        edge.source_port, edge.source_node_id
-                    ),
-                    node_id: Some(edge.source_node_id.clone()),
                     edge_id: Some(edge.id.clone()),
                 });
             }

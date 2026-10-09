@@ -12,7 +12,7 @@ async function read(page) {
 async function capture(page, name, state) {
   const styles = await page
     .locator(
-      ".battersea-editor__workspace, .react-flow__node, .flow-studio-node-frame, .authoring-graph-handle, aside, [data-phase]",
+      ".battersea-editor__workspace, .react-flow__node, .flow-studio-node-frame, .authoring-graph-handle, .flow-studio-node-port-label, .flow-studio-node-port-select, aside, [data-phase]",
     )
     .evaluateAll((elements) =>
       elements.map((el) => {
@@ -29,6 +29,12 @@ async function capture(page, name, state) {
           height: r.height,
           display: c.display,
           opacity: c.opacity,
+          pointerEvents: c.pointerEvents,
+          transform: c.transform,
+          left: c.left,
+          right: c.right,
+          top: c.top,
+          bottom: c.bottom,
         };
       }),
     );
@@ -182,9 +188,54 @@ for (const [name, engine] of Object.entries({ chromium, webkit })) {
         ?.textContent?.endsWith("cancelled"),
     );
     await capture(page, name, "cancelled");
+    const branchBaseline = await read(page);
+    const knownNodes = new Set(branchBaseline.nodes.map(node => node.id));
+    await page.getByRole("button", { name: "Output", exact: true }).click();
+    await page.waitForFunction(count => document.querySelectorAll(".react-flow__node").length === count, knownNodes.size + 1);
+    const branchNode = await page.locator(".react-flow__node").evaluateAll((nodes, known) => nodes.map(node => node.dataset.id).find(id => !known.includes(id)), [...knownNodes]);
+    assert.ok(branchNode);
+    const branchStyle = await page.locator(`.react-flow__node[data-id="${branchNode}"]`).getAttribute("style");
+    await page.getByRole("button", { name: "Auto layout: apply Dagre", exact: true }).click();
+    await page.waitForFunction(({id, before}) => document.querySelector(`.react-flow__node[data-id="${id}"]`)?.getAttribute("style") !== before, {id: branchNode, before: branchStyle});
+    await page.locator(".react-flow__controls-fitview").click();
+    await page.waitForFunction(() => document.querySelector('.react-flow__node[data-id="text"]').getBoundingClientRect().width > 100);
+    await capture(page, name, "fanout-ready");
+    const outputHandle = page.locator('.react-flow__node[data-id="text"] .react-flow__handle[data-handleid="output-0"]');
+    const inputHandle = page.locator(`.react-flow__node[data-id="${branchNode}"] .react-flow__handle[data-handleid="input-0"]`);
+    // Locator actions wait for fit-view animation to finish before hit testing.
+    await outputHandle.hover();
+    await inputHandle.hover();
+    await outputHandle.hover();
+    const to = await inputHandle.boundingBox();
+    assert.ok(to);
+    await page.mouse.down();
+    await page.mouse.move(to.x + to.width / 2, to.y + to.height / 2, { steps: 12 });
+    await page.waitForFunction(id => document.querySelector(`.react-flow__node[data-id="${id}"] .react-flow__handle[data-handleid="input-0"]`)?.classList.contains("valid"), branchNode);
+    await capture(page, name, "fanout-connecting");
+    await page.mouse.up();
+    await capture(page, name, "fanout-connected");
+    await page.waitForFunction(count => document.querySelectorAll(".react-flow__edge").length === count, branchBaseline.edges.length + 1);
+    await page.getByRole("button", { name: "Undo", exact: true }).click();
+    await page.waitForFunction(count => document.querySelectorAll(".react-flow__edge").length === count, branchBaseline.edges.length);
+    await page.getByRole("button", { name: "Redo", exact: true }).click();
+    await page.waitForFunction(count => document.querySelectorAll(".react-flow__edge").length === count, branchBaseline.edges.length + 1);
+    await page.getByRole("button", { name: "Save", exact: true }).click();
+    await page.waitForFunction(() => document.querySelector(".battersea-editor__toolbar output")?.textContent === "Saved");
+    const branched = await read(page);
+    assert.equal(branched.edges.length, branchBaseline.edges.length + 1);
+    assert.deepEqual(branched.execution, branchBaseline.execution);
+    await page.getByRole("button", { name: "Reload", exact: true }).click();
+    await page.locator('.react-flow__node[data-id="text"]').click();
+    await page.getByRole("textbox", { name: "Text", exact: true }).fill(`fan-out ${name}`);
+    await page.getByRole("button", { name: "Activate node", exact: true }).click();
+    await page.waitForFunction(() => document.querySelector('[aria-label="Activation status"]')?.textContent?.endsWith("succeeded"));
+    const branchRun = (await page.getByLabel("Activation status").textContent()).split(":")[0];
+    const branchEvents = await (await page.request.get(`${origin}/api/activations/${branchRun}`)).json();
+    assert.equal(branchEvents.events.filter(event => event.phase === "flow.token.receive").length, branched.edges.length);
+    await capture(page, name, "fanout");
     assert.deepEqual(errors, []);
     console.log(
-      `${name}: load, read purity, edit, undo, save/reload, layout, activate, diagnostics and cancel passed`,
+      `${name}: load, read purity, edit, undo, save/reload, layout, activate, diagnostics, cancel and fan-out edit/undo/save/reload/execute passed`,
     );
   } finally {
     await browser.close();

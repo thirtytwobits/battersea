@@ -439,11 +439,17 @@ mod tests {
         )
         .await
         .unwrap();
-        assert_eq!(run.output, vec![json!(text.to_uppercase())]);
+        assert_eq!(
+            run.output
+                .iter()
+                .map(|value| (**value).clone())
+                .collect::<Vec<_>>(),
+            vec![json!(text.to_uppercase())]
+        );
         let record: Value =
             serde_json::from_slice(&std::fs::read(root.join(format!("runs/{id}.json"))).unwrap())
                 .unwrap();
-        assert_eq!(record["capture"][0]["value"], run.output[0]);
+        assert_eq!(record["capture"][0]["value"], *run.output[0]);
     }
     #[test]
     fn read_paths_preserve_documents_and_reject_traversal() {

@@ -55,7 +55,7 @@ impl ExecutionError for Error {
 }
 struct Run {
     scheduler: SchedulerState,
-    output: Vec<Value>,
+    output: Vec<Retained<Value>>,
     order: Vec<&'static str>,
 }
 impl Deref for Run {
@@ -128,10 +128,14 @@ impl NodeHandler<Application> for Sink {
         run: &mut Run,
         _node: &FlowNode,
         _port: &str,
-        token: Token,
+        token: Retained<Token>,
     ) -> Result<(), Error> {
         run.order.push("sink");
-        run.output.push(token.value);
+        run.output.push(
+            run.retention
+                .retain("output", token.value.clone())
+                .map_err(Error::invalid_request)?,
+        );
         Ok(())
     }
 }
@@ -139,6 +143,14 @@ impl NodeHandler<Application> for Sink {
 impl ExecutionHost for Application {
     type State = Run;
     type Error = Error;
+    fn controller_activation_effects(
+        &self,
+        run: &mut Run,
+        _node: &str,
+        _values: &HashMap<String, Value>,
+    ) {
+        run.order.push("controller");
+    }
     fn handlers(&self) -> &HandlerRegistry<Self> {
         &self.handlers
     }
@@ -212,14 +224,6 @@ impl ActivationHost for Application {
     async fn preflight_activation(&self, run: &mut Run) -> Result<(), Error> {
         run.order.push("preflight");
         Ok(())
-    }
-    fn controller_activation_effects(
-        &self,
-        run: &mut Run,
-        _node: &str,
-        _values: &HashMap<String, Value>,
-    ) {
-        run.order.push("controller");
     }
     async fn complete_execution(&self, run: &mut Run) -> Result<(), Error> {
         run.order.push("complete");
@@ -301,7 +305,14 @@ async fn demonstrate_generic_fanout() -> Result<(), Error> {
         CancellationToken::new(),
     )
     .await?;
-    assert_eq!(state.output, vec![payload.clone(), payload]);
+    assert_eq!(
+        state
+            .output
+            .iter()
+            .map(|value| (**value).clone())
+            .collect::<Vec<_>>(),
+        vec![payload.clone(), payload]
+    );
     Ok(())
 }
 #[tokio::main(flavor = "current_thread")]
@@ -316,7 +327,13 @@ async fn main() -> Result<(), Error> {
         CancellationToken::new(),
     )
     .await?;
-    assert_eq!(run.output, vec![payload]);
+    assert_eq!(
+        run.output
+            .iter()
+            .map(|value| (**value).clone())
+            .collect::<Vec<_>>(),
+        vec![payload]
+    );
     demonstrate_generic_fanout().await?;
     Ok(())
 }
@@ -340,7 +357,13 @@ mod tests {
         )
         .await
         .unwrap();
-        assert_eq!(run.output, vec![payload]);
+        assert_eq!(
+            run.output
+                .iter()
+                .map(|value| (**value).clone())
+                .collect::<Vec<_>>(),
+            vec![payload]
+        );
         assert_eq!(
             run.order,
             ["preflight", "source", "sink", "controller", "complete"]

@@ -700,6 +700,7 @@ dependencies = [
  "battersea-pianola",
  "battersea-runtime",
  "clap",
+ "futures-util",
  "reqwest",
  "serde",
  "serde_json",

@@ -39,7 +39,7 @@ impl<H: ExecutionHost> FlowRuntimeHandler<H> for MultiplexerHandler {
                 runtime,
                 &node.id,
                 &output_port.name,
-                input_token.clone(),
+                (*input_token).clone(),
                 token,
             )
             .await?;

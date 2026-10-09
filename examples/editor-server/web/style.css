@@ -143,6 +143,23 @@ output {
   transform: translateY(-50%);
   pointer-events: none;
 }
+.flow-studio-node-port-label--input {
+  left: 8px;
+}
+.flow-studio-node-port-label--output {
+  right: 8px;
+  text-align: right;
+}
+.flow-studio-node-port-label--top {
+  top: 8px;
+  text-align: center;
+  transform: translateX(-50%);
+}
+.flow-studio-node-port-label--bottom {
+  bottom: 8px;
+  text-align: center;
+  transform: translateX(-50%);
+}
 .flow-studio-node-port-cluster {
   display: inline-flex;
   pointer-events: auto;

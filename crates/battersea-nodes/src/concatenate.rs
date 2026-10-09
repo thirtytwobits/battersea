@@ -420,7 +420,7 @@ pub fn prepare_concatenate(
     flow: &battersea_flow::FlowDocument,
     node: &FlowNode,
     definition: &FlowNodeDefinition,
-    inputs: &HashMap<String, FlowToken>,
+    inputs: &HashMap<String, impl std::borrow::Borrow<FlowToken>>,
 ) -> EngineResult<FlowToken> {
     let config = ConcatenateConfig::from_node(node, definition, flow);
     let mut ordered_ports = inputs.keys().cloned().collect::<Vec<_>>();
@@ -432,7 +432,7 @@ pub fn prepare_concatenate(
     // element type (`prompt.fragment`) since concatenate flattens.
     let mut emitted_token_type: Option<String> = None;
     for port_name in ordered_ports {
-        let token_value = &inputs[&port_name];
+        let token_value = inputs[&port_name].borrow();
         if emitted_token_type.is_none() {
             emitted_token_type = Some(match token_value.token_type.as_str() {
                 "prompt.fragmentArray" => "prompt.fragment".to_string(),

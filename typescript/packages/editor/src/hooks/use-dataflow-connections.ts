@@ -109,7 +109,7 @@ function notifyPortAlreadyConnected(
     tone: "warning",
     title: "Port already connected",
     message:
-      "Each port can only have one edge attached. Remove the existing edge first.",
+      "Inputs and signal ports accept one edge. Remove the existing edge first.",
   });
 }
 

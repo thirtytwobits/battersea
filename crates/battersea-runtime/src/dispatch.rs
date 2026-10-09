@@ -42,7 +42,7 @@ pub async fn execute_registered_sink<H: ExecutionHost>(
     node: &FlowNode,
     definition: &FlowNodeDefinition,
     input_port: &str,
-    token_value: Token,
+    token_value: Retained<Token>,
 ) -> Result<(), H::Error> {
     core.handlers()
         .get(&definition.handler_id)

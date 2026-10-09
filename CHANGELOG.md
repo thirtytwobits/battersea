@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+- Require an explicit upgrade to version 2 with port modes, source order and finite limits.
+- Queue ordered token fan-out and control delivery with lossless admission and explicit lossy drops.
+- Consume streaming deltas once and wait for successful closure before final execution.
+- Drive owned provider pumps with cancellation, fair selection and retained-payload accounting.
+- Support token fan-out editing and exercise durable save/reload in the independent editor.
+
 ## 0.5.0 — 2026-10-09
 
 - Publish an unstyled React editor with document, catalogue, validation and activation ports.

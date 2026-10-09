@@ -1,4 +1,8 @@
 //! Session-independent node execution and host contracts.
+mod delivery;
+pub use delivery::ProviderEvent;
+pub mod retention;
+pub use retention::{Retained, RetentionBudget};
 mod event;
 mod handler;
 mod lifecycle;

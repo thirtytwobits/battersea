@@ -56,7 +56,7 @@ impl ExecutionError for Error {
 }
 pub struct Run {
     scheduler: SchedulerState,
-    pub output: Vec<Value>,
+    pub output: Vec<Retained<Value>>,
     pub tap: Mutex<battersea_pianola::PianolaTap>,
 }
 impl Deref for Run {
@@ -91,7 +91,7 @@ impl NodeHandler<Application> for TextSource {
         node: &FlowNode,
         _: &FlowNodeDefinition,
         values: Option<&HashMap<String, Value>>,
-        token: &CancellationToken,
+        _token: &CancellationToken,
     ) -> Result<(), Error> {
         let text = values
             .and_then(|v| v.get("text"))
@@ -102,16 +102,20 @@ impl NodeHandler<Application> for TextSource {
             .get("delay_ms")
             .and_then(Value::as_u64)
             .unwrap_or(0);
-        tokio::select! { _ = token.cancelled() => return Err(Error::cancelled("Cancelled by caller")), _ = tokio::time::sleep(std::time::Duration::from_millis(delay)) => () }
-        host.emit_flow_token(
+        let text = text.to_uppercase();
+        host.start_provider(
             run,
             &node.id,
-            "text",
-            Token {
-                token_type: "prompt.fragment".into(),
-                value: json!(text.to_uppercase()),
-            },
-            token,
+            futures_util::stream::once(async move {
+                tokio::time::sleep(std::time::Duration::from_millis(delay)).await;
+                ProviderEvent::Token {
+                    port: "text".into(),
+                    value: Token {
+                        token_type: "prompt.fragment".into(),
+                        value: json!(text),
+                    },
+                }
+            }),
         )
         .await
     }
@@ -127,9 +131,13 @@ impl NodeHandler<Application> for Output {
         run: &mut Run,
         _: &FlowNode,
         _: &str,
-        token: Token,
+        token: Retained<Token>,
     ) -> Result<(), Error> {
-        run.output.push(token.value);
+        run.output.push(
+            run.retention
+                .retain("output", token.value.clone())
+                .map_err(Error::invalid_request)?,
+        );
         Ok(())
     }
 }
@@ -209,6 +217,7 @@ impl Application {
 impl ExecutionHost for Application {
     type State = Run;
     type Error = Error;
+    fn controller_activation_effects(&self, _: &mut Run, _: &str, _: &HashMap<String, Value>) {}
     fn handlers(&self) -> &HandlerRegistry<Self> {
         &self.handlers
     }
@@ -291,7 +300,6 @@ impl ActivationHost for Application {
     async fn preflight_activation(&self, _: &mut Run) -> Result<(), Error> {
         Ok(())
     }
-    fn controller_activation_effects(&self, _: &mut Run, _: &str, _: &HashMap<String, Value>) {}
     async fn complete_execution(&self, _: &mut Run) -> Result<(), Error> {
         Ok(())
     }

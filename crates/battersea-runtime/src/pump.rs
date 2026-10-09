@@ -214,7 +214,7 @@ impl<T> Drop for EventPump<T> {
 }
 
 /// Measure without constructing a second encoded copy of a retained payload.
-fn measure(value: &impl Serialize, limit: usize) -> Result<usize, PumpError> {
+pub(crate) fn measure(value: &impl Serialize, limit: usize) -> Result<usize, PumpError> {
     struct Counter {
         bytes: usize,
         limit: usize,

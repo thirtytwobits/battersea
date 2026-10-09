@@ -1,4 +1,4 @@
-use crate::{ExecutionError, ExecutionHost, Token};
+use crate::{ExecutionError, ExecutionHost, Retained, Token};
 use async_trait::async_trait;
 use battersea_flow::{FlowNode, FlowNodeDefinition};
 use serde_json::Value;
@@ -61,7 +61,7 @@ pub trait NodeHandler<H: ExecutionHost>: Send + Sync {
         _runtime: &mut H::State,
         _node: &FlowNode,
         _input_port: &str,
-        _token_value: Token,
+        _token_value: Retained<Token>,
     ) -> Result<(), H::Error> {
         Err(H::Error::invalid_request(format!(
             "Flow handler \"{}\" does not support sink execution.",
@@ -105,10 +105,8 @@ pub trait NodeHandler<H: ExecutionHost>: Send + Sync {
         )))
     }
 
-    /// Observes one received input token before the runtime queues or consumes it.
-    ///
-    /// Handlers can use this to emit incremental outputs while still allowing
-    /// the final queued execution pass to consume the full buffered inputs.
+    /// Consumes one streaming delta. The runtime does not retain it for final execution.
+    /// Application-owned copies must use the node's retention budget.
     async fn receive_input_token(
         &self,
         _core: &H,
@@ -117,6 +115,35 @@ pub trait NodeHandler<H: ExecutionHost>: Send + Sync {
         _definition: &FlowNodeDefinition,
         _input_port: &str,
         _token_value: &Token,
+        _token: &CancellationToken,
+    ) -> Result<(), H::Error> {
+        Err(H::Error::invalid_request(format!(
+            "Flow handler {:?} does not consume streaming inputs.",
+            self.handler_id()
+        )))
+    }
+    /// Applies one custom event from an owned provider pump on the driver.
+    async fn receive_provider_event(
+        &self,
+        _core: &H,
+        _runtime: &mut H::State,
+        _node: &FlowNode,
+        _definition: &FlowNodeDefinition,
+        _value: &Value,
+        _token: &CancellationToken,
+    ) -> Result<(), H::Error> {
+        Err(H::Error::invalid_request(
+            "Handler does not accept custom provider events.",
+        ))
+    }
+
+    /// Finishes an owned provider stream. A tool continuation may register its next pump.
+    async fn provider_complete(
+        &self,
+        _core: &H,
+        _runtime: &mut H::State,
+        _node: &FlowNode,
+        _definition: &FlowNodeDefinition,
         _token: &CancellationToken,
     ) -> Result<(), H::Error> {
         Ok(())

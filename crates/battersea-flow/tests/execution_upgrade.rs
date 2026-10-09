@@ -225,3 +225,26 @@ fn typed_documents_cannot_bypass_version_inspection() {
         .supported()
         .is_err());
 }
+
+#[test]
+fn catalogue_accepts_token_fanout_but_requires_one_producer_per_input() {
+    let definitions = definitions();
+    let mut entries = vec![definitions["Stream"].clone(), definitions["Sink"].clone()];
+    entries[0].kind = battersea_flow::FlowNodeClass::Source;
+    let mut registry = battersea_flow::registry::Registry::default();
+    registry.register_token_type("text", json!(true)).unwrap();
+    for definition in &entries {
+        registry.register_handler(&definition.handler_id).unwrap();
+    }
+    let catalogue = battersea_flow::catalog::Catalog::from_definitions(entries, registry).unwrap();
+    let mut flow: FlowDocument = serde_json::from_value(json!({
+        "version":battersea_flow::document::FLOW_DOCUMENT_VERSION,"flow_key":"fanout","title":"Fan-out",
+        "execution":{"source_order":["source"],"limits":FlowExecutionLimits::default()},
+        "nodes":[{"id":"source","definition_name":"Stream","instance_name":"Source"},{"id":"a","definition_name":"Sink","instance_name":"A"},{"id":"b","definition_name":"Sink","instance_name":"B"}],
+        "edges":[{"id":"a","source_node_id":"source","source_port":"out","target_node_id":"a","target_port":"in","queue":battersea_flow::FlowQueueLimits::default()},
+            {"id":"b","source_node_id":"source","source_port":"out","target_node_id":"b","target_port":"in","queue":battersea_flow::FlowQueueLimits::default()}]
+    })).unwrap();
+    assert!(catalogue.validate(&flow).valid);
+    flow.edges[1].target_node_id = flow.edges[0].target_node_id.clone();
+    assert!(!catalogue.validate(&flow).valid);
+}

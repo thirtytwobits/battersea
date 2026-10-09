@@ -11,7 +11,10 @@ injected function; the default lazily loads Dagre. Primrose supplies its data wo
 
 A parameter renderer returns `undefined` to delegate to the primitive control or `null` to hide
 its field. Custom source resolution and storage remain host responsibilities. Document inspection
-preserves parameter values and does not infer upgrades from their shape.
+preserves parameter values and does not infer upgrades from their shape. Token outputs support
+ordered fan-out; inputs and signal outputs accept one edge. Connections require matching
+consumption modes and compatible token types. Saved graphs preserve execution limits,
+source priority and streaming queue policy.
 
 The editor-server example connects an installed package to application-owned HTTP endpoints.
 Component stories cover nodes, edges, palette and inspector. Dependency notices are packaged

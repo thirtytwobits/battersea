@@ -784,7 +784,8 @@ export function connectionConflictsWithExistingEdge(
 
   return edges.some(
     (edge) =>
-      (getEdgeKind(edge) === resolvedConnection.family &&
+      (resolvedConnection.family === "signal" &&
+        getEdgeKind(edge) === resolvedConnection.family &&
         edge.source === resolvedConnection.source &&
         (edge.sourceHandle ?? defaultHandles.sourceHandleId) ===
           resolvedConnection.sourceHandleId) ||
@@ -922,6 +923,9 @@ export function connectionUsesCompatibleTokenTypes(options: {
   if (!sourcePort?.tokenType || !targetPort?.tokenType) {
     return false;
   }
+  const targetMode = targetSide === "automation" ? "final_value" : targetPort.mode;
+  if (sourcePort.mode !== targetMode) return false;
+  if (targetPort.phase === "snapshot" && sourcePort.phase !== "snapshot") return false;
 
   // An "auto" source can only ever carry one of its node's input
   // accepted types; gather that union for the shared rule below.

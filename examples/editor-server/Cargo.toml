@@ -12,6 +12,7 @@ battersea-nodes = { path = "../../crates/battersea-nodes" }
 battersea-pianola = { path = "../../crates/battersea-pianola" }
 async-trait.workspace = true
 axum.workspace = true
+futures-util.workspace = true
 clap.workspace = true
 serde.workspace = true
 serde_json.workspace = true

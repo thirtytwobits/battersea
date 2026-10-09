@@ -29,7 +29,7 @@ pub fn battersea_nodes::concatenate::ConcatenateHandler::borrow_mut(&mut self) -
 impl<T> core::convert::From<T> for battersea_nodes::concatenate::ConcatenateHandler
 pub fn battersea_nodes::concatenate::ConcatenateHandler::from(t: T) -> T
 impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_nodes::concatenate::ConcatenateHandler where T: ?core::marker::Sized
-pub fn battersea_nodes::concatenate::prepare_concatenate(flow: &battersea_flow::types::FlowDocument, node: &battersea_flow::types::FlowNode, definition: &battersea_flow::types::FlowNodeDefinition, inputs: &std::collections::hash::map::HashMap<alloc::string::String, battersea_runtime::Token>) -> battersea_nodes::NodeResult<battersea_runtime::Token>
+pub fn battersea_nodes::concatenate::prepare_concatenate(flow: &battersea_flow::types::FlowDocument, node: &battersea_flow::types::FlowNode, definition: &battersea_flow::types::FlowNodeDefinition, inputs: &std::collections::hash::map::HashMap<alloc::string::String, impl core::borrow::Borrow<battersea_runtime::Token>>) -> battersea_nodes::NodeResult<battersea_runtime::Token>
 pub mod battersea_nodes::logic
 pub struct battersea_nodes::logic::AndGateHandler
 impl<H: battersea_runtime::host::ExecutionHost> battersea_runtime::handler::NodeHandler<H> for battersea_nodes::logic::AndGateHandler

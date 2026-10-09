@@ -69,12 +69,6 @@ pub trait ActivationHost: ExecutionHost {
     async fn accept_activation(&self, runtime: &Self::State, node: &str)
         -> Result<(), Self::Error>;
     async fn preflight_activation(&self, runtime: &mut Self::State) -> Result<(), Self::Error>;
-    fn controller_activation_effects(
-        &self,
-        runtime: &mut Self::State,
-        node: &str,
-        values: &HashMap<String, Value>,
-    );
     async fn complete_execution(&self, runtime: &mut Self::State) -> Result<(), Self::Error>;
     async fn retain_execution_phase(
         &self,
@@ -95,6 +89,18 @@ pub trait ActivationHost: ExecutionHost {
             .validate(runtime.definitions.values())
             .map_err(Self::Error::invalid_request)?;
         self.validate_activation(runtime)?;
+        let value_bytes = crate::pump::measure(
+            &values,
+            runtime.flow.execution.limits.node_retained_bytes as usize,
+        )
+        .map_err(|e| Self::Error::invalid_request(e.to_string()))?;
+        runtime.activation_values_charge = Some(
+            runtime
+                .retention
+                .reserve(0, value_bytes, Some(node))
+                .map_err(Self::Error::invalid_request)?,
+        );
+        runtime.activated_node_id = Some(node.into());
         runtime.activation_values = values.clone();
         runtime.activation_token = token.clone();
         self.accept_activation(runtime, node).await?;
@@ -106,31 +112,50 @@ pub trait ActivationHost: ExecutionHost {
             None,
         )
         .await;
-        let work = async {
-            if token.is_cancelled() {
-                return Err(Self::Error::cancelled(
-                    "Activation cancelled before execution.",
-                ));
-            }
-            self.preflight_activation(runtime).await?;
-            while self.evaluate_ready_logic_nodes(runtime).await? {}
-            self.execute_flow_node(runtime, node, Some(&values), &token)
-                .await?;
-            self.controller_activation_effects(runtime, node, &values);
-            self.materialize_snapshot_sources(runtime, node, &token)
-                .await?;
-            self.drain_flow_work(runtime, &token).await?;
-            if token.is_cancelled() {
-                return Err(Self::Error::cancelled(
-                    "Activation cancelled before completion.",
-                ));
-            }
-            self.complete_execution(runtime).await
+        let work =
+            async {
+                if token.is_cancelled() {
+                    return Err(Self::Error::cancelled(
+                        "Activation cancelled before execution.",
+                    ));
+                }
+                self.preflight_activation(runtime).await?;
+                loop {
+                    while self.progress_delivery(runtime, &token).await? {}
+                    if !self.evaluate_ready_logic_nodes(runtime).await? {
+                        break;
+                    }
+                }
+                self.execute_flow_node(runtime, node, Some(&values), &token)
+                    .await?;
+                if runtime.producers.get(node).is_some_and(|producer| {
+                    producer.phase == battersea_flow::FlowPortPhase::Snapshot
+                }) {
+                    self.await_snapshot_phase(runtime, node, &token).await?;
+                }
+                while self.progress_delivery(runtime, &token).await? {}
+                self.materialize_snapshot_sources(runtime, node, &token)
+                    .await?;
+                self.drain_flow_work(runtime, &token).await?;
+                if token.is_cancelled() {
+                    return Err(Self::Error::cancelled(
+                        "Activation cancelled before completion.",
+                    ));
+                }
+                self.complete_execution(runtime).await
+            };
+        let result = tokio::select! {
+            biased;
+            _ = token.cancelled() => Err(Self::Error::cancelled("Flow activation cancelled.")),
+            result = AssertUnwindSafe(work).catch_unwind() => result.unwrap_or_else(|_| Err(Self::Error::interrupted("Activation task panicked."))),
         };
-        let result = AssertUnwindSafe(work)
-            .catch_unwind()
-            .await
-            .unwrap_or_else(|_| Err(Self::Error::interrupted("Activation task panicked.")));
+        runtime.producers.clear();
+        runtime.data_queue.clear();
+        runtime.control_queue.clear();
+        runtime.input_tokens.clear();
+        runtime.active_delivery_groups.clear();
+        runtime.activation_values.clear();
+        runtime.activation_values_charge.take();
         let phase = match &result {
             Ok(()) => RunPhase::CompletionPending,
             Err(error) => RunPhase::Terminal {

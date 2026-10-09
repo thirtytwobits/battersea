@@ -17,6 +17,8 @@ pub enum EventKind {
     TokenEmit,
     TokenReceive,
     TokenSkip,
+    TokenDrop,
+    ProviderEvent,
     ActivationAccepted,
     ActivationExecutionFinished,
 }
@@ -35,6 +37,8 @@ impl EventKind {
             Self::SignalReceive => "flow.signal.receive",
             Self::TokenEmit => "flow.token.emit",
             Self::TokenReceive => "flow.token.receive",
+            Self::TokenDrop => "flow.token.drop",
+            Self::ProviderEvent => "flow.provider.event",
             Self::TokenSkip => "flow.token.skip",
             Self::ActivationAccepted => "activation.accepted",
             Self::ActivationExecutionFinished => "activation.execution_finished",
