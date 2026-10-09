@@ -29,6 +29,8 @@ const USER_PROMPT_DEFINITION: WireFlowNodeDefinition = {
   long_description: "Starts a flow by emitting exactly the prompt text entered for the activation.",
   output_ports: [
     {
+      mode: "final_value",
+      phase: "snapshot",
       kind: "output",
       name: "output",
       token_type: "prompt.fragment"
@@ -53,6 +55,8 @@ const CONCATENATE_DEFINITION: WireFlowNodeDefinition = {
   class_name: "Concatenate",
   dynamic_input_ports: [
     {
+      mode: "final_value",
+      phase: "execution",
       count_parameter: "input_ports",
       name_template: "input-{index}",
       token_type: "prompt.fragment"
@@ -66,6 +70,8 @@ const CONCATENATE_DEFINITION: WireFlowNodeDefinition = {
   long_description: "Concatenates N prompt fragments with configurable ordering, whitespace cleanup, and output formatting.",
   output_ports: [
     {
+      mode: "final_value",
+      phase: "execution",
       kind: "output",
       name: "output",
       token_type: "prompt.fragment"
@@ -146,6 +152,8 @@ const CHARACTER_LIST_DEFINITION: WireFlowNodeDefinition = {
   long_description: "Provides a rendered list of characters.",
   output_ports: [
     {
+      mode: "final_value",
+      phase: "snapshot",
       kind: "output",
       name: "output",
       token_type: "prompt.fragment"
@@ -199,11 +207,15 @@ const RESPONSE_PARSER_DEFINITION: WireFlowNodeDefinition = {
   handler_id: "primrose.chat-response-parser",
   input_ports: [
     {
+      mode: "final_value",
+      phase: "execution",
       kind: "input",
       name: "response_stream",
       token_type: "chat.response_stream"
     },
     {
+      mode: "final_value",
+      phase: "execution",
       kind: "input",
       name: "response",
       token_type: "chat.response"
@@ -214,12 +226,16 @@ const RESPONSE_PARSER_DEFINITION: WireFlowNodeDefinition = {
   long_description: "Parses tagged chat responses into structured outputs.",
   output_ports: [
     {
+      mode: "final_value",
+      phase: "execution",
       display_class: "source",
       kind: "output",
       name: "format_rule",
       token_type: "prompt.fragment"
     },
     {
+      mode: "final_value",
+      phase: "execution",
       kind: "output",
       name: "user_response",
       token_type: "chat.response"
@@ -285,6 +301,8 @@ test("createFlowNodeDragPayload marks nodes with controller outputs", () => {
     dynamic_output_ports: [],
     handler_id: "primrose.session-output",
     input_ports: [{
+      mode: "final_value",
+      phase: "execution",
       kind: "input",
       name: "response_stream",
       token_type: "chat.response_stream"

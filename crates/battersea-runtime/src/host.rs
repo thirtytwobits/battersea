@@ -247,7 +247,8 @@ pub trait ExecutionHost: Sized + Send + Sync {
             })
             .map(|node| node.id.clone())
             .collect::<Vec<_>>();
-        let source_ids = order_source_phase_materialization(runtime, source_ids);
+        let source_ids = order_source_phase_materialization(runtime, source_ids)
+            .map_err(Self::Error::invalid_request)?;
 
         for node_id in source_ids {
             let node = runtime
@@ -1089,93 +1090,12 @@ pub trait ExecutionHost: Sized + Send + Sync {
 pub fn order_source_phase_materialization<S: std::ops::Deref<Target = SchedulerState>>(
     runtime: &S,
     source_ids: Vec<String>,
-) -> Vec<String> {
-    let source_set: HashSet<String> = source_ids.iter().cloned().collect();
-    let original_index: HashMap<String, usize> = source_ids
-        .iter()
-        .enumerate()
-        .map(|(index, id)| (id.clone(), index))
-        .collect();
-
-    let mut dependencies: HashMap<String, HashSet<String>> = HashMap::new();
-    let mut dependents: HashMap<String, Vec<String>> = HashMap::new();
-    for node_id in &source_ids {
-        let Some(node) = runtime.nodes_by_id.get(node_id) else {
-            continue;
-        };
-        let Some(definition) = node_definition(&runtime.definitions, node) else {
-            continue;
-        };
-        for edge in runtime
-            .incoming_edges
-            .values()
-            .filter(|edge| edge.target_node_id == *node_id)
-        {
-            if edge.kind != FlowEdgeKind::Token {
-                continue;
-            }
-            if !source_set.contains(&edge.source_node_id) {
-                continue;
-            }
-            let Some(input_port) = definition
-                .input_ports
-                .iter()
-                .find(|port| port.name == edge.target_port)
-            else {
-                continue;
-            };
-            if input_port.display_class != Some(battersea_flow::FlowPortDisplayClass::Source) {
-                continue;
-            }
-            dependencies
-                .entry(node_id.clone())
-                .or_default()
-                .insert(edge.source_node_id.clone());
-            dependents
-                .entry(edge.source_node_id.clone())
-                .or_default()
-                .push(node_id.clone());
-        }
-    }
-
-    let mut ready: Vec<String> = source_ids
-        .iter()
-        .filter(|id| dependencies.get(*id).is_none_or(|deps| deps.is_empty()))
-        .cloned()
-        .collect();
-    ready.sort_by_key(|id| original_index.get(id).copied().unwrap_or(usize::MAX));
-
-    let mut result = Vec::with_capacity(source_ids.len());
-    let mut emitted: HashSet<String> = HashSet::new();
-    while let Some(node_id) = ready.first().cloned() {
-        ready.remove(0);
-        if !emitted.insert(node_id.clone()) {
-            continue;
-        }
-        result.push(node_id.clone());
-        if let Some(consumers) = dependents.get(&node_id).cloned() {
-            for consumer in consumers {
-                if let Some(deps) = dependencies.get_mut(&consumer) {
-                    deps.remove(&node_id);
-                    if deps.is_empty() && !emitted.contains(&consumer) {
-                        let position = ready
-                            .binary_search_by_key(
-                                &original_index.get(&consumer).copied().unwrap_or(usize::MAX),
-                                |id| original_index.get(id).copied().unwrap_or(usize::MAX),
-                            )
-                            .unwrap_or_else(|index| index);
-                        ready.insert(position, consumer);
-                    }
-                }
-            }
-        }
-    }
-    // Append any nodes left over (cycle or unreachable) in original order so
-    // we never drop nodes; the cycle is preserved as a deterministic fallback.
-    for node_id in source_ids {
-        if !emitted.contains(&node_id) {
-            result.push(node_id);
-        }
-    }
-    result
+) -> Result<Vec<String>, String> {
+    let included: HashSet<_> = source_ids.into_iter().collect();
+    Ok(
+        battersea_flow::execution::ordered_sources(&runtime.flow, &runtime.definitions)?
+            .into_iter()
+            .filter(|id| included.contains(id))
+            .collect(),
+    )
 }

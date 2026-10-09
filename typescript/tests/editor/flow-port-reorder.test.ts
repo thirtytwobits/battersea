@@ -18,6 +18,8 @@ const CONCATENATE_DEFINITION = {
   activation_parameters: [],
   class_name: "Concatenate",
   dynamic_input_ports: [{
+    mode: "final_value",
+    phase: "execution",
     count_parameter: "input_ports",
     name_template: "input-{index}",
     token_type: "prompt.fragment"

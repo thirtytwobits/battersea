@@ -29,6 +29,7 @@ export type FlowControllerOutputDefinition = {
 export type FlowDocument = {
     "description"?: string;
     "edges": Array<FlowEdge>;
+    "execution": FlowExecutionPolicy;
     "flow_key": string;
     "layout"?: {
         [key: string]: unknown;
@@ -46,8 +47,10 @@ export type FlowDynamicPortGroup = {
     "count_parameter": string;
     "display_class"?: FlowPortDisplayClass;
     "long_description"?: string;
+    "mode": FlowPortMode;
     "name_template": string;
     "parameters"?: Array<FlowParameterDefinition>;
+    "phase": FlowPortPhase;
     "short_description"?: string;
     "token_type": string;
 };
@@ -62,12 +65,23 @@ export type FlowEdge = {
     "id": string;
     "kind": FlowEdgeKind;
     "order": number;
+    "queue"?: FlowQueueLimits;
     "source_node_id": string;
     "source_port": string;
     "target_node_id": string;
     "target_port": string;
 };
 export type FlowEdgeKind = "token" | "signal";
+export type FlowExecutionLimits = {
+    "node_retained_bytes": number;
+    "pending_events": number;
+    "provider_queue": FlowQueueLimits;
+    "retained_bytes": number;
+};
+export type FlowExecutionPolicy = {
+    "limits": FlowExecutionLimits;
+    "source_order": Array<string>;
+};
 export type FlowNode = {
     "definition_name": string;
     "id": string;
@@ -165,8 +179,10 @@ export type FlowPort = {
     "formatter"?: FlowPortFormatter;
     "kind": FlowPortKind;
     "long_description"?: string;
+    "mode": FlowPortMode;
     "name": string;
     "parameters"?: Array<FlowParameterDefinition>;
+    "phase": FlowPortPhase;
     "short_description"?: string;
     "token_type": string;
 };
@@ -180,6 +196,8 @@ export type FlowPortFormatter = {
 };
 export type FlowPortFormatterKind = "prompt_template";
 export type FlowPortKind = "input" | "output";
+export type FlowPortMode = "final_value" | "stream";
+export type FlowPortPhase = "snapshot" | "execution";
 export type FlowPromptListTemplateNode = {
     "binding": string;
     "item_bindings"?: Array<string>;
@@ -219,6 +237,13 @@ export type FlowPromptTemplateNode = {
 export type FlowPromptTextTemplateNode = {
     "text": string;
 };
+export type FlowQueueLimits = {
+    "bytes": number;
+    "items": number;
+    "max_event_bytes": number;
+    "policy": FlowQueuePolicy;
+};
+export type FlowQueuePolicy = "backpressure" | "drop_oldest";
 export type FlowSignalPortDefinition = {
     "display_class"?: FlowPortDisplayClass;
     "long_description"?: string;
@@ -235,9 +260,44 @@ export type FlowValidationResult = {
     "valid": boolean;
 };
 
+// defaults.d.ts
+export declare const FLOW_DOCUMENT_VERSION = 2;
+export declare const DEFAULT_FLOW_EXECUTION_LIMITS: {
+    pending_events: number;
+    retained_bytes: number;
+    node_retained_bytes: number;
+    provider_queue: {
+        items: number;
+        bytes: number;
+        max_event_bytes: number;
+        policy: "backpressure";
+    };
+};
+
+// execution.d.ts
+import type { FlowDocument, FlowExecutionPolicy } from "./contract.js";
+/** Execution policy for a newly authored document. Stored documents require an explicit upgrade. */
+export declare function createFlowExecutionPolicy(sourceOrder?: string[]): FlowExecutionPolicy;
+/** Version admission; complete graph validation belongs to the catalogue. */
+export declare function requireSupportedFlowVersion(document: Pick<FlowDocument, "version" | "execution">): void;
+
 // fixtures.d.ts
 export declare const flows: {
     edges: never[];
+    execution: {
+        limits: {
+            node_retained_bytes: number;
+            pending_events: number;
+            provider_queue: {
+                bytes: number;
+                items: number;
+                max_event_bytes: number;
+                policy: "backpressure";
+            };
+            retained_bytes: number;
+        };
+        source_order: string[];
+    };
     flow_key: string;
     layout: {
         "editor.example": {
@@ -270,6 +330,8 @@ export declare const flows: {
 // index.d.ts
 export type * from "./contract.js";
 export { tokenConnectionCompatible } from "./ports.js";
+export { FLOW_DOCUMENT_VERSION } from "./defaults.js";
+export { createFlowExecutionPolicy, requireSupportedFlowVersion } from "./execution.js";
 
 // ports.d.ts
 /** Nominal token compatibility, including pass-through outputs with inferred input types. */

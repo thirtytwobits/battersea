@@ -306,7 +306,11 @@ mod tests {
 
     fn flow(output_encoding: &str, whitespace_mode: &str) -> FlowDocument {
         FlowDocument {
-            version: 1,
+            version: crate::document::FLOW_DOCUMENT_VERSION,
+            execution: crate::FlowExecutionPolicy {
+                source_order: Vec::new(),
+                limits: crate::FlowExecutionLimits::default(),
+            },
             flow_key: "test-flow".to_string(),
             title: "Test Flow".to_string(),
             description: None,

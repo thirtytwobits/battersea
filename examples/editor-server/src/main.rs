@@ -1,4 +1,5 @@
 mod runtime;
+mod upgrade;
 use axum::{
     extract::{Path, State},
     http::StatusCode,
@@ -45,6 +46,20 @@ enum Command {
         node: String,
         text: String,
     },
+    /// Inspect a saved flow's explicit upgrade and revision without changing it.
+    InspectUpgrade {
+        #[arg(long, default_value = "http://127.0.0.1:18180")]
+        server: String,
+        flow: String,
+    },
+    /// Upgrade a saved flow at the inspected revision, retaining its original.
+    Upgrade {
+        #[arg(long, default_value = "http://127.0.0.1:18180")]
+        server: String,
+        flow: String,
+        #[arg(long)]
+        expected_revision: String,
+    },
     /// Read an activation and its ordered diagnostics.
     Inspect {
         #[arg(long, default_value = "http://127.0.0.1:18180")]
@@ -62,6 +77,7 @@ enum Command {
 struct App {
     runtime: Arc<Application>,
     runs: Arc<Mutex<HashMap<String, LiveRun>>>,
+    writes: Arc<Mutex<()>>,
 }
 struct LiveRun {
     status: String,
@@ -167,6 +183,7 @@ async fn save(
     State(app): State<App>,
     Json(flow): Json<FlowDocument>,
 ) -> Result<Json<Value>, Error> {
+    let _guard = app.writes.lock().unwrap();
     key(&flow.flow_key)?;
     let validation = app.runtime.catalog.validate(&flow);
     if !validation.valid {
@@ -177,6 +194,13 @@ async fn save(
         .root
         .join("flows")
         .join(format!("{}.json", flow.flow_key));
+    match std::fs::read_to_string(&path) {
+        Ok(source) => {
+            load_document(&source).map_err(|e| Error::invalid_request(e.to_string()))?;
+        }
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
+        Err(error) => return Err(io(error)),
+    }
     let tmp = path.with_extension(format!("{}.tmp", uuid::Uuid::new_v4()));
     std::fs::write(&tmp, serde_json::to_vec_pretty(&flow).map_err(io)?).map_err(io)?;
     std::fs::rename(tmp, path).map_err(io)?;
@@ -192,6 +216,7 @@ async fn clone_flow(
     State(app): State<App>,
     Json(request): Json<CloneRequest>,
 ) -> Result<Json<Value>, Error> {
+    let _guard = app.writes.lock().unwrap();
     let mut flow = read(&app, &request.current_flow_key)?;
     key(&request.next_flow_key)?;
     let path = app
@@ -215,6 +240,7 @@ async fn delete_flow(
     State(app): State<App>,
     Path(name): Path<String>,
 ) -> Result<Json<Value>, Error> {
+    let _guard = app.writes.lock().unwrap();
     std::fs::remove_file(
         app.runtime
             .root
@@ -307,6 +333,10 @@ fn router(app: App) -> Router {
         .route("/api/flows", get(list).put(save))
         .route("/api/flows/clone", post(clone_flow))
         .route("/api/flows/{key}", get(read_flow).delete(delete_flow))
+        .route(
+            "/api/flows/{key}/upgrade",
+            get(upgrade::inspect).post(upgrade::apply),
+        )
         .route("/api/validate", post(validate))
         .route("/api/activations", post(activate))
         .route("/api/activations/{id}", get(inspect).delete(cancel))
@@ -320,6 +350,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             let app = App {
                 runtime: Arc::new(Application::new(root)?),
                 runs: Arc::default(),
+                writes: Arc::default(),
             };
             let listener =
                 tokio::net::TcpListener::bind((std::net::Ipv4Addr::LOCALHOST, port)).await?;
@@ -343,6 +374,29 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     .await?
             );
         }
+        Command::InspectUpgrade { server, flow } => println!(
+            "{}",
+            reqwest::get(format!("{server}/api/flows/{}/upgrade", key(&flow)?))
+                .await?
+                .error_for_status()?
+                .text()
+                .await?
+        ),
+        Command::Upgrade {
+            server,
+            flow,
+            expected_revision,
+        } => println!(
+            "{}",
+            reqwest::Client::new()
+                .post(format!("{server}/api/flows/{}/upgrade", key(&flow)?))
+                .json(&json!({"expected_revision": expected_revision}))
+                .send()
+                .await?
+                .error_for_status()?
+                .text()
+                .await?
+        ),
         Command::Inspect { server, id } => println!(
             "{}",
             reqwest::get(format!("{server}/api/activations/{id}"))
@@ -399,6 +453,7 @@ mod tests {
         let app = App {
             runtime: Arc::new(Application::new(root.clone()).unwrap()),
             runs: Arc::default(),
+            writes: Arc::default(),
         };
         let path = root.join("flows/example.json");
         let before = std::fs::read(&path).unwrap();
@@ -419,6 +474,7 @@ mod tests {
         let app = App {
             runtime: Arc::new(Application::new(root.clone()).unwrap()),
             runs: Arc::default(),
+            writes: Arc::default(),
         };
         let path = root.join("flows/future.json");
         let bytes = br#"{"version":999,"flow_key":"future","title":"Future document","nodes":"a different format"}"#;
@@ -449,6 +505,7 @@ mod tests {
         let app = App {
             runtime: Arc::new(Application::new(root.clone()).unwrap()),
             runs: Arc::default(),
+            writes: Arc::default(),
         };
         let mut flow = read(&app, "example").unwrap();
         flow.nodes[0]

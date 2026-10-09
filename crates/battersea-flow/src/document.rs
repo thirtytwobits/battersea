@@ -5,11 +5,11 @@ use serde::Serialize;
 use serde_json::Value;
 use std::collections::{BTreeMap, HashMap, HashSet};
 
-pub const FLOW_DOCUMENT_VERSION: u32 = 1;
+pub const FLOW_DOCUMENT_VERSION: u32 = 2;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum DocumentInspection {
-    Supported(FlowDocument),
+    Supported(Box<FlowDocument>),
     Incompatible {
         version: u64,
         flow_key: String,
@@ -46,7 +46,7 @@ pub fn inspect_document(source: &str) -> Result<DocumentInspection> {
 
 pub fn load_document(source: &str) -> Result<FlowDocument> {
     match inspect_document(source)? {
-        DocumentInspection::Supported(document) => Ok(document),
+        DocumentInspection::Supported(document) => Ok(*document),
         DocumentInspection::Incompatible { version, .. } => bail!("Unsupported flow document version {version}; supported version is {FLOW_DOCUMENT_VERSION}"),
     }
 }
@@ -149,13 +149,26 @@ impl Upgrades {
 
 impl From<FlowDocument> for DocumentInspection {
     fn from(document: FlowDocument) -> Self {
-        Self::Supported(document)
+        if document.version == FLOW_DOCUMENT_VERSION {
+            Self::Supported(Box::new(document))
+        } else {
+            Self::Incompatible {
+                version: u64::from(document.version),
+                flow_key: document.flow_key.clone(),
+                title: document.title.clone(),
+                raw: serde_json::to_value(document).expect("FlowDocument is JSON-serialisable"),
+            }
+        }
     }
 }
 impl DocumentInspection {
     pub fn supported(&self) -> Result<&FlowDocument> {
         match self {
-            Self::Supported(document) => Ok(document),
+            Self::Supported(document) => {
+                ensure!(document.version == FLOW_DOCUMENT_VERSION,
+                    "Unsupported flow document version {}", document.version);
+                Ok(document)
+            },
             Self::Incompatible { version, .. } => bail!("Unsupported flow document version {version}; supported version is {FLOW_DOCUMENT_VERSION}"),
         }
     }

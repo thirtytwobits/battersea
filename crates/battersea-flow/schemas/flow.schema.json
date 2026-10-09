@@ -115,6 +115,9 @@
           },
           "type": "array"
         },
+        "execution": {
+          "$ref": "#/$defs/FlowExecutionPolicy"
+        },
         "flow_key": {
           "type": "string"
         },
@@ -157,6 +160,7 @@
       },
       "required": [
         "version",
+        "execution",
         "flow_key",
         "title",
         "output_encoding",
@@ -185,6 +189,9 @@
         "long_description": {
           "type": "string"
         },
+        "mode": {
+          "$ref": "#/$defs/FlowPortMode"
+        },
         "name_template": {
           "type": "string"
         },
@@ -194,6 +201,9 @@
             "$ref": "#/$defs/FlowParameterDefinition"
           },
           "type": "array"
+        },
+        "phase": {
+          "$ref": "#/$defs/FlowPortPhase"
         },
         "short_description": {
           "type": "string"
@@ -205,7 +215,9 @@
       "required": [
         "count_parameter",
         "name_template",
-        "token_type"
+        "token_type",
+        "mode",
+        "phase"
       ],
       "type": "object"
     },
@@ -250,6 +262,9 @@
           "minimum": 0,
           "type": "integer"
         },
+        "queue": {
+          "$ref": "#/$defs/FlowQueueLimits"
+        },
         "source_node_id": {
           "type": "string"
         },
@@ -280,6 +295,55 @@
         "signal"
       ],
       "type": "string"
+    },
+    "FlowExecutionLimits": {
+      "additionalProperties": false,
+      "properties": {
+        "node_retained_bytes": {
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "pending_events": {
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "provider_queue": {
+          "$ref": "#/$defs/FlowQueueLimits"
+        },
+        "retained_bytes": {
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "pending_events",
+        "retained_bytes",
+        "node_retained_bytes",
+        "provider_queue"
+      ],
+      "type": "object"
+    },
+    "FlowExecutionPolicy": {
+      "additionalProperties": false,
+      "properties": {
+        "limits": {
+          "$ref": "#/$defs/FlowExecutionLimits"
+        },
+        "source_order": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "source_order",
+        "limits"
+      ],
+      "type": "object"
     },
     "FlowNode": {
       "additionalProperties": false,
@@ -668,6 +732,9 @@
         "long_description": {
           "type": "string"
         },
+        "mode": {
+          "$ref": "#/$defs/FlowPortMode"
+        },
         "name": {
           "type": "string"
         },
@@ -676,6 +743,9 @@
             "$ref": "#/$defs/FlowParameterDefinition"
           },
           "type": "array"
+        },
+        "phase": {
+          "$ref": "#/$defs/FlowPortPhase"
         },
         "short_description": {
           "type": "string"
@@ -687,7 +757,9 @@
       "required": [
         "name",
         "kind",
-        "token_type"
+        "token_type",
+        "mode",
+        "phase"
       ],
       "type": "object"
     },
@@ -730,6 +802,20 @@
       "enum": [
         "input",
         "output"
+      ],
+      "type": "string"
+    },
+    "FlowPortMode": {
+      "enum": [
+        "final_value",
+        "stream"
+      ],
+      "type": "string"
+    },
+    "FlowPortPhase": {
+      "enum": [
+        "snapshot",
+        "execution"
       ],
       "type": "string"
     },
@@ -926,6 +1012,43 @@
         "text"
       ],
       "type": "object"
+    },
+    "FlowQueueLimits": {
+      "additionalProperties": false,
+      "properties": {
+        "bytes": {
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "items": {
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "max_event_bytes": {
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "policy": {
+          "$ref": "#/$defs/FlowQueuePolicy"
+        }
+      },
+      "required": [
+        "items",
+        "bytes",
+        "max_event_bytes",
+        "policy"
+      ],
+      "type": "object"
+    },
+    "FlowQueuePolicy": {
+      "enum": [
+        "backpressure",
+        "drop_oldest"
+      ],
+      "type": "string"
     },
     "FlowSignalPortDefinition": {
       "additionalProperties": false,

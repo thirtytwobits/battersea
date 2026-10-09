@@ -45,6 +45,7 @@ impl SchedulerState {
         flow: &FlowDocument,
         definitions: HashMap<String, FlowNodeDefinition>,
     ) -> Result<Self, String> {
+        battersea_flow::execution::validate_execution_contract(flow, &definitions)?;
         let mut incoming_edges = HashMap::<(String, String), battersea_flow::FlowEdge>::new();
         let mut outgoing_edges = HashMap::<(String, String), battersea_flow::FlowEdge>::new();
         let mut incoming_signal_edges =

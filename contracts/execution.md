@@ -1,6 +1,7 @@
 # Execution contract
 
-Status: M6.1 design, 2026-10-09. The v0.5.0 runtime implements the
+Status: M6.1 design approved for implementation, 2026-10-09. The user requires an
+explicit upgrade for saved flows. The v0.5.0 runtime implements the
 [extraction contract](extraction.md). Adoption of this contract requires the new flow
 document version and an explicitly invoked upgrade.
 

@@ -4,6 +4,7 @@
 
 /// Opaque client-owned editor state, keyed by namespace.
 pub type ClientLayoutState = BTreeMap<String, Value>;
+use crate::{FlowExecutionPolicy, FlowPortMode, FlowPortPhase, FlowQueueLimits};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::{BTreeMap, HashMap};
@@ -288,6 +289,8 @@ pub struct FlowPort {
     pub name: String,
     pub kind: FlowPortKind,
     pub token_type: String,
+    pub mode: FlowPortMode,
+    pub phase: FlowPortPhase,
     #[serde(skip_serializing_if = "Option::is_none")]
     #[schemars(with = "FlowPortDisplayClass")]
     pub display_class: Option<FlowPortDisplayClass>,
@@ -312,6 +315,8 @@ pub struct FlowDynamicPortGroup {
     pub count_parameter: String,
     pub name_template: String,
     pub token_type: String,
+    pub mode: FlowPortMode,
+    pub phase: FlowPortPhase,
     #[serde(skip_serializing_if = "Option::is_none")]
     #[schemars(with = "FlowPortDisplayClass")]
     pub display_class: Option<FlowPortDisplayClass>,
@@ -457,6 +462,9 @@ pub struct FlowEdge {
     pub target_port: String,
     #[serde(default)]
     pub order: u32,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[schemars(with = "FlowQueueLimits")]
+    pub queue: Option<FlowQueueLimits>,
 }
 
 fn default_flow_edge_kind() -> FlowEdgeKind {
@@ -467,6 +475,7 @@ fn default_flow_edge_kind() -> FlowEdgeKind {
 #[serde(deny_unknown_fields)]
 pub struct FlowDocument {
     pub version: u32,
+    pub execution: FlowExecutionPolicy,
     pub flow_key: String,
     pub title: String,
     #[serde(skip_serializing_if = "Option::is_none")]

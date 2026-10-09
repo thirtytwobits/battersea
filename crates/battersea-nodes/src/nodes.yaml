@@ -150,6 +150,8 @@ node_definitions:
       - count_parameter: input_ports
         name_template: input-{index}
         token_type: oneof
+        mode: final_value
+        phase: execution
         accepted_token_types:
           - prompt.fragment
           - prompt.fragmentArray
@@ -174,6 +176,8 @@ node_definitions:
       - name: output
         kind: output
         token_type: auto
+        mode: final_value
+        phase: execution
         short_description: The combined text. Type adopts the kind of the connected inputs.
         formatter:
           kind: prompt_template
@@ -202,6 +206,8 @@ node_definitions:
       - name: input
         kind: input
         token_type: oneof
+        mode: final_value
+        phase: execution
         accepted_token_types:
           - prompt.fragment
           - chat.raw
@@ -210,6 +216,8 @@ node_definitions:
       - count_parameter: output_ports
         name_template: output-{index}
         token_type: auto
+        mode: final_value
+        phase: execution
         short_description: A duplicated copy of the input. Type adopts the kind of the connected input.
 
   - class_name: SignalMultiplexer

@@ -35,7 +35,7 @@ fn manifest() -> String {
         "class_name": "Echo", "short_description": "Echo", "long_description": "Echo",
         "kind": "source", "handler_id": "example.echo",
         "parameters": [{"name": "label", "datatype": {"kind": "example.label"}, "editor": {}}],
-        "output_ports": [{"name": "out", "kind": "output", "token_type": "example.message"}]
+        "output_ports": [{"name": "out", "kind": "output", "token_type": "example.message","mode":"final_value","phase":"snapshot"}]
     }]})
     .to_string()
 }
@@ -44,7 +44,7 @@ fn manifest() -> String {
 fn a_host_registered_type_validates_values_without_product_dependencies() {
     let catalog = Catalog::from_manifest(&manifest(), registry()).unwrap();
     let mut flow: FlowDocument = serde_json::from_value(json!({
-        "version": 1, "flow_key": "example", "title": "Example", "nodes": [{
+        "version": 2, "execution": battersea_flow::FlowExecutionPolicy { source_order: vec!["source".into()], limits: battersea_flow::FlowExecutionLimits::default() }, "flow_key": "example", "title": "Example", "nodes": [{
             "id": "source", "definition_name": "Echo", "instance_name": "Source", "parameter_values": {"label": "authored label"}
         }], "layout": {"independent_editor_v1": {"viewport": [4, 7, 1.5]}},
         "metadata": {"owner": {"colour": "violet"}}
@@ -100,7 +100,7 @@ fn dynamic_expansion_refuses_out_of_range_counts_before_allocating_ports() {
     let definition: FlowNodeDefinition = serde_json::from_value(json!({
         "class_name": "Dynamic", "kind": "logic", "handler_id": "example.dynamic", "short_description": "Dynamic", "long_description": "Dynamic",
         "parameters": [{"name": "count", "datatype": {"kind": "int"}, "editor": {"kind": "input_port_count", "min": 0, "max": 3}}],
-        "dynamic_input_ports": [{"count_parameter": "count", "name_template": "input-{index}", "token_type": "example.message"}],
+        "dynamic_input_ports": [{"count_parameter": "count", "name_template": "input-{index}", "token_type": "example.message", "mode":"final_value", "phase":"execution"}],
         "dynamic_signal_ports": [{"count_parameter": "count", "name_template": "signal-{index}"}]
     })).unwrap();
     let definitions =
@@ -142,10 +142,10 @@ fn catalogue_order_follows_the_authored_manifest_and_defaults_obey_their_control
 fn an_external_graph_enforces_ports_cardinality_nominal_types_and_acyclicity() {
     let mut source: Value = serde_json::from_str(&manifest()).unwrap();
     source["node_definitions"][0]["kind"] = json!("inline");
-    source["node_definitions"][0]["input_ports"] =
-        json!([{"name": "in", "kind": "input", "token_type": "example.message"}]);
+    source["node_definitions"][0]["output_ports"][0]["phase"] = json!("execution");
+    source["node_definitions"][0]["input_ports"] = json!([{"name": "in", "kind": "input", "token_type": "example.message","mode":"final_value","phase":"execution"}]);
     let catalog = Catalog::from_manifest(&source.to_string(), registry()).unwrap();
-    let base = json!({"version": 1, "flow_key": "graph", "title": "Graph", "nodes": [
+    let base = json!({"version": 2, "execution": battersea_flow::FlowExecutionPolicy { source_order: vec![], limits: battersea_flow::FlowExecutionLimits::default() }, "flow_key": "graph", "title": "Graph", "nodes": [
         {"id": "left", "definition_name": "Echo", "instance_name": "Left"},
         {"id": "right", "definition_name": "Echo", "instance_name": "Right"}
     ], "edges": [{"id": "forward", "source_node_id": "left", "source_port": "out", "target_node_id": "right", "target_port": "in"}]});

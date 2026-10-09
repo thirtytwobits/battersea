@@ -261,10 +261,10 @@ fn run(id: &str) -> Run {
     }
 
     let catalog = Catalog::from_manifests(&[("generic", battersea_nodes::MANIFEST), ("application", &json!({"node_definitions":[
-        {"class_name":"Source","short_description":"Source","long_description":"Source","handler_id":"example.source","kind":"source","output_ports":[{"name":"text","kind":"output","token_type":"prompt.fragment"}]},
-        {"class_name":"Sink","short_description":"Sink","long_description":"Sink","handler_id":"example.sink","kind":"sink","input_ports":[{"name":"text","kind":"input","token_type":"prompt.fragment"}]}
+        {"class_name":"Source","short_description":"Source","long_description":"Source","handler_id":"example.source","kind":"source","output_ports":[{"name":"text","kind":"output","token_type":"prompt.fragment","mode":"final_value","phase":"snapshot"}]},
+        {"class_name":"Sink","short_description":"Sink","long_description":"Sink","handler_id":"example.sink","kind":"sink","input_ports":[{"name":"text","kind":"input","token_type":"prompt.fragment","mode":"final_value","phase":"execution"}]}
     ]}).to_string())], registry).unwrap();
-    let flow = battersea_flow::document::load_document(&json!({"version":1,"flow_key":"example","title":"Example","nodes":[{"id":"source","definition_name":"Source","instance_name":"Source"},{"id":"sink","definition_name":"Sink","instance_name":"Sink"}],"edges":[{"id":"delivery","source_node_id":"source","source_port":"text","target_node_id":"sink","target_port":"text","kind":"token","order":0}]}).to_string()).unwrap();
+    let flow = battersea_flow::document::load_document(&json!({"version": 2, "execution": battersea_flow::FlowExecutionPolicy { source_order: vec!["source".into()], limits: battersea_flow::FlowExecutionLimits::default() },"flow_key":"example","title":"Example","nodes":[{"id":"source","definition_name":"Source","instance_name":"Source"},{"id":"sink","definition_name":"Sink","instance_name":"Sink"}],"edges":[{"id":"delivery","source_node_id":"source","source_port":"text","target_node_id":"sink","target_port":"text","kind":"token","order":0}]}).to_string()).unwrap();
     let catalog = application().handlers.bind_catalog(catalog).unwrap();
     assert!(catalog.validate(&flow).valid);
     Run {

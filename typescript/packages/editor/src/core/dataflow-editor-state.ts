@@ -41,6 +41,7 @@ export type FlowStudioEdgeData = AuthoringEditableEdgeData<{
   edgeClassName?: string;
   kind: WireFlowEdge["kind"];
   order: number;
+  queue?: WireFlowEdge["queue"];
   sourceHandleIndex?: number;
   sourceSideCount?: number;
   targetHandleIndex?: number;

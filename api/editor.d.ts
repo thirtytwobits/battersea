@@ -238,6 +238,7 @@ export type FlowStudioEdgeData = AuthoringEditableEdgeData<{
     edgeClassName?: string;
     kind: WireFlowEdge["kind"];
     order: number;
+    queue?: WireFlowEdge["queue"];
     sourceHandleIndex?: number;
     sourceSideCount?: number;
     targetHandleIndex?: number;
@@ -854,7 +855,7 @@ export declare function buildFlowNodeDropFailureNotification(params: {
 
 // core/flow-node-ports.d.ts
 import type { Edge } from "@xyflow/react";
-import type { FlowNode as WireFlowNode, FlowNodeClass as WireFlowNodeClass, FlowParameterDefinition as WireFlowParameterDefinition } from "@battersea/flow";
+import type { FlowNode as WireFlowNode, FlowPortMode, FlowPortPhase, FlowNodeClass as WireFlowNodeClass, FlowParameterDefinition as WireFlowParameterDefinition } from "@battersea/flow";
 import { type AuthoringGraphHandleDescriptor } from "../graph.js";
 import { type FlowControllerPortPlacement } from "./flow-controller-port-placement.js";
 import type { FlowStudioEdgeData } from "./dataflow-editor-state.js";
@@ -863,6 +864,8 @@ export type FlowConnectionKind = "signal" | "token";
 export type FlowStudioPortNames = WireFlowNode["port_names"];
 export type FlowStudioPortDisplayClass = "inline" | "sink" | "source";
 export interface FlowStudioResolvedPort {
+    mode?: FlowPortMode;
+    phase?: FlowPortPhase;
     acceptedTokenTypes?: string[];
     displayClass: FlowStudioPortDisplayClass;
     id: string;
@@ -922,6 +925,8 @@ export declare function getFlowPortLabel(portId: string): string;
 export declare function resolveFlowPortAliasLabel(portId: string, alias?: string | null): string;
 export declare function normaliseFlowPortAlias(alias: string): string | null;
 export declare function buildResolvedFlowPort(options: {
+    mode?: FlowPortMode;
+    phase?: FlowPortPhase;
     acceptedTokenTypes?: string[] | null;
     displayClass?: FlowStudioPortDisplayClass | null;
     id: string;

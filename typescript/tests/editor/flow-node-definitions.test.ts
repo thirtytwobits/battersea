@@ -47,6 +47,8 @@ test("buildResolvedNodeData applies node-level port aliases while keeping canoni
       activation_parameters: [],
       class_name: "Concatenate",
       dynamic_input_ports: [{
+        mode: "final_value",
+        phase: "execution",
         count_parameter: "input_ports",
         name_template: "input-{index}",
         token_type: "prompt.fragment"
@@ -58,6 +60,8 @@ test("buildResolvedNodeData applies node-level port aliases while keeping canoni
       kind: "inline",
       long_description: "Concatenate inputs.",
       output_ports: [{
+        mode: "final_value",
+        phase: "execution",
         kind: "output",
         name: "output",
         token_type: "prompt.fragment"
@@ -107,6 +111,8 @@ test("buildResolvedNodeData preserves accepted token types on input ports", () =
       activation_parameters: [],
       class_name: "Concatenate",
       dynamic_input_ports: [{
+        mode: "final_value",
+        phase: "execution",
         accepted_token_types: ["prompt.fragment", "prompt.fragmentArray"],
         count_parameter: "input_ports",
         name_template: "input-{index}",
@@ -169,6 +175,8 @@ test("buildResolvedNodeData preserves fixed input and output port parameters", (
       dynamic_output_ports: [],
       handler_id: "primrose.chat-response-parser",
       input_ports: [{
+        mode: "final_value",
+        phase: "execution",
         kind: "input",
         name: "response",
         parameters: [inputHintParameter],
@@ -178,6 +186,8 @@ test("buildResolvedNodeData preserves fixed input and output port parameters", (
       kind: "inline",
       long_description: "Parses responses.",
       output_ports: [{
+        mode: "final_value",
+        phase: "execution",
         kind: "output",
         name: "format_rule",
         parameters: [formatterParameter],
@@ -209,12 +219,16 @@ test("buildResolvedNodeData expands dynamic output ports from output_port_count 
       class_name: "Multiplexer",
       dynamic_input_ports: [],
       dynamic_output_ports: [{
+        mode: "final_value",
+        phase: "execution",
         count_parameter: "output_ports",
         name_template: "output-{index}",
         token_type: "prompt.fragment"
       }],
       handler_id: "battersea.multiplexer",
       input_ports: [{
+        mode: "final_value",
+        phase: "execution",
         kind: "input",
         name: "input",
         token_type: "prompt.fragment"
@@ -321,6 +335,8 @@ test("buildResolvedNodeData applies saved port order without changing canonical 
       activation_parameters: [],
       class_name: "Concatenate",
       dynamic_input_ports: [{
+        mode: "final_value",
+        phase: "execution",
         count_parameter: "input_ports",
         name_template: "input-{index}",
         token_type: "prompt.fragment"
@@ -332,6 +348,8 @@ test("buildResolvedNodeData applies saved port order without changing canonical 
       kind: "inline",
       long_description: "Concatenate inputs.",
       output_ports: [{
+        mode: "final_value",
+        phase: "execution",
         kind: "output",
         name: "output",
         token_type: "prompt.fragment"
@@ -370,6 +388,8 @@ test("buildResolvedNodeData preserves reordered dynamic-port survivors and appen
       activation_parameters: [],
       class_name: "Concatenate",
       dynamic_input_ports: [{
+        mode: "final_value",
+        phase: "execution",
         count_parameter: "input_ports",
         name_template: "input-{index}",
         token_type: "prompt.fragment"
@@ -381,6 +401,8 @@ test("buildResolvedNodeData preserves reordered dynamic-port survivors and appen
       kind: "inline",
       long_description: "Concatenate inputs.",
       output_ports: [{
+        mode: "final_value",
+        phase: "execution",
         kind: "output",
         name: "output",
         token_type: "prompt.fragment"

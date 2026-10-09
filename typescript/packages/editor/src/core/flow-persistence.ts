@@ -4,6 +4,7 @@
  * Persists and restores flow persistence for the editor's dataflow workspace.
  */
 import type { Node } from "@xyflow/react";
+import { createFlowExecutionPolicy, FLOW_DOCUMENT_VERSION, requireSupportedFlowVersion } from "@battersea/flow";
 import type {
   FlowDocument as WireFlowDocument,
   FlowEdge as WireFlowEdge,
@@ -125,7 +126,8 @@ export function buildDefaultFlowWorkspace(): FlowStudioWorkspaceState {
 
 export function createBlankFlowDocument(): WireFlowDocument {
   return {
-    version: 1,
+    version: FLOW_DOCUMENT_VERSION,
+    execution: createFlowExecutionPolicy(),
     flow_key: "",
     title: "",
     description: "",
@@ -366,6 +368,9 @@ function isFlowDocument(value: unknown): value is WireFlowDocument {
   }
 
   const candidate = value as Partial<WireFlowDocument>;
+  if (typeof candidate.version === "number") {
+    requireSupportedFlowVersion(candidate as WireFlowDocument);
+  }
   return (
     typeof candidate.version === "number" &&
     typeof candidate.flow_key === "string" &&
@@ -393,6 +398,7 @@ export function buildFlowDocumentFromWorkspace(params: {
   whitespaceMode?: string;
   title: string;
 }): WireFlowDocument {
+  if (params.baselineFlow) requireSupportedFlowVersion(params.baselineFlow);
   const title = params.title.trim();
   const nodes = [...params.nodes].sort((left, right) =>
     left.id.localeCompare(right.id),
@@ -401,8 +407,19 @@ export function buildFlowDocumentFromWorkspace(params: {
     left.id.localeCompare(right.id),
   );
 
+  const execution = structuredClone(
+    params.baselineFlow?.execution ?? createFlowExecutionPolicy(),
+  );
+  const sources = params.nodes
+    .filter(node => node.data.nodeClass === "source" || node.data.nodeClass === "hybrid")
+    .map(node => node.id);
+  execution.source_order = execution.source_order.filter(id => sources.includes(id));
+  for (const id of sources) {
+    if (!execution.source_order.includes(id)) execution.source_order.push(id);
+  }
   return {
-    version: 1,
+    version: FLOW_DOCUMENT_VERSION,
+    execution,
     flow_key: params.draftFlowKey,
     title,
     description: params.description.trim(),
@@ -411,7 +428,9 @@ export function buildFlowDocumentFromWorkspace(params: {
       params.plainFragmentDelimiter ?? DEFAULT_FLOW_PLAIN_FRAGMENT_DELIMITER,
     whitespace_mode: params.whitespaceMode ?? DEFAULT_FLOW_WHITESPACE_MODE,
     nodes: nodes.map(buildWireFlowNodeFromCanvasNode),
-    edges: edges.map((edge) => buildWireFlowEdgeFromCanvasEdge(edge, nodes)),
+    edges: edges.map((edge) => buildWireFlowEdgeFromCanvasEdge(
+      edge, nodes, execution.limits.provider_queue,
+    )),
     layout: {
       ...(isRecord(params.baselineFlow?.layout)
         ? params.baselineFlow.layout
@@ -498,6 +517,7 @@ export function buildFlowWorkspaceFromDocument(params: {
   definitions: WireFlowNodeDefinition[];
   document: WireFlowDocument;
 }): FlowStudioWorkspaceState {
+  requireSupportedFlowVersion(params.document);
   const definitionLookup = createFlowDefinitionLookup(params.definitions);
   const nodeDocsById = Object.fromEntries(
     params.document.nodes.map((node) => [node.id, node]),
@@ -642,6 +662,7 @@ function buildWireFlowNodeFromCanvasNode(
 function buildWireFlowEdgeFromCanvasEdge(
   edge: FlowStudioEdge,
   nodes: Array<Node<FlowStudioNodeData>>,
+  defaultQueue: NonNullable<WireFlowEdge["queue"]>,
 ): WireFlowEdge {
   const sourceNode = nodes.find((node) => node.id === edge.source);
   const targetNode = nodes.find((node) => node.id === edge.target);
@@ -681,16 +702,17 @@ function buildWireFlowEdgeFromCanvasEdge(
             "input",
           );
 
+  const sourcePort = resolveHandlePortId(
+    sourcePorts, edge.sourceHandle, edgeKind === "signal" ? "signal" : "output",
+  );
+  const streaming = edgeKind === "token" && sourcePorts.find(port => port.id === sourcePort)?.mode === "stream";
   return {
     id: edge.id,
     kind: edgeKind,
+    ...(streaming ? { queue: structuredClone(edge.data?.queue ?? defaultQueue) } : {}),
     order: typeof edge.data?.order === "number" ? edge.data.order : 0,
     source_node_id: edge.source,
-    source_port: resolveHandlePortId(
-      sourcePorts,
-      edge.sourceHandle,
-      edgeKind === "signal" ? "signal" : "output",
-    ),
+    source_port: sourcePort,
     target_node_id: edge.target,
     target_port: resolveHandlePortId(
       targetPorts,
@@ -815,6 +837,7 @@ function mapWireEdgeToCanvasEdge(
         : undefined,
       kind: edge.kind,
       order: edge.order,
+      ...(edge.queue ? { queue: structuredClone(edge.queue) } : {}),
       waypoints: isRecord(layoutEdge)
         ? resolveLayoutEdgeWaypoints(layoutEdge.waypoints)
         : undefined,

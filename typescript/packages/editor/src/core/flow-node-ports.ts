@@ -7,6 +7,8 @@ import { tokenConnectionCompatible } from "@battersea/flow";
 import type { Edge } from "@xyflow/react";
 import type {
   FlowNode as WireFlowNode,
+  FlowPortMode,
+  FlowPortPhase,
   FlowNodeClass as WireFlowNodeClass,
   FlowParameterDefinition as WireFlowParameterDefinition,
 } from "@battersea/flow";
@@ -34,6 +36,8 @@ export type FlowStudioPortNames = WireFlowNode["port_names"];
 export type FlowStudioPortDisplayClass = "inline" | "sink" | "source";
 
 export interface FlowStudioResolvedPort {
+  mode?: FlowPortMode;
+  phase?: FlowPortPhase;
   acceptedTokenTypes?: string[];
   displayClass: FlowStudioPortDisplayClass;
   id: string;
@@ -132,6 +136,8 @@ export function normaliseFlowPortAlias(alias: string): string | null {
 }
 
 export function buildResolvedFlowPort(options: {
+  mode?: FlowPortMode;
+  phase?: FlowPortPhase;
   acceptedTokenTypes?: string[] | null;
   displayClass?: FlowStudioPortDisplayClass | null;
   id: string;
@@ -147,6 +153,8 @@ export function buildResolvedFlowPort(options: {
 
   return {
     id: options.id,
+    mode: options.mode,
+    phase: options.phase,
     label: resolveFlowPortAliasLabel(options.id, alias),
     acceptedTokenTypes:
       Array.isArray(options.acceptedTokenTypes) &&

@@ -35,6 +35,13 @@ pub fn validate_document(
         };
     }
     let mut issues = Vec::new();
+    if let Err(message) = crate::execution::validate_execution_contract(flow, definitions) {
+        issues.push(FlowValidationIssue {
+            message,
+            node_id: None,
+            edge_id: None,
+        });
+    }
     let mut node_ids = HashSet::new();
     let mut edge_ids = HashSet::new();
     let nodes_by_id = flow

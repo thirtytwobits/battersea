@@ -89,6 +89,8 @@ pub trait ActivationHost: ExecutionHost {
         values: HashMap<String, Value>,
         token: CancellationToken,
     ) -> Result<(), Self::Error> {
+        battersea_flow::execution::validate_execution_contract(&runtime.flow, &runtime.definitions)
+            .map_err(Self::Error::invalid_request)?;
         self.handlers()
             .validate(runtime.definitions.values())
             .map_err(Self::Error::invalid_request)?;

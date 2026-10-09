@@ -250,6 +250,8 @@ export function expandDefinitionPorts(
         parameters: group.parameters ?? [],
         short_description: group.short_description,
         token_type: group.token_type,
+        mode: group.mode,
+        phase: group.phase,
       });
     }
   }
@@ -372,6 +374,8 @@ export function resolveInputPorts(
         longDescription: port.long_description,
         name: getFlowPortAlias(portNames, "input", port.name),
         nodeClass: definition.kind,
+        mode: port.mode,
+        phase: port.phase,
         parameters: port.parameters,
         shortDescription: port.short_description,
         side: "input",
@@ -393,6 +397,8 @@ export function resolveOutputPorts(
         longDescription: port.long_description,
         name: getFlowPortAlias(portNames, "output", port.name),
         nodeClass: definition.kind,
+        mode: port.mode,
+        phase: port.phase,
         parameters: port.parameters,
         shortDescription: port.short_description,
         side: "output",

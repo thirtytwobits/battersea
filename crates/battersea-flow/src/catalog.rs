@@ -82,6 +82,8 @@ struct FlowManifestPort {
     name: String,
     kind: FlowPortKind,
     token_type: String,
+    mode: crate::FlowPortMode,
+    phase: crate::FlowPortPhase,
     #[serde(default)]
     display_class: Option<FlowPortDisplayClass>,
     #[serde(default)]
@@ -331,6 +333,8 @@ fn normalize_manifest_port(
         name: port.name,
         kind: port.kind,
         token_type: port.token_type,
+        mode: port.mode,
+        phase: port.phase,
         display_class: port.display_class,
         accepted_token_types: port.accepted_token_types,
         short_description: port.short_description,

@@ -3,6 +3,22 @@ import type { FlowDocument } from './contract.js';
 export const flows = [
 {
   "edges": [],
+  "execution": {
+    "limits": {
+      "node_retained_bytes": 16777216,
+      "pending_events": 4096,
+      "provider_queue": {
+        "bytes": 1048576,
+        "items": 32,
+        "max_event_bytes": 262144,
+        "policy": "backpressure"
+      },
+      "retained_bytes": 67108864
+    },
+    "source_order": [
+      "source"
+    ]
+  },
   "flow_key": "example",
   "layout": {
     "editor.example": {
@@ -36,7 +52,7 @@ export const flows = [
   "output_encoding": "xml",
   "plain_fragment_delimiter": "blank_line",
   "title": "Independent application",
-  "version": 1,
+  "version": 2,
   "whitespace_mode": "preserve"
 }
 ] satisfies FlowDocument[];

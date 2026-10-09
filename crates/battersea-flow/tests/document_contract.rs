@@ -22,7 +22,7 @@ fn unknown_versions_are_inspected_without_interpreting_or_upgrading_their_payloa
 
 #[test]
 fn canonical_round_trip_preserves_authored_policy_and_opaque_editor_values() {
-    let source = json!({"version": 1, "flow_key": "test", "title": "Example", "whitespace_mode": "preserve", "output_encoding": "plain", "plain_fragment_delimiter": "space", "layout": {"editor_a": {"view": [1, 2, 3]}, "editor_b": {"future": {"x": true}}}, "metadata": {"extension": ["first", "second"]}}).to_string();
+    let source = json!({"version": 2, "execution": battersea_flow::FlowExecutionPolicy { source_order: vec![], limits: battersea_flow::FlowExecutionLimits::default() }, "flow_key": "test", "title": "Example", "whitespace_mode": "preserve", "output_encoding": "plain", "plain_fragment_delimiter": "space", "layout": {"editor_a": {"view": [1, 2, 3]}, "editor_b": {"future": {"x": true}}}, "metadata": {"extension": ["first", "second"]}}).to_string();
     let flow = load_document(&source).unwrap();
     let round_trip = load_document(&serialize_canonical_document(&flow).unwrap()).unwrap();
     assert_eq!(round_trip, canonicalize_document(&flow));
@@ -43,9 +43,13 @@ fn only_explicit_upgrade_invocation_runs_a_registered_transformation() {
     let flag = called.clone();
     let mut upgrades = Upgrades::default();
     upgrades
-        .register(0, 1, move |mut value| {
+        .register(0, 2, move |mut value| {
             flag.store(true, Ordering::SeqCst);
-            value["version"] = json!(1);
+            value["version"] = json!(2);
+            value["execution"] = json!(battersea_flow::FlowExecutionPolicy {
+                source_order: vec![],
+                limits: battersea_flow::FlowExecutionLimits::default()
+            });
             Ok(value)
         })
         .unwrap();

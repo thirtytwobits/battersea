@@ -4,6 +4,11 @@ mod types;
 pub use types::*;
 pub mod catalog;
 pub mod document;
+pub mod execution;
+pub use execution::{
+    FlowExecutionLimits, FlowExecutionPolicy, FlowPortMode, FlowPortPhase, FlowQueueLimits,
+    FlowQueuePolicy,
+};
 pub mod dsl;
 pub mod output_encoding;
 pub mod ports;

@@ -22,14 +22,14 @@ fn example() -> Result<String, Box<dyn std::error::Error>> {
         "class_name": "Note", "short_description": "Note", "long_description": "An application note.",
         "handler_id": "example.note", "kind": "source",
         "parameters": [{"name": "label", "datatype": {"kind": "example.label"}, "editor": {}}],
-        "output_ports": [{"name": "note", "kind": "output", "token_type": "example.note"}]
+        "output_ports": [{"name": "note", "kind": "output", "token_type": "example.note","mode":"final_value","phase":"snapshot"}]
     }]}).to_string();
     let catalog = Catalog::from_manifest(&manifest, registry)?;
     catalog
         .registry()
         .validate_token("example.note", &json!({"text": "Authored content"}))?;
     let flow = load_document(&json!({
-        "version": 1, "flow_key": "notes", "title": "Notes",
+        "version": 2, "execution": battersea_flow::FlowExecutionPolicy { source_order: vec!["note".into()], limits: battersea_flow::FlowExecutionLimits::default() }, "flow_key": "notes", "title": "Notes",
         "nodes": [{"id": "note", "definition_name": "Note", "instance_name": "First note", "parameter_values": {"label": "Example"}}],
         "layout": {"example-editor": {"position": [12, 34], "zoom": 1.5}},
         "metadata": {"example": {"flags": [true, null]}}

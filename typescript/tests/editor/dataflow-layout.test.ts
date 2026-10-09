@@ -7,7 +7,11 @@ import { createDroppedFlowNode, createFlowNodeDragPayload } from "@battersea/edi
 import { createFlowDefinitionLookup } from "@battersea/editor/core/flow-node-definitions";
 import type { FlowNodeDefinition } from "@battersea/flow";
 const definition: FlowNodeDefinition = { class_name: "External", handler_id: "external", kind: "inline", short_description: "", long_description: "", interfaces: [], activation_parameters: [], parameters: [],
- action_ports: [], signal_ports: [], input_ports: [{ name: "input", kind: "input", token_type: "text" }], output_ports: [{ name: "output", kind: "output", token_type: "text" }], dynamic_input_ports: [], dynamic_output_ports: [] };
+ action_ports: [], signal_ports: [], input_ports: [{
+mode: "final_value",
+phase: "execution", name: "input", kind: "input", token_type: "text" }], output_ports: [{
+mode: "final_value",
+phase: "execution", name: "output", kind: "output", token_type: "text" }], dynamic_input_ports: [], dynamic_output_ports: [] };
 test("dataflow layout retains disconnected nodes, edge direction and every authored parameter", async () => {
  const workspace = buildDefaultFlowWorkspace(); workspace.title = "Layout"; workspace.draftFlowKey = "layout";
  workspace.nodes = [1, 2, 3].map(nextIndex => createDroppedFlowNode({ payload: createFlowNodeDragPayload(definition), nextIndex, position: { x: 0, y: 0 } }));

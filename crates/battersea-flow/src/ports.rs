@@ -359,6 +359,8 @@ pub(crate) fn expand_ports(
                     FlowPortKind::Output
                 },
                 token_type: group.token_type.clone(),
+                mode: group.mode,
+                phase: group.phase,
                 display_class: group.display_class,
                 accepted_token_types: if input {
                     group.accepted_token_types.clone()
@@ -688,6 +690,8 @@ mod tests {
             name: name.to_string(),
             kind,
             token_type: token_type.to_string(),
+            mode: crate::FlowPortMode::FinalValue,
+            phase: crate::FlowPortPhase::Execution,
             display_class: None,
             accepted_token_types: Vec::new(),
             short_description: Some(format!("short {name}")),
@@ -724,6 +728,8 @@ mod tests {
             count_parameter: count_parameter.to_string(),
             name_template: name_template.to_string(),
             token_type: token_type.to_string(),
+            mode: crate::FlowPortMode::FinalValue,
+            phase: crate::FlowPortPhase::Execution,
             display_class: None,
             accepted_token_types: Vec::new(),
             short_description: Some(format!("short {name_template}")),

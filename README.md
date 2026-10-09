@@ -40,6 +40,10 @@ its CLI uses the same activation endpoints.
 Document inspection reports unsupported versions before interpreting graph fields. Loading
 and canonical saving preserve opaque editor namespaces. Format upgrades are explicitly
 registered transformations; the host owns their invocation and persistence.
+The unreleased M6.1 work introduces version 2 execution policy and a v1 conversion API.
+The example host demonstrates revision fencing and original-document retention through
+an explicit upgrade command. Scheduler delivery and Primrose adoption remain in progress
+under the [execution contract](contracts/execution.md).
 
 Battersea is licensed under the [MIT License](LICENSE).
 

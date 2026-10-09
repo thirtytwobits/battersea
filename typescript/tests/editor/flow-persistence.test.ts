@@ -3,6 +3,7 @@
  *
  * Exercises flow persistence behaviour in the editor's dataflow workspace.
  */
+import { createFlowExecutionPolicy } from "@battersea/flow";
 import assert from "node:assert/strict";
 import test from "node:test";
 import type { FlowDocument as WireFlowDocument, FlowNodeDefinition as WireFlowNodeDefinition } from "@battersea/flow";
@@ -65,6 +66,8 @@ const DEFINITIONS: WireFlowNodeDefinition[] = [
     long_description: "Starts a flow by emitting exactly the prompt text entered for the activation.",
     output_ports: [
       {
+        mode: "final_value",
+        phase: "snapshot",
         kind: "output",
         name: "output",
         token_type: "prompt.fragment"
@@ -137,6 +140,8 @@ const DEFINITIONS: WireFlowNodeDefinition[] = [
     long_description: "Emits a prompt fragment from story-rule query results.",
     output_ports: [
       {
+        mode: "final_value",
+        phase: "snapshot",
         kind: "output",
         name: "results",
         token_type: "prompt.fragment"
@@ -168,6 +173,8 @@ const DEFINITIONS: WireFlowNodeDefinition[] = [
     class_name: "Concatenate",
     dynamic_input_ports: [
       {
+        mode: "final_value",
+        phase: "execution",
         count_parameter: "input_ports",
         name_template: "input-{index}",
         token_type: "prompt.fragment"
@@ -181,6 +188,8 @@ const DEFINITIONS: WireFlowNodeDefinition[] = [
     long_description: "Concatenates N prompt fragments with configurable ordering, whitespace cleanup, and output formatting.",
     output_ports: [
       {
+        mode: "final_value",
+        phase: "execution",
         kind: "output",
         name: "output",
         token_type: "prompt.fragment"
@@ -256,6 +265,8 @@ const DEFINITIONS: WireFlowNodeDefinition[] = [
     handler_id: "primrose.chat-api",
     input_ports: [
       {
+        mode: "final_value",
+        phase: "execution",
         kind: "input",
         name: "input",
         token_type: "prompt.fragment"
@@ -266,11 +277,15 @@ const DEFINITIONS: WireFlowNodeDefinition[] = [
     long_description: "Sends a prompt fragment to an AI backend and emits streaming and final response tokens.",
     output_ports: [
       {
+        mode: "final_value",
+        phase: "execution",
         kind: "output",
         name: "response_stream",
         token_type: "chat.response_stream"
       },
       {
+        mode: "final_value",
+        phase: "execution",
         kind: "output",
         name: "response",
         token_type: "chat.response"
@@ -342,11 +357,15 @@ const DEFINITIONS: WireFlowNodeDefinition[] = [
     handler_id: "primrose.session-output",
     input_ports: [
       {
+        mode: "final_value",
+        phase: "execution",
         kind: "input",
         name: "response_stream",
         token_type: "chat.response_stream"
       },
       {
+        mode: "final_value",
+        phase: "execution",
         kind: "input",
         name: "response",
         token_type: "chat.response"
@@ -393,6 +412,7 @@ test("buildFlowSaveDocument applies a confirmed draft name without mutating the 
   const workspace = buildFlowWorkspaceFromDocument({
     definitions: DEFINITIONS,
     document: {
+      execution: createFlowExecutionPolicy(),
       description: "  Draft description  ",
       edges: [],
       flow_key: "",
@@ -407,7 +427,7 @@ test("buildFlowSaveDocument applies a confirmed draft name without mutating the 
         }
       }],
       title: "",
-      version: 1,
+      version: 2,
       output_encoding: "xml",
       plain_fragment_delimiter: "blank_line",
       whitespace_mode: "trim"
@@ -441,6 +461,7 @@ test("buildFlowValidationDocument injects internal identity placeholders for unt
 
 test("buildFlowWorkspaceFromDocument maps definition ports to canvas handles", () => {
   const flow: WireFlowDocument = {
+    execution: createFlowExecutionPolicy(),
     description: "Test flow",
     edges: [
       {
@@ -482,7 +503,7 @@ test("buildFlowWorkspaceFromDocument maps definition ports to canvas handles", (
       }
     ],
     title: "Default Session Activation",
-    version: 1,
+    version: 2,
     output_encoding: "xml",
     plain_fragment_delimiter: "blank_line",
     whitespace_mode: "trim"
@@ -505,6 +526,7 @@ test("buildFlowWorkspaceFromDocument maps definition ports to canvas handles", (
 
 test("query parameter values survive a workspace round trip unchanged", () => {
   const flow: WireFlowDocument = {
+    execution: createFlowExecutionPolicy(),
     description: "",
     edges: [],
     flow_key: "query-flow",
@@ -539,7 +561,7 @@ test("query parameter values survive a workspace round trip unchanged", () => {
       }
     ],
     title: "Query flow",
-    version: 1,
+    version: 2,
     output_encoding: "xml",
     plain_fragment_delimiter: "blank_line",
     whitespace_mode: "trim"
@@ -593,6 +615,7 @@ test("port parameter values survive a workspace round trip unchanged", () => {
   const workspace = buildFlowWorkspaceFromDocument({
     definitions,
     document: {
+      execution: createFlowExecutionPolicy(),
       description: "",
       edges: [],
       flow_key: "port-parameters",
@@ -610,7 +633,7 @@ test("port parameter values survive a workspace round trip unchanged", () => {
         }
       }],
       title: "Port parameters",
-      version: 1,
+      version: 2,
       output_encoding: "xml",
       plain_fragment_delimiter: "blank_line",
       whitespace_mode: "trim"
@@ -634,6 +657,7 @@ test("buildFlowDocumentFromWorkspace maps canvas handles back to manifest ports 
   const workspace = buildFlowWorkspaceFromDocument({
     definitions: DEFINITIONS,
     document: {
+      execution: createFlowExecutionPolicy(),
       description: "",
       edges: [
         {
@@ -671,7 +695,7 @@ test("buildFlowDocumentFromWorkspace maps canvas handles back to manifest ports 
         }
       ],
       title: "Test flow",
-      version: 1,
+      version: 2,
       output_encoding: "xml",
       plain_fragment_delimiter: "blank_line",
       whitespace_mode: "trim"
@@ -710,6 +734,7 @@ test("buildFlowDocumentFromWorkspace persists swapped controller port placement 
   const workspace = buildFlowWorkspaceFromDocument({
     definitions: DEFINITIONS,
     document: {
+      execution: createFlowExecutionPolicy(),
       description: "",
       edges: [],
       flow_key: "test-flow",
@@ -733,7 +758,7 @@ test("buildFlowDocumentFromWorkspace persists swapped controller port placement 
         }
       ],
       title: "Test flow",
-      version: 1,
+      version: 2,
       output_encoding: "xml",
       plain_fragment_delimiter: "blank_line",
       whitespace_mode: "trim"
@@ -760,6 +785,7 @@ test("buildFlowDocumentFromWorkspace round-trips reversed logic direction throug
   const workspace = buildFlowWorkspaceFromDocument({
     definitions: DEFINITIONS,
     document: {
+      execution: createFlowExecutionPolicy(),
       description: "",
       edges: [],
       flow_key: "test-flow",
@@ -786,7 +812,7 @@ test("buildFlowDocumentFromWorkspace round-trips reversed logic direction throug
         }
       ],
       title: "Test flow",
-      version: 1,
+      version: 2,
       output_encoding: "xml",
       plain_fragment_delimiter: "blank_line",
       whitespace_mode: "trim"
@@ -821,6 +847,7 @@ test("buildFlowDocumentFromWorkspace persists edge waypoints inside the canvas l
   const workspace = buildFlowWorkspaceFromDocument({
     definitions: DEFINITIONS,
     document: {
+      execution: createFlowExecutionPolicy(),
       description: "",
       edges: [
         {
@@ -867,7 +894,7 @@ test("buildFlowDocumentFromWorkspace persists edge waypoints inside the canvas l
         }
       ],
       title: "Test flow",
-      version: 1,
+      version: 2,
       output_encoding: "xml",
       plain_fragment_delimiter: "blank_line",
       whitespace_mode: "trim"
@@ -902,6 +929,7 @@ test("buildFlowDocumentFromWorkspace persists edge bridges inside the canvas lay
   const workspace = buildFlowWorkspaceFromDocument({
     definitions: DEFINITIONS,
     document: {
+      execution: createFlowExecutionPolicy(),
       description: "",
       edges: [
         {
@@ -948,7 +976,7 @@ test("buildFlowDocumentFromWorkspace persists edge bridges inside the canvas lay
         }
       ],
       title: "Test flow",
-      version: 1,
+      version: 2,
       output_encoding: "xml",
       plain_fragment_delimiter: "blank_line",
       whitespace_mode: "trim"
@@ -981,6 +1009,7 @@ test("buildFlowWorkspaceFromDocument restores edge waypoints from layout", () =>
   const workspace = buildFlowWorkspaceFromDocument({
     definitions: DEFINITIONS,
     document: {
+      execution: createFlowExecutionPolicy(),
       description: "",
       edges: [
         {
@@ -1027,7 +1056,7 @@ test("buildFlowWorkspaceFromDocument restores edge waypoints from layout", () =>
         }
       ],
       title: "Test flow",
-      version: 1,
+      version: 2,
       output_encoding: "xml",
       plain_fragment_delimiter: "blank_line",
       whitespace_mode: "trim"
@@ -1045,6 +1074,7 @@ test("buildFlowWorkspaceFromDocument restores swapped controller port placement 
   const workspace = buildFlowWorkspaceFromDocument({
     definitions: DEFINITIONS,
     document: {
+      execution: createFlowExecutionPolicy(),
       description: "",
       edges: [],
       flow_key: "test-flow",
@@ -1068,7 +1098,7 @@ test("buildFlowWorkspaceFromDocument restores swapped controller port placement 
         }
       ],
       title: "Test flow",
-      version: 1,
+      version: 2,
       output_encoding: "xml",
       plain_fragment_delimiter: "blank_line",
       whitespace_mode: "trim"
@@ -1082,6 +1112,7 @@ test("buildFlowWorkspaceFromDocument restores edge bridges from layout", () => {
   const workspace = buildFlowWorkspaceFromDocument({
     definitions: DEFINITIONS,
     document: {
+      execution: createFlowExecutionPolicy(),
       description: "",
       edges: [
         {
@@ -1128,7 +1159,7 @@ test("buildFlowWorkspaceFromDocument restores edge bridges from layout", () => {
         }
       ],
       title: "Test flow",
-      version: 1,
+      version: 2,
       output_encoding: "xml",
       plain_fragment_delimiter: "blank_line",
       whitespace_mode: "trim"
@@ -1146,6 +1177,7 @@ test("buildFlowDocumentFromWorkspace preserves numbered dynamic ports", () => {
   const workspace = buildFlowWorkspaceFromDocument({
     definitions: DEFINITIONS,
     document: {
+      execution: createFlowExecutionPolicy(),
       description: "",
       edges: [
         {
@@ -1176,7 +1208,7 @@ test("buildFlowDocumentFromWorkspace preserves numbered dynamic ports", () => {
         }
       ],
       title: "Dynamic flow",
-      version: 1,
+      version: 2,
       output_encoding: "xml",
       plain_fragment_delimiter: "blank_line",
       whitespace_mode: "trim"
@@ -1202,6 +1234,7 @@ test("buildFlowDocumentFromWorkspace preserves numbered dynamic ports", () => {
 
 test("buildFlowDocumentFromWorkspace canonicalises flow ordering for stable round trips", () => {
   const flow: WireFlowDocument = {
+    execution: createFlowExecutionPolicy(),
     description: "",
     edges: [
       {
@@ -1283,7 +1316,7 @@ test("buildFlowDocumentFromWorkspace canonicalises flow ordering for stable roun
       }
     ],
     title: "Stable round trip",
-    version: 1,
+    version: 2,
     output_encoding: "xml",
     plain_fragment_delimiter: "blank_line",
     whitespace_mode: "trim"
@@ -1344,6 +1377,7 @@ test("buildFlowWorkspaceFromDocument uses deterministic fallback positions when 
   const workspace = buildFlowWorkspaceFromDocument({
     definitions: DEFINITIONS,
     document: {
+      execution: createFlowExecutionPolicy(),
       description: "",
       edges: [],
       flow_key: "no-layout",
@@ -1364,7 +1398,7 @@ test("buildFlowWorkspaceFromDocument uses deterministic fallback positions when 
         }
       ],
       title: "No layout",
-      version: 1,
+      version: 2,
       output_encoding: "xml",
       plain_fragment_delimiter: "blank_line",
       whitespace_mode: "trim"
@@ -1377,7 +1411,8 @@ test("buildFlowWorkspaceFromDocument uses deterministic fallback positions when 
 
 test("areFlowDocumentsEqual treats node ordering and JSON key ordering as irrelevant", () => {
   const left: WireFlowDocument = {
-    version: 1,
+    execution: createFlowExecutionPolicy(),
+    version: 2,
     output_encoding: "xml",
     plain_fragment_delimiter: "blank_line",
     whitespace_mode: "trim",
@@ -1429,6 +1464,7 @@ test("areFlowDocumentsEqual treats node ordering and JSON key ordering as irrele
 
 test("areFlowDocumentsEqual treats an empty canvas layout and a missing layout as equivalent", () => {
   const left: WireFlowDocument = {
+    execution: createFlowExecutionPolicy(),
     description: "",
     edges: [],
     flow_key: "empty-flow",
@@ -1436,7 +1472,7 @@ test("areFlowDocumentsEqual treats an empty canvas layout and a missing layout a
     metadata: null,
     nodes: [],
     title: "Empty flow",
-    version: 1,
+    version: 2,
     output_encoding: "xml",
     plain_fragment_delimiter: "blank_line",
     whitespace_mode: "trim"
@@ -1456,6 +1492,7 @@ test("areFlowDocumentsEqual treats an empty canvas layout and a missing layout a
 
 test("areFlowDocumentsEqual ignores insignificant floating-point drift in layout positions", () => {
   const left: WireFlowDocument = {
+    execution: createFlowExecutionPolicy(),
     description: "",
     edges: [],
     flow_key: "position-drift",
@@ -1481,7 +1518,7 @@ test("areFlowDocumentsEqual ignores insignificant floating-point drift in layout
       }
     ],
     title: "Position drift",
-    version: 1,
+    version: 2,
     output_encoding: "xml",
     plain_fragment_delimiter: "blank_line",
     whitespace_mode: "trim"
@@ -1508,6 +1545,7 @@ test("areFlowDocumentsEqual ignores insignificant floating-point drift in layout
 
 test("areFlowDocumentsEqual ignores insignificant floating-point drift in edge waypoints", () => {
   const left: WireFlowDocument = {
+    execution: createFlowExecutionPolicy(),
     description: "",
     edges: [{
       id: "edge-1",
@@ -1552,7 +1590,7 @@ test("areFlowDocumentsEqual ignores insignificant floating-point drift in edge w
       }
     ],
     title: "Waypoint drift",
-    version: 1,
+    version: 2,
     output_encoding: "xml",
     plain_fragment_delimiter: "blank_line",
     whitespace_mode: "trim"
@@ -1584,6 +1622,7 @@ test("areFlowDocumentsEqual ignores insignificant floating-point drift in edge w
 
 test("areFlowDocumentsEqual ignores insignificant floating-point drift in edge bridges", () => {
   const left: WireFlowDocument = {
+    execution: createFlowExecutionPolicy(),
     description: "",
     edges: [{
       id: "edge-1",
@@ -1628,7 +1667,7 @@ test("areFlowDocumentsEqual ignores insignificant floating-point drift in edge b
       }
     ],
     title: "Bridge drift",
-    version: 1,
+    version: 2,
     output_encoding: "xml",
     plain_fragment_delimiter: "blank_line",
     whitespace_mode: "trim"
@@ -1741,11 +1780,15 @@ test("reconcileFlowWorkspaceDefinitions refreshes persisted ports from current d
       handler_id: "primrose.chat-response-parser",
       input_ports: [
         {
+          mode: "final_value",
+          phase: "execution",
           kind: "input",
           name: "response_stream",
           token_type: "chat.response_stream"
         },
         {
+          mode: "final_value",
+          phase: "execution",
           kind: "input",
           name: "response",
           token_type: "chat.response"
@@ -1756,12 +1799,16 @@ test("reconcileFlowWorkspaceDefinitions refreshes persisted ports from current d
       long_description: "Parses the structured response envelope.",
       output_ports: [
         {
+          mode: "final_value",
+          phase: "execution",
           display_class: "source",
           kind: "output",
           name: "format_rule",
           token_type: "prompt.fragment"
         },
         {
+          mode: "final_value",
+          phase: "execution",
           kind: "output",
           name: "user_response_stream",
           token_type: "chat.response_stream"
@@ -1784,6 +1831,7 @@ test("removeNodeFromWorkspace drops the node and all attached edges", () => {
   const workspace = buildFlowWorkspaceFromDocument({
     definitions: DEFINITIONS,
     document: {
+      execution: createFlowExecutionPolicy(),
       description: "",
       edges: [
         {
@@ -1814,7 +1862,7 @@ test("removeNodeFromWorkspace drops the node and all attached edges", () => {
         }
       ],
       title: "Remove node",
-      version: 1,
+      version: 2,
       output_encoding: "xml",
       plain_fragment_delimiter: "blank_line",
       whitespace_mode: "trim"
@@ -1835,6 +1883,7 @@ test("renameNodeInstanceInWorkspace updates the node instance name without distu
   const workspace = buildFlowWorkspaceFromDocument({
     definitions: DEFINITIONS,
     document: {
+      execution: createFlowExecutionPolicy(),
       description: "",
       edges: [],
       flow_key: "rename-node",
@@ -1857,7 +1906,7 @@ test("renameNodeInstanceInWorkspace updates the node instance name without distu
         }
       ],
       title: "Rename node",
-      version: 1,
+      version: 2,
       output_encoding: "xml",
       plain_fragment_delimiter: "blank_line",
       whitespace_mode: "trim"
@@ -1874,6 +1923,7 @@ test("findNextFlowNodeIndex returns one greater than the highest numeric node su
   const workspace = buildFlowWorkspaceFromDocument({
     definitions: DEFINITIONS,
     document: {
+      execution: createFlowExecutionPolicy(),
       description: "",
       edges: [],
       flow_key: "suffixes",
@@ -1900,7 +1950,7 @@ test("findNextFlowNodeIndex returns one greater than the highest numeric node su
         }
       ],
       title: "Suffixes",
-      version: 1,
+      version: 2,
       output_encoding: "xml",
       plain_fragment_delimiter: "blank_line",
       whitespace_mode: "trim"
@@ -1923,12 +1973,16 @@ test("multiplexer output count survives a workspace round trip", () => {
     class_name: "Multiplexer",
     dynamic_input_ports: [],
     dynamic_output_ports: [{
+      mode: "final_value",
+      phase: "execution",
       count_parameter: "output_ports",
       name_template: "output-{index}",
       token_type: "prompt.fragment"
     }],
     handler_id: "battersea.multiplexer",
     input_ports: [{
+      mode: "final_value",
+      phase: "execution",
       kind: "input",
       name: "input",
       token_type: "prompt.fragment"
@@ -1953,6 +2007,7 @@ test("multiplexer output count survives a workspace round trip", () => {
   const workspace = buildFlowWorkspaceFromDocument({
     definitions,
     document: {
+      execution: createFlowExecutionPolicy(),
       description: "",
       edges: [],
       flow_key: "multiplexer-round-trip",
@@ -1969,7 +2024,7 @@ test("multiplexer output count survives a workspace round trip", () => {
         }
       ],
       title: "Multiplexer round trip",
-      version: 1,
+      version: 2,
       output_encoding: "xml",
       plain_fragment_delimiter: "blank_line",
       whitespace_mode: "trim"
@@ -1995,6 +2050,7 @@ test("multiplexer output count survives a workspace round trip", () => {
 
 test("node port order survives a document to workspace round trip without adding untouched sides", () => {
   const document: WireFlowDocument = {
+    execution: createFlowExecutionPolicy(),
     description: "",
     edges: [],
     flow_key: "port-order-round-trip",
@@ -2012,7 +2068,7 @@ test("node port order survives a document to workspace round trip without adding
       }
     }],
     title: "Port order round trip",
-    version: 1,
+    version: 2,
     output_encoding: "xml",
     plain_fragment_delimiter: "blank_line",
     whitespace_mode: "trim"
@@ -2054,4 +2110,75 @@ test("saving an edited document preserves host metadata and another editor's lay
   assert.deepEqual(saved.metadata, document.metadata);
   assert.deepEqual((saved.layout as Record<string, unknown>).external_editor, document.layout.external_editor);
   assert.deepEqual(document, before);
+});
+
+test("legacy flows cannot enter the editor or be saved without an explicit upgrade", () => {
+  const document = buildFlowDocumentFromWorkspace(buildDefaultFlowWorkspace());
+  const legacy = { ...document, version: 1 };
+  delete (legacy as Partial<WireFlowDocument>).execution;
+  const before = structuredClone(legacy);
+  assert.throws(() => buildFlowWorkspaceFromDocument({ definitions: [], document: legacy }), /explicit upgrade/);
+  assert.throws(() => buildFlowDocumentFromWorkspace({ ...buildDefaultFlowWorkspace(), baselineFlow: legacy }), /explicit upgrade/);
+  assert.throws(() => normalizeFlowWorkspaceState({ ...buildDefaultFlowWorkspace(), baselineFlow: legacy }), /explicit upgrade/);
+  assert.deepEqual(legacy, before);
+  const missingPolicy = { ...document };
+  delete (missingPolicy as Partial<WireFlowDocument>).execution;
+  assert.throws(() => buildFlowWorkspaceFromDocument({ definitions: [], document: missingPolicy }), /execution policy/);
+});
+
+test("saving preserves authored source priority and limits across layout and node-array changes", () => {
+  const order = ["z-source", "a-source"];
+  const document: WireFlowDocument = {
+    ...buildFlowDocumentFromWorkspace(buildDefaultFlowWorkspace()),
+    execution: createFlowExecutionPolicy(order),
+    nodes: order.map(id => ({ id, definition_name: "UserPrompt", instance_name: id, parameter_values: {} })),
+  };
+  document.execution.limits.node_retained_bytes /= 2;
+  const before = structuredClone(document);
+  const workspace = buildFlowWorkspaceFromDocument({ definitions: DEFINITIONS, document });
+  workspace.nodes.reverse();
+  workspace.nodes[0].position.x += 100;
+  workspace.nodes[0].data.instanceName = "A new title";
+  const saved = buildFlowDocumentFromWorkspace({ ...workspace, baselineFlow: workspace.baselineFlow });
+  assert.deepEqual(saved.execution, before.execution);
+  assert.deepEqual(document, before);
+  saved.execution.source_order.reverse();
+  saved.execution.limits.node_retained_bytes /= 2;
+  assert.deepEqual(workspace.baselineFlow?.execution, before.execution);
+});
+
+test("stream queue policy survives editor round trips and new edges receive finite limits", () => {
+  const source = structuredClone(DEFINITIONS.find(def => def.class_name === "UserPrompt")!);
+  source.output_ports[0].mode = "stream";
+  source.output_ports[0].phase = "execution";
+  const sink: WireFlowNodeDefinition = {
+    ...structuredClone(source), class_name: "StreamSink", kind: "sink",
+    input_ports: [{ ...source.output_ports[0], kind: "input", name: "input" }], output_ports: [],
+  };
+  const queue = { ...createFlowExecutionPolicy().limits.provider_queue, items: 3, policy: "drop_oldest" as const };
+  const document: WireFlowDocument = {
+    ...buildFlowDocumentFromWorkspace(buildDefaultFlowWorkspace()),
+    execution: createFlowExecutionPolicy(["producer"]),
+    nodes: [
+      { id: "producer", definition_name: source.class_name, instance_name: "Producer", parameter_values: {} },
+      { id: "consumer", definition_name: sink.class_name, instance_name: "Consumer", parameter_values: {} },
+    ],
+    edges: [{ id: "stream", kind: "token", order: 0, source_node_id: "producer", source_port: "output", target_node_id: "consumer", target_port: "input", queue }],
+  };
+  const workspace = buildFlowWorkspaceFromDocument({ definitions: [source, sink], document });
+  const saved = buildFlowDocumentFromWorkspace(workspace);
+  assert.deepEqual(saved.edges[0].queue, queue);
+  saved.edges[0].queue!.items += 1;
+  assert.deepEqual(workspace.edges[0].data?.queue, queue);
+  delete workspace.edges[0].data!.queue;
+  const newEdge = buildFlowDocumentFromWorkspace(workspace);
+  assert.deepEqual(newEdge.edges[0].queue, document.execution.limits.provider_queue);
+  for (const node of workspace.nodes) {
+    for (const port of [...node.data.inputPorts, ...node.data.outputPorts]) {
+      if (typeof port !== "string") port.mode = "final_value";
+    }
+  }
+  workspace.edges[0].data!.queue = queue;
+  const finalEdge = buildFlowDocumentFromWorkspace(workspace);
+  assert.equal(finalEdge.edges[0].queue, undefined);
 });
