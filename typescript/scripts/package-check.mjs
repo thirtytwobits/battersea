@@ -30,11 +30,13 @@ try {
       [
         "install",
         "--ignore-scripts",
-        "--offline",
         "--no-audit",
         "--no-fund",
-        ...archives.map(entry => path.join(temp, entry.filename)),
-        "react@^18.3.1", "react-dom@^18.3.1", "@types/react@^18.3.1", "@types/react-dom@^18.3.1",
+        ...archives.map((entry) => path.join(temp, entry.filename)),
+        "react@^18.3.1",
+        "react-dom@^18.3.1",
+        "@types/react@^18.3.1",
+        "@types/react-dom@^18.3.1",
       ],
       { cwd: consumer, stdio: "inherit" },
     );

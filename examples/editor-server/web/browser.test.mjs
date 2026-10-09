@@ -52,6 +52,21 @@ for (const [name, engine] of Object.entries({ chromium, webkit })) {
     });
     page.on("dialog", (dialog) => dialog.accept());
     await page.goto(origin);
+    const fixture = await read(page);
+    fixture.layout = {
+      ...fixture.layout,
+      flow_builder_v1: {
+        canvas: {
+          nodes: {
+            text: { position: { x: 0, y: 0 } },
+            output: { position: { x: 5000, y: 1000 } },
+          },
+        },
+      },
+    };
+    assert(
+      (await page.request.put(`${origin}/api/flows`, { data: fixture })).ok(),
+    );
     const before = await read(page);
     await page
       .getByRole("combobox", { name: "Flow", exact: true })
@@ -63,6 +78,17 @@ for (const [name, engine] of Object.entries({ chromium, webkit })) {
           .opacity === "1",
     );
     assert.deepEqual(await read(page), before, "Loading must not save");
+    const bounds = await page.locator(".react-flow").boundingBox();
+    for (const node of await page.locator(".react-flow__node").all()) {
+      const rect = await node.boundingBox();
+      assert(
+        rect.x >= bounds.x &&
+          rect.y >= bounds.y &&
+          rect.x + rect.width <= bounds.x + bounds.width &&
+          rect.y + rect.height <= bounds.y + bounds.height,
+        "Initial framing must contain every node",
+      );
+    }
     await page.locator('.react-flow__node[data-id="text"]').click();
     await capture(page, name, "selected");
     assert.equal(

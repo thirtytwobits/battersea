@@ -44,14 +44,17 @@ import type { FlowStudioEdgeActivationState } from "../core/flow-edge-activation
 import type { FlowPortSide } from "../core/flow-node-ports.js";
 import { DATAFLOW_CANVAS_DROPZONE_ID } from "../core/flow-drag.js";
 
+const DATAFLOW_MIN_ZOOM = 0.03;
 const DATAFLOW_CANVAS_CONTROLS_PROPS = {
   fitViewOptions: {
     duration: 180,
     padding: 0.18,
+    minZoom: DATAFLOW_MIN_ZOOM,
   },
   showZoom: false,
 } as const;
 const DATAFLOW_INITIAL_FIT_VIEW_OPTIONS = {
+  minZoom: DATAFLOW_MIN_ZOOM,
   duration: 0,
   padding: 0.18,
 } as const;
@@ -421,6 +424,7 @@ export function DataflowCanvas({
 
   return (
     <AuthoringGraphCanvas<FlowStudioNode, FlowStudioEdge>
+      reactFlowProps={{ minZoom: DATAFLOW_MIN_ZOOM }}
       autoLayoutController={autoLayout}
       presentation={presentation}
       canvasClassName={canvasClassName}
