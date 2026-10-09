@@ -6,6 +6,11 @@ Battersea is being extracted from Primrose Hill as an embeddable dataflow framew
 graph validation. Applications register their handlers, nominal token schemas, parameter
 schemas and product validators. `examples/catalogue` is an independent host application.
 
+`battersea-runtime` supplies node handlers, token and signal scheduling, typed execution events
+and the activation lifecycle. Applications supply their state, effects and durable acceptance
+through host interfaces. `examples/custom-node` runs a separately compiled node without a
+product session.
+
 `@battersea/flow` carries the generated TypeScript contract, JSON Schema, shared fixtures
 and token-connection compatibility. Rust types own the contract; `cargo xtask bindings`
 generates its distributable forms.

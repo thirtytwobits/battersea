@@ -1,0 +1,615 @@
+pub mod battersea_runtime
+pub mod battersea_runtime::dispatch
+pub async fn battersea_runtime::dispatch::execute_registered_action<H: battersea_runtime::ExecutionHost>(core: &H, runtime: &mut <H as battersea_runtime::ExecutionHost>::State, node: &battersea_flow::types::FlowNode, definition: &battersea_flow::types::FlowNodeDefinition, action_port: &str) -> core::result::Result<(), <H as battersea_runtime::ExecutionHost>::Error>
+pub async fn battersea_runtime::dispatch::execute_registered_controller_action<H: battersea_runtime::ExecutionHost>(core: &H, runtime: &mut <H as battersea_runtime::ExecutionHost>::State, node: &battersea_flow::types::FlowNode, definition: &battersea_flow::types::FlowNodeDefinition, controller_action: &str) -> core::result::Result<(), <H as battersea_runtime::ExecutionHost>::Error>
+pub async fn battersea_runtime::dispatch::execute_registered_flow_node<H: battersea_runtime::ExecutionHost>(core: &H, runtime: &mut <H as battersea_runtime::ExecutionHost>::State, node: &battersea_flow::types::FlowNode, definition: &battersea_flow::types::FlowNodeDefinition, activation_values: core::option::Option<&std::collections::hash::map::HashMap<alloc::string::String, serde_json::value::Value>>, token: &tokio_util::sync::cancellation_token::CancellationToken) -> core::result::Result<(), <H as battersea_runtime::ExecutionHost>::Error>
+pub async fn battersea_runtime::dispatch::execute_registered_sink<H: battersea_runtime::ExecutionHost>(core: &H, runtime: &mut <H as battersea_runtime::ExecutionHost>::State, node: &battersea_flow::types::FlowNode, definition: &battersea_flow::types::FlowNodeDefinition, input_port: &str, token_value: battersea_runtime::Token) -> core::result::Result<(), <H as battersea_runtime::ExecutionHost>::Error>
+pub async fn battersea_runtime::dispatch::materialize_registered_flow_node<H: battersea_runtime::ExecutionHost>(core: &H, runtime: &mut <H as battersea_runtime::ExecutionHost>::State, node: &battersea_flow::types::FlowNode, definition: &battersea_flow::types::FlowNodeDefinition, token: &tokio_util::sync::cancellation_token::CancellationToken) -> core::result::Result<(), <H as battersea_runtime::ExecutionHost>::Error>
+pub async fn battersea_runtime::dispatch::receive_registered_input_token<H: battersea_runtime::ExecutionHost>(core: &H, runtime: &mut <H as battersea_runtime::ExecutionHost>::State, node: &battersea_flow::types::FlowNode, definition: &battersea_flow::types::FlowNodeDefinition, input_port: &str, token_value: &battersea_runtime::Token, token: &tokio_util::sync::cancellation_token::CancellationToken) -> core::result::Result<(), <H as battersea_runtime::ExecutionHost>::Error>
+pub enum battersea_runtime::EventKind
+pub battersea_runtime::EventKind::ActionInvoke
+pub battersea_runtime::EventKind::ActivationAccepted
+pub battersea_runtime::EventKind::ActivationExecutionFinished
+pub battersea_runtime::EventKind::AutomationRejected
+pub battersea_runtime::EventKind::AutomationWrite
+pub battersea_runtime::EventKind::LogicEvaluate
+pub battersea_runtime::EventKind::NodeComplete
+pub battersea_runtime::EventKind::NodeError
+pub battersea_runtime::EventKind::NodeSkipped
+pub battersea_runtime::EventKind::NodeStart
+pub battersea_runtime::EventKind::SignalEmit
+pub battersea_runtime::EventKind::SignalReceive
+pub battersea_runtime::EventKind::TokenEmit
+pub battersea_runtime::EventKind::TokenReceive
+pub battersea_runtime::EventKind::TokenSkip
+impl battersea_runtime::EventKind
+pub fn battersea_runtime::EventKind::category(self) -> &'static str
+impl core::clone::Clone for battersea_runtime::EventKind
+pub fn battersea_runtime::EventKind::clone(&self) -> battersea_runtime::EventKind
+impl core::cmp::Eq for battersea_runtime::EventKind
+impl core::cmp::PartialEq for battersea_runtime::EventKind
+pub fn battersea_runtime::EventKind::eq(&self, other: &battersea_runtime::EventKind) -> bool
+impl core::fmt::Debug for battersea_runtime::EventKind
+pub fn battersea_runtime::EventKind::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for battersea_runtime::EventKind
+impl core::marker::StructuralPartialEq for battersea_runtime::EventKind
+impl serde_core::ser::Serialize for battersea_runtime::EventKind
+pub fn battersea_runtime::EventKind::serialize<__S>(&self, __serializer: __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for battersea_runtime::EventKind
+pub fn battersea_runtime::EventKind::deserialize<__D>(__deserializer: __D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for battersea_runtime::EventKind
+impl core::marker::Send for battersea_runtime::EventKind
+impl core::marker::Sync for battersea_runtime::EventKind
+impl core::marker::Unpin for battersea_runtime::EventKind
+impl core::panic::unwind_safe::RefUnwindSafe for battersea_runtime::EventKind
+impl core::panic::unwind_safe::UnwindSafe for battersea_runtime::EventKind
+impl<Q, K> equivalent::Equivalent<K> for battersea_runtime::EventKind where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn battersea_runtime::EventKind::equivalent(&self, key: &K) -> bool
+impl<Q, K> hashbrown::Equivalent<K> for battersea_runtime::EventKind where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn battersea_runtime::EventKind::equivalent(&self, key: &K) -> bool
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_runtime::EventKind where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_runtime::EventKind where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<T, U> core::convert::Into<U> for battersea_runtime::EventKind where U: core::convert::From<T>
+pub fn battersea_runtime::EventKind::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_runtime::EventKind where U: core::convert::Into<T>
+pub type battersea_runtime::EventKind::Error = core::convert::Infallible
+pub fn battersea_runtime::EventKind::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for battersea_runtime::EventKind where U: core::convert::TryFrom<T>
+pub type battersea_runtime::EventKind::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_runtime::EventKind::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for battersea_runtime::EventKind where T: core::clone::Clone
+pub type battersea_runtime::EventKind::Owned = T
+pub fn battersea_runtime::EventKind::clone_into(&self, target: &mut T)
+pub fn battersea_runtime::EventKind::to_owned(&self) -> T
+impl<T> core::any::Any for battersea_runtime::EventKind where T: 'static + ?core::marker::Sized
+pub fn battersea_runtime::EventKind::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_runtime::EventKind where T: ?core::marker::Sized
+pub fn battersea_runtime::EventKind::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_runtime::EventKind where T: ?core::marker::Sized
+pub fn battersea_runtime::EventKind::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for battersea_runtime::EventKind where T: core::clone::Clone
+pub unsafe fn battersea_runtime::EventKind::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for battersea_runtime::EventKind
+pub fn battersea_runtime::EventKind::from(t: T) -> T
+impl<T> dyn_clone::DynClone for battersea_runtime::EventKind where T: core::clone::Clone
+pub fn battersea_runtime::EventKind::__clone_box(&self, _: dyn_clone::sealed::Private) -> *mut ()
+impl<T> outref::AsOut<T> for battersea_runtime::EventKind where T: core::marker::Copy
+pub fn battersea_runtime::EventKind::as_out(&mut self) -> outref::Out<'_, T>
+impl<T> serde_core::de::DeserializeOwned for battersea_runtime::EventKind where T: for<'de> serde_core::de::Deserialize<'de>
+impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_runtime::EventKind where T: ?core::marker::Sized
+pub enum battersea_runtime::Outcome
+pub battersea_runtime::Outcome::Cancelled
+pub battersea_runtime::Outcome::Cancelled::message: alloc::string::String
+pub battersea_runtime::Outcome::Failed
+pub battersea_runtime::Outcome::Failed::code: alloc::string::String
+pub battersea_runtime::Outcome::Failed::message: alloc::string::String
+pub battersea_runtime::Outcome::Interrupted
+pub battersea_runtime::Outcome::Interrupted::message: alloc::string::String
+pub battersea_runtime::Outcome::Succeeded
+impl battersea_runtime::Outcome
+pub fn battersea_runtime::Outcome::from_error(error: &impl battersea_runtime::ExecutionError) -> Self
+impl core::clone::Clone for battersea_runtime::Outcome
+pub fn battersea_runtime::Outcome::clone(&self) -> battersea_runtime::Outcome
+impl core::cmp::Eq for battersea_runtime::Outcome
+impl core::cmp::PartialEq for battersea_runtime::Outcome
+pub fn battersea_runtime::Outcome::eq(&self, other: &battersea_runtime::Outcome) -> bool
+impl core::fmt::Debug for battersea_runtime::Outcome
+pub fn battersea_runtime::Outcome::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for battersea_runtime::Outcome
+impl serde_core::ser::Serialize for battersea_runtime::Outcome
+pub fn battersea_runtime::Outcome::serialize<__S>(&self, __serializer: __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for battersea_runtime::Outcome
+pub fn battersea_runtime::Outcome::deserialize<__D>(__deserializer: __D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for battersea_runtime::Outcome
+impl core::marker::Send for battersea_runtime::Outcome
+impl core::marker::Sync for battersea_runtime::Outcome
+impl core::marker::Unpin for battersea_runtime::Outcome
+impl core::panic::unwind_safe::RefUnwindSafe for battersea_runtime::Outcome
+impl core::panic::unwind_safe::UnwindSafe for battersea_runtime::Outcome
+impl<Q, K> equivalent::Equivalent<K> for battersea_runtime::Outcome where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn battersea_runtime::Outcome::equivalent(&self, key: &K) -> bool
+impl<Q, K> hashbrown::Equivalent<K> for battersea_runtime::Outcome where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn battersea_runtime::Outcome::equivalent(&self, key: &K) -> bool
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_runtime::Outcome where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_runtime::Outcome where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<T, U> core::convert::Into<U> for battersea_runtime::Outcome where U: core::convert::From<T>
+pub fn battersea_runtime::Outcome::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_runtime::Outcome where U: core::convert::Into<T>
+pub type battersea_runtime::Outcome::Error = core::convert::Infallible
+pub fn battersea_runtime::Outcome::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for battersea_runtime::Outcome where U: core::convert::TryFrom<T>
+pub type battersea_runtime::Outcome::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_runtime::Outcome::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for battersea_runtime::Outcome where T: core::clone::Clone
+pub type battersea_runtime::Outcome::Owned = T
+pub fn battersea_runtime::Outcome::clone_into(&self, target: &mut T)
+pub fn battersea_runtime::Outcome::to_owned(&self) -> T
+impl<T> core::any::Any for battersea_runtime::Outcome where T: 'static + ?core::marker::Sized
+pub fn battersea_runtime::Outcome::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_runtime::Outcome where T: ?core::marker::Sized
+pub fn battersea_runtime::Outcome::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_runtime::Outcome where T: ?core::marker::Sized
+pub fn battersea_runtime::Outcome::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for battersea_runtime::Outcome where T: core::clone::Clone
+pub unsafe fn battersea_runtime::Outcome::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for battersea_runtime::Outcome
+pub fn battersea_runtime::Outcome::from(t: T) -> T
+impl<T> dyn_clone::DynClone for battersea_runtime::Outcome where T: core::clone::Clone
+pub fn battersea_runtime::Outcome::__clone_box(&self, _: dyn_clone::sealed::Private) -> *mut ()
+impl<T> serde_core::de::DeserializeOwned for battersea_runtime::Outcome where T: for<'de> serde_core::de::Deserialize<'de>
+impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_runtime::Outcome where T: ?core::marker::Sized
+pub enum battersea_runtime::RunPhase
+pub battersea_runtime::RunPhase::Accepted
+pub battersea_runtime::RunPhase::CompletionPending
+pub battersea_runtime::RunPhase::Terminal
+pub battersea_runtime::RunPhase::Terminal::outcome: battersea_runtime::Outcome
+impl core::clone::Clone for battersea_runtime::RunPhase
+pub fn battersea_runtime::RunPhase::clone(&self) -> battersea_runtime::RunPhase
+impl core::cmp::Eq for battersea_runtime::RunPhase
+impl core::cmp::PartialEq for battersea_runtime::RunPhase
+pub fn battersea_runtime::RunPhase::eq(&self, other: &battersea_runtime::RunPhase) -> bool
+impl core::fmt::Debug for battersea_runtime::RunPhase
+pub fn battersea_runtime::RunPhase::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for battersea_runtime::RunPhase
+impl serde_core::ser::Serialize for battersea_runtime::RunPhase
+pub fn battersea_runtime::RunPhase::serialize<__S>(&self, __serializer: __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for battersea_runtime::RunPhase
+pub fn battersea_runtime::RunPhase::deserialize<__D>(__deserializer: __D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for battersea_runtime::RunPhase
+impl core::marker::Send for battersea_runtime::RunPhase
+impl core::marker::Sync for battersea_runtime::RunPhase
+impl core::marker::Unpin for battersea_runtime::RunPhase
+impl core::panic::unwind_safe::RefUnwindSafe for battersea_runtime::RunPhase
+impl core::panic::unwind_safe::UnwindSafe for battersea_runtime::RunPhase
+impl<Q, K> equivalent::Equivalent<K> for battersea_runtime::RunPhase where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn battersea_runtime::RunPhase::equivalent(&self, key: &K) -> bool
+impl<Q, K> hashbrown::Equivalent<K> for battersea_runtime::RunPhase where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn battersea_runtime::RunPhase::equivalent(&self, key: &K) -> bool
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_runtime::RunPhase where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_runtime::RunPhase where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<T, U> core::convert::Into<U> for battersea_runtime::RunPhase where U: core::convert::From<T>
+pub fn battersea_runtime::RunPhase::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_runtime::RunPhase where U: core::convert::Into<T>
+pub type battersea_runtime::RunPhase::Error = core::convert::Infallible
+pub fn battersea_runtime::RunPhase::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for battersea_runtime::RunPhase where U: core::convert::TryFrom<T>
+pub type battersea_runtime::RunPhase::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_runtime::RunPhase::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for battersea_runtime::RunPhase where T: core::clone::Clone
+pub type battersea_runtime::RunPhase::Owned = T
+pub fn battersea_runtime::RunPhase::clone_into(&self, target: &mut T)
+pub fn battersea_runtime::RunPhase::to_owned(&self) -> T
+impl<T> core::any::Any for battersea_runtime::RunPhase where T: 'static + ?core::marker::Sized
+pub fn battersea_runtime::RunPhase::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_runtime::RunPhase where T: ?core::marker::Sized
+pub fn battersea_runtime::RunPhase::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_runtime::RunPhase where T: ?core::marker::Sized
+pub fn battersea_runtime::RunPhase::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for battersea_runtime::RunPhase where T: core::clone::Clone
+pub unsafe fn battersea_runtime::RunPhase::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for battersea_runtime::RunPhase
+pub fn battersea_runtime::RunPhase::from(t: T) -> T
+impl<T> dyn_clone::DynClone for battersea_runtime::RunPhase where T: core::clone::Clone
+pub fn battersea_runtime::RunPhase::__clone_box(&self, _: dyn_clone::sealed::Private) -> *mut ()
+impl<T> serde_core::de::DeserializeOwned for battersea_runtime::RunPhase where T: for<'de> serde_core::de::Deserialize<'de>
+impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_runtime::RunPhase where T: ?core::marker::Sized
+pub struct battersea_runtime::ExecutableCatalog
+impl battersea_runtime::ExecutableCatalog
+pub fn battersea_runtime::ExecutableCatalog::contracts(&self) -> &battersea_flow::registry::Registry
+pub fn battersea_runtime::ExecutableCatalog::definitions(&self) -> &std::collections::hash::map::HashMap<alloc::string::String, battersea_flow::types::FlowNodeDefinition>
+pub fn battersea_runtime::ExecutableCatalog::validate(&self, flow: &battersea_flow::types::FlowDocument) -> battersea_flow::types::FlowValidationResult
+impl core::marker::Freeze for battersea_runtime::ExecutableCatalog
+impl core::marker::Send for battersea_runtime::ExecutableCatalog
+impl core::marker::Sync for battersea_runtime::ExecutableCatalog
+impl core::marker::Unpin for battersea_runtime::ExecutableCatalog
+impl !core::panic::unwind_safe::RefUnwindSafe for battersea_runtime::ExecutableCatalog
+impl !core::panic::unwind_safe::UnwindSafe for battersea_runtime::ExecutableCatalog
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_runtime::ExecutableCatalog where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_runtime::ExecutableCatalog where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<T, U> core::convert::Into<U> for battersea_runtime::ExecutableCatalog where U: core::convert::From<T>
+pub fn battersea_runtime::ExecutableCatalog::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_runtime::ExecutableCatalog where U: core::convert::Into<T>
+pub type battersea_runtime::ExecutableCatalog::Error = core::convert::Infallible
+pub fn battersea_runtime::ExecutableCatalog::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for battersea_runtime::ExecutableCatalog where U: core::convert::TryFrom<T>
+pub type battersea_runtime::ExecutableCatalog::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_runtime::ExecutableCatalog::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> core::any::Any for battersea_runtime::ExecutableCatalog where T: 'static + ?core::marker::Sized
+pub fn battersea_runtime::ExecutableCatalog::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_runtime::ExecutableCatalog where T: ?core::marker::Sized
+pub fn battersea_runtime::ExecutableCatalog::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_runtime::ExecutableCatalog where T: ?core::marker::Sized
+pub fn battersea_runtime::ExecutableCatalog::borrow_mut(&mut self) -> &mut T
+impl<T> core::convert::From<T> for battersea_runtime::ExecutableCatalog
+pub fn battersea_runtime::ExecutableCatalog::from(t: T) -> T
+impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_runtime::ExecutableCatalog where T: ?core::marker::Sized
+pub struct battersea_runtime::ExecutionEvent
+pub battersea_runtime::ExecutionEvent::detail: core::option::Option<serde_json::value::Value>
+pub battersea_runtime::ExecutionEvent::flow_key: alloc::string::String
+pub battersea_runtime::ExecutionEvent::kind: battersea_runtime::EventKind
+pub battersea_runtime::ExecutionEvent::node_id: alloc::string::String
+pub battersea_runtime::ExecutionEvent::run_id: alloc::string::String
+pub battersea_runtime::ExecutionEvent::sequence: u64
+pub battersea_runtime::ExecutionEvent::summary: alloc::string::String
+impl core::clone::Clone for battersea_runtime::ExecutionEvent
+pub fn battersea_runtime::ExecutionEvent::clone(&self) -> battersea_runtime::ExecutionEvent
+impl core::fmt::Debug for battersea_runtime::ExecutionEvent
+pub fn battersea_runtime::ExecutionEvent::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl serde_core::ser::Serialize for battersea_runtime::ExecutionEvent
+pub fn battersea_runtime::ExecutionEvent::serialize<__S>(&self, __serializer: __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for battersea_runtime::ExecutionEvent
+pub fn battersea_runtime::ExecutionEvent::deserialize<__D>(__deserializer: __D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for battersea_runtime::ExecutionEvent
+impl core::marker::Send for battersea_runtime::ExecutionEvent
+impl core::marker::Sync for battersea_runtime::ExecutionEvent
+impl core::marker::Unpin for battersea_runtime::ExecutionEvent
+impl core::panic::unwind_safe::RefUnwindSafe for battersea_runtime::ExecutionEvent
+impl core::panic::unwind_safe::UnwindSafe for battersea_runtime::ExecutionEvent
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_runtime::ExecutionEvent where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_runtime::ExecutionEvent where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<T, U> core::convert::Into<U> for battersea_runtime::ExecutionEvent where U: core::convert::From<T>
+pub fn battersea_runtime::ExecutionEvent::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_runtime::ExecutionEvent where U: core::convert::Into<T>
+pub type battersea_runtime::ExecutionEvent::Error = core::convert::Infallible
+pub fn battersea_runtime::ExecutionEvent::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for battersea_runtime::ExecutionEvent where U: core::convert::TryFrom<T>
+pub type battersea_runtime::ExecutionEvent::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_runtime::ExecutionEvent::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for battersea_runtime::ExecutionEvent where T: core::clone::Clone
+pub type battersea_runtime::ExecutionEvent::Owned = T
+pub fn battersea_runtime::ExecutionEvent::clone_into(&self, target: &mut T)
+pub fn battersea_runtime::ExecutionEvent::to_owned(&self) -> T
+impl<T> core::any::Any for battersea_runtime::ExecutionEvent where T: 'static + ?core::marker::Sized
+pub fn battersea_runtime::ExecutionEvent::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_runtime::ExecutionEvent where T: ?core::marker::Sized
+pub fn battersea_runtime::ExecutionEvent::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_runtime::ExecutionEvent where T: ?core::marker::Sized
+pub fn battersea_runtime::ExecutionEvent::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for battersea_runtime::ExecutionEvent where T: core::clone::Clone
+pub unsafe fn battersea_runtime::ExecutionEvent::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for battersea_runtime::ExecutionEvent
+pub fn battersea_runtime::ExecutionEvent::from(t: T) -> T
+impl<T> dyn_clone::DynClone for battersea_runtime::ExecutionEvent where T: core::clone::Clone
+pub fn battersea_runtime::ExecutionEvent::__clone_box(&self, _: dyn_clone::sealed::Private) -> *mut ()
+impl<T> serde_core::de::DeserializeOwned for battersea_runtime::ExecutionEvent where T: for<'de> serde_core::de::Deserialize<'de>
+impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_runtime::ExecutionEvent where T: ?core::marker::Sized
+pub struct battersea_runtime::HandlerRegistry<H: battersea_runtime::ExecutionHost>
+impl<H: battersea_runtime::ExecutionHost> battersea_runtime::HandlerRegistry<H>
+pub fn battersea_runtime::HandlerRegistry<H>::bind_catalog(&self, catalog: battersea_flow::catalog::Catalog) -> core::result::Result<battersea_runtime::ExecutableCatalog, alloc::string::String>
+impl<H: battersea_runtime::ExecutionHost> battersea_runtime::HandlerRegistry<H>
+pub fn battersea_runtime::HandlerRegistry<H>::get(&self, id: &str) -> core::result::Result<&dyn battersea_runtime::NodeHandler<H>, alloc::string::String>
+pub fn battersea_runtime::HandlerRegistry<H>::ids(&self) -> impl core::iter::traits::iterator::Iterator<Item = &str>
+pub fn battersea_runtime::HandlerRegistry<H>::validate<'a>(&self, definitions: impl core::iter::traits::collect::IntoIterator<Item = &'a battersea_flow::types::FlowNodeDefinition>) -> core::result::Result<(), alloc::string::String>
+impl<H> core::marker::Freeze for battersea_runtime::HandlerRegistry<H>
+impl<H> core::marker::Send for battersea_runtime::HandlerRegistry<H>
+impl<H> core::marker::Sync for battersea_runtime::HandlerRegistry<H>
+impl<H> core::marker::Unpin for battersea_runtime::HandlerRegistry<H>
+impl<H> !core::panic::unwind_safe::RefUnwindSafe for battersea_runtime::HandlerRegistry<H>
+impl<H> !core::panic::unwind_safe::UnwindSafe for battersea_runtime::HandlerRegistry<H>
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_runtime::HandlerRegistry<H> where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_runtime::HandlerRegistry<H> where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<T, U> core::convert::Into<U> for battersea_runtime::HandlerRegistry<H> where U: core::convert::From<T>
+pub fn battersea_runtime::HandlerRegistry<H>::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_runtime::HandlerRegistry<H> where U: core::convert::Into<T>
+pub type battersea_runtime::HandlerRegistry<H>::Error = core::convert::Infallible
+pub fn battersea_runtime::HandlerRegistry<H>::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for battersea_runtime::HandlerRegistry<H> where U: core::convert::TryFrom<T>
+pub type battersea_runtime::HandlerRegistry<H>::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_runtime::HandlerRegistry<H>::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> core::any::Any for battersea_runtime::HandlerRegistry<H> where T: 'static + ?core::marker::Sized
+pub fn battersea_runtime::HandlerRegistry<H>::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_runtime::HandlerRegistry<H> where T: ?core::marker::Sized
+pub fn battersea_runtime::HandlerRegistry<H>::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_runtime::HandlerRegistry<H> where T: ?core::marker::Sized
+pub fn battersea_runtime::HandlerRegistry<H>::borrow_mut(&mut self) -> &mut T
+impl<T> core::convert::From<T> for battersea_runtime::HandlerRegistry<H>
+pub fn battersea_runtime::HandlerRegistry<H>::from(t: T) -> T
+impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_runtime::HandlerRegistry<H> where T: ?core::marker::Sized
+pub struct battersea_runtime::RegistryBuilder<H: battersea_runtime::ExecutionHost>
+impl<H: battersea_runtime::ExecutionHost> battersea_runtime::RegistryBuilder<H>
+pub fn battersea_runtime::RegistryBuilder<H>::build(self) -> battersea_runtime::HandlerRegistry<H>
+pub fn battersea_runtime::RegistryBuilder<H>::register(&mut self, handler: impl battersea_runtime::NodeHandler<H> + 'static) -> core::result::Result<(), alloc::string::String>
+impl<H: battersea_runtime::ExecutionHost> core::default::Default for battersea_runtime::RegistryBuilder<H>
+pub fn battersea_runtime::RegistryBuilder<H>::default() -> Self
+impl<H> core::marker::Freeze for battersea_runtime::RegistryBuilder<H>
+impl<H> core::marker::Send for battersea_runtime::RegistryBuilder<H>
+impl<H> core::marker::Sync for battersea_runtime::RegistryBuilder<H>
+impl<H> core::marker::Unpin for battersea_runtime::RegistryBuilder<H>
+impl<H> !core::panic::unwind_safe::RefUnwindSafe for battersea_runtime::RegistryBuilder<H>
+impl<H> !core::panic::unwind_safe::UnwindSafe for battersea_runtime::RegistryBuilder<H>
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_runtime::RegistryBuilder<H> where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_runtime::RegistryBuilder<H> where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<T, U> core::convert::Into<U> for battersea_runtime::RegistryBuilder<H> where U: core::convert::From<T>
+pub fn battersea_runtime::RegistryBuilder<H>::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_runtime::RegistryBuilder<H> where U: core::convert::Into<T>
+pub type battersea_runtime::RegistryBuilder<H>::Error = core::convert::Infallible
+pub fn battersea_runtime::RegistryBuilder<H>::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for battersea_runtime::RegistryBuilder<H> where U: core::convert::TryFrom<T>
+pub type battersea_runtime::RegistryBuilder<H>::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_runtime::RegistryBuilder<H>::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> core::any::Any for battersea_runtime::RegistryBuilder<H> where T: 'static + ?core::marker::Sized
+pub fn battersea_runtime::RegistryBuilder<H>::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_runtime::RegistryBuilder<H> where T: ?core::marker::Sized
+pub fn battersea_runtime::RegistryBuilder<H>::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_runtime::RegistryBuilder<H> where T: ?core::marker::Sized
+pub fn battersea_runtime::RegistryBuilder<H>::borrow_mut(&mut self) -> &mut T
+impl<T> core::convert::From<T> for battersea_runtime::RegistryBuilder<H>
+pub fn battersea_runtime::RegistryBuilder<H>::from(t: T) -> T
+impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_runtime::RegistryBuilder<H> where T: ?core::marker::Sized
+pub struct battersea_runtime::RunIdentity
+pub battersea_runtime::RunIdentity::catalogue_revision: alloc::string::String
+pub battersea_runtime::RunIdentity::configuration_revision: alloc::string::String
+pub battersea_runtime::RunIdentity::flow_key: alloc::string::String
+pub battersea_runtime::RunIdentity::graph_revision: alloc::string::String
+pub battersea_runtime::RunIdentity::run_id: alloc::string::String
+impl core::clone::Clone for battersea_runtime::RunIdentity
+pub fn battersea_runtime::RunIdentity::clone(&self) -> battersea_runtime::RunIdentity
+impl core::cmp::Eq for battersea_runtime::RunIdentity
+impl core::cmp::PartialEq for battersea_runtime::RunIdentity
+pub fn battersea_runtime::RunIdentity::eq(&self, other: &battersea_runtime::RunIdentity) -> bool
+impl core::fmt::Debug for battersea_runtime::RunIdentity
+pub fn battersea_runtime::RunIdentity::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for battersea_runtime::RunIdentity
+impl serde_core::ser::Serialize for battersea_runtime::RunIdentity
+pub fn battersea_runtime::RunIdentity::serialize<__S>(&self, __serializer: __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for battersea_runtime::RunIdentity
+pub fn battersea_runtime::RunIdentity::deserialize<__D>(__deserializer: __D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for battersea_runtime::RunIdentity
+impl core::marker::Send for battersea_runtime::RunIdentity
+impl core::marker::Sync for battersea_runtime::RunIdentity
+impl core::marker::Unpin for battersea_runtime::RunIdentity
+impl core::panic::unwind_safe::RefUnwindSafe for battersea_runtime::RunIdentity
+impl core::panic::unwind_safe::UnwindSafe for battersea_runtime::RunIdentity
+impl<Q, K> equivalent::Equivalent<K> for battersea_runtime::RunIdentity where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn battersea_runtime::RunIdentity::equivalent(&self, key: &K) -> bool
+impl<Q, K> hashbrown::Equivalent<K> for battersea_runtime::RunIdentity where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn battersea_runtime::RunIdentity::equivalent(&self, key: &K) -> bool
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_runtime::RunIdentity where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_runtime::RunIdentity where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<T, U> core::convert::Into<U> for battersea_runtime::RunIdentity where U: core::convert::From<T>
+pub fn battersea_runtime::RunIdentity::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_runtime::RunIdentity where U: core::convert::Into<T>
+pub type battersea_runtime::RunIdentity::Error = core::convert::Infallible
+pub fn battersea_runtime::RunIdentity::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for battersea_runtime::RunIdentity where U: core::convert::TryFrom<T>
+pub type battersea_runtime::RunIdentity::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_runtime::RunIdentity::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for battersea_runtime::RunIdentity where T: core::clone::Clone
+pub type battersea_runtime::RunIdentity::Owned = T
+pub fn battersea_runtime::RunIdentity::clone_into(&self, target: &mut T)
+pub fn battersea_runtime::RunIdentity::to_owned(&self) -> T
+impl<T> core::any::Any for battersea_runtime::RunIdentity where T: 'static + ?core::marker::Sized
+pub fn battersea_runtime::RunIdentity::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_runtime::RunIdentity where T: ?core::marker::Sized
+pub fn battersea_runtime::RunIdentity::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_runtime::RunIdentity where T: ?core::marker::Sized
+pub fn battersea_runtime::RunIdentity::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for battersea_runtime::RunIdentity where T: core::clone::Clone
+pub unsafe fn battersea_runtime::RunIdentity::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for battersea_runtime::RunIdentity
+pub fn battersea_runtime::RunIdentity::from(t: T) -> T
+impl<T> dyn_clone::DynClone for battersea_runtime::RunIdentity where T: core::clone::Clone
+pub fn battersea_runtime::RunIdentity::__clone_box(&self, _: dyn_clone::sealed::Private) -> *mut ()
+impl<T> serde_core::de::DeserializeOwned for battersea_runtime::RunIdentity where T: for<'de> serde_core::de::Deserialize<'de>
+impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_runtime::RunIdentity where T: ?core::marker::Sized
+pub struct battersea_runtime::RunRecord
+pub battersea_runtime::RunRecord::identity: battersea_runtime::RunIdentity
+pub battersea_runtime::RunRecord::phase: battersea_runtime::RunPhase
+impl core::clone::Clone for battersea_runtime::RunRecord
+pub fn battersea_runtime::RunRecord::clone(&self) -> battersea_runtime::RunRecord
+impl core::cmp::Eq for battersea_runtime::RunRecord
+impl core::cmp::PartialEq for battersea_runtime::RunRecord
+pub fn battersea_runtime::RunRecord::eq(&self, other: &battersea_runtime::RunRecord) -> bool
+impl core::fmt::Debug for battersea_runtime::RunRecord
+pub fn battersea_runtime::RunRecord::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for battersea_runtime::RunRecord
+impl serde_core::ser::Serialize for battersea_runtime::RunRecord
+pub fn battersea_runtime::RunRecord::serialize<__S>(&self, __serializer: __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for battersea_runtime::RunRecord
+pub fn battersea_runtime::RunRecord::deserialize<__D>(__deserializer: __D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for battersea_runtime::RunRecord
+impl core::marker::Send for battersea_runtime::RunRecord
+impl core::marker::Sync for battersea_runtime::RunRecord
+impl core::marker::Unpin for battersea_runtime::RunRecord
+impl core::panic::unwind_safe::RefUnwindSafe for battersea_runtime::RunRecord
+impl core::panic::unwind_safe::UnwindSafe for battersea_runtime::RunRecord
+impl<Q, K> equivalent::Equivalent<K> for battersea_runtime::RunRecord where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn battersea_runtime::RunRecord::equivalent(&self, key: &K) -> bool
+impl<Q, K> hashbrown::Equivalent<K> for battersea_runtime::RunRecord where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn battersea_runtime::RunRecord::equivalent(&self, key: &K) -> bool
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_runtime::RunRecord where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_runtime::RunRecord where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<T, U> core::convert::Into<U> for battersea_runtime::RunRecord where U: core::convert::From<T>
+pub fn battersea_runtime::RunRecord::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_runtime::RunRecord where U: core::convert::Into<T>
+pub type battersea_runtime::RunRecord::Error = core::convert::Infallible
+pub fn battersea_runtime::RunRecord::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for battersea_runtime::RunRecord where U: core::convert::TryFrom<T>
+pub type battersea_runtime::RunRecord::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_runtime::RunRecord::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for battersea_runtime::RunRecord where T: core::clone::Clone
+pub type battersea_runtime::RunRecord::Owned = T
+pub fn battersea_runtime::RunRecord::clone_into(&self, target: &mut T)
+pub fn battersea_runtime::RunRecord::to_owned(&self) -> T
+impl<T> core::any::Any for battersea_runtime::RunRecord where T: 'static + ?core::marker::Sized
+pub fn battersea_runtime::RunRecord::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_runtime::RunRecord where T: ?core::marker::Sized
+pub fn battersea_runtime::RunRecord::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_runtime::RunRecord where T: ?core::marker::Sized
+pub fn battersea_runtime::RunRecord::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for battersea_runtime::RunRecord where T: core::clone::Clone
+pub unsafe fn battersea_runtime::RunRecord::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for battersea_runtime::RunRecord
+pub fn battersea_runtime::RunRecord::from(t: T) -> T
+impl<T> dyn_clone::DynClone for battersea_runtime::RunRecord where T: core::clone::Clone
+pub fn battersea_runtime::RunRecord::__clone_box(&self, _: dyn_clone::sealed::Private) -> *mut ()
+impl<T> serde_core::de::DeserializeOwned for battersea_runtime::RunRecord where T: for<'de> serde_core::de::Deserialize<'de>
+impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_runtime::RunRecord where T: ?core::marker::Sized
+pub struct battersea_runtime::SchedulerState
+pub battersea_runtime::SchedulerState::activation_token: tokio_util::sync::cancellation_token::CancellationToken
+pub battersea_runtime::SchedulerState::activation_values: std::collections::hash::map::HashMap<alloc::string::String, serde_json::value::Value>
+pub battersea_runtime::SchedulerState::active_signal_path: std::collections::hash::set::HashSet<(alloc::string::String, alloc::string::String)>
+pub battersea_runtime::SchedulerState::cancellation_requested: bool
+pub battersea_runtime::SchedulerState::consumed_tokens: u32
+pub battersea_runtime::SchedulerState::definitions: std::collections::hash::map::HashMap<alloc::string::String, battersea_flow::types::FlowNodeDefinition>
+pub battersea_runtime::SchedulerState::disabled_output_nodes: std::collections::hash::set::HashSet<alloc::string::String>
+pub battersea_runtime::SchedulerState::emitted_tokens: u32
+pub battersea_runtime::SchedulerState::event_sequence: alloc::sync::Arc<core::sync::atomic::AtomicU64>
+pub battersea_runtime::SchedulerState::executed_nodes: std::collections::hash::set::HashSet<alloc::string::String>
+pub battersea_runtime::SchedulerState::flow: battersea_flow::types::FlowDocument
+pub battersea_runtime::SchedulerState::incoming_edges: std::collections::hash::map::HashMap<(alloc::string::String, alloc::string::String), battersea_flow::types::FlowEdge>
+pub battersea_runtime::SchedulerState::incoming_signal_edges: std::collections::hash::map::HashMap<(alloc::string::String, alloc::string::String), battersea_flow::types::FlowEdge>
+pub battersea_runtime::SchedulerState::input_tokens: std::collections::hash::map::HashMap<(alloc::string::String, alloc::string::String), alloc::vec::Vec<battersea_runtime::Token>>
+pub battersea_runtime::SchedulerState::logic_nodes_evaluated: std::collections::hash::set::HashSet<alloc::string::String>
+pub battersea_runtime::SchedulerState::materialized_sources: std::collections::hash::set::HashSet<alloc::string::String>
+pub battersea_runtime::SchedulerState::nodes_by_id: std::collections::hash::map::HashMap<alloc::string::String, battersea_flow::types::FlowNode>
+pub battersea_runtime::SchedulerState::outgoing_edges: std::collections::hash::map::HashMap<(alloc::string::String, alloc::string::String), battersea_flow::types::FlowEdge>
+pub battersea_runtime::SchedulerState::outgoing_signal_edges: std::collections::hash::map::HashMap<(alloc::string::String, alloc::string::String), battersea_flow::types::FlowEdge>
+pub battersea_runtime::SchedulerState::ready_inline_nodes: alloc::collections::vec_deque::VecDeque<alloc::string::String>
+pub battersea_runtime::SchedulerState::run_id: alloc::string::String
+pub battersea_runtime::SchedulerState::signal_action_latches: std::collections::hash::set::HashSet<(alloc::string::String, alloc::string::String)>
+pub battersea_runtime::SchedulerState::signal_sources_settled: std::collections::hash::set::HashSet<(alloc::string::String, alloc::string::String)>
+impl battersea_runtime::SchedulerState
+pub fn battersea_runtime::SchedulerState::new(run_id: alloc::string::String, flow: &battersea_flow::types::FlowDocument, definitions: std::collections::hash::map::HashMap<alloc::string::String, battersea_flow::types::FlowNodeDefinition>) -> core::result::Result<Self, alloc::string::String>
+impl core::clone::Clone for battersea_runtime::SchedulerState
+pub fn battersea_runtime::SchedulerState::clone(&self) -> battersea_runtime::SchedulerState
+impl core::fmt::Debug for battersea_runtime::SchedulerState
+pub fn battersea_runtime::SchedulerState::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Freeze for battersea_runtime::SchedulerState
+impl core::marker::Send for battersea_runtime::SchedulerState
+impl core::marker::Sync for battersea_runtime::SchedulerState
+impl core::marker::Unpin for battersea_runtime::SchedulerState
+impl core::panic::unwind_safe::RefUnwindSafe for battersea_runtime::SchedulerState
+impl core::panic::unwind_safe::UnwindSafe for battersea_runtime::SchedulerState
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_runtime::SchedulerState where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_runtime::SchedulerState where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<T, U> core::convert::Into<U> for battersea_runtime::SchedulerState where U: core::convert::From<T>
+pub fn battersea_runtime::SchedulerState::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_runtime::SchedulerState where U: core::convert::Into<T>
+pub type battersea_runtime::SchedulerState::Error = core::convert::Infallible
+pub fn battersea_runtime::SchedulerState::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for battersea_runtime::SchedulerState where U: core::convert::TryFrom<T>
+pub type battersea_runtime::SchedulerState::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_runtime::SchedulerState::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for battersea_runtime::SchedulerState where T: core::clone::Clone
+pub type battersea_runtime::SchedulerState::Owned = T
+pub fn battersea_runtime::SchedulerState::clone_into(&self, target: &mut T)
+pub fn battersea_runtime::SchedulerState::to_owned(&self) -> T
+impl<T> core::any::Any for battersea_runtime::SchedulerState where T: 'static + ?core::marker::Sized
+pub fn battersea_runtime::SchedulerState::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_runtime::SchedulerState where T: ?core::marker::Sized
+pub fn battersea_runtime::SchedulerState::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_runtime::SchedulerState where T: ?core::marker::Sized
+pub fn battersea_runtime::SchedulerState::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for battersea_runtime::SchedulerState where T: core::clone::Clone
+pub unsafe fn battersea_runtime::SchedulerState::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for battersea_runtime::SchedulerState
+pub fn battersea_runtime::SchedulerState::from(t: T) -> T
+impl<T> dyn_clone::DynClone for battersea_runtime::SchedulerState where T: core::clone::Clone
+pub fn battersea_runtime::SchedulerState::__clone_box(&self, _: dyn_clone::sealed::Private) -> *mut ()
+impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_runtime::SchedulerState where T: ?core::marker::Sized
+pub struct battersea_runtime::Token
+pub battersea_runtime::Token::token_type: alloc::string::String
+pub battersea_runtime::Token::value: serde_json::value::Value
+impl core::clone::Clone for battersea_runtime::Token
+pub fn battersea_runtime::Token::clone(&self) -> battersea_runtime::Token
+impl core::fmt::Debug for battersea_runtime::Token
+pub fn battersea_runtime::Token::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl serde_core::ser::Serialize for battersea_runtime::Token
+pub fn battersea_runtime::Token::serialize<__S>(&self, __serializer: __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for battersea_runtime::Token
+pub fn battersea_runtime::Token::deserialize<__D>(__deserializer: __D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for battersea_runtime::Token
+impl core::marker::Send for battersea_runtime::Token
+impl core::marker::Sync for battersea_runtime::Token
+impl core::marker::Unpin for battersea_runtime::Token
+impl core::panic::unwind_safe::RefUnwindSafe for battersea_runtime::Token
+impl core::panic::unwind_safe::UnwindSafe for battersea_runtime::Token
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_runtime::Token where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_runtime::Token where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<T, U> core::convert::Into<U> for battersea_runtime::Token where U: core::convert::From<T>
+pub fn battersea_runtime::Token::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_runtime::Token where U: core::convert::Into<T>
+pub type battersea_runtime::Token::Error = core::convert::Infallible
+pub fn battersea_runtime::Token::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for battersea_runtime::Token where U: core::convert::TryFrom<T>
+pub type battersea_runtime::Token::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_runtime::Token::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for battersea_runtime::Token where T: core::clone::Clone
+pub type battersea_runtime::Token::Owned = T
+pub fn battersea_runtime::Token::clone_into(&self, target: &mut T)
+pub fn battersea_runtime::Token::to_owned(&self) -> T
+impl<T> core::any::Any for battersea_runtime::Token where T: 'static + ?core::marker::Sized
+pub fn battersea_runtime::Token::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_runtime::Token where T: ?core::marker::Sized
+pub fn battersea_runtime::Token::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_runtime::Token where T: ?core::marker::Sized
+pub fn battersea_runtime::Token::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for battersea_runtime::Token where T: core::clone::Clone
+pub unsafe fn battersea_runtime::Token::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for battersea_runtime::Token
+pub fn battersea_runtime::Token::from(t: T) -> T
+impl<T> dyn_clone::DynClone for battersea_runtime::Token where T: core::clone::Clone
+pub fn battersea_runtime::Token::__clone_box(&self, _: dyn_clone::sealed::Private) -> *mut ()
+impl<T> serde_core::de::DeserializeOwned for battersea_runtime::Token where T: for<'de> serde_core::de::Deserialize<'de>
+impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_runtime::Token where T: ?core::marker::Sized
+pub trait battersea_runtime::ActivationHost: battersea_runtime::ExecutionHost
+pub fn battersea_runtime::ActivationHost::accept_activation<'life0, 'life1, 'life2, 'async_trait>(&'life0 self, runtime: &'life1 Self::State, node: &'life2 str) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<(), Self::Error>> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait, 'life1: 'async_trait, 'life2: 'async_trait
+pub fn battersea_runtime::ActivationHost::complete_execution<'life0, 'life1, 'async_trait>(&'life0 self, runtime: &'life1 mut Self::State) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<(), Self::Error>> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait, 'life1: 'async_trait
+pub fn battersea_runtime::ActivationHost::controller_activation_effects(&self, runtime: &mut Self::State, node: &str, values: &std::collections::hash::map::HashMap<alloc::string::String, serde_json::value::Value>)
+pub fn battersea_runtime::ActivationHost::preflight_activation<'life0, 'life1, 'async_trait>(&'life0 self, runtime: &'life1 mut Self::State) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<(), Self::Error>> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait, 'life1: 'async_trait
+pub fn battersea_runtime::ActivationHost::retain_execution_phase<'life0, 'life1, 'async_trait>(&'life0 self, runtime: &'life1 Self::State, phase: battersea_runtime::RunPhase) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<(), Self::Error>> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait, 'life1: 'async_trait
+pub fn battersea_runtime::ActivationHost::run_activation<'life0, 'life1, 'life2, 'async_trait>(&'life0 self, runtime: &'life1 mut Self::State, node: &'life2 str, values: std::collections::hash::map::HashMap<alloc::string::String, serde_json::value::Value>, token: tokio_util::sync::cancellation_token::CancellationToken) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<(), Self::Error>> + core::marker::Send + 'async_trait)>> where Self: core::marker::Sync + 'async_trait, 'life0: 'async_trait, 'life1: 'async_trait, 'life2: 'async_trait
+pub fn battersea_runtime::ActivationHost::validate_activation(&self, runtime: &Self::State) -> core::result::Result<(), Self::Error>
+pub trait battersea_runtime::ExecutionError: core::error::Error + core::marker::Send + core::marker::Sync + 'static
+pub fn battersea_runtime::ExecutionError::cancelled(message: impl core::convert::Into<alloc::string::String>) -> Self
+pub fn battersea_runtime::ExecutionError::code(&self) -> &str
+pub fn battersea_runtime::ExecutionError::internal(message: impl core::convert::Into<alloc::string::String>) -> Self
+pub fn battersea_runtime::ExecutionError::interrupted(message: impl core::convert::Into<alloc::string::String>) -> Self
+pub fn battersea_runtime::ExecutionError::invalid_request(message: impl core::convert::Into<alloc::string::String>) -> Self
+pub fn battersea_runtime::ExecutionError::message(&self) -> &str
+pub trait battersea_runtime::ExecutionHost: core::marker::Sized + core::marker::Send + core::marker::Sync
+pub type battersea_runtime::ExecutionHost::Error: battersea_runtime::ExecutionError
+pub type battersea_runtime::ExecutionHost::State: core::ops::deref::Deref<Target = battersea_runtime::SchedulerState> + core::ops::deref::DerefMut + core::marker::Send + core::marker::Sync
+pub fn battersea_runtime::ExecutionHost::apply_automation_write<'life0, 'life1, 'life2, 'life3, 'life4, 'life5, 'life6, 'async_trait>(&'life0 self, runtime: &'life1 mut Self::State, edge: &'life2 battersea_flow::types::FlowEdge, source_node: &'life3 str, source_port: &'life4 str, target: &'life5 battersea_flow::types::FlowNode, port: &'life6 battersea_flow::types::FlowAutomationPortDefinition, token: battersea_runtime::Token) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<(), Self::Error>> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait, 'life1: 'async_trait, 'life2: 'async_trait, 'life3: 'async_trait, 'life4: 'async_trait, 'life5: 'async_trait, 'life6: 'async_trait
+pub fn battersea_runtime::ExecutionHost::commit_parameter_write<'life0, 'life1, 'life2, 'life3, 'life4, 'async_trait>(&'life0 self, runtime: &'life1 mut Self::State, node: &'life2 battersea_flow::types::FlowNode, parameter: &'life3 battersea_flow::types::FlowParameterDefinition, value: &'life4 serde_json::value::Value) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<(), Self::Error>> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait, 'life1: 'async_trait, 'life2: 'async_trait, 'life3: 'async_trait, 'life4: 'async_trait
+pub fn battersea_runtime::ExecutionHost::connected_input_ports(&self, runtime: &Self::State, node_id: &str) -> alloc::vec::Vec<alloc::string::String>
+pub fn battersea_runtime::ExecutionHost::definition_is_output_capable(definition: &battersea_flow::types::FlowNodeDefinition) -> bool
+pub fn battersea_runtime::ExecutionHost::discard_queued_input_tokens_for_node(&self, runtime: &mut Self::State, node_id: &str)
+pub fn battersea_runtime::ExecutionHost::drain_flow_work<'life0, 'life1, 'life2, 'async_trait>(&'life0 self, runtime: &'life1 mut Self::State, token: &'life2 tokio_util::sync::cancellation_token::CancellationToken) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<(), Self::Error>> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait, 'life1: 'async_trait, 'life2: 'async_trait
+pub fn battersea_runtime::ExecutionHost::edge_source_is_disabled(&self, runtime: &Self::State, edge: &battersea_flow::types::FlowEdge) -> bool
+pub fn battersea_runtime::ExecutionHost::emit_flow_signal<'life0, 'life1, 'life2, 'life3, 'async_trait>(&'life0 self, runtime: &'life1 mut Self::State, node: &'life2 battersea_flow::types::FlowNode, signal_port: &'life3 str) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<(), Self::Error>> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait, 'life1: 'async_trait, 'life2: 'async_trait, 'life3: 'async_trait
+pub fn battersea_runtime::ExecutionHost::emit_flow_token<'life0, 'life1, 'life2, 'life3, 'life4, 'async_trait>(&'life0 self, runtime: &'life1 mut Self::State, source_node_id: &'life2 str, source_port: &'life3 str, token_value: battersea_runtime::Token, cancel_token: &'life4 tokio_util::sync::cancellation_token::CancellationToken) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<(), Self::Error>> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait, 'life1: 'async_trait, 'life2: 'async_trait, 'life3: 'async_trait, 'life4: 'async_trait
+pub fn battersea_runtime::ExecutionHost::emit_post_activate_signal<'life0, 'life1, 'life2, 'life3, 'async_trait>(&'life0 self, runtime: &'life1 mut Self::State, node: &'life2 battersea_flow::types::FlowNode, _definition: &'life3 battersea_flow::types::FlowNodeDefinition) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<(), Self::Error>> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait, 'life1: 'async_trait, 'life2: 'async_trait, 'life3: 'async_trait
+pub fn battersea_runtime::ExecutionHost::enqueue_ready_inline_targets_after_source_disconnect(&self, runtime: &mut Self::State, source_node_id: &str)
+pub fn battersea_runtime::ExecutionHost::evaluate_logic_node<'life0, 'life1, 'life2, 'async_trait>(&'life0 self, runtime: &'life1 mut Self::State, node: &'life2 battersea_flow::types::FlowNode) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<(), Self::Error>> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait, 'life1: 'async_trait, 'life2: 'async_trait
+pub fn battersea_runtime::ExecutionHost::evaluate_ready_logic_nodes<'life0, 'life1, 'async_trait>(&'life0 self, runtime: &'life1 mut Self::State) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<bool, Self::Error>> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait, 'life1: 'async_trait
+pub fn battersea_runtime::ExecutionHost::execute_flow_action<'life0, 'life1, 'life2, 'life3, 'async_trait>(&'life0 self, runtime: &'life1 mut Self::State, node: &'life2 battersea_flow::types::FlowNode, action_port: &'life3 str) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<(), Self::Error>> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait, 'life1: 'async_trait, 'life2: 'async_trait, 'life3: 'async_trait
+pub fn battersea_runtime::ExecutionHost::execute_flow_node<'life0, 'life1, 'life2, 'life3, 'life4, 'async_trait>(&'life0 self, runtime: &'life1 mut Self::State, node_id: &'life2 str, activation_values: core::option::Option<&'life3 std::collections::hash::map::HashMap<alloc::string::String, serde_json::value::Value>>, token: &'life4 tokio_util::sync::cancellation_token::CancellationToken) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<(), Self::Error>> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait, 'life1: 'async_trait, 'life2: 'async_trait, 'life3: 'async_trait, 'life4: 'async_trait
+pub fn battersea_runtime::ExecutionHost::execute_sink_port<'life0, 'life1, 'life2, 'life3, 'async_trait>(&'life0 self, runtime: &'life1 mut Self::State, node: &'life2 battersea_flow::types::FlowNode, input_port: &'life3 str, token_value: battersea_runtime::Token) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<(), Self::Error>> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait, 'life1: 'async_trait, 'life2: 'async_trait, 'life3: 'async_trait
+pub fn battersea_runtime::ExecutionHost::execution_event<'life0, 'life1, 'async_trait>(&'life0 self, runtime: &'life1 Self::State, event: battersea_runtime::ExecutionEvent) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = ()> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait, 'life1: 'async_trait
+pub fn battersea_runtime::ExecutionHost::flow_token_excerpt(value: &serde_json::value::Value) -> core::option::Option<alloc::string::String>
+pub fn battersea_runtime::ExecutionHost::handlers(&self) -> &battersea_runtime::HandlerRegistry<Self>
+pub fn battersea_runtime::ExecutionHost::inline_node_ready(&self, runtime: &Self::State, node_id: &str) -> bool
+pub fn battersea_runtime::ExecutionHost::logic_gate_label(&self, node: &battersea_flow::types::FlowNode, definition: &battersea_flow::types::FlowNodeDefinition) -> alloc::string::String
+pub fn battersea_runtime::ExecutionHost::logic_node_ready_to_evaluate(&self, runtime: &Self::State, node: &battersea_flow::types::FlowNode) -> core::result::Result<bool, Self::Error>
+pub fn battersea_runtime::ExecutionHost::mark_node_signal_ports_settled_except(&self, runtime: &mut Self::State, node: &battersea_flow::types::FlowNode, emitted_ports: &[alloc::string::String]) -> core::result::Result<(), Self::Error>
+pub fn battersea_runtime::ExecutionHost::materialize_snapshot_sources<'life0, 'life1, 'life2, 'life3, 'async_trait>(&'life0 self, runtime: &'life1 mut Self::State, activated_node_id: &'life2 str, token: &'life3 tokio_util::sync::cancellation_token::CancellationToken) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<(), Self::Error>> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait, 'life1: 'async_trait, 'life2: 'async_trait, 'life3: 'async_trait
+pub fn battersea_runtime::ExecutionHost::node_is_disabled_output_capable(&self, runtime: &Self::State, node: &battersea_flow::types::FlowNode, definition: &battersea_flow::types::FlowNodeDefinition) -> bool
+pub fn battersea_runtime::ExecutionHost::observe_token(&self, _runtime: &Self::State, _node: &str, _port: &str, _token: &battersea_runtime::Token)
+pub fn battersea_runtime::ExecutionHost::prepare_logic_outputs(&self, node: &battersea_flow::types::FlowNode, definition: &battersea_flow::types::FlowNodeDefinition, actions: &[battersea_flow::types::FlowActionPortDefinition], signals: &[battersea_flow::types::FlowSignalPortDefinition], fired: &std::collections::hash::set::HashSet<alloc::string::String>, enabled: bool) -> core::result::Result<alloc::vec::Vec<alloc::string::String>, Self::Error>
+pub fn battersea_runtime::ExecutionHost::publish_execution_record<'life0, 'life1, 'life2, 'async_trait>(&'life0 self, runtime: &'life1 Self::State, node_id: &'life2 str, kind: battersea_runtime::EventKind, summary: alloc::string::String, detail: core::option::Option<serde_json::value::Value>) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = ()> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait, 'life1: 'async_trait, 'life2: 'async_trait
+pub fn battersea_runtime::ExecutionHost::record_logic_action_signal(&self, runtime: &mut Self::State, node: &battersea_flow::types::FlowNode, action_port: &str)
+pub fn battersea_runtime::ExecutionHost::request_activation_cancel(&self, runtime: &mut Self::State, reason: &str) -> core::result::Result<(), Self::Error>
+pub fn battersea_runtime::ExecutionHost::resolve_parameter_write<'life0, 'life1, 'life2, 'life3, 'life4, 'async_trait>(&'life0 self, runtime: &'life1 Self::State, node: &'life2 battersea_flow::types::FlowNode, parameter: &'life3 battersea_flow::types::FlowParameterDefinition, value: &'life4 serde_json::value::Value) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<serde_json::value::Value, Self::Error>> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait, 'life1: 'async_trait, 'life2: 'async_trait, 'life3: 'async_trait, 'life4: 'async_trait
+pub fn battersea_runtime::ExecutionHost::take_all_flow_input_tokens(&self, runtime: &mut Self::State, node_id: &str, port_name: &str) -> core::result::Result<alloc::vec::Vec<battersea_runtime::Token>, Self::Error>
+pub fn battersea_runtime::ExecutionHost::take_flow_input_token(&self, runtime: &mut Self::State, node_id: &str, port_name: &str) -> core::result::Result<battersea_runtime::Token, Self::Error>
+pub trait battersea_runtime::NodeHandler<H: battersea_runtime::ExecutionHost>: core::marker::Send + core::marker::Sync
+pub fn battersea_runtime::NodeHandler::execute_action<'life0, 'life1, 'life2, 'life3, 'life4, 'life5, 'async_trait>(&'life0 self, _core: &'life1 H, _runtime: &'life2 mut <H as battersea_runtime::ExecutionHost>::State, _node: &'life3 battersea_flow::types::FlowNode, _definition: &'life4 battersea_flow::types::FlowNodeDefinition, _action_port: &'life5 str) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<(), <H as battersea_runtime::ExecutionHost>::Error>> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait, 'life1: 'async_trait, 'life2: 'async_trait, 'life3: 'async_trait, 'life4: 'async_trait, 'life5: 'async_trait
+pub fn battersea_runtime::NodeHandler::execute_controller_action<'life0, 'life1, 'life2, 'life3, 'life4, 'life5, 'async_trait>(&'life0 self, _core: &'life1 H, _runtime: &'life2 mut <H as battersea_runtime::ExecutionHost>::State, _node: &'life3 battersea_flow::types::FlowNode, _definition: &'life4 battersea_flow::types::FlowNodeDefinition, _controller_action: &'life5 str) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<(), <H as battersea_runtime::ExecutionHost>::Error>> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait, 'life1: 'async_trait, 'life2: 'async_trait, 'life3: 'async_trait, 'life4: 'async_trait, 'life5: 'async_trait
+pub fn battersea_runtime::NodeHandler::execute_node<'life0, 'life1, 'life2, 'life3, 'life4, 'life5, 'life6, 'async_trait>(&'life0 self, _core: &'life1 H, _runtime: &'life2 mut <H as battersea_runtime::ExecutionHost>::State, _node: &'life3 battersea_flow::types::FlowNode, _definition: &'life4 battersea_flow::types::FlowNodeDefinition, _activation_values: core::option::Option<&'life5 std::collections::hash::map::HashMap<alloc::string::String, serde_json::value::Value>>, _token: &'life6 tokio_util::sync::cancellation_token::CancellationToken) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<(), <H as battersea_runtime::ExecutionHost>::Error>> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait, 'life1: 'async_trait, 'life2: 'async_trait, 'life3: 'async_trait, 'life4: 'async_trait, 'life5: 'async_trait, 'life6: 'async_trait
+pub fn battersea_runtime::NodeHandler::execute_sink<'life0, 'life1, 'life2, 'life3, 'life4, 'async_trait>(&'life0 self, _core: &'life1 H, _runtime: &'life2 mut <H as battersea_runtime::ExecutionHost>::State, _node: &'life3 battersea_flow::types::FlowNode, _input_port: &'life4 str, _token_value: battersea_runtime::Token) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<(), <H as battersea_runtime::ExecutionHost>::Error>> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait, 'life1: 'async_trait, 'life2: 'async_trait, 'life3: 'async_trait, 'life4: 'async_trait
+pub fn battersea_runtime::NodeHandler::handler_id(&self) -> &'static str
+pub fn battersea_runtime::NodeHandler::materialize_node<'life0, 'life1, 'life2, 'life3, 'life4, 'life5, 'async_trait>(&'life0 self, _core: &'life1 H, _runtime: &'life2 mut <H as battersea_runtime::ExecutionHost>::State, _node: &'life3 battersea_flow::types::FlowNode, _definition: &'life4 battersea_flow::types::FlowNodeDefinition, _token: &'life5 tokio_util::sync::cancellation_token::CancellationToken) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<(), <H as battersea_runtime::ExecutionHost>::Error>> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait, 'life1: 'async_trait, 'life2: 'async_trait, 'life3: 'async_trait, 'life4: 'async_trait, 'life5: 'async_trait
+pub fn battersea_runtime::NodeHandler::receive_input_token<'life0, 'life1, 'life2, 'life3, 'life4, 'life5, 'life6, 'life7, 'async_trait>(&'life0 self, _core: &'life1 H, _runtime: &'life2 mut <H as battersea_runtime::ExecutionHost>::State, _node: &'life3 battersea_flow::types::FlowNode, _definition: &'life4 battersea_flow::types::FlowNodeDefinition, _input_port: &'life5 str, _token_value: &'life6 battersea_runtime::Token, _token: &'life7 tokio_util::sync::cancellation_token::CancellationToken) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<(), <H as battersea_runtime::ExecutionHost>::Error>> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait, 'life1: 'async_trait, 'life2: 'async_trait, 'life3: 'async_trait, 'life4: 'async_trait, 'life5: 'async_trait, 'life6: 'async_trait, 'life7: 'async_trait
+pub fn battersea_runtime::order_source_phase_materialization<S: core::ops::deref::Deref<Target = battersea_runtime::SchedulerState>>(runtime: &S, source_ids: alloc::vec::Vec<alloc::string::String>) -> alloc::vec::Vec<alloc::string::String>

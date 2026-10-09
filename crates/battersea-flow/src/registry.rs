@@ -8,6 +8,7 @@ use serde_json::Value;
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
+type AutomationConversion = dyn Fn(&Value) -> Result<Value, String> + Send + Sync;
 type ValueCheck = dyn Fn(&Value) -> Result<(), String> + Send + Sync;
 type DefinitionCheck = dyn Fn(&FlowNodeDefinition) -> Result<(), String> + Send + Sync;
 type GraphCheck = dyn Fn(&FlowDocument, &HashMap<String, FlowNodeDefinition>) -> Vec<FlowValidationIssue>
@@ -19,6 +20,7 @@ pub struct ParameterType {
     pub schema: Value,
     pub default_editor: Option<FlowParameterEditorKind>,
     validate: Arc<ValueCheck>,
+    automation: Arc<AutomationConversion>,
 }
 impl ParameterType {
     pub fn new(
@@ -30,7 +32,15 @@ impl ParameterType {
             schema,
             default_editor,
             validate: Arc::new(validate),
+            automation: Arc::new(|value| Ok(value.clone())),
         }
+    }
+    pub fn with_automation_conversion(
+        mut self,
+        conversion: impl Fn(&Value) -> Result<Value, String> + Send + Sync + 'static,
+    ) -> Self {
+        self.automation = Arc::new(conversion);
+        self
     }
 }
 struct RegisteredParameter {
@@ -185,6 +195,55 @@ impl Registry {
             }
         }
     }
+
+    pub fn convert_automation_value(
+        &self,
+        parameter: &crate::FlowParameterDefinition,
+        value: &Value,
+    ) -> Result<Value> {
+        fn convert(
+            registry: &Registry,
+            datatype: &FlowParameterDataType,
+            value: &Value,
+        ) -> Result<Value> {
+            registry.validate_datatype(datatype)?;
+            match datatype.kind.as_str() {
+                "list" => {
+                    let values = match value {
+                        Value::Null => vec![],
+                        Value::Array(values) => values.clone(),
+                        value => vec![value.clone()],
+                    };
+                    values
+                        .iter()
+                        .map(|v| convert(registry, datatype.item_type.as_deref().unwrap(), v))
+                        .collect::<Result<Vec<_>>>()
+                        .map(Value::Array)
+                }
+                "map" if value.is_object() => value
+                    .as_object()
+                    .unwrap()
+                    .iter()
+                    .map(|(key, value)| {
+                        convert(registry, datatype.value_type.as_deref().unwrap(), value)
+                            .map(|v| (key.clone(), v))
+                    })
+                    .collect::<Result<serde_json::Map<_, _>>>()
+                    .map(Value::Object),
+                name => match registry.parameters.get(name) {
+                    Some(entry) => (entry.contract.automation)(value).map_err(anyhow::Error::msg),
+                    None => Ok(value.clone()),
+                },
+            }
+        }
+        let converted = convert(self, &parameter.datatype, value)?;
+        if let Some(error) =
+            crate::validation::validate_parameter_value(parameter, &converted, self)
+        {
+            bail!("{error}");
+        }
+        Ok(converted)
+    }
     pub(crate) fn default_editor(
         &self,
         datatype: &FlowParameterDataType,
@@ -220,5 +279,49 @@ impl Registry {
             .iter()
             .flat_map(|check| check(flow, definitions))
             .collect()
+    }
+}
+
+#[cfg(test)]
+mod automation_tests {
+    use super::*;
+    use serde_json::json;
+
+    #[test]
+    fn automation_conversion_obeys_the_registered_element_contract_and_list_bounds() {
+        let mut registry = Registry::default();
+        registry
+            .register_parameter_type(
+                "label",
+                ParameterType::new(json!({"type":"string","minLength":1}), None, |_| Ok(()))
+                    .with_automation_conversion(|value| {
+                        value
+                            .as_str()
+                            .map(|s| Value::String(s.trim().into()))
+                            .ok_or_else(|| "A label must be text".into())
+                    }),
+            )
+            .unwrap();
+        let parameter: crate::FlowParameterDefinition = serde_json::from_value(json!({
+            "name":"labels", "datatype":{"kind":"list","item_type":{"kind":"label"}}, "editor":{"kind":"list","max":2}
+        })).unwrap();
+        let label = "authored label";
+        assert_eq!(
+            registry
+                .convert_automation_value(&parameter, &json!(format!("  {label}  ")))
+                .unwrap(),
+            json!([label])
+        );
+        assert_eq!(
+            registry
+                .convert_automation_value(&parameter, &Value::Null)
+                .unwrap(),
+            json!([])
+        );
+        for invalid in [json!(42), json!(" "), json!([label, label, label])] {
+            assert!(registry
+                .convert_automation_value(&parameter, &invalid)
+                .is_err());
+        }
     }
 }

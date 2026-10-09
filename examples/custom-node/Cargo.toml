@@ -1,0 +1,14 @@
+[package]
+name = "custom-node-example"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish = false
+[dependencies]
+battersea-flow = { path = "../../crates/battersea-flow" }
+battersea-runtime = { path = "../../crates/battersea-runtime" }
+async-trait = "0.1"
+serde_json.workspace = true
+tokio = { version = "1", features = ["macros", "rt"] }
+tokio-util = "0.7"

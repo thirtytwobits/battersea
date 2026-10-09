@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.3.0 — 2026-10-08
+
+- Add the public node SDK, immutable executable catalogues and host execution contract.
+- Extract token queues, source ordering, signal settlement and activation scheduling.
+- Add typed execution events, accepted identities and terminal outcomes.
+- Convert automation values through registered parameter contracts.
+- Exercise an independent custom node and lifecycle failure cases against packaged crates.
+
 ## 0.2.0 — 2026-10-08
 
 - Extract flow documents, node catalogues, ports, template contracts and graph validation.

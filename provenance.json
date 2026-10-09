@@ -17,6 +17,15 @@
         "engine/bindings/fixtures/token-type-compatibility.json",
         "gui/apps/engine-editor/src/tabs/dataflow/flow-node-ports.ts"
       ]
+    },
+    {
+      "milestone": "M3",
+      "source_commit": "20ccd7134afab60d65d51c754db97b2df7bd66ef",
+      "source_paths": [
+        "engine/crates/primrose-engine-core/src/lib.rs",
+        "engine/crates/primrose-engine-core/src/flow_api.rs",
+        "engine/crates/primrose-engine-core/src/flow_runtime/mod.rs"
+      ]
     }
   ]
 }

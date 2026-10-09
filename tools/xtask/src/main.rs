@@ -256,34 +256,62 @@ fn package(root: &Path) -> Result<()> {
             .as_str()
             .ok_or("Cargo returned no target directory")?,
     );
-    for (name, required) in release["crates"].as_object().unwrap() {
-        let manifest_path = metadata["packages"]
+    let crates = release["crates"].as_object().unwrap();
+    let mut directories = std::collections::BTreeMap::new();
+    for name in crates.keys() {
+        let manifest = metadata["packages"]
             .as_array()
             .unwrap()
             .iter()
-            .find(|package| package["name"] == *name)
-            .and_then(|package| package["manifest_path"].as_str())
+            .find(|p| p["name"] == *name)
+            .and_then(|p| p["manifest_path"].as_str())
             .ok_or("release crate has no manifest")?;
-        let crate_dir = Path::new(manifest_path)
-            .parent()
-            .ok_or("manifest has no directory")?;
+        directories.insert(
+            name.clone(),
+            Path::new(manifest)
+                .parent()
+                .ok_or("manifest has no directory")?
+                .to_path_buf(),
+        );
+    }
+    let unpack_root = tempfile::tempdir()?;
+    for (name, required) in crates {
+        let directory = &directories[name];
         for asset in ["LICENSE", "NOTICE"] {
-            fs::copy(root.join(asset), crate_dir.join(asset))?;
+            fs::copy(root.join(asset), directory.join(asset))?;
+        }
+        let mut args = vec![
+            "package".to_string(),
+            "--locked".into(),
+            "--allow-dirty".into(),
+            "--no-verify".into(),
+            "-p".into(),
+            name.clone(),
+        ];
+        // Packages are distributed together. Resolve their versioned dependencies
+        // locally while creating archives, then verify only the unpacked archives.
+        for (dependency, path) in &directories {
+            args.extend([
+                "--config".into(),
+                format!("patch.crates-io.{dependency}.path={:?}", path),
+            ]);
         }
         run(
             root,
             "cargo",
-            &["package", "--locked", "--allow-dirty", "-p", name],
+            &args.iter().map(String::as_str).collect::<Vec<_>>(),
         )?;
         let archive = target_dir
             .join("package")
             .join(format!("{name}-{version}.crate"));
-        let temp = tempfile::tempdir()?;
-        run(temp.path(), "tar", &["-xzf", archive.to_str().unwrap()])?;
-        let unpacked = temp.path().join(format!("{name}-{version}"));
+        run(
+            unpack_root.path(),
+            "tar",
+            &["-xzf", archive.to_str().unwrap()],
+        )?;
+        let unpacked = unpack_root.path().join(format!("{name}-{version}"));
         for required in required.as_array().unwrap() {
-            let required = required.as_str().unwrap();
-            if !unpacked.join(required).is_file() {
+            if !unpacked.join(required.as_str().unwrap()).is_file() {
                 return Err(format!("{name} package omits {required}").into());
             }
         }
@@ -297,12 +325,28 @@ fn package(root: &Path) -> Result<()> {
         {
             return Err(format!("{name} package licence differs from release.json").into());
         }
-        let consumer = temp.path().join("consumer");
+    }
+    for example in ["catalogue", "custom-node"] {
+        let consumer = unpack_root.path().join(example);
         fs::create_dir_all(consumer.join("src"))?;
-        fs::write(consumer.join("Cargo.toml"), format!("[package]\nname = \"package-consumer\"\nversion = \"0.0.0\"\nedition = \"2021\"\n[dependencies]\n{name} = {{ path = {:?} }}\nserde_json = \"1\"\n", unpacked))?;
+        let mut manifest = format!("[package]\nname = \"package-{example}\"\nversion = \"0.0.0\"\nedition = \"2021\"\n[dependencies]\nserde_json = \"1\"\nasync-trait = \"0.1\"\ntokio = {{ version = \"1\", features = [\"macros\", \"rt\"] }}\ntokio-util = \"0.7\"\n");
+        for name in crates.keys() {
+            manifest.push_str(&format!(
+                "{name} = {{ path = {:?} }}\n",
+                unpack_root.path().join(format!("{name}-{version}"))
+            ));
+        }
+        manifest.push_str("[patch.crates-io]\n");
+        for name in crates.keys() {
+            manifest.push_str(&format!(
+                "{name} = {{ path = {:?} }}\n",
+                unpack_root.path().join(format!("{name}-{version}"))
+            ));
+        }
+        fs::write(consumer.join("Cargo.toml"), manifest)?;
         fs::write(
             consumer.join("src/main.rs"),
-            fs::read_to_string(root.join("examples/catalogue/src/main.rs"))?,
+            fs::read_to_string(root.join(format!("examples/{example}/src/main.rs")))?,
         )?;
         run(
             &consumer,

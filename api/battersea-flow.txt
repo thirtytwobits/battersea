@@ -498,6 +498,7 @@ pub battersea_flow::registry::ParameterType::default_editor: core::option::Optio
 pub battersea_flow::registry::ParameterType::schema: serde_json::value::Value
 impl battersea_flow::registry::ParameterType
 pub fn battersea_flow::registry::ParameterType::new(schema: serde_json::value::Value, default_editor: core::option::Option<battersea_flow::FlowParameterEditorKind>, validate: impl core::ops::function::Fn(&serde_json::value::Value) -> anyhow::Result<(), alloc::string::String> + core::marker::Send + core::marker::Sync + 'static) -> Self
+pub fn battersea_flow::registry::ParameterType::with_automation_conversion(self, conversion: impl core::ops::function::Fn(&serde_json::value::Value) -> anyhow::Result<serde_json::value::Value, alloc::string::String> + core::marker::Send + core::marker::Sync + 'static) -> Self
 impl core::marker::Freeze for battersea_flow::registry::ParameterType
 impl core::marker::Send for battersea_flow::registry::ParameterType
 impl core::marker::Sync for battersea_flow::registry::ParameterType
@@ -525,6 +526,7 @@ pub fn battersea_flow::registry::ParameterType::from(t: T) -> T
 impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_flow::registry::ParameterType where T: ?core::marker::Sized
 pub struct battersea_flow::registry::Registry
 impl battersea_flow::registry::Registry
+pub fn battersea_flow::registry::Registry::convert_automation_value(&self, parameter: &battersea_flow::FlowParameterDefinition, value: &serde_json::value::Value) -> anyhow::Result<serde_json::value::Value>
 pub fn battersea_flow::registry::Registry::parameter_schema(&self, name: &str) -> core::option::Option<&serde_json::value::Value>
 pub fn battersea_flow::registry::Registry::register_definition_validator(&mut self, check: impl core::ops::function::Fn(&battersea_flow::FlowNodeDefinition) -> anyhow::Result<(), alloc::string::String> + core::marker::Send + core::marker::Sync + 'static)
 pub fn battersea_flow::registry::Registry::register_graph_validator(&mut self, check: impl core::ops::function::Fn(&battersea_flow::FlowDocument, &std::collections::hash::map::HashMap<alloc::string::String, battersea_flow::FlowNodeDefinition>) -> alloc::vec::Vec<battersea_flow::FlowValidationIssue> + core::marker::Send + core::marker::Sync + 'static)
