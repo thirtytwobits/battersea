@@ -1,0 +1,466 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://battersea.dev/schemas/pianola-roll.schema.json",
+  "title": "Battersea Pianola roll",
+  "type": "object",
+  "version": 1,
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "name",
+    "setup",
+    "steps"
+  ],
+  "properties": {
+    "version": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1
+    },
+    "description": {
+      "type": "string"
+    },
+    "defaults": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "timeout_ms": {
+          "type": "integer",
+          "minimum": 1,
+          "default": 10000
+        },
+        "flow_binding": {
+          "type": "string"
+        }
+      }
+    },
+    "setup": false,
+    "steps": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "do"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9_-]*$"
+          },
+          "description": {
+            "type": "string"
+          },
+          "timeout_ms": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "do": {
+            "oneOf": []
+          },
+          "expect": {
+            "type": "array",
+            "default": [],
+            "items": {
+              "oneOf": [
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "kind",
+                    "port",
+                    "match"
+                  ],
+                  "properties": {
+                    "kind": {
+                      "const": "port"
+                    },
+                    "port": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "match": {
+                      "$ref": "#/$defs/textMatch"
+                    },
+                    "within_ms": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "severity": {
+                      "$ref": "#/$defs/gradingSeverity"
+                    },
+                    "weight": {
+                      "$ref": "#/$defs/gradingWeight"
+                    }
+                  }
+                },
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "kind",
+                    "name"
+                  ],
+                  "properties": {
+                    "kind": {
+                      "const": "tool_call"
+                    },
+                    "name": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "arguments_match": {
+                      "type": "object"
+                    },
+                    "status": {
+                      "enum": [
+                        "succeeded",
+                        "failed",
+                        "cancelled"
+                      ]
+                    },
+                    "occurrences": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "default": 1
+                    },
+                    "severity": {
+                      "$ref": "#/$defs/gradingSeverity"
+                    },
+                    "weight": {
+                      "$ref": "#/$defs/gradingWeight"
+                    }
+                  }
+                },
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "kind",
+                    "before",
+                    "after"
+                  ],
+                  "properties": {
+                    "kind": {
+                      "const": "order"
+                    },
+                    "before": {
+                      "$ref": "#/$defs/eventRef"
+                    },
+                    "after": {
+                      "$ref": "#/$defs/eventRef"
+                    },
+                    "description": {
+                      "type": "string"
+                    },
+                    "severity": {
+                      "$ref": "#/$defs/gradingSeverity"
+                    },
+                    "weight": {
+                      "$ref": "#/$defs/gradingWeight"
+                    }
+                  }
+                },
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "kind",
+                    "target",
+                    "n"
+                  ],
+                  "properties": {
+                    "kind": {
+                      "const": "count"
+                    },
+                    "target": {
+                      "enum": [
+                        "tool_call",
+                        "port"
+                      ]
+                    },
+                    "filter": {
+                      "type": "object"
+                    },
+                    "n": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "severity": {
+                      "$ref": "#/$defs/gradingSeverity"
+                    },
+                    "weight": {
+                      "$ref": "#/$defs/gradingWeight"
+                    }
+                  }
+                },
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "kind",
+                    "rubric"
+                  ],
+                  "properties": {
+                    "kind": {
+                      "const": "agent_grade"
+                    },
+                    "rubric": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "subject": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": [
+                        "port"
+                      ],
+                      "properties": {
+                        "port": {
+                          "type": "string",
+                          "minLength": 1
+                        }
+                      }
+                    },
+                    "grader": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": [
+                        "kind"
+                      ],
+                      "properties": {
+                        "kind": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "model": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "label": {
+                          "type": "string",
+                          "minLength": 1
+                        }
+                      }
+                    },
+                    "require_distinct_model": {
+                      "type": "boolean",
+                      "default": false
+                    },
+                    "weight": {
+                      "$ref": "#/$defs/gradingWeight"
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        }
+      }
+    },
+    "criteria": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "allowed_errors": {
+          "type": "array",
+          "items": {
+            "oneOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "connectivity",
+                  "rate_limit",
+                  "spend_limit",
+                  "server_error"
+                ]
+              },
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "code": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "message_regex": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                }
+              }
+            ]
+          }
+        },
+        "success": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "require": {
+              "type": "string",
+              "enum": [
+                "hard_pass"
+              ]
+            },
+            "min_grade": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            }
+          }
+        }
+      }
+    },
+    "tee": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "output",
+        "ports"
+      ],
+      "properties": {
+        "output": {
+          "type": "string",
+          "minLength": 1
+        },
+        "ports": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "port"
+            ],
+            "properties": {
+              "port": {
+                "type": "string",
+                "minLength": 1
+              },
+              "node": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "definition"
+                ],
+                "properties": {
+                  "definition": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "instance": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "gradingSeverity": {
+      "type": "string",
+      "enum": [
+        "hard",
+        "graded",
+        "advisory"
+      ],
+      "default": "hard"
+    },
+    "gradingWeight": {
+      "type": "integer",
+      "minimum": 1,
+      "default": 1
+    },
+    "textMatch": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": [
+            "equals"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "equals": {
+              "type": "string"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "contains"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "contains": {
+              "type": "string"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "regex"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "regex": {
+              "type": "string"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "absent"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "absent": {
+              "const": true
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "present"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "present": {
+              "const": true
+            }
+          }
+        }
+      ]
+    },
+    "eventRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "step"
+      ],
+      "properties": {
+        "step": {
+          "type": "string"
+        },
+        "port": {
+          "type": "string"
+        },
+        "tool": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}

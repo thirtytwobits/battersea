@@ -1,0 +1,18 @@
+[package]
+name = "battersea-pianola"
+description = "Extensible flow rolls, lossless capture, assertions and grading"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish = false
+readme = "README.md"
+include = ["src/**", "schemas/**", "fixtures/**", "README.md", "LICENSE", "NOTICE"]
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
+serde_yaml.workspace = true
+chrono.workspace = true
+regex-lite.workspace = true
+jsonschema = { version = "0.30", default-features = false }

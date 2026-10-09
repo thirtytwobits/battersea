@@ -7,6 +7,9 @@ consumer. These commands need only Rust and the operating system tools used by C
 In `typescript/`, install the lockfile with `npm ci`, then run `npm run check` and
 `npm run package:check`. The latter installs the packed artefacts in an isolated consumer.
 
+Build `editor-server-example` with Cargo, then run `npm run test:example` in `typescript/` for the
+installed-package browser and CLI contract checks. They use an isolated application directory.
+
 Public Rust APIs are recorded by `cargo-public-api` 0.50.2 using `nightly-2025-08-02`; the pinned
 toolchain is only needed for the API gate. `cargo xtask api` checks the snapshots. TypeScript's
 API record is the declaration output checked by its own gate. Follow tool help when deliberately

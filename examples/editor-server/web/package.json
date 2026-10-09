@@ -1,0 +1,26 @@
+{
+  "name": "battersea-editor-example",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1 --port 18181",
+    "build": "tsc --noEmit && vite build",
+    "test": "node browser.test.mjs"
+  },
+  "dependencies": {
+    "@battersea/editor": "https://github.com/thirtytwobits/battersea/releases/download/v0.5.0/battersea-editor-0.5.0.tgz",
+    "@battersea/flow": "https://github.com/thirtytwobits/battersea/releases/download/v0.5.0/battersea-flow-0.5.0.tgz",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "@xyflow/react": "^12.8.5",
+    "@dnd-kit/core": "^6.3.1",
+    "react-amnesia": "^0.2.0"
+  },
+  "devDependencies": {
+    "typescript": "5.9.3",
+    "vite": "^6.2.2",
+    "@types/react": "^18.3.1",
+    "@types/react-dom": "^18.3.1",
+    "playwright": "1.62.1"
+  }
+}

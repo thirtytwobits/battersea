@@ -1,0 +1,13 @@
+version: 1
+name: echo-contract
+setup: {}
+steps:
+  - id: echo
+    do: {kind: emit, port: output, value: authored payload}
+    expect:
+      - {kind: port, port: output, match: {equals: authored payload}}
+      - {kind: count, target: port, n: 1}
+      - {kind: agent_grade, rubric: Evaluate the captured output., subject: {port: output}, weight: 2}
+tee:
+  output: echo.ndjson
+  ports: [{port: output}]

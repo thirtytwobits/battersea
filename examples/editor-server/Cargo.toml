@@ -1,0 +1,23 @@
+[package]
+name = "editor-server-example"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish = false
+[dependencies]
+battersea-flow = { path = "../../crates/battersea-flow" }
+battersea-runtime = { path = "../../crates/battersea-runtime" }
+battersea-nodes = { path = "../../crates/battersea-nodes" }
+battersea-pianola = { path = "../../crates/battersea-pianola" }
+async-trait.workspace = true
+axum.workspace = true
+clap.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+tokio.workspace = true
+tokio-util.workspace = true
+reqwest.workspace = true
+uuid = { version = "1", features = ["v4"] }
+[dev-dependencies]
+tempfile.workspace = true

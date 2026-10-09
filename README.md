@@ -28,6 +28,15 @@ Media submission returns either a completed result or a remote job with wait/can
 and token-connection compatibility. Rust types own the contract; `cargo xtask bindings`
 generates its distributable forms.
 
+`@battersea/editor` provides an unstyled editor and a separate graph-primitives entry point.
+Applications inject document, catalogue, validation and activation services, parameter renderers
+and presentation. Dagre and force/geographic layouts load on demand.
+
+`battersea-pianola` supplies roll grammar, lossless port capture, generic assertions and grading.
+Hosts register domain assertions and supply their setup, actions and observation timeline.
+`examples/editor-server` connects an installed editor to application-owned documents and execution;
+its CLI uses the same activation endpoints.
+
 Document inspection reports unsupported versions before interpreting graph fields. Loading
 and canonical saving preserve opaque editor namespaces. Format upgrades are explicitly
 registered transformations; the host owns their invocation and persistence.

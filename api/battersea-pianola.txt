@@ -1,0 +1,1381 @@
+pub mod battersea_pianola
+pub mod battersea_pianola::schema
+pub fn battersea_pianola::schema::compose_schema(extension: serde_json::value::Value) -> core::result::Result<serde_json::value::Value, alloc::string::String>
+pub fn battersea_pianola::schema::validate_yaml(yaml: &str, schema: &serde_json::value::Value) -> alloc::vec::Vec<alloc::string::String>
+pub enum battersea_pianola::AllowedError
+pub battersea_pianola::AllowedError::Class(alloc::string::String)
+pub battersea_pianola::AllowedError::Custom
+pub battersea_pianola::AllowedError::Custom::code: core::option::Option<alloc::string::String>
+pub battersea_pianola::AllowedError::Custom::message_regex: core::option::Option<alloc::string::String>
+impl core::clone::Clone for battersea_pianola::AllowedError
+pub fn battersea_pianola::AllowedError::clone(&self) -> battersea_pianola::AllowedError
+impl core::cmp::PartialEq for battersea_pianola::AllowedError
+pub fn battersea_pianola::AllowedError::eq(&self, other: &battersea_pianola::AllowedError) -> bool
+impl core::fmt::Debug for battersea_pianola::AllowedError
+pub fn battersea_pianola::AllowedError::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for battersea_pianola::AllowedError
+impl serde_core::ser::Serialize for battersea_pianola::AllowedError
+pub fn battersea_pianola::AllowedError::serialize<__S>(&self, __serializer: __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for battersea_pianola::AllowedError
+pub fn battersea_pianola::AllowedError::deserialize<__D>(__deserializer: __D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for battersea_pianola::AllowedError
+impl core::marker::Send for battersea_pianola::AllowedError
+impl core::marker::Sync for battersea_pianola::AllowedError
+impl core::marker::Unpin for battersea_pianola::AllowedError
+impl core::panic::unwind_safe::RefUnwindSafe for battersea_pianola::AllowedError
+impl core::panic::unwind_safe::UnwindSafe for battersea_pianola::AllowedError
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_pianola::AllowedError where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_pianola::AllowedError where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<T, U> core::convert::Into<U> for battersea_pianola::AllowedError where U: core::convert::From<T>
+pub fn battersea_pianola::AllowedError::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_pianola::AllowedError where U: core::convert::Into<T>
+pub type battersea_pianola::AllowedError::Error = core::convert::Infallible
+pub fn battersea_pianola::AllowedError::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for battersea_pianola::AllowedError where U: core::convert::TryFrom<T>
+pub type battersea_pianola::AllowedError::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_pianola::AllowedError::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for battersea_pianola::AllowedError where T: core::clone::Clone
+pub type battersea_pianola::AllowedError::Owned = T
+pub fn battersea_pianola::AllowedError::clone_into(&self, target: &mut T)
+pub fn battersea_pianola::AllowedError::to_owned(&self) -> T
+impl<T> core::any::Any for battersea_pianola::AllowedError where T: 'static + ?core::marker::Sized
+pub fn battersea_pianola::AllowedError::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_pianola::AllowedError where T: ?core::marker::Sized
+pub fn battersea_pianola::AllowedError::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_pianola::AllowedError where T: ?core::marker::Sized
+pub fn battersea_pianola::AllowedError::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for battersea_pianola::AllowedError where T: core::clone::Clone
+pub unsafe fn battersea_pianola::AllowedError::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for battersea_pianola::AllowedError
+pub fn battersea_pianola::AllowedError::from(t: T) -> T
+impl<T> serde_core::de::DeserializeOwned for battersea_pianola::AllowedError where T: for<'de> serde_core::de::Deserialize<'de>
+impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_pianola::AllowedError where T: ?core::marker::Sized
+pub enum battersea_pianola::Expectation<D>
+pub battersea_pianola::Expectation::Domain(D)
+pub battersea_pianola::Expectation::Generic(battersea_pianola::GenericExpectation)
+impl<D: battersea_pianola::DomainCriterion> battersea_pianola::Expectation<D>
+pub fn battersea_pianola::Expectation<D>::severity(&self) -> battersea_pianola::Severity
+pub fn battersea_pianola::Expectation<D>::weight(&self) -> f64
+impl<'de, D> serde_core::de::Deserialize<'de> for battersea_pianola::Expectation<D> where D: serde_core::de::Deserialize<'de>
+pub fn battersea_pianola::Expectation<D>::deserialize<__D>(__deserializer: __D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl<D: core::clone::Clone> core::clone::Clone for battersea_pianola::Expectation<D>
+pub fn battersea_pianola::Expectation<D>::clone(&self) -> battersea_pianola::Expectation<D>
+impl<D: core::cmp::PartialEq> core::cmp::PartialEq for battersea_pianola::Expectation<D>
+pub fn battersea_pianola::Expectation<D>::eq(&self, other: &battersea_pianola::Expectation<D>) -> bool
+impl<D: core::fmt::Debug> core::fmt::Debug for battersea_pianola::Expectation<D>
+pub fn battersea_pianola::Expectation<D>::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl<D> core::marker::StructuralPartialEq for battersea_pianola::Expectation<D>
+impl<D> serde_core::ser::Serialize for battersea_pianola::Expectation<D> where D: serde_core::ser::Serialize
+pub fn battersea_pianola::Expectation<D>::serialize<__S>(&self, __serializer: __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<D> core::marker::Freeze for battersea_pianola::Expectation<D> where D: core::marker::Freeze
+impl<D> core::marker::Send for battersea_pianola::Expectation<D> where D: core::marker::Send
+impl<D> core::marker::Sync for battersea_pianola::Expectation<D> where D: core::marker::Sync
+impl<D> core::marker::Unpin for battersea_pianola::Expectation<D> where D: core::marker::Unpin
+impl<D> core::panic::unwind_safe::RefUnwindSafe for battersea_pianola::Expectation<D> where D: core::panic::unwind_safe::RefUnwindSafe
+impl<D> core::panic::unwind_safe::UnwindSafe for battersea_pianola::Expectation<D> where D: core::panic::unwind_safe::UnwindSafe
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_pianola::Expectation<D> where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_pianola::Expectation<D> where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<T, U> core::convert::Into<U> for battersea_pianola::Expectation<D> where U: core::convert::From<T>
+pub fn battersea_pianola::Expectation<D>::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_pianola::Expectation<D> where U: core::convert::Into<T>
+pub type battersea_pianola::Expectation<D>::Error = core::convert::Infallible
+pub fn battersea_pianola::Expectation<D>::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for battersea_pianola::Expectation<D> where U: core::convert::TryFrom<T>
+pub type battersea_pianola::Expectation<D>::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_pianola::Expectation<D>::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for battersea_pianola::Expectation<D> where T: core::clone::Clone
+pub type battersea_pianola::Expectation<D>::Owned = T
+pub fn battersea_pianola::Expectation<D>::clone_into(&self, target: &mut T)
+pub fn battersea_pianola::Expectation<D>::to_owned(&self) -> T
+impl<T> core::any::Any for battersea_pianola::Expectation<D> where T: 'static + ?core::marker::Sized
+pub fn battersea_pianola::Expectation<D>::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_pianola::Expectation<D> where T: ?core::marker::Sized
+pub fn battersea_pianola::Expectation<D>::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_pianola::Expectation<D> where T: ?core::marker::Sized
+pub fn battersea_pianola::Expectation<D>::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for battersea_pianola::Expectation<D> where T: core::clone::Clone
+pub unsafe fn battersea_pianola::Expectation<D>::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for battersea_pianola::Expectation<D>
+pub fn battersea_pianola::Expectation<D>::from(t: T) -> T
+impl<T> serde_core::de::DeserializeOwned for battersea_pianola::Expectation<D> where T: for<'de> serde_core::de::Deserialize<'de>
+impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_pianola::Expectation<D> where T: ?core::marker::Sized
+pub enum battersea_pianola::GenericExpectation
+pub battersea_pianola::GenericExpectation::AgentGrade
+pub battersea_pianola::GenericExpectation::AgentGrade::grader: core::option::Option<battersea_pianola::AgentGradeGrader>
+pub battersea_pianola::GenericExpectation::AgentGrade::require_distinct_model: bool
+pub battersea_pianola::GenericExpectation::AgentGrade::rubric: alloc::string::String
+pub battersea_pianola::GenericExpectation::AgentGrade::subject: core::option::Option<battersea_pianola::AgentGradeSubject>
+pub battersea_pianola::GenericExpectation::AgentGrade::weight: core::option::Option<u32>
+pub battersea_pianola::GenericExpectation::Count
+pub battersea_pianola::GenericExpectation::Count::filter: core::option::Option<serde_json::value::Value>
+pub battersea_pianola::GenericExpectation::Count::n: u32
+pub battersea_pianola::GenericExpectation::Count::severity: battersea_pianola::Severity
+pub battersea_pianola::GenericExpectation::Count::target: alloc::string::String
+pub battersea_pianola::GenericExpectation::Count::weight: core::option::Option<u32>
+pub battersea_pianola::GenericExpectation::Order
+pub battersea_pianola::GenericExpectation::Order::after: battersea_pianola::EventRef
+pub battersea_pianola::GenericExpectation::Order::before: battersea_pianola::EventRef
+pub battersea_pianola::GenericExpectation::Order::description: core::option::Option<alloc::string::String>
+pub battersea_pianola::GenericExpectation::Order::severity: battersea_pianola::Severity
+pub battersea_pianola::GenericExpectation::Order::weight: core::option::Option<u32>
+pub battersea_pianola::GenericExpectation::Port
+pub battersea_pianola::GenericExpectation::Port::matcher: battersea_pianola::TextMatch
+pub battersea_pianola::GenericExpectation::Port::port: alloc::string::String
+pub battersea_pianola::GenericExpectation::Port::severity: battersea_pianola::Severity
+pub battersea_pianola::GenericExpectation::Port::weight: core::option::Option<u32>
+pub battersea_pianola::GenericExpectation::Port::within_ms: core::option::Option<u64>
+pub battersea_pianola::GenericExpectation::ToolCall
+pub battersea_pianola::GenericExpectation::ToolCall::arguments_match: core::option::Option<serde_json::value::Value>
+pub battersea_pianola::GenericExpectation::ToolCall::name: alloc::string::String
+pub battersea_pianola::GenericExpectation::ToolCall::occurrences: u32
+pub battersea_pianola::GenericExpectation::ToolCall::severity: battersea_pianola::Severity
+pub battersea_pianola::GenericExpectation::ToolCall::status: core::option::Option<battersea_pianola::ToolCallStatusMatch>
+pub battersea_pianola::GenericExpectation::ToolCall::weight: core::option::Option<u32>
+impl battersea_pianola::GenericExpectation
+pub fn battersea_pianola::GenericExpectation::severity(&self) -> battersea_pianola::Severity
+pub fn battersea_pianola::GenericExpectation::weight(&self) -> f64
+impl core::clone::Clone for battersea_pianola::GenericExpectation
+pub fn battersea_pianola::GenericExpectation::clone(&self) -> battersea_pianola::GenericExpectation
+impl core::cmp::PartialEq for battersea_pianola::GenericExpectation
+pub fn battersea_pianola::GenericExpectation::eq(&self, other: &battersea_pianola::GenericExpectation) -> bool
+impl core::fmt::Debug for battersea_pianola::GenericExpectation
+pub fn battersea_pianola::GenericExpectation::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for battersea_pianola::GenericExpectation
+impl serde_core::ser::Serialize for battersea_pianola::GenericExpectation
+pub fn battersea_pianola::GenericExpectation::serialize<__S>(&self, __serializer: __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for battersea_pianola::GenericExpectation
+pub fn battersea_pianola::GenericExpectation::deserialize<__D>(__deserializer: __D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for battersea_pianola::GenericExpectation
+impl core::marker::Send for battersea_pianola::GenericExpectation
+impl core::marker::Sync for battersea_pianola::GenericExpectation
+impl core::marker::Unpin for battersea_pianola::GenericExpectation
+impl core::panic::unwind_safe::RefUnwindSafe for battersea_pianola::GenericExpectation
+impl core::panic::unwind_safe::UnwindSafe for battersea_pianola::GenericExpectation
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_pianola::GenericExpectation where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_pianola::GenericExpectation where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<T, U> core::convert::Into<U> for battersea_pianola::GenericExpectation where U: core::convert::From<T>
+pub fn battersea_pianola::GenericExpectation::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_pianola::GenericExpectation where U: core::convert::Into<T>
+pub type battersea_pianola::GenericExpectation::Error = core::convert::Infallible
+pub fn battersea_pianola::GenericExpectation::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for battersea_pianola::GenericExpectation where U: core::convert::TryFrom<T>
+pub type battersea_pianola::GenericExpectation::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_pianola::GenericExpectation::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for battersea_pianola::GenericExpectation where T: core::clone::Clone
+pub type battersea_pianola::GenericExpectation::Owned = T
+pub fn battersea_pianola::GenericExpectation::clone_into(&self, target: &mut T)
+pub fn battersea_pianola::GenericExpectation::to_owned(&self) -> T
+impl<T> core::any::Any for battersea_pianola::GenericExpectation where T: 'static + ?core::marker::Sized
+pub fn battersea_pianola::GenericExpectation::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_pianola::GenericExpectation where T: ?core::marker::Sized
+pub fn battersea_pianola::GenericExpectation::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_pianola::GenericExpectation where T: ?core::marker::Sized
+pub fn battersea_pianola::GenericExpectation::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for battersea_pianola::GenericExpectation where T: core::clone::Clone
+pub unsafe fn battersea_pianola::GenericExpectation::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for battersea_pianola::GenericExpectation
+pub fn battersea_pianola::GenericExpectation::from(t: T) -> T
+impl<T> serde_core::de::DeserializeOwned for battersea_pianola::GenericExpectation where T: for<'de> serde_core::de::Deserialize<'de>
+impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_pianola::GenericExpectation where T: ?core::marker::Sized
+pub enum battersea_pianola::Severity
+pub battersea_pianola::Severity::Advisory
+pub battersea_pianola::Severity::Graded
+pub battersea_pianola::Severity::Hard
+impl core::clone::Clone for battersea_pianola::Severity
+pub fn battersea_pianola::Severity::clone(&self) -> battersea_pianola::Severity
+impl core::cmp::Eq for battersea_pianola::Severity
+impl core::cmp::PartialEq for battersea_pianola::Severity
+pub fn battersea_pianola::Severity::eq(&self, other: &battersea_pianola::Severity) -> bool
+impl core::default::Default for battersea_pianola::Severity
+pub fn battersea_pianola::Severity::default() -> battersea_pianola::Severity
+impl core::fmt::Debug for battersea_pianola::Severity
+pub fn battersea_pianola::Severity::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for battersea_pianola::Severity
+impl core::marker::StructuralPartialEq for battersea_pianola::Severity
+impl serde_core::ser::Serialize for battersea_pianola::Severity
+pub fn battersea_pianola::Severity::serialize<__S>(&self, __serializer: __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for battersea_pianola::Severity
+pub fn battersea_pianola::Severity::deserialize<__D>(__deserializer: __D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for battersea_pianola::Severity
+impl core::marker::Send for battersea_pianola::Severity
+impl core::marker::Sync for battersea_pianola::Severity
+impl core::marker::Unpin for battersea_pianola::Severity
+impl core::panic::unwind_safe::RefUnwindSafe for battersea_pianola::Severity
+impl core::panic::unwind_safe::UnwindSafe for battersea_pianola::Severity
+impl<Q, K> equivalent::Equivalent<K> for battersea_pianola::Severity where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn battersea_pianola::Severity::equivalent(&self, key: &K) -> bool
+impl<Q, K> hashbrown::Equivalent<K> for battersea_pianola::Severity where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn battersea_pianola::Severity::equivalent(&self, key: &K) -> bool
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_pianola::Severity where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_pianola::Severity where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<T, U> core::convert::Into<U> for battersea_pianola::Severity where U: core::convert::From<T>
+pub fn battersea_pianola::Severity::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_pianola::Severity where U: core::convert::Into<T>
+pub type battersea_pianola::Severity::Error = core::convert::Infallible
+pub fn battersea_pianola::Severity::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for battersea_pianola::Severity where U: core::convert::TryFrom<T>
+pub type battersea_pianola::Severity::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_pianola::Severity::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for battersea_pianola::Severity where T: core::clone::Clone
+pub type battersea_pianola::Severity::Owned = T
+pub fn battersea_pianola::Severity::clone_into(&self, target: &mut T)
+pub fn battersea_pianola::Severity::to_owned(&self) -> T
+impl<T> core::any::Any for battersea_pianola::Severity where T: 'static + ?core::marker::Sized
+pub fn battersea_pianola::Severity::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_pianola::Severity where T: ?core::marker::Sized
+pub fn battersea_pianola::Severity::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_pianola::Severity where T: ?core::marker::Sized
+pub fn battersea_pianola::Severity::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for battersea_pianola::Severity where T: core::clone::Clone
+pub unsafe fn battersea_pianola::Severity::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for battersea_pianola::Severity
+pub fn battersea_pianola::Severity::from(t: T) -> T
+impl<T> outref::AsOut<T> for battersea_pianola::Severity where T: core::marker::Copy
+pub fn battersea_pianola::Severity::as_out(&mut self) -> outref::Out<'_, T>
+impl<T> serde_core::de::DeserializeOwned for battersea_pianola::Severity where T: for<'de> serde_core::de::Deserialize<'de>
+impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_pianola::Severity where T: ?core::marker::Sized
+pub enum battersea_pianola::TextMatch
+pub battersea_pianola::TextMatch::Absent(bool)
+pub battersea_pianola::TextMatch::Contains(alloc::string::String)
+pub battersea_pianola::TextMatch::Equals(alloc::string::String)
+pub battersea_pianola::TextMatch::Present(bool)
+pub battersea_pianola::TextMatch::Regex(alloc::string::String)
+impl core::clone::Clone for battersea_pianola::TextMatch
+pub fn battersea_pianola::TextMatch::clone(&self) -> battersea_pianola::TextMatch
+impl core::cmp::PartialEq for battersea_pianola::TextMatch
+pub fn battersea_pianola::TextMatch::eq(&self, other: &battersea_pianola::TextMatch) -> bool
+impl core::fmt::Debug for battersea_pianola::TextMatch
+pub fn battersea_pianola::TextMatch::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for battersea_pianola::TextMatch
+impl serde_core::ser::Serialize for battersea_pianola::TextMatch
+pub fn battersea_pianola::TextMatch::serialize<__S>(&self, __serializer: __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for battersea_pianola::TextMatch
+pub fn battersea_pianola::TextMatch::deserialize<__D>(__deserializer: __D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for battersea_pianola::TextMatch
+impl core::marker::Send for battersea_pianola::TextMatch
+impl core::marker::Sync for battersea_pianola::TextMatch
+impl core::marker::Unpin for battersea_pianola::TextMatch
+impl core::panic::unwind_safe::RefUnwindSafe for battersea_pianola::TextMatch
+impl core::panic::unwind_safe::UnwindSafe for battersea_pianola::TextMatch
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_pianola::TextMatch where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_pianola::TextMatch where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<T, U> core::convert::Into<U> for battersea_pianola::TextMatch where U: core::convert::From<T>
+pub fn battersea_pianola::TextMatch::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_pianola::TextMatch where U: core::convert::Into<T>
+pub type battersea_pianola::TextMatch::Error = core::convert::Infallible
+pub fn battersea_pianola::TextMatch::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for battersea_pianola::TextMatch where U: core::convert::TryFrom<T>
+pub type battersea_pianola::TextMatch::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_pianola::TextMatch::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for battersea_pianola::TextMatch where T: core::clone::Clone
+pub type battersea_pianola::TextMatch::Owned = T
+pub fn battersea_pianola::TextMatch::clone_into(&self, target: &mut T)
+pub fn battersea_pianola::TextMatch::to_owned(&self) -> T
+impl<T> core::any::Any for battersea_pianola::TextMatch where T: 'static + ?core::marker::Sized
+pub fn battersea_pianola::TextMatch::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_pianola::TextMatch where T: ?core::marker::Sized
+pub fn battersea_pianola::TextMatch::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_pianola::TextMatch where T: ?core::marker::Sized
+pub fn battersea_pianola::TextMatch::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for battersea_pianola::TextMatch where T: core::clone::Clone
+pub unsafe fn battersea_pianola::TextMatch::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for battersea_pianola::TextMatch
+pub fn battersea_pianola::TextMatch::from(t: T) -> T
+impl<T> serde_core::de::DeserializeOwned for battersea_pianola::TextMatch where T: for<'de> serde_core::de::Deserialize<'de>
+impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_pianola::TextMatch where T: ?core::marker::Sized
+pub enum battersea_pianola::ToolCallStatusMatch
+pub battersea_pianola::ToolCallStatusMatch::Cancelled
+pub battersea_pianola::ToolCallStatusMatch::Failed
+pub battersea_pianola::ToolCallStatusMatch::Succeeded
+impl core::clone::Clone for battersea_pianola::ToolCallStatusMatch
+pub fn battersea_pianola::ToolCallStatusMatch::clone(&self) -> battersea_pianola::ToolCallStatusMatch
+impl core::cmp::Eq for battersea_pianola::ToolCallStatusMatch
+impl core::cmp::PartialEq for battersea_pianola::ToolCallStatusMatch
+pub fn battersea_pianola::ToolCallStatusMatch::eq(&self, other: &battersea_pianola::ToolCallStatusMatch) -> bool
+impl core::fmt::Debug for battersea_pianola::ToolCallStatusMatch
+pub fn battersea_pianola::ToolCallStatusMatch::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for battersea_pianola::ToolCallStatusMatch
+impl core::marker::StructuralPartialEq for battersea_pianola::ToolCallStatusMatch
+impl serde_core::ser::Serialize for battersea_pianola::ToolCallStatusMatch
+pub fn battersea_pianola::ToolCallStatusMatch::serialize<__S>(&self, __serializer: __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for battersea_pianola::ToolCallStatusMatch
+pub fn battersea_pianola::ToolCallStatusMatch::deserialize<__D>(__deserializer: __D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for battersea_pianola::ToolCallStatusMatch
+impl core::marker::Send for battersea_pianola::ToolCallStatusMatch
+impl core::marker::Sync for battersea_pianola::ToolCallStatusMatch
+impl core::marker::Unpin for battersea_pianola::ToolCallStatusMatch
+impl core::panic::unwind_safe::RefUnwindSafe for battersea_pianola::ToolCallStatusMatch
+impl core::panic::unwind_safe::UnwindSafe for battersea_pianola::ToolCallStatusMatch
+impl<Q, K> equivalent::Equivalent<K> for battersea_pianola::ToolCallStatusMatch where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn battersea_pianola::ToolCallStatusMatch::equivalent(&self, key: &K) -> bool
+impl<Q, K> hashbrown::Equivalent<K> for battersea_pianola::ToolCallStatusMatch where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn battersea_pianola::ToolCallStatusMatch::equivalent(&self, key: &K) -> bool
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_pianola::ToolCallStatusMatch where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_pianola::ToolCallStatusMatch where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<T, U> core::convert::Into<U> for battersea_pianola::ToolCallStatusMatch where U: core::convert::From<T>
+pub fn battersea_pianola::ToolCallStatusMatch::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_pianola::ToolCallStatusMatch where U: core::convert::Into<T>
+pub type battersea_pianola::ToolCallStatusMatch::Error = core::convert::Infallible
+pub fn battersea_pianola::ToolCallStatusMatch::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for battersea_pianola::ToolCallStatusMatch where U: core::convert::TryFrom<T>
+pub type battersea_pianola::ToolCallStatusMatch::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_pianola::ToolCallStatusMatch::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for battersea_pianola::ToolCallStatusMatch where T: core::clone::Clone
+pub type battersea_pianola::ToolCallStatusMatch::Owned = T
+pub fn battersea_pianola::ToolCallStatusMatch::clone_into(&self, target: &mut T)
+pub fn battersea_pianola::ToolCallStatusMatch::to_owned(&self) -> T
+impl<T> core::any::Any for battersea_pianola::ToolCallStatusMatch where T: 'static + ?core::marker::Sized
+pub fn battersea_pianola::ToolCallStatusMatch::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_pianola::ToolCallStatusMatch where T: ?core::marker::Sized
+pub fn battersea_pianola::ToolCallStatusMatch::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_pianola::ToolCallStatusMatch where T: ?core::marker::Sized
+pub fn battersea_pianola::ToolCallStatusMatch::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for battersea_pianola::ToolCallStatusMatch where T: core::clone::Clone
+pub unsafe fn battersea_pianola::ToolCallStatusMatch::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for battersea_pianola::ToolCallStatusMatch
+pub fn battersea_pianola::ToolCallStatusMatch::from(t: T) -> T
+impl<T> outref::AsOut<T> for battersea_pianola::ToolCallStatusMatch where T: core::marker::Copy
+pub fn battersea_pianola::ToolCallStatusMatch::as_out(&mut self) -> outref::Out<'_, T>
+impl<T> serde_core::de::DeserializeOwned for battersea_pianola::ToolCallStatusMatch where T: for<'de> serde_core::de::Deserialize<'de>
+impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_pianola::ToolCallStatusMatch where T: ?core::marker::Sized
+pub struct battersea_pianola::AgentGradeGrader
+pub battersea_pianola::AgentGradeGrader::kind: alloc::string::String
+pub battersea_pianola::AgentGradeGrader::label: core::option::Option<alloc::string::String>
+pub battersea_pianola::AgentGradeGrader::model: core::option::Option<alloc::string::String>
+impl core::clone::Clone for battersea_pianola::AgentGradeGrader
+pub fn battersea_pianola::AgentGradeGrader::clone(&self) -> battersea_pianola::AgentGradeGrader
+impl core::cmp::Eq for battersea_pianola::AgentGradeGrader
+impl core::cmp::PartialEq for battersea_pianola::AgentGradeGrader
+pub fn battersea_pianola::AgentGradeGrader::eq(&self, other: &battersea_pianola::AgentGradeGrader) -> bool
+impl core::fmt::Debug for battersea_pianola::AgentGradeGrader
+pub fn battersea_pianola::AgentGradeGrader::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for battersea_pianola::AgentGradeGrader
+impl serde_core::ser::Serialize for battersea_pianola::AgentGradeGrader
+pub fn battersea_pianola::AgentGradeGrader::serialize<__S>(&self, __serializer: __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for battersea_pianola::AgentGradeGrader
+pub fn battersea_pianola::AgentGradeGrader::deserialize<__D>(__deserializer: __D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for battersea_pianola::AgentGradeGrader
+impl core::marker::Send for battersea_pianola::AgentGradeGrader
+impl core::marker::Sync for battersea_pianola::AgentGradeGrader
+impl core::marker::Unpin for battersea_pianola::AgentGradeGrader
+impl core::panic::unwind_safe::RefUnwindSafe for battersea_pianola::AgentGradeGrader
+impl core::panic::unwind_safe::UnwindSafe for battersea_pianola::AgentGradeGrader
+impl<Q, K> equivalent::Equivalent<K> for battersea_pianola::AgentGradeGrader where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn battersea_pianola::AgentGradeGrader::equivalent(&self, key: &K) -> bool
+impl<Q, K> hashbrown::Equivalent<K> for battersea_pianola::AgentGradeGrader where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn battersea_pianola::AgentGradeGrader::equivalent(&self, key: &K) -> bool
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_pianola::AgentGradeGrader where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_pianola::AgentGradeGrader where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<T, U> core::convert::Into<U> for battersea_pianola::AgentGradeGrader where U: core::convert::From<T>
+pub fn battersea_pianola::AgentGradeGrader::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_pianola::AgentGradeGrader where U: core::convert::Into<T>
+pub type battersea_pianola::AgentGradeGrader::Error = core::convert::Infallible
+pub fn battersea_pianola::AgentGradeGrader::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for battersea_pianola::AgentGradeGrader where U: core::convert::TryFrom<T>
+pub type battersea_pianola::AgentGradeGrader::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_pianola::AgentGradeGrader::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for battersea_pianola::AgentGradeGrader where T: core::clone::Clone
+pub type battersea_pianola::AgentGradeGrader::Owned = T
+pub fn battersea_pianola::AgentGradeGrader::clone_into(&self, target: &mut T)
+pub fn battersea_pianola::AgentGradeGrader::to_owned(&self) -> T
+impl<T> core::any::Any for battersea_pianola::AgentGradeGrader where T: 'static + ?core::marker::Sized
+pub fn battersea_pianola::AgentGradeGrader::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_pianola::AgentGradeGrader where T: ?core::marker::Sized
+pub fn battersea_pianola::AgentGradeGrader::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_pianola::AgentGradeGrader where T: ?core::marker::Sized
+pub fn battersea_pianola::AgentGradeGrader::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for battersea_pianola::AgentGradeGrader where T: core::clone::Clone
+pub unsafe fn battersea_pianola::AgentGradeGrader::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for battersea_pianola::AgentGradeGrader
+pub fn battersea_pianola::AgentGradeGrader::from(t: T) -> T
+impl<T> serde_core::de::DeserializeOwned for battersea_pianola::AgentGradeGrader where T: for<'de> serde_core::de::Deserialize<'de>
+impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_pianola::AgentGradeGrader where T: ?core::marker::Sized
+pub struct battersea_pianola::AgentGradeSubject
+pub battersea_pianola::AgentGradeSubject::port: alloc::string::String
+impl core::clone::Clone for battersea_pianola::AgentGradeSubject
+pub fn battersea_pianola::AgentGradeSubject::clone(&self) -> battersea_pianola::AgentGradeSubject
+impl core::cmp::PartialEq for battersea_pianola::AgentGradeSubject
+pub fn battersea_pianola::AgentGradeSubject::eq(&self, other: &battersea_pianola::AgentGradeSubject) -> bool
+impl core::fmt::Debug for battersea_pianola::AgentGradeSubject
+pub fn battersea_pianola::AgentGradeSubject::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for battersea_pianola::AgentGradeSubject
+impl serde_core::ser::Serialize for battersea_pianola::AgentGradeSubject
+pub fn battersea_pianola::AgentGradeSubject::serialize<__S>(&self, __serializer: __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for battersea_pianola::AgentGradeSubject
+pub fn battersea_pianola::AgentGradeSubject::deserialize<__D>(__deserializer: __D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for battersea_pianola::AgentGradeSubject
+impl core::marker::Send for battersea_pianola::AgentGradeSubject
+impl core::marker::Sync for battersea_pianola::AgentGradeSubject
+impl core::marker::Unpin for battersea_pianola::AgentGradeSubject
+impl core::panic::unwind_safe::RefUnwindSafe for battersea_pianola::AgentGradeSubject
+impl core::panic::unwind_safe::UnwindSafe for battersea_pianola::AgentGradeSubject
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_pianola::AgentGradeSubject where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_pianola::AgentGradeSubject where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<T, U> core::convert::Into<U> for battersea_pianola::AgentGradeSubject where U: core::convert::From<T>
+pub fn battersea_pianola::AgentGradeSubject::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_pianola::AgentGradeSubject where U: core::convert::Into<T>
+pub type battersea_pianola::AgentGradeSubject::Error = core::convert::Infallible
+pub fn battersea_pianola::AgentGradeSubject::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for battersea_pianola::AgentGradeSubject where U: core::convert::TryFrom<T>
+pub type battersea_pianola::AgentGradeSubject::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_pianola::AgentGradeSubject::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for battersea_pianola::AgentGradeSubject where T: core::clone::Clone
+pub type battersea_pianola::AgentGradeSubject::Owned = T
+pub fn battersea_pianola::AgentGradeSubject::clone_into(&self, target: &mut T)
+pub fn battersea_pianola::AgentGradeSubject::to_owned(&self) -> T
+impl<T> core::any::Any for battersea_pianola::AgentGradeSubject where T: 'static + ?core::marker::Sized
+pub fn battersea_pianola::AgentGradeSubject::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_pianola::AgentGradeSubject where T: ?core::marker::Sized
+pub fn battersea_pianola::AgentGradeSubject::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_pianola::AgentGradeSubject where T: ?core::marker::Sized
+pub fn battersea_pianola::AgentGradeSubject::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for battersea_pianola::AgentGradeSubject where T: core::clone::Clone
+pub unsafe fn battersea_pianola::AgentGradeSubject::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for battersea_pianola::AgentGradeSubject
+pub fn battersea_pianola::AgentGradeSubject::from(t: T) -> T
+impl<T> serde_core::de::DeserializeOwned for battersea_pianola::AgentGradeSubject where T: for<'de> serde_core::de::Deserialize<'de>
+impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_pianola::AgentGradeSubject where T: ?core::marker::Sized
+pub struct battersea_pianola::AssertionRegistry<D, C>
+impl<D: battersea_pianola::DomainCriterion, C: battersea_pianola::Observation> battersea_pianola::AssertionRegistry<D, C>
+pub fn battersea_pianola::AssertionRegistry<D, C>::evaluate(&self, step_id: &str, expectation: &battersea_pianola::Expectation<D>, timeline: &C, prior: &std::collections::hash::map::HashMap<alloc::string::String, C>, default_grade_port: &str) -> battersea_pianola::ExpectationReport
+pub fn battersea_pianola::AssertionRegistry<D, C>::register(&mut self, kind: &str, handler: fn(&D, &C) -> battersea_pianola::RawAssertion) -> core::result::Result<(), alloc::string::String>
+impl<D, C> core::default::Default for battersea_pianola::AssertionRegistry<D, C>
+pub fn battersea_pianola::AssertionRegistry<D, C>::default() -> Self
+impl<D, C> core::marker::Freeze for battersea_pianola::AssertionRegistry<D, C>
+impl<D, C> core::marker::Send for battersea_pianola::AssertionRegistry<D, C>
+impl<D, C> core::marker::Sync for battersea_pianola::AssertionRegistry<D, C>
+impl<D, C> core::marker::Unpin for battersea_pianola::AssertionRegistry<D, C>
+impl<D, C> core::panic::unwind_safe::RefUnwindSafe for battersea_pianola::AssertionRegistry<D, C>
+impl<D, C> core::panic::unwind_safe::UnwindSafe for battersea_pianola::AssertionRegistry<D, C>
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_pianola::AssertionRegistry<D, C> where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_pianola::AssertionRegistry<D, C> where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<T, U> core::convert::Into<U> for battersea_pianola::AssertionRegistry<D, C> where U: core::convert::From<T>
+pub fn battersea_pianola::AssertionRegistry<D, C>::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_pianola::AssertionRegistry<D, C> where U: core::convert::Into<T>
+pub type battersea_pianola::AssertionRegistry<D, C>::Error = core::convert::Infallible
+pub fn battersea_pianola::AssertionRegistry<D, C>::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for battersea_pianola::AssertionRegistry<D, C> where U: core::convert::TryFrom<T>
+pub type battersea_pianola::AssertionRegistry<D, C>::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_pianola::AssertionRegistry<D, C>::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> core::any::Any for battersea_pianola::AssertionRegistry<D, C> where T: 'static + ?core::marker::Sized
+pub fn battersea_pianola::AssertionRegistry<D, C>::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_pianola::AssertionRegistry<D, C> where T: ?core::marker::Sized
+pub fn battersea_pianola::AssertionRegistry<D, C>::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_pianola::AssertionRegistry<D, C> where T: ?core::marker::Sized
+pub fn battersea_pianola::AssertionRegistry<D, C>::borrow_mut(&mut self) -> &mut T
+impl<T> core::convert::From<T> for battersea_pianola::AssertionRegistry<D, C>
+pub fn battersea_pianola::AssertionRegistry<D, C>::from(t: T) -> T
+impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_pianola::AssertionRegistry<D, C> where T: ?core::marker::Sized
+pub struct battersea_pianola::EventRef
+pub battersea_pianola::EventRef::port: core::option::Option<alloc::string::String>
+pub battersea_pianola::EventRef::step: alloc::string::String
+pub battersea_pianola::EventRef::tool: core::option::Option<alloc::string::String>
+impl core::clone::Clone for battersea_pianola::EventRef
+pub fn battersea_pianola::EventRef::clone(&self) -> battersea_pianola::EventRef
+impl core::cmp::PartialEq for battersea_pianola::EventRef
+pub fn battersea_pianola::EventRef::eq(&self, other: &battersea_pianola::EventRef) -> bool
+impl core::fmt::Debug for battersea_pianola::EventRef
+pub fn battersea_pianola::EventRef::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for battersea_pianola::EventRef
+impl serde_core::ser::Serialize for battersea_pianola::EventRef
+pub fn battersea_pianola::EventRef::serialize<__S>(&self, __serializer: __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for battersea_pianola::EventRef
+pub fn battersea_pianola::EventRef::deserialize<__D>(__deserializer: __D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for battersea_pianola::EventRef
+impl core::marker::Send for battersea_pianola::EventRef
+impl core::marker::Sync for battersea_pianola::EventRef
+impl core::marker::Unpin for battersea_pianola::EventRef
+impl core::panic::unwind_safe::RefUnwindSafe for battersea_pianola::EventRef
+impl core::panic::unwind_safe::UnwindSafe for battersea_pianola::EventRef
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_pianola::EventRef where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_pianola::EventRef where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<T, U> core::convert::Into<U> for battersea_pianola::EventRef where U: core::convert::From<T>
+pub fn battersea_pianola::EventRef::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_pianola::EventRef where U: core::convert::Into<T>
+pub type battersea_pianola::EventRef::Error = core::convert::Infallible
+pub fn battersea_pianola::EventRef::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for battersea_pianola::EventRef where U: core::convert::TryFrom<T>
+pub type battersea_pianola::EventRef::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_pianola::EventRef::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for battersea_pianola::EventRef where T: core::clone::Clone
+pub type battersea_pianola::EventRef::Owned = T
+pub fn battersea_pianola::EventRef::clone_into(&self, target: &mut T)
+pub fn battersea_pianola::EventRef::to_owned(&self) -> T
+impl<T> core::any::Any for battersea_pianola::EventRef where T: 'static + ?core::marker::Sized
+pub fn battersea_pianola::EventRef::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_pianola::EventRef where T: ?core::marker::Sized
+pub fn battersea_pianola::EventRef::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_pianola::EventRef where T: ?core::marker::Sized
+pub fn battersea_pianola::EventRef::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for battersea_pianola::EventRef where T: core::clone::Clone
+pub unsafe fn battersea_pianola::EventRef::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for battersea_pianola::EventRef
+pub fn battersea_pianola::EventRef::from(t: T) -> T
+impl<T> serde_core::de::DeserializeOwned for battersea_pianola::EventRef where T: for<'de> serde_core::de::Deserialize<'de>
+impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_pianola::EventRef where T: ?core::marker::Sized
+pub struct battersea_pianola::ExpectationReport
+pub battersea_pianola::ExpectationReport::all_criteria_held: bool
+pub battersea_pianola::ExpectationReport::detail: core::option::Option<alloc::string::String>
+pub battersea_pianola::ExpectationReport::grader: core::option::Option<battersea_pianola::AgentGradeGrader>
+pub battersea_pianola::ExpectationReport::max: core::option::Option<f64>
+pub battersea_pianola::ExpectationReport::pending: bool
+pub battersea_pianola::ExpectationReport::require_distinct_model: bool
+pub battersea_pianola::ExpectationReport::required_criteria_held: bool
+pub battersea_pianola::ExpectationReport::rubric: core::option::Option<alloc::string::String>
+pub battersea_pianola::ExpectationReport::score: core::option::Option<f64>
+pub battersea_pianola::ExpectationReport::severity: battersea_pianola::Severity
+pub battersea_pianola::ExpectationReport::subject: core::option::Option<alloc::string::String>
+pub battersea_pianola::ExpectationReport::subject_backend: core::option::Option<alloc::string::String>
+pub battersea_pianola::ExpectationReport::subject_model: core::option::Option<alloc::string::String>
+pub battersea_pianola::ExpectationReport::summary: alloc::string::String
+impl core::clone::Clone for battersea_pianola::ExpectationReport
+pub fn battersea_pianola::ExpectationReport::clone(&self) -> battersea_pianola::ExpectationReport
+impl core::cmp::PartialEq for battersea_pianola::ExpectationReport
+pub fn battersea_pianola::ExpectationReport::eq(&self, other: &battersea_pianola::ExpectationReport) -> bool
+impl core::fmt::Debug for battersea_pianola::ExpectationReport
+pub fn battersea_pianola::ExpectationReport::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for battersea_pianola::ExpectationReport
+impl core::marker::Freeze for battersea_pianola::ExpectationReport
+impl core::marker::Send for battersea_pianola::ExpectationReport
+impl core::marker::Sync for battersea_pianola::ExpectationReport
+impl core::marker::Unpin for battersea_pianola::ExpectationReport
+impl core::panic::unwind_safe::RefUnwindSafe for battersea_pianola::ExpectationReport
+impl core::panic::unwind_safe::UnwindSafe for battersea_pianola::ExpectationReport
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_pianola::ExpectationReport where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_pianola::ExpectationReport where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<T, U> core::convert::Into<U> for battersea_pianola::ExpectationReport where U: core::convert::From<T>
+pub fn battersea_pianola::ExpectationReport::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_pianola::ExpectationReport where U: core::convert::Into<T>
+pub type battersea_pianola::ExpectationReport::Error = core::convert::Infallible
+pub fn battersea_pianola::ExpectationReport::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for battersea_pianola::ExpectationReport where U: core::convert::TryFrom<T>
+pub type battersea_pianola::ExpectationReport::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_pianola::ExpectationReport::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for battersea_pianola::ExpectationReport where T: core::clone::Clone
+pub type battersea_pianola::ExpectationReport::Owned = T
+pub fn battersea_pianola::ExpectationReport::clone_into(&self, target: &mut T)
+pub fn battersea_pianola::ExpectationReport::to_owned(&self) -> T
+impl<T> core::any::Any for battersea_pianola::ExpectationReport where T: 'static + ?core::marker::Sized
+pub fn battersea_pianola::ExpectationReport::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_pianola::ExpectationReport where T: ?core::marker::Sized
+pub fn battersea_pianola::ExpectationReport::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_pianola::ExpectationReport where T: ?core::marker::Sized
+pub fn battersea_pianola::ExpectationReport::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for battersea_pianola::ExpectationReport where T: core::clone::Clone
+pub unsafe fn battersea_pianola::ExpectationReport::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for battersea_pianola::ExpectationReport
+pub fn battersea_pianola::ExpectationReport::from(t: T) -> T
+impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_pianola::ExpectationReport where T: ?core::marker::Sized
+pub struct battersea_pianola::NodeSelector
+pub battersea_pianola::NodeSelector::definition: alloc::string::String
+pub battersea_pianola::NodeSelector::instance: core::option::Option<alloc::string::String>
+impl core::clone::Clone for battersea_pianola::NodeSelector
+pub fn battersea_pianola::NodeSelector::clone(&self) -> battersea_pianola::NodeSelector
+impl core::cmp::PartialEq for battersea_pianola::NodeSelector
+pub fn battersea_pianola::NodeSelector::eq(&self, other: &battersea_pianola::NodeSelector) -> bool
+impl core::fmt::Debug for battersea_pianola::NodeSelector
+pub fn battersea_pianola::NodeSelector::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for battersea_pianola::NodeSelector
+impl serde_core::ser::Serialize for battersea_pianola::NodeSelector
+pub fn battersea_pianola::NodeSelector::serialize<__S>(&self, __serializer: __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for battersea_pianola::NodeSelector
+pub fn battersea_pianola::NodeSelector::deserialize<__D>(__deserializer: __D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for battersea_pianola::NodeSelector
+impl core::marker::Send for battersea_pianola::NodeSelector
+impl core::marker::Sync for battersea_pianola::NodeSelector
+impl core::marker::Unpin for battersea_pianola::NodeSelector
+impl core::panic::unwind_safe::RefUnwindSafe for battersea_pianola::NodeSelector
+impl core::panic::unwind_safe::UnwindSafe for battersea_pianola::NodeSelector
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_pianola::NodeSelector where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_pianola::NodeSelector where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<T, U> core::convert::Into<U> for battersea_pianola::NodeSelector where U: core::convert::From<T>
+pub fn battersea_pianola::NodeSelector::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_pianola::NodeSelector where U: core::convert::Into<T>
+pub type battersea_pianola::NodeSelector::Error = core::convert::Infallible
+pub fn battersea_pianola::NodeSelector::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for battersea_pianola::NodeSelector where U: core::convert::TryFrom<T>
+pub type battersea_pianola::NodeSelector::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_pianola::NodeSelector::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for battersea_pianola::NodeSelector where T: core::clone::Clone
+pub type battersea_pianola::NodeSelector::Owned = T
+pub fn battersea_pianola::NodeSelector::clone_into(&self, target: &mut T)
+pub fn battersea_pianola::NodeSelector::to_owned(&self) -> T
+impl<T> core::any::Any for battersea_pianola::NodeSelector where T: 'static + ?core::marker::Sized
+pub fn battersea_pianola::NodeSelector::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_pianola::NodeSelector where T: ?core::marker::Sized
+pub fn battersea_pianola::NodeSelector::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_pianola::NodeSelector where T: ?core::marker::Sized
+pub fn battersea_pianola::NodeSelector::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for battersea_pianola::NodeSelector where T: core::clone::Clone
+pub unsafe fn battersea_pianola::NodeSelector::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for battersea_pianola::NodeSelector
+pub fn battersea_pianola::NodeSelector::from(t: T) -> T
+impl<T> serde_core::de::DeserializeOwned for battersea_pianola::NodeSelector where T: for<'de> serde_core::de::Deserialize<'de>
+impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_pianola::NodeSelector where T: ?core::marker::Sized
+pub struct battersea_pianola::PianolaTap
+impl battersea_pianola::PianolaTap
+pub fn battersea_pianola::PianolaTap::capture(&mut self, flow_key: &str, node_id: &str, port: &str, token_type: &str, value: &serde_json::value::Value)
+pub fn battersea_pianola::PianolaTap::captured_len(&self) -> usize
+pub fn battersea_pianola::PianolaTap::emissions_from(&self, start: usize) -> alloc::vec::Vec<battersea_pianola::TappedEmission>
+pub fn battersea_pianola::PianolaTap::new(targets: alloc::vec::Vec<battersea_pianola::PianolaTapTarget>) -> Self
+impl core::default::Default for battersea_pianola::PianolaTap
+pub fn battersea_pianola::PianolaTap::default() -> battersea_pianola::PianolaTap
+impl core::fmt::Debug for battersea_pianola::PianolaTap
+pub fn battersea_pianola::PianolaTap::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Freeze for battersea_pianola::PianolaTap
+impl core::marker::Send for battersea_pianola::PianolaTap
+impl core::marker::Sync for battersea_pianola::PianolaTap
+impl core::marker::Unpin for battersea_pianola::PianolaTap
+impl core::panic::unwind_safe::RefUnwindSafe for battersea_pianola::PianolaTap
+impl core::panic::unwind_safe::UnwindSafe for battersea_pianola::PianolaTap
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_pianola::PianolaTap where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_pianola::PianolaTap where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<T, U> core::convert::Into<U> for battersea_pianola::PianolaTap where U: core::convert::From<T>
+pub fn battersea_pianola::PianolaTap::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_pianola::PianolaTap where U: core::convert::Into<T>
+pub type battersea_pianola::PianolaTap::Error = core::convert::Infallible
+pub fn battersea_pianola::PianolaTap::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for battersea_pianola::PianolaTap where U: core::convert::TryFrom<T>
+pub type battersea_pianola::PianolaTap::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_pianola::PianolaTap::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> core::any::Any for battersea_pianola::PianolaTap where T: 'static + ?core::marker::Sized
+pub fn battersea_pianola::PianolaTap::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_pianola::PianolaTap where T: ?core::marker::Sized
+pub fn battersea_pianola::PianolaTap::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_pianola::PianolaTap where T: ?core::marker::Sized
+pub fn battersea_pianola::PianolaTap::borrow_mut(&mut self) -> &mut T
+impl<T> core::convert::From<T> for battersea_pianola::PianolaTap
+pub fn battersea_pianola::PianolaTap::from(t: T) -> T
+impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_pianola::PianolaTap where T: ?core::marker::Sized
+pub struct battersea_pianola::PianolaTapTarget
+pub battersea_pianola::PianolaTapTarget::flow_key: alloc::string::String
+pub battersea_pianola::PianolaTapTarget::node_id: core::option::Option<alloc::string::String>
+pub battersea_pianola::PianolaTapTarget::port: alloc::string::String
+impl core::clone::Clone for battersea_pianola::PianolaTapTarget
+pub fn battersea_pianola::PianolaTapTarget::clone(&self) -> battersea_pianola::PianolaTapTarget
+impl core::fmt::Debug for battersea_pianola::PianolaTapTarget
+pub fn battersea_pianola::PianolaTapTarget::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Freeze for battersea_pianola::PianolaTapTarget
+impl core::marker::Send for battersea_pianola::PianolaTapTarget
+impl core::marker::Sync for battersea_pianola::PianolaTapTarget
+impl core::marker::Unpin for battersea_pianola::PianolaTapTarget
+impl core::panic::unwind_safe::RefUnwindSafe for battersea_pianola::PianolaTapTarget
+impl core::panic::unwind_safe::UnwindSafe for battersea_pianola::PianolaTapTarget
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_pianola::PianolaTapTarget where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_pianola::PianolaTapTarget where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<T, U> core::convert::Into<U> for battersea_pianola::PianolaTapTarget where U: core::convert::From<T>
+pub fn battersea_pianola::PianolaTapTarget::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_pianola::PianolaTapTarget where U: core::convert::Into<T>
+pub type battersea_pianola::PianolaTapTarget::Error = core::convert::Infallible
+pub fn battersea_pianola::PianolaTapTarget::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for battersea_pianola::PianolaTapTarget where U: core::convert::TryFrom<T>
+pub type battersea_pianola::PianolaTapTarget::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_pianola::PianolaTapTarget::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for battersea_pianola::PianolaTapTarget where T: core::clone::Clone
+pub type battersea_pianola::PianolaTapTarget::Owned = T
+pub fn battersea_pianola::PianolaTapTarget::clone_into(&self, target: &mut T)
+pub fn battersea_pianola::PianolaTapTarget::to_owned(&self) -> T
+impl<T> core::any::Any for battersea_pianola::PianolaTapTarget where T: 'static + ?core::marker::Sized
+pub fn battersea_pianola::PianolaTapTarget::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_pianola::PianolaTapTarget where T: ?core::marker::Sized
+pub fn battersea_pianola::PianolaTapTarget::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_pianola::PianolaTapTarget where T: ?core::marker::Sized
+pub fn battersea_pianola::PianolaTapTarget::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for battersea_pianola::PianolaTapTarget where T: core::clone::Clone
+pub unsafe fn battersea_pianola::PianolaTapTarget::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for battersea_pianola::PianolaTapTarget
+pub fn battersea_pianola::PianolaTapTarget::from(t: T) -> T
+impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_pianola::PianolaTapTarget where T: ?core::marker::Sized
+pub struct battersea_pianola::PortEmission
+pub battersea_pianola::PortEmission::at: core::option::Option<chrono::datetime::DateTime<chrono::offset::utc::Utc>>
+pub battersea_pianola::PortEmission::port: alloc::string::String
+pub battersea_pianola::PortEmission::value: serde_json::value::Value
+impl core::clone::Clone for battersea_pianola::PortEmission
+pub fn battersea_pianola::PortEmission::clone(&self) -> battersea_pianola::PortEmission
+impl core::fmt::Debug for battersea_pianola::PortEmission
+pub fn battersea_pianola::PortEmission::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Freeze for battersea_pianola::PortEmission
+impl core::marker::Send for battersea_pianola::PortEmission
+impl core::marker::Sync for battersea_pianola::PortEmission
+impl core::marker::Unpin for battersea_pianola::PortEmission
+impl core::panic::unwind_safe::RefUnwindSafe for battersea_pianola::PortEmission
+impl core::panic::unwind_safe::UnwindSafe for battersea_pianola::PortEmission
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_pianola::PortEmission where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_pianola::PortEmission where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<T, U> core::convert::Into<U> for battersea_pianola::PortEmission where U: core::convert::From<T>
+pub fn battersea_pianola::PortEmission::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_pianola::PortEmission where U: core::convert::Into<T>
+pub type battersea_pianola::PortEmission::Error = core::convert::Infallible
+pub fn battersea_pianola::PortEmission::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for battersea_pianola::PortEmission where U: core::convert::TryFrom<T>
+pub type battersea_pianola::PortEmission::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_pianola::PortEmission::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for battersea_pianola::PortEmission where T: core::clone::Clone
+pub type battersea_pianola::PortEmission::Owned = T
+pub fn battersea_pianola::PortEmission::clone_into(&self, target: &mut T)
+pub fn battersea_pianola::PortEmission::to_owned(&self) -> T
+impl<T> core::any::Any for battersea_pianola::PortEmission where T: 'static + ?core::marker::Sized
+pub fn battersea_pianola::PortEmission::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_pianola::PortEmission where T: ?core::marker::Sized
+pub fn battersea_pianola::PortEmission::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_pianola::PortEmission where T: ?core::marker::Sized
+pub fn battersea_pianola::PortEmission::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for battersea_pianola::PortEmission where T: core::clone::Clone
+pub unsafe fn battersea_pianola::PortEmission::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for battersea_pianola::PortEmission
+pub fn battersea_pianola::PortEmission::from(t: T) -> T
+impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_pianola::PortEmission where T: ?core::marker::Sized
+pub struct battersea_pianola::RawAssertion
+pub battersea_pianola::RawAssertion::detail: core::option::Option<alloc::string::String>
+pub battersea_pianola::RawAssertion::passed: bool
+pub battersea_pianola::RawAssertion::summary: alloc::string::String
+impl core::marker::Freeze for battersea_pianola::RawAssertion
+impl core::marker::Send for battersea_pianola::RawAssertion
+impl core::marker::Sync for battersea_pianola::RawAssertion
+impl core::marker::Unpin for battersea_pianola::RawAssertion
+impl core::panic::unwind_safe::RefUnwindSafe for battersea_pianola::RawAssertion
+impl core::panic::unwind_safe::UnwindSafe for battersea_pianola::RawAssertion
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_pianola::RawAssertion where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_pianola::RawAssertion where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<T, U> core::convert::Into<U> for battersea_pianola::RawAssertion where U: core::convert::From<T>
+pub fn battersea_pianola::RawAssertion::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_pianola::RawAssertion where U: core::convert::Into<T>
+pub type battersea_pianola::RawAssertion::Error = core::convert::Infallible
+pub fn battersea_pianola::RawAssertion::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for battersea_pianola::RawAssertion where U: core::convert::TryFrom<T>
+pub type battersea_pianola::RawAssertion::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_pianola::RawAssertion::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> core::any::Any for battersea_pianola::RawAssertion where T: 'static + ?core::marker::Sized
+pub fn battersea_pianola::RawAssertion::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_pianola::RawAssertion where T: ?core::marker::Sized
+pub fn battersea_pianola::RawAssertion::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_pianola::RawAssertion where T: ?core::marker::Sized
+pub fn battersea_pianola::RawAssertion::borrow_mut(&mut self) -> &mut T
+impl<T> core::convert::From<T> for battersea_pianola::RawAssertion
+pub fn battersea_pianola::RawAssertion::from(t: T) -> T
+impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_pianola::RawAssertion where T: ?core::marker::Sized
+pub struct battersea_pianola::Roll<S, A, E>
+pub battersea_pianola::Roll::criteria: core::option::Option<battersea_pianola::RollCriteria>
+pub battersea_pianola::Roll::defaults: core::option::Option<battersea_pianola::RollDefaults>
+pub battersea_pianola::Roll::description: core::option::Option<alloc::string::String>
+pub battersea_pianola::Roll::name: alloc::string::String
+pub battersea_pianola::Roll::setup: S
+pub battersea_pianola::Roll::steps: alloc::vec::Vec<battersea_pianola::RollStep<A, E>>
+pub battersea_pianola::Roll::tee: core::option::Option<battersea_pianola::RollTee>
+pub battersea_pianola::Roll::version: u32
+impl<'de, S, A, E> serde_core::de::Deserialize<'de> for battersea_pianola::Roll<S, A, E> where S: serde_core::de::Deserialize<'de>, A: serde_core::de::Deserialize<'de>, E: serde_core::de::Deserialize<'de>
+pub fn battersea_pianola::Roll<S, A, E>::deserialize<__D>(__deserializer: __D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl<S, A, E> core::marker::StructuralPartialEq for battersea_pianola::Roll<S, A, E>
+impl<S, A, E> serde_core::ser::Serialize for battersea_pianola::Roll<S, A, E> where S: serde_core::ser::Serialize, A: serde_core::ser::Serialize, E: serde_core::ser::Serialize
+pub fn battersea_pianola::Roll<S, A, E>::serialize<__S>(&self, __serializer: __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<S: core::clone::Clone, A: core::clone::Clone, E: core::clone::Clone> core::clone::Clone for battersea_pianola::Roll<S, A, E>
+pub fn battersea_pianola::Roll<S, A, E>::clone(&self) -> battersea_pianola::Roll<S, A, E>
+impl<S: core::cmp::PartialEq, A: core::cmp::PartialEq, E: core::cmp::PartialEq> core::cmp::PartialEq for battersea_pianola::Roll<S, A, E>
+pub fn battersea_pianola::Roll<S, A, E>::eq(&self, other: &battersea_pianola::Roll<S, A, E>) -> bool
+impl<S: core::fmt::Debug, A: core::fmt::Debug, E: core::fmt::Debug> core::fmt::Debug for battersea_pianola::Roll<S, A, E>
+pub fn battersea_pianola::Roll<S, A, E>::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl<S, A, E> core::marker::Freeze for battersea_pianola::Roll<S, A, E> where S: core::marker::Freeze
+impl<S, A, E> core::marker::Send for battersea_pianola::Roll<S, A, E> where S: core::marker::Send, A: core::marker::Send, E: core::marker::Send
+impl<S, A, E> core::marker::Sync for battersea_pianola::Roll<S, A, E> where S: core::marker::Sync, A: core::marker::Sync, E: core::marker::Sync
+impl<S, A, E> core::marker::Unpin for battersea_pianola::Roll<S, A, E> where S: core::marker::Unpin, A: core::marker::Unpin, E: core::marker::Unpin
+impl<S, A, E> core::panic::unwind_safe::RefUnwindSafe for battersea_pianola::Roll<S, A, E> where S: core::panic::unwind_safe::RefUnwindSafe, A: core::panic::unwind_safe::RefUnwindSafe, E: core::panic::unwind_safe::RefUnwindSafe
+impl<S, A, E> core::panic::unwind_safe::UnwindSafe for battersea_pianola::Roll<S, A, E> where S: core::panic::unwind_safe::UnwindSafe, A: core::panic::unwind_safe::UnwindSafe, E: core::panic::unwind_safe::UnwindSafe
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_pianola::Roll<S, A, E> where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_pianola::Roll<S, A, E> where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<T, U> core::convert::Into<U> for battersea_pianola::Roll<S, A, E> where U: core::convert::From<T>
+pub fn battersea_pianola::Roll<S, A, E>::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_pianola::Roll<S, A, E> where U: core::convert::Into<T>
+pub type battersea_pianola::Roll<S, A, E>::Error = core::convert::Infallible
+pub fn battersea_pianola::Roll<S, A, E>::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for battersea_pianola::Roll<S, A, E> where U: core::convert::TryFrom<T>
+pub type battersea_pianola::Roll<S, A, E>::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_pianola::Roll<S, A, E>::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for battersea_pianola::Roll<S, A, E> where T: core::clone::Clone
+pub type battersea_pianola::Roll<S, A, E>::Owned = T
+pub fn battersea_pianola::Roll<S, A, E>::clone_into(&self, target: &mut T)
+pub fn battersea_pianola::Roll<S, A, E>::to_owned(&self) -> T
+impl<T> core::any::Any for battersea_pianola::Roll<S, A, E> where T: 'static + ?core::marker::Sized
+pub fn battersea_pianola::Roll<S, A, E>::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_pianola::Roll<S, A, E> where T: ?core::marker::Sized
+pub fn battersea_pianola::Roll<S, A, E>::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_pianola::Roll<S, A, E> where T: ?core::marker::Sized
+pub fn battersea_pianola::Roll<S, A, E>::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for battersea_pianola::Roll<S, A, E> where T: core::clone::Clone
+pub unsafe fn battersea_pianola::Roll<S, A, E>::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for battersea_pianola::Roll<S, A, E>
+pub fn battersea_pianola::Roll<S, A, E>::from(t: T) -> T
+impl<T> serde_core::de::DeserializeOwned for battersea_pianola::Roll<S, A, E> where T: for<'de> serde_core::de::Deserialize<'de>
+impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_pianola::Roll<S, A, E> where T: ?core::marker::Sized
+pub struct battersea_pianola::RollCriteria
+pub battersea_pianola::RollCriteria::allowed_errors: alloc::vec::Vec<battersea_pianola::AllowedError>
+pub battersea_pianola::RollCriteria::success: core::option::Option<battersea_pianola::RollSuccessPolicy>
+impl core::clone::Clone for battersea_pianola::RollCriteria
+pub fn battersea_pianola::RollCriteria::clone(&self) -> battersea_pianola::RollCriteria
+impl core::cmp::PartialEq for battersea_pianola::RollCriteria
+pub fn battersea_pianola::RollCriteria::eq(&self, other: &battersea_pianola::RollCriteria) -> bool
+impl core::fmt::Debug for battersea_pianola::RollCriteria
+pub fn battersea_pianola::RollCriteria::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for battersea_pianola::RollCriteria
+impl serde_core::ser::Serialize for battersea_pianola::RollCriteria
+pub fn battersea_pianola::RollCriteria::serialize<__S>(&self, __serializer: __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for battersea_pianola::RollCriteria
+pub fn battersea_pianola::RollCriteria::deserialize<__D>(__deserializer: __D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for battersea_pianola::RollCriteria
+impl core::marker::Send for battersea_pianola::RollCriteria
+impl core::marker::Sync for battersea_pianola::RollCriteria
+impl core::marker::Unpin for battersea_pianola::RollCriteria
+impl core::panic::unwind_safe::RefUnwindSafe for battersea_pianola::RollCriteria
+impl core::panic::unwind_safe::UnwindSafe for battersea_pianola::RollCriteria
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_pianola::RollCriteria where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_pianola::RollCriteria where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<T, U> core::convert::Into<U> for battersea_pianola::RollCriteria where U: core::convert::From<T>
+pub fn battersea_pianola::RollCriteria::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_pianola::RollCriteria where U: core::convert::Into<T>
+pub type battersea_pianola::RollCriteria::Error = core::convert::Infallible
+pub fn battersea_pianola::RollCriteria::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for battersea_pianola::RollCriteria where U: core::convert::TryFrom<T>
+pub type battersea_pianola::RollCriteria::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_pianola::RollCriteria::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for battersea_pianola::RollCriteria where T: core::clone::Clone
+pub type battersea_pianola::RollCriteria::Owned = T
+pub fn battersea_pianola::RollCriteria::clone_into(&self, target: &mut T)
+pub fn battersea_pianola::RollCriteria::to_owned(&self) -> T
+impl<T> core::any::Any for battersea_pianola::RollCriteria where T: 'static + ?core::marker::Sized
+pub fn battersea_pianola::RollCriteria::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_pianola::RollCriteria where T: ?core::marker::Sized
+pub fn battersea_pianola::RollCriteria::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_pianola::RollCriteria where T: ?core::marker::Sized
+pub fn battersea_pianola::RollCriteria::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for battersea_pianola::RollCriteria where T: core::clone::Clone
+pub unsafe fn battersea_pianola::RollCriteria::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for battersea_pianola::RollCriteria
+pub fn battersea_pianola::RollCriteria::from(t: T) -> T
+impl<T> serde_core::de::DeserializeOwned for battersea_pianola::RollCriteria where T: for<'de> serde_core::de::Deserialize<'de>
+impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_pianola::RollCriteria where T: ?core::marker::Sized
+pub struct battersea_pianola::RollDefaults
+pub battersea_pianola::RollDefaults::flow_binding: core::option::Option<alloc::string::String>
+pub battersea_pianola::RollDefaults::timeout_ms: core::option::Option<u64>
+impl core::clone::Clone for battersea_pianola::RollDefaults
+pub fn battersea_pianola::RollDefaults::clone(&self) -> battersea_pianola::RollDefaults
+impl core::cmp::PartialEq for battersea_pianola::RollDefaults
+pub fn battersea_pianola::RollDefaults::eq(&self, other: &battersea_pianola::RollDefaults) -> bool
+impl core::fmt::Debug for battersea_pianola::RollDefaults
+pub fn battersea_pianola::RollDefaults::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for battersea_pianola::RollDefaults
+impl serde_core::ser::Serialize for battersea_pianola::RollDefaults
+pub fn battersea_pianola::RollDefaults::serialize<__S>(&self, __serializer: __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for battersea_pianola::RollDefaults
+pub fn battersea_pianola::RollDefaults::deserialize<__D>(__deserializer: __D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for battersea_pianola::RollDefaults
+impl core::marker::Send for battersea_pianola::RollDefaults
+impl core::marker::Sync for battersea_pianola::RollDefaults
+impl core::marker::Unpin for battersea_pianola::RollDefaults
+impl core::panic::unwind_safe::RefUnwindSafe for battersea_pianola::RollDefaults
+impl core::panic::unwind_safe::UnwindSafe for battersea_pianola::RollDefaults
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_pianola::RollDefaults where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_pianola::RollDefaults where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<T, U> core::convert::Into<U> for battersea_pianola::RollDefaults where U: core::convert::From<T>
+pub fn battersea_pianola::RollDefaults::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_pianola::RollDefaults where U: core::convert::Into<T>
+pub type battersea_pianola::RollDefaults::Error = core::convert::Infallible
+pub fn battersea_pianola::RollDefaults::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for battersea_pianola::RollDefaults where U: core::convert::TryFrom<T>
+pub type battersea_pianola::RollDefaults::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_pianola::RollDefaults::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for battersea_pianola::RollDefaults where T: core::clone::Clone
+pub type battersea_pianola::RollDefaults::Owned = T
+pub fn battersea_pianola::RollDefaults::clone_into(&self, target: &mut T)
+pub fn battersea_pianola::RollDefaults::to_owned(&self) -> T
+impl<T> core::any::Any for battersea_pianola::RollDefaults where T: 'static + ?core::marker::Sized
+pub fn battersea_pianola::RollDefaults::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_pianola::RollDefaults where T: ?core::marker::Sized
+pub fn battersea_pianola::RollDefaults::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_pianola::RollDefaults where T: ?core::marker::Sized
+pub fn battersea_pianola::RollDefaults::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for battersea_pianola::RollDefaults where T: core::clone::Clone
+pub unsafe fn battersea_pianola::RollDefaults::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for battersea_pianola::RollDefaults
+pub fn battersea_pianola::RollDefaults::from(t: T) -> T
+impl<T> serde_core::de::DeserializeOwned for battersea_pianola::RollDefaults where T: for<'de> serde_core::de::Deserialize<'de>
+impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_pianola::RollDefaults where T: ?core::marker::Sized
+pub struct battersea_pianola::RollRecordingEntry
+pub battersea_pianola::RollRecordingEntry::node_id: alloc::string::String
+pub battersea_pianola::RollRecordingEntry::ordinal: u64
+pub battersea_pianola::RollRecordingEntry::port: alloc::string::String
+pub battersea_pianola::RollRecordingEntry::step_id: alloc::string::String
+pub battersea_pianola::RollRecordingEntry::timestamp: alloc::string::String
+pub battersea_pianola::RollRecordingEntry::token_type: alloc::string::String
+pub battersea_pianola::RollRecordingEntry::value: serde_json::value::Value
+impl core::clone::Clone for battersea_pianola::RollRecordingEntry
+pub fn battersea_pianola::RollRecordingEntry::clone(&self) -> battersea_pianola::RollRecordingEntry
+impl core::cmp::PartialEq for battersea_pianola::RollRecordingEntry
+pub fn battersea_pianola::RollRecordingEntry::eq(&self, other: &battersea_pianola::RollRecordingEntry) -> bool
+impl core::fmt::Debug for battersea_pianola::RollRecordingEntry
+pub fn battersea_pianola::RollRecordingEntry::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for battersea_pianola::RollRecordingEntry
+impl core::marker::Freeze for battersea_pianola::RollRecordingEntry
+impl core::marker::Send for battersea_pianola::RollRecordingEntry
+impl core::marker::Sync for battersea_pianola::RollRecordingEntry
+impl core::marker::Unpin for battersea_pianola::RollRecordingEntry
+impl core::panic::unwind_safe::RefUnwindSafe for battersea_pianola::RollRecordingEntry
+impl core::panic::unwind_safe::UnwindSafe for battersea_pianola::RollRecordingEntry
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_pianola::RollRecordingEntry where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_pianola::RollRecordingEntry where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<T, U> core::convert::Into<U> for battersea_pianola::RollRecordingEntry where U: core::convert::From<T>
+pub fn battersea_pianola::RollRecordingEntry::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_pianola::RollRecordingEntry where U: core::convert::Into<T>
+pub type battersea_pianola::RollRecordingEntry::Error = core::convert::Infallible
+pub fn battersea_pianola::RollRecordingEntry::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for battersea_pianola::RollRecordingEntry where U: core::convert::TryFrom<T>
+pub type battersea_pianola::RollRecordingEntry::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_pianola::RollRecordingEntry::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for battersea_pianola::RollRecordingEntry where T: core::clone::Clone
+pub type battersea_pianola::RollRecordingEntry::Owned = T
+pub fn battersea_pianola::RollRecordingEntry::clone_into(&self, target: &mut T)
+pub fn battersea_pianola::RollRecordingEntry::to_owned(&self) -> T
+impl<T> core::any::Any for battersea_pianola::RollRecordingEntry where T: 'static + ?core::marker::Sized
+pub fn battersea_pianola::RollRecordingEntry::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_pianola::RollRecordingEntry where T: ?core::marker::Sized
+pub fn battersea_pianola::RollRecordingEntry::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_pianola::RollRecordingEntry where T: ?core::marker::Sized
+pub fn battersea_pianola::RollRecordingEntry::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for battersea_pianola::RollRecordingEntry where T: core::clone::Clone
+pub unsafe fn battersea_pianola::RollRecordingEntry::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for battersea_pianola::RollRecordingEntry
+pub fn battersea_pianola::RollRecordingEntry::from(t: T) -> T
+impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_pianola::RollRecordingEntry where T: ?core::marker::Sized
+pub struct battersea_pianola::RollReport
+pub battersea_pianola::RollReport::all_criteria_held: bool
+pub battersea_pianola::RollReport::grade: core::option::Option<f64>
+pub battersea_pianola::RollReport::min_grade: core::option::Option<f64>
+pub battersea_pianola::RollReport::pending_grades: bool
+pub battersea_pianola::RollReport::recording: alloc::vec::Vec<battersea_pianola::RollRecordingEntry>
+pub battersea_pianola::RollReport::recording_output: core::option::Option<alloc::string::String>
+pub battersea_pianola::RollReport::required_criteria_held: bool
+pub battersea_pianola::RollReport::roll_name: alloc::string::String
+pub battersea_pianola::RollReport::steps: alloc::vec::Vec<battersea_pianola::StepReport>
+impl core::clone::Clone for battersea_pianola::RollReport
+pub fn battersea_pianola::RollReport::clone(&self) -> battersea_pianola::RollReport
+impl core::cmp::PartialEq for battersea_pianola::RollReport
+pub fn battersea_pianola::RollReport::eq(&self, other: &battersea_pianola::RollReport) -> bool
+impl core::fmt::Debug for battersea_pianola::RollReport
+pub fn battersea_pianola::RollReport::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for battersea_pianola::RollReport
+impl core::marker::Freeze for battersea_pianola::RollReport
+impl core::marker::Send for battersea_pianola::RollReport
+impl core::marker::Sync for battersea_pianola::RollReport
+impl core::marker::Unpin for battersea_pianola::RollReport
+impl core::panic::unwind_safe::RefUnwindSafe for battersea_pianola::RollReport
+impl core::panic::unwind_safe::UnwindSafe for battersea_pianola::RollReport
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_pianola::RollReport where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_pianola::RollReport where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<T, U> core::convert::Into<U> for battersea_pianola::RollReport where U: core::convert::From<T>
+pub fn battersea_pianola::RollReport::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_pianola::RollReport where U: core::convert::Into<T>
+pub type battersea_pianola::RollReport::Error = core::convert::Infallible
+pub fn battersea_pianola::RollReport::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for battersea_pianola::RollReport where U: core::convert::TryFrom<T>
+pub type battersea_pianola::RollReport::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_pianola::RollReport::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for battersea_pianola::RollReport where T: core::clone::Clone
+pub type battersea_pianola::RollReport::Owned = T
+pub fn battersea_pianola::RollReport::clone_into(&self, target: &mut T)
+pub fn battersea_pianola::RollReport::to_owned(&self) -> T
+impl<T> core::any::Any for battersea_pianola::RollReport where T: 'static + ?core::marker::Sized
+pub fn battersea_pianola::RollReport::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_pianola::RollReport where T: ?core::marker::Sized
+pub fn battersea_pianola::RollReport::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_pianola::RollReport where T: ?core::marker::Sized
+pub fn battersea_pianola::RollReport::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for battersea_pianola::RollReport where T: core::clone::Clone
+pub unsafe fn battersea_pianola::RollReport::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for battersea_pianola::RollReport
+pub fn battersea_pianola::RollReport::from(t: T) -> T
+impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_pianola::RollReport where T: ?core::marker::Sized
+pub struct battersea_pianola::RollStep<A, E>
+pub battersea_pianola::RollStep::action: A
+pub battersea_pianola::RollStep::description: core::option::Option<alloc::string::String>
+pub battersea_pianola::RollStep::expect: alloc::vec::Vec<E>
+pub battersea_pianola::RollStep::id: alloc::string::String
+pub battersea_pianola::RollStep::timeout_ms: core::option::Option<u64>
+impl<'de, A, E> serde_core::de::Deserialize<'de> for battersea_pianola::RollStep<A, E> where A: serde_core::de::Deserialize<'de>, E: serde_core::de::Deserialize<'de>
+pub fn battersea_pianola::RollStep<A, E>::deserialize<__D>(__deserializer: __D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl<A, E> core::marker::StructuralPartialEq for battersea_pianola::RollStep<A, E>
+impl<A, E> serde_core::ser::Serialize for battersea_pianola::RollStep<A, E> where A: serde_core::ser::Serialize, E: serde_core::ser::Serialize
+pub fn battersea_pianola::RollStep<A, E>::serialize<__S>(&self, __serializer: __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<A: core::clone::Clone, E: core::clone::Clone> core::clone::Clone for battersea_pianola::RollStep<A, E>
+pub fn battersea_pianola::RollStep<A, E>::clone(&self) -> battersea_pianola::RollStep<A, E>
+impl<A: core::cmp::PartialEq, E: core::cmp::PartialEq> core::cmp::PartialEq for battersea_pianola::RollStep<A, E>
+pub fn battersea_pianola::RollStep<A, E>::eq(&self, other: &battersea_pianola::RollStep<A, E>) -> bool
+impl<A: core::fmt::Debug, E: core::fmt::Debug> core::fmt::Debug for battersea_pianola::RollStep<A, E>
+pub fn battersea_pianola::RollStep<A, E>::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl<A, E> core::marker::Freeze for battersea_pianola::RollStep<A, E> where A: core::marker::Freeze
+impl<A, E> core::marker::Send for battersea_pianola::RollStep<A, E> where A: core::marker::Send, E: core::marker::Send
+impl<A, E> core::marker::Sync for battersea_pianola::RollStep<A, E> where A: core::marker::Sync, E: core::marker::Sync
+impl<A, E> core::marker::Unpin for battersea_pianola::RollStep<A, E> where A: core::marker::Unpin, E: core::marker::Unpin
+impl<A, E> core::panic::unwind_safe::RefUnwindSafe for battersea_pianola::RollStep<A, E> where A: core::panic::unwind_safe::RefUnwindSafe, E: core::panic::unwind_safe::RefUnwindSafe
+impl<A, E> core::panic::unwind_safe::UnwindSafe for battersea_pianola::RollStep<A, E> where A: core::panic::unwind_safe::UnwindSafe, E: core::panic::unwind_safe::UnwindSafe
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_pianola::RollStep<A, E> where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_pianola::RollStep<A, E> where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<T, U> core::convert::Into<U> for battersea_pianola::RollStep<A, E> where U: core::convert::From<T>
+pub fn battersea_pianola::RollStep<A, E>::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_pianola::RollStep<A, E> where U: core::convert::Into<T>
+pub type battersea_pianola::RollStep<A, E>::Error = core::convert::Infallible
+pub fn battersea_pianola::RollStep<A, E>::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for battersea_pianola::RollStep<A, E> where U: core::convert::TryFrom<T>
+pub type battersea_pianola::RollStep<A, E>::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_pianola::RollStep<A, E>::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for battersea_pianola::RollStep<A, E> where T: core::clone::Clone
+pub type battersea_pianola::RollStep<A, E>::Owned = T
+pub fn battersea_pianola::RollStep<A, E>::clone_into(&self, target: &mut T)
+pub fn battersea_pianola::RollStep<A, E>::to_owned(&self) -> T
+impl<T> core::any::Any for battersea_pianola::RollStep<A, E> where T: 'static + ?core::marker::Sized
+pub fn battersea_pianola::RollStep<A, E>::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_pianola::RollStep<A, E> where T: ?core::marker::Sized
+pub fn battersea_pianola::RollStep<A, E>::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_pianola::RollStep<A, E> where T: ?core::marker::Sized
+pub fn battersea_pianola::RollStep<A, E>::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for battersea_pianola::RollStep<A, E> where T: core::clone::Clone
+pub unsafe fn battersea_pianola::RollStep<A, E>::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for battersea_pianola::RollStep<A, E>
+pub fn battersea_pianola::RollStep<A, E>::from(t: T) -> T
+impl<T> serde_core::de::DeserializeOwned for battersea_pianola::RollStep<A, E> where T: for<'de> serde_core::de::Deserialize<'de>
+impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_pianola::RollStep<A, E> where T: ?core::marker::Sized
+pub struct battersea_pianola::RollSuccessPolicy
+pub battersea_pianola::RollSuccessPolicy::min_grade: core::option::Option<f64>
+pub battersea_pianola::RollSuccessPolicy::require: core::option::Option<alloc::string::String>
+impl core::clone::Clone for battersea_pianola::RollSuccessPolicy
+pub fn battersea_pianola::RollSuccessPolicy::clone(&self) -> battersea_pianola::RollSuccessPolicy
+impl core::cmp::PartialEq for battersea_pianola::RollSuccessPolicy
+pub fn battersea_pianola::RollSuccessPolicy::eq(&self, other: &battersea_pianola::RollSuccessPolicy) -> bool
+impl core::fmt::Debug for battersea_pianola::RollSuccessPolicy
+pub fn battersea_pianola::RollSuccessPolicy::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for battersea_pianola::RollSuccessPolicy
+impl serde_core::ser::Serialize for battersea_pianola::RollSuccessPolicy
+pub fn battersea_pianola::RollSuccessPolicy::serialize<__S>(&self, __serializer: __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for battersea_pianola::RollSuccessPolicy
+pub fn battersea_pianola::RollSuccessPolicy::deserialize<__D>(__deserializer: __D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for battersea_pianola::RollSuccessPolicy
+impl core::marker::Send for battersea_pianola::RollSuccessPolicy
+impl core::marker::Sync for battersea_pianola::RollSuccessPolicy
+impl core::marker::Unpin for battersea_pianola::RollSuccessPolicy
+impl core::panic::unwind_safe::RefUnwindSafe for battersea_pianola::RollSuccessPolicy
+impl core::panic::unwind_safe::UnwindSafe for battersea_pianola::RollSuccessPolicy
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_pianola::RollSuccessPolicy where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_pianola::RollSuccessPolicy where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<T, U> core::convert::Into<U> for battersea_pianola::RollSuccessPolicy where U: core::convert::From<T>
+pub fn battersea_pianola::RollSuccessPolicy::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_pianola::RollSuccessPolicy where U: core::convert::Into<T>
+pub type battersea_pianola::RollSuccessPolicy::Error = core::convert::Infallible
+pub fn battersea_pianola::RollSuccessPolicy::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for battersea_pianola::RollSuccessPolicy where U: core::convert::TryFrom<T>
+pub type battersea_pianola::RollSuccessPolicy::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_pianola::RollSuccessPolicy::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for battersea_pianola::RollSuccessPolicy where T: core::clone::Clone
+pub type battersea_pianola::RollSuccessPolicy::Owned = T
+pub fn battersea_pianola::RollSuccessPolicy::clone_into(&self, target: &mut T)
+pub fn battersea_pianola::RollSuccessPolicy::to_owned(&self) -> T
+impl<T> core::any::Any for battersea_pianola::RollSuccessPolicy where T: 'static + ?core::marker::Sized
+pub fn battersea_pianola::RollSuccessPolicy::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_pianola::RollSuccessPolicy where T: ?core::marker::Sized
+pub fn battersea_pianola::RollSuccessPolicy::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_pianola::RollSuccessPolicy where T: ?core::marker::Sized
+pub fn battersea_pianola::RollSuccessPolicy::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for battersea_pianola::RollSuccessPolicy where T: core::clone::Clone
+pub unsafe fn battersea_pianola::RollSuccessPolicy::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for battersea_pianola::RollSuccessPolicy
+pub fn battersea_pianola::RollSuccessPolicy::from(t: T) -> T
+impl<T> serde_core::de::DeserializeOwned for battersea_pianola::RollSuccessPolicy where T: for<'de> serde_core::de::Deserialize<'de>
+impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_pianola::RollSuccessPolicy where T: ?core::marker::Sized
+pub struct battersea_pianola::RollTee
+pub battersea_pianola::RollTee::output: alloc::string::String
+pub battersea_pianola::RollTee::ports: alloc::vec::Vec<battersea_pianola::RollTeePort>
+impl core::clone::Clone for battersea_pianola::RollTee
+pub fn battersea_pianola::RollTee::clone(&self) -> battersea_pianola::RollTee
+impl core::cmp::PartialEq for battersea_pianola::RollTee
+pub fn battersea_pianola::RollTee::eq(&self, other: &battersea_pianola::RollTee) -> bool
+impl core::fmt::Debug for battersea_pianola::RollTee
+pub fn battersea_pianola::RollTee::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for battersea_pianola::RollTee
+impl serde_core::ser::Serialize for battersea_pianola::RollTee
+pub fn battersea_pianola::RollTee::serialize<__S>(&self, __serializer: __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for battersea_pianola::RollTee
+pub fn battersea_pianola::RollTee::deserialize<__D>(__deserializer: __D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for battersea_pianola::RollTee
+impl core::marker::Send for battersea_pianola::RollTee
+impl core::marker::Sync for battersea_pianola::RollTee
+impl core::marker::Unpin for battersea_pianola::RollTee
+impl core::panic::unwind_safe::RefUnwindSafe for battersea_pianola::RollTee
+impl core::panic::unwind_safe::UnwindSafe for battersea_pianola::RollTee
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_pianola::RollTee where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_pianola::RollTee where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<T, U> core::convert::Into<U> for battersea_pianola::RollTee where U: core::convert::From<T>
+pub fn battersea_pianola::RollTee::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_pianola::RollTee where U: core::convert::Into<T>
+pub type battersea_pianola::RollTee::Error = core::convert::Infallible
+pub fn battersea_pianola::RollTee::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for battersea_pianola::RollTee where U: core::convert::TryFrom<T>
+pub type battersea_pianola::RollTee::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_pianola::RollTee::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for battersea_pianola::RollTee where T: core::clone::Clone
+pub type battersea_pianola::RollTee::Owned = T
+pub fn battersea_pianola::RollTee::clone_into(&self, target: &mut T)
+pub fn battersea_pianola::RollTee::to_owned(&self) -> T
+impl<T> core::any::Any for battersea_pianola::RollTee where T: 'static + ?core::marker::Sized
+pub fn battersea_pianola::RollTee::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_pianola::RollTee where T: ?core::marker::Sized
+pub fn battersea_pianola::RollTee::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_pianola::RollTee where T: ?core::marker::Sized
+pub fn battersea_pianola::RollTee::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for battersea_pianola::RollTee where T: core::clone::Clone
+pub unsafe fn battersea_pianola::RollTee::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for battersea_pianola::RollTee
+pub fn battersea_pianola::RollTee::from(t: T) -> T
+impl<T> serde_core::de::DeserializeOwned for battersea_pianola::RollTee where T: for<'de> serde_core::de::Deserialize<'de>
+impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_pianola::RollTee where T: ?core::marker::Sized
+pub struct battersea_pianola::RollTeePort
+pub battersea_pianola::RollTeePort::node: core::option::Option<battersea_pianola::NodeSelector>
+pub battersea_pianola::RollTeePort::port: alloc::string::String
+impl core::clone::Clone for battersea_pianola::RollTeePort
+pub fn battersea_pianola::RollTeePort::clone(&self) -> battersea_pianola::RollTeePort
+impl core::cmp::PartialEq for battersea_pianola::RollTeePort
+pub fn battersea_pianola::RollTeePort::eq(&self, other: &battersea_pianola::RollTeePort) -> bool
+impl core::fmt::Debug for battersea_pianola::RollTeePort
+pub fn battersea_pianola::RollTeePort::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for battersea_pianola::RollTeePort
+impl serde_core::ser::Serialize for battersea_pianola::RollTeePort
+pub fn battersea_pianola::RollTeePort::serialize<__S>(&self, __serializer: __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for battersea_pianola::RollTeePort
+pub fn battersea_pianola::RollTeePort::deserialize<__D>(__deserializer: __D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for battersea_pianola::RollTeePort
+impl core::marker::Send for battersea_pianola::RollTeePort
+impl core::marker::Sync for battersea_pianola::RollTeePort
+impl core::marker::Unpin for battersea_pianola::RollTeePort
+impl core::panic::unwind_safe::RefUnwindSafe for battersea_pianola::RollTeePort
+impl core::panic::unwind_safe::UnwindSafe for battersea_pianola::RollTeePort
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_pianola::RollTeePort where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_pianola::RollTeePort where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<T, U> core::convert::Into<U> for battersea_pianola::RollTeePort where U: core::convert::From<T>
+pub fn battersea_pianola::RollTeePort::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_pianola::RollTeePort where U: core::convert::Into<T>
+pub type battersea_pianola::RollTeePort::Error = core::convert::Infallible
+pub fn battersea_pianola::RollTeePort::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for battersea_pianola::RollTeePort where U: core::convert::TryFrom<T>
+pub type battersea_pianola::RollTeePort::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_pianola::RollTeePort::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for battersea_pianola::RollTeePort where T: core::clone::Clone
+pub type battersea_pianola::RollTeePort::Owned = T
+pub fn battersea_pianola::RollTeePort::clone_into(&self, target: &mut T)
+pub fn battersea_pianola::RollTeePort::to_owned(&self) -> T
+impl<T> core::any::Any for battersea_pianola::RollTeePort where T: 'static + ?core::marker::Sized
+pub fn battersea_pianola::RollTeePort::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_pianola::RollTeePort where T: ?core::marker::Sized
+pub fn battersea_pianola::RollTeePort::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_pianola::RollTeePort where T: ?core::marker::Sized
+pub fn battersea_pianola::RollTeePort::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for battersea_pianola::RollTeePort where T: core::clone::Clone
+pub unsafe fn battersea_pianola::RollTeePort::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for battersea_pianola::RollTeePort
+pub fn battersea_pianola::RollTeePort::from(t: T) -> T
+impl<T> serde_core::de::DeserializeOwned for battersea_pianola::RollTeePort where T: for<'de> serde_core::de::Deserialize<'de>
+impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_pianola::RollTeePort where T: ?core::marker::Sized
+pub struct battersea_pianola::StepReport
+pub battersea_pianola::StepReport::all_criteria_held: bool
+pub battersea_pianola::StepReport::error_class: core::option::Option<alloc::string::String>
+pub battersea_pianola::StepReport::expectations: alloc::vec::Vec<battersea_pianola::ExpectationReport>
+pub battersea_pianola::StepReport::required_criteria_held: bool
+pub battersea_pianola::StepReport::step_id: alloc::string::String
+pub battersea_pianola::StepReport::strike_error: core::option::Option<alloc::string::String>
+impl core::clone::Clone for battersea_pianola::StepReport
+pub fn battersea_pianola::StepReport::clone(&self) -> battersea_pianola::StepReport
+impl core::cmp::PartialEq for battersea_pianola::StepReport
+pub fn battersea_pianola::StepReport::eq(&self, other: &battersea_pianola::StepReport) -> bool
+impl core::fmt::Debug for battersea_pianola::StepReport
+pub fn battersea_pianola::StepReport::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for battersea_pianola::StepReport
+impl core::marker::Freeze for battersea_pianola::StepReport
+impl core::marker::Send for battersea_pianola::StepReport
+impl core::marker::Sync for battersea_pianola::StepReport
+impl core::marker::Unpin for battersea_pianola::StepReport
+impl core::panic::unwind_safe::RefUnwindSafe for battersea_pianola::StepReport
+impl core::panic::unwind_safe::UnwindSafe for battersea_pianola::StepReport
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_pianola::StepReport where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_pianola::StepReport where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<T, U> core::convert::Into<U> for battersea_pianola::StepReport where U: core::convert::From<T>
+pub fn battersea_pianola::StepReport::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_pianola::StepReport where U: core::convert::Into<T>
+pub type battersea_pianola::StepReport::Error = core::convert::Infallible
+pub fn battersea_pianola::StepReport::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for battersea_pianola::StepReport where U: core::convert::TryFrom<T>
+pub type battersea_pianola::StepReport::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_pianola::StepReport::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for battersea_pianola::StepReport where T: core::clone::Clone
+pub type battersea_pianola::StepReport::Owned = T
+pub fn battersea_pianola::StepReport::clone_into(&self, target: &mut T)
+pub fn battersea_pianola::StepReport::to_owned(&self) -> T
+impl<T> core::any::Any for battersea_pianola::StepReport where T: 'static + ?core::marker::Sized
+pub fn battersea_pianola::StepReport::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_pianola::StepReport where T: ?core::marker::Sized
+pub fn battersea_pianola::StepReport::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_pianola::StepReport where T: ?core::marker::Sized
+pub fn battersea_pianola::StepReport::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for battersea_pianola::StepReport where T: core::clone::Clone
+pub unsafe fn battersea_pianola::StepReport::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for battersea_pianola::StepReport
+pub fn battersea_pianola::StepReport::from(t: T) -> T
+impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_pianola::StepReport where T: ?core::marker::Sized
+pub struct battersea_pianola::TappedEmission
+pub battersea_pianola::TappedEmission::at: chrono::datetime::DateTime<chrono::offset::utc::Utc>
+pub battersea_pianola::TappedEmission::node_id: alloc::string::String
+pub battersea_pianola::TappedEmission::ordinal: u64
+pub battersea_pianola::TappedEmission::port: alloc::string::String
+pub battersea_pianola::TappedEmission::token_type: alloc::string::String
+pub battersea_pianola::TappedEmission::value: serde_json::value::Value
+impl core::clone::Clone for battersea_pianola::TappedEmission
+pub fn battersea_pianola::TappedEmission::clone(&self) -> battersea_pianola::TappedEmission
+impl core::fmt::Debug for battersea_pianola::TappedEmission
+pub fn battersea_pianola::TappedEmission::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Freeze for battersea_pianola::TappedEmission
+impl core::marker::Send for battersea_pianola::TappedEmission
+impl core::marker::Sync for battersea_pianola::TappedEmission
+impl core::marker::Unpin for battersea_pianola::TappedEmission
+impl core::panic::unwind_safe::RefUnwindSafe for battersea_pianola::TappedEmission
+impl core::panic::unwind_safe::UnwindSafe for battersea_pianola::TappedEmission
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_pianola::TappedEmission where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_pianola::TappedEmission where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<T, U> core::convert::Into<U> for battersea_pianola::TappedEmission where U: core::convert::From<T>
+pub fn battersea_pianola::TappedEmission::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_pianola::TappedEmission where U: core::convert::Into<T>
+pub type battersea_pianola::TappedEmission::Error = core::convert::Infallible
+pub fn battersea_pianola::TappedEmission::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for battersea_pianola::TappedEmission where U: core::convert::TryFrom<T>
+pub type battersea_pianola::TappedEmission::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_pianola::TappedEmission::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for battersea_pianola::TappedEmission where T: core::clone::Clone
+pub type battersea_pianola::TappedEmission::Owned = T
+pub fn battersea_pianola::TappedEmission::clone_into(&self, target: &mut T)
+pub fn battersea_pianola::TappedEmission::to_owned(&self) -> T
+impl<T> core::any::Any for battersea_pianola::TappedEmission where T: 'static + ?core::marker::Sized
+pub fn battersea_pianola::TappedEmission::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_pianola::TappedEmission where T: ?core::marker::Sized
+pub fn battersea_pianola::TappedEmission::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_pianola::TappedEmission where T: ?core::marker::Sized
+pub fn battersea_pianola::TappedEmission::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for battersea_pianola::TappedEmission where T: core::clone::Clone
+pub unsafe fn battersea_pianola::TappedEmission::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for battersea_pianola::TappedEmission
+pub fn battersea_pianola::TappedEmission::from(t: T) -> T
+impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_pianola::TappedEmission where T: ?core::marker::Sized
+pub struct battersea_pianola::Timeline
+pub battersea_pianola::Timeline::ports: alloc::vec::Vec<battersea_pianola::PortEmission>
+pub battersea_pianola::Timeline::strike_ms: u128
+pub battersea_pianola::Timeline::tools: alloc::vec::Vec<battersea_pianola::ToolObservation>
+impl battersea_pianola::Observation for battersea_pianola::Timeline
+pub fn battersea_pianola::Timeline::count(&self, target: &str, filter: core::option::Option<&serde_json::value::Value>) -> core::option::Option<u32>
+pub fn battersea_pianola::Timeline::ports(&self) -> &[battersea_pianola::PortEmission]
+pub fn battersea_pianola::Timeline::strike_ms(&self) -> u128
+pub fn battersea_pianola::Timeline::tools(&self) -> &[battersea_pianola::ToolObservation]
+impl core::clone::Clone for battersea_pianola::Timeline
+pub fn battersea_pianola::Timeline::clone(&self) -> battersea_pianola::Timeline
+impl core::default::Default for battersea_pianola::Timeline
+pub fn battersea_pianola::Timeline::default() -> battersea_pianola::Timeline
+impl core::fmt::Debug for battersea_pianola::Timeline
+pub fn battersea_pianola::Timeline::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Freeze for battersea_pianola::Timeline
+impl core::marker::Send for battersea_pianola::Timeline
+impl core::marker::Sync for battersea_pianola::Timeline
+impl core::marker::Unpin for battersea_pianola::Timeline
+impl core::panic::unwind_safe::RefUnwindSafe for battersea_pianola::Timeline
+impl core::panic::unwind_safe::UnwindSafe for battersea_pianola::Timeline
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_pianola::Timeline where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_pianola::Timeline where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<T, U> core::convert::Into<U> for battersea_pianola::Timeline where U: core::convert::From<T>
+pub fn battersea_pianola::Timeline::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_pianola::Timeline where U: core::convert::Into<T>
+pub type battersea_pianola::Timeline::Error = core::convert::Infallible
+pub fn battersea_pianola::Timeline::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for battersea_pianola::Timeline where U: core::convert::TryFrom<T>
+pub type battersea_pianola::Timeline::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_pianola::Timeline::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for battersea_pianola::Timeline where T: core::clone::Clone
+pub type battersea_pianola::Timeline::Owned = T
+pub fn battersea_pianola::Timeline::clone_into(&self, target: &mut T)
+pub fn battersea_pianola::Timeline::to_owned(&self) -> T
+impl<T> core::any::Any for battersea_pianola::Timeline where T: 'static + ?core::marker::Sized
+pub fn battersea_pianola::Timeline::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_pianola::Timeline where T: ?core::marker::Sized
+pub fn battersea_pianola::Timeline::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_pianola::Timeline where T: ?core::marker::Sized
+pub fn battersea_pianola::Timeline::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for battersea_pianola::Timeline where T: core::clone::Clone
+pub unsafe fn battersea_pianola::Timeline::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for battersea_pianola::Timeline
+pub fn battersea_pianola::Timeline::from(t: T) -> T
+impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_pianola::Timeline where T: ?core::marker::Sized
+pub struct battersea_pianola::ToolObservation
+pub battersea_pianola::ToolObservation::arguments_json: alloc::string::String
+pub battersea_pianola::ToolObservation::at: core::option::Option<chrono::datetime::DateTime<chrono::offset::utc::Utc>>
+pub battersea_pianola::ToolObservation::name: alloc::string::String
+pub battersea_pianola::ToolObservation::status: alloc::string::String
+impl core::clone::Clone for battersea_pianola::ToolObservation
+pub fn battersea_pianola::ToolObservation::clone(&self) -> battersea_pianola::ToolObservation
+impl core::fmt::Debug for battersea_pianola::ToolObservation
+pub fn battersea_pianola::ToolObservation::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Freeze for battersea_pianola::ToolObservation
+impl core::marker::Send for battersea_pianola::ToolObservation
+impl core::marker::Sync for battersea_pianola::ToolObservation
+impl core::marker::Unpin for battersea_pianola::ToolObservation
+impl core::panic::unwind_safe::RefUnwindSafe for battersea_pianola::ToolObservation
+impl core::panic::unwind_safe::UnwindSafe for battersea_pianola::ToolObservation
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_pianola::ToolObservation where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_pianola::ToolObservation where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<T, U> core::convert::Into<U> for battersea_pianola::ToolObservation where U: core::convert::From<T>
+pub fn battersea_pianola::ToolObservation::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_pianola::ToolObservation where U: core::convert::Into<T>
+pub type battersea_pianola::ToolObservation::Error = core::convert::Infallible
+pub fn battersea_pianola::ToolObservation::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for battersea_pianola::ToolObservation where U: core::convert::TryFrom<T>
+pub type battersea_pianola::ToolObservation::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_pianola::ToolObservation::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for battersea_pianola::ToolObservation where T: core::clone::Clone
+pub type battersea_pianola::ToolObservation::Owned = T
+pub fn battersea_pianola::ToolObservation::clone_into(&self, target: &mut T)
+pub fn battersea_pianola::ToolObservation::to_owned(&self) -> T
+impl<T> core::any::Any for battersea_pianola::ToolObservation where T: 'static + ?core::marker::Sized
+pub fn battersea_pianola::ToolObservation::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_pianola::ToolObservation where T: ?core::marker::Sized
+pub fn battersea_pianola::ToolObservation::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_pianola::ToolObservation where T: ?core::marker::Sized
+pub fn battersea_pianola::ToolObservation::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for battersea_pianola::ToolObservation where T: core::clone::Clone
+pub unsafe fn battersea_pianola::ToolObservation::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for battersea_pianola::ToolObservation
+pub fn battersea_pianola::ToolObservation::from(t: T) -> T
+impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_pianola::ToolObservation where T: ?core::marker::Sized
+pub trait battersea_pianola::DomainCriterion
+pub fn battersea_pianola::DomainCriterion::kind(&self) -> &str
+pub fn battersea_pianola::DomainCriterion::severity(&self) -> battersea_pianola::Severity
+pub fn battersea_pianola::DomainCriterion::weight(&self) -> f64
+pub trait battersea_pianola::Observation
+pub fn battersea_pianola::Observation::count(&self, target: &str, filter: core::option::Option<&serde_json::value::Value>) -> core::option::Option<u32>
+pub fn battersea_pianola::Observation::ports(&self) -> &[battersea_pianola::PortEmission]
+pub fn battersea_pianola::Observation::strike_ms(&self) -> u128
+pub fn battersea_pianola::Observation::tools(&self) -> &[battersea_pianola::ToolObservation]
+impl battersea_pianola::Observation for battersea_pianola::Timeline
+pub fn battersea_pianola::Timeline::count(&self, target: &str, filter: core::option::Option<&serde_json::value::Value>) -> core::option::Option<u32>
+pub fn battersea_pianola::Timeline::ports(&self) -> &[battersea_pianola::PortEmission]
+pub fn battersea_pianola::Timeline::strike_ms(&self) -> u128
+pub fn battersea_pianola::Timeline::tools(&self) -> &[battersea_pianola::ToolObservation]
+pub fn battersea_pianola::aggregate_grade(steps: &[battersea_pianola::StepReport]) -> core::option::Option<f64>
+pub fn battersea_pianola::classify_assertion(raw: battersea_pianola::RawAssertion, severity: battersea_pianola::Severity, weight: f64) -> battersea_pianola::ExpectationReport
+pub fn battersea_pianola::compute_gate(steps: &[battersea_pianola::StepReport], grade: core::option::Option<f64>, success: core::option::Option<&battersea_pianola::RollSuccessPolicy>) -> bool
+pub fn battersea_pianola::count_tools(tools: &[battersea_pianola::ToolObservation], filter: core::option::Option<&serde_json::value::Value>) -> u32
+pub fn battersea_pianola::evaluate_generic<C: battersea_pianola::Observation>(step_id: &str, expectation: &battersea_pianola::GenericExpectation, timeline: &C, prior: &std::collections::hash::map::HashMap<alloc::string::String, C>) -> battersea_pianola::RawAssertion
+pub fn battersea_pianola::fail(summary: alloc::string::String, detail: alloc::string::String) -> battersea_pianola::RawAssertion
+pub fn battersea_pianola::json_subset(subset: &serde_json::value::Value, superset: &serde_json::value::Value) -> bool
+pub fn battersea_pianola::pass(summary: alloc::string::String) -> battersea_pianola::RawAssertion
+pub fn battersea_pianola::resolve_grade(report: &mut battersea_pianola::ExpectationReport, score: f64, notes: alloc::string::String, grader_model: core::option::Option<&str>) -> core::result::Result<(), alloc::string::String>
+pub fn battersea_pianola::rubric_excerpt(rubric: &str) -> alloc::string::String
+pub fn battersea_pianola::severity_str(severity: battersea_pianola::Severity) -> &'static str
+pub fn battersea_pianola::text_match_passes(matcher: &battersea_pianola::TextMatch, observed: core::option::Option<&str>) -> core::result::Result<bool, alloc::string::String>
+pub fn battersea_pianola::value_as_text(value: &serde_json::value::Value) -> alloc::string::String

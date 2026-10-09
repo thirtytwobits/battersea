@@ -19,7 +19,7 @@ runway = []
 mock = ["dep:ab_glyph", "dep:png"]
 
 [dependencies]
-battersea-model = { path = "../battersea-model", version = "0.4.0" }
+battersea-model = { path = "../battersea-model", version = "0.5.0" }
 ab_glyph = { version = "0.2.32", optional = true }
 anyhow.workspace = true
 async-openai = { workspace = true, optional = true }

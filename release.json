@@ -1,5 +1,5 @@
 {
-  "version": "0.4.0",
+  "version": "0.5.0",
   "repository": "https://github.com/thirtytwobits/battersea",
   "license": "MIT",
   "security_contact": "https://github.com/thirtytwobits/battersea/security/advisories/new",
@@ -56,6 +56,14 @@
       "README.md",
       "LICENSE",
       "NOTICE"
+    ],
+    "battersea-pianola": [
+      "Cargo.toml",
+      "src/lib.rs",
+      "schemas/pianola-roll.schema.json",
+      "README.md",
+      "LICENSE",
+      "NOTICE"
     ]
   },
   "npm": {
@@ -69,6 +77,16 @@
       "schemas/flow.schema.json",
       "fixtures/token-type-compatibility.json",
       "fixtures/flows.json"
+    ],
+    "@battersea/editor": [
+      "package.json",
+      "dist/index.js",
+      "dist/index.d.ts",
+      "dist/graph.js",
+      "README.md",
+      "LICENSE",
+      "NOTICE",
+      "THIRD_PARTY_NOTICES.md"
     ]
   }
 }

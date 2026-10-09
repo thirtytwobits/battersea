@@ -54,3 +54,25 @@ jobs:
       - run: rustup default 1.99.0
       - run: cargo install cargo-public-api --version 0.50.2 --locked
       - run: cargo xtask api
+  editor-example:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - run: rustup toolchain install 1.99.0 --profile minimal
+      - run: rustup default 1.99.0
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: typescript/package-lock.json
+      - run: cargo build --locked -p editor-server-example
+      - run: npm ci --ignore-scripts
+        working-directory: typescript
+      - run: npm run build && npm run test:example
+        working-directory: typescript
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: editor-browser
+          path: target/editor-browser

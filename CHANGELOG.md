@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.5.0 — 2026-10-09
+
+- Publish an unstyled React editor with document, catalogue, validation and activation ports.
+- Extract graph primitives, parameter renderers, undo, diagnostics and lazy layout engines.
+- Preserve application metadata and other editor namespaces when saving flows.
+- Publish generic Pianola grammar, lossless capture, registered assertions and grading hooks.
+- Ship an independent editor/server/CLI example and Chromium/WebKit package-consumer checks.
+
 ## 0.4.0 — 2026-10-09
 
 - Extract message contracts, open provider/tool registries and the shared tool runner.

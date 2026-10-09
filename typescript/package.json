@@ -1,6 +1,6 @@
 {
   "name": "battersea-typescript",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "private": true,
   "type": "module",
   "engines": {
@@ -13,12 +13,21 @@
     "build": "node scripts/build.mjs",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "node --test scripts/*.test.mjs",
-    "check": "npm run build && npm run typecheck && npm test && node scripts/check.mjs",
+    "check": "npm run build && npm run typecheck && npm test && npm run test:editor && node scripts/check.mjs",
     "api:update": "npm run build && node scripts/check.mjs --update-api",
-    "package:check": "npm run check && node scripts/package-check.mjs"
+    "package:check": "npm run check && node scripts/package-check.mjs",
+    "test:editor": "tsx --test tests/editor/*.test.ts tests/editor/*.test.tsx",
+    "test:example": "node scripts/example-check.mjs"
   },
   "devDependencies": {
-    "typescript": "5.9.3"
+    "typescript": "5.9.3",
+    "@types/react": "^18.3.1",
+    "@types/react-dom": "^18.3.1",
+    "@types/node": "^25.3.5",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "tsx": "^4.21.0",
+    "@types/d3-force": "^3.0.10"
   },
   "license": "MIT",
   "repository": {

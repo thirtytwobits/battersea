@@ -1,0 +1,163 @@
+:root {
+  font: 15px/1.4 system-ui;
+  color: #182332;
+  background: #edf1f6;
+}
+body {
+  margin: 0;
+  padding: 16px;
+}
+h1 {
+  font-size: 24px;
+  margin: 0 0 8px;
+}
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+button {
+  cursor: pointer;
+  padding: 6px 10px;
+}
+button:disabled {
+  cursor: default;
+}
+label {
+  display: block;
+}
+textarea {
+  box-sizing: border-box;
+  width: 100%;
+}
+output {
+  display: block;
+}
+.battersea-editor__toolbar {
+  display: flex;
+  align-items: end;
+  gap: 8px;
+  padding: 10px 0;
+}
+.battersea-editor__workspace {
+  display: grid;
+  grid-template-columns: 210px minmax(400px, 1fr) 290px;
+  height: calc(100vh - 165px);
+}
+.battersea-editor__workspace > nav,
+.battersea-editor__workspace > aside {
+  overflow: auto;
+  padding: 12px;
+  background: white;
+}
+.battersea-editor__workspace > nav button {
+  display: block;
+  margin: 4px 0;
+  width: 100%;
+  text-align: left;
+}
+.battersea-editor__canvas,
+.authoring-graph-canvas,
+.authoring-graph-canvas-pane,
+.flow-studio-canvas {
+  min-height: 0;
+  height: 100%;
+  position: relative;
+}
+.flow-studio-node {
+  border: 1px solid #54677f;
+  border-radius: 5px;
+  background: white;
+}
+.flow-studio-node.selected {
+  border-color: #1464de;
+  outline: 2px solid #1464de;
+}
+.flow-studio-node-shell {
+  padding: 14px 28px;
+  box-sizing: border-box;
+  height: 100%;
+}
+.flow-studio-node-shell__title {
+  font-weight: 650;
+}
+.flow-studio-node-shell__eyebrow,
+.flow-studio-node-shell__description {
+  font-size: 11px;
+}
+.flow-studio-node-port-label {
+  position: absolute;
+}
+.flow-studio-node-port-move {
+  display: none;
+}
+.flow-studio-node-port-select {
+  font-size: 10px;
+  border: 0;
+  background: white;
+  padding: 2px;
+}
+.flow-studio-node-port-select__compact {
+  display: none;
+}
+.flow-studio-edge__interaction {
+  stroke: transparent;
+  fill: none;
+}
+.flow-studio-edge__selection-outline {
+  fill: none;
+  stroke: #1464de;
+}
+.flow-studio-canvas--pending-initial-fit .react-flow__viewport {
+  opacity: 0;
+  pointer-events: none;
+}
+.authoring-graph-auto-layout {
+  position: absolute;
+  bottom: 10px;
+  left: 60px;
+  z-index: 5;
+  background: white;
+  padding: 6px;
+}
+.battersea-editor__workspace aside ol {
+  padding-left: 18px;
+  overflow-wrap: anywhere;
+  font-size: 11px;
+}
+.flow-studio-node-frame {
+  position: relative;
+  width: var(--flow-studio-node-width);
+  min-height: var(--flow-studio-node-height);
+  overflow: visible;
+}
+.flow-studio-node-shell {
+  min-height: var(--flow-studio-node-height);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+.flow-studio-node-port-label {
+  width: var(--flow-studio-node-port-pill-width);
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+.flow-studio-node-port-cluster {
+  display: inline-flex;
+  pointer-events: auto;
+}
+.flow-studio-node-port-select {
+  white-space: nowrap;
+}
+.authoring-graph-canvas__auto-layout-apply .codicon-play::before {
+  content: "▷";
+  font-size: 18px;
+}
+.authoring-graph-canvas__auto-layout-apply .codicon-loading::before {
+  content: "…";
+}
+
+.battersea-editor__workspace aside output {
+  overflow-wrap: anywhere;
+}

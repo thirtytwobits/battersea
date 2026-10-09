@@ -3,7 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-for (const name of fs.readdirSync(path.join(root, "packages"))) {
+for (const name of fs.readdirSync(path.join(root, "packages")).sort((a, b) => a === "flow" ? -1 : b === "flow" ? 1 : a.localeCompare(b))) {
   const dir = path.join(root, "packages", name);
   if (!fs.existsSync(path.join(dir, "package.json"))) continue;
   fs.rmSync(path.join(dir, "dist"), { recursive: true, force: true });

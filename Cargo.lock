@@ -232,7 +232,7 @@ dependencies = [
 
 [[package]]
 name = "backend-example"
-version = "0.4.0"
+version = "0.5.0"
 dependencies = [
  "async-trait",
  "battersea-model",
@@ -271,7 +271,7 @@ checksum = "ac07cdecf99051d9a5238b80f35af32cdeba5b336e55d957b318b50137e18da5"
 
 [[package]]
 name = "battersea-config"
-version = "0.4.0"
+version = "0.5.0"
 dependencies = [
  "anyhow",
  "battersea-flow",
@@ -283,7 +283,7 @@ dependencies = [
 
 [[package]]
 name = "battersea-flow"
-version = "0.4.0"
+version = "0.5.0"
 dependencies = [
  "anyhow",
  "jsonschema",
@@ -296,7 +296,7 @@ dependencies = [
 
 [[package]]
 name = "battersea-guard"
-version = "0.4.0"
+version = "0.5.0"
 dependencies = [
  "anyhow",
  "regex-lite",
@@ -306,7 +306,7 @@ dependencies = [
 
 [[package]]
 name = "battersea-model"
-version = "0.4.0"
+version = "0.5.0"
 dependencies = [
  "async-trait",
  "chrono",
@@ -323,7 +323,7 @@ dependencies = [
 
 [[package]]
 name = "battersea-nodes"
-version = "0.4.0"
+version = "0.5.0"
 dependencies = [
  "async-trait",
  "battersea-flow",
@@ -334,8 +334,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "battersea-pianola"
+version = "0.5.0"
+dependencies = [
+ "chrono",
+ "jsonschema",
+ "regex-lite",
+ "serde",
+ "serde_json",
+ "serde_yaml",
+]
+
+[[package]]
 name = "battersea-providers"
-version = "0.4.0"
+version = "0.5.0"
 dependencies = [
  "ab_glyph",
  "anyhow",
@@ -360,7 +372,7 @@ dependencies = [
 
 [[package]]
 name = "battersea-runtime"
-version = "0.4.0"
+version = "0.5.0"
 dependencies = [
  "async-trait",
  "battersea-flow",
@@ -433,7 +445,7 @@ checksum = "fc652a48c352aef3ea3aed32080501cf3ef6ed5da78602a020c991775b0aff04"
 
 [[package]]
 name = "catalogue-example"
-version = "0.4.0"
+version = "0.5.0"
 dependencies = [
  "battersea-flow",
  "serde_json",
@@ -567,7 +579,7 @@ dependencies = [
 
 [[package]]
 name = "custom-node-example"
-version = "0.4.0"
+version = "0.5.0"
 dependencies = [
  "async-trait",
  "battersea-flow",
@@ -676,6 +688,26 @@ name = "dyn-clone"
 version = "1.0.20"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d0881ea181b1df73ff77ffaaf9c7544ecc11e82fba9b5f27b262a3c73a332555"
+
+[[package]]
+name = "editor-server-example"
+version = "0.5.0"
+dependencies = [
+ "async-trait",
+ "axum",
+ "battersea-flow",
+ "battersea-nodes",
+ "battersea-pianola",
+ "battersea-runtime",
+ "clap",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "tokio",
+ "tokio-util",
+ "uuid",
+]
 
 [[package]]
 name = "email_address"
@@ -2572,6 +2604,7 @@ version = "1.26.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2ef6dac1e96601b4fb3acccccff2139741fcb757cb9a36089bf5be91cfb285ce"
 dependencies = [
+ "getrandom 0.4.3",
  "js-sys",
  "wasm-bindgen",
 ]
@@ -2965,7 +2998,7 @@ checksum = "3ad82d2a33cdc9674dc7465672f271e096168fcdbe0f799d9e6db8c5892679dc"
 
 [[package]]
 name = "xtask"
-version = "0.4.0"
+version = "0.5.0"
 dependencies = [
  "battersea-flow",
  "battersea-guard",

@@ -33,7 +33,8 @@ try {
         "--offline",
         "--no-audit",
         "--no-fund",
-        path.join(temp, pack.filename),
+        ...archives.map(entry => path.join(temp, entry.filename)),
+        "react@^18.3.1", "react-dom@^18.3.1", "@types/react@^18.3.1", "@types/react-dom@^18.3.1",
       ],
       { cwd: consumer, stdio: "inherit" },
     );

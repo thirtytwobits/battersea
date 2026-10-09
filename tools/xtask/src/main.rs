@@ -328,10 +328,13 @@ fn package(root: &Path) -> Result<()> {
             return Err(format!("{name} package licence differs from release.json").into());
         }
     }
-    for example in ["catalogue", "custom-node", "backend"] {
+    for example in ["catalogue", "custom-node", "backend", "editor-server"] {
         let consumer = unpack_root.path().join(example);
         fs::create_dir_all(consumer.join("src"))?;
-        let mut manifest = format!("[package]\nname = \"package-{example}\"\nversion = \"0.0.0\"\nedition = \"2021\"\n[dependencies]\nserde_json = \"1\"\nfutures-util = \"0.3\"\nasync-trait = \"0.1\"\ntokio = {{ version = \"1\", features = [\"macros\", \"rt\"] }}\ntokio-util = \"0.7\"\n");
+        let mut manifest = format!("[package]\nname = \"package-{example}\"\nversion = \"0.0.0\"\nedition = \"2021\"\n[dependencies]\nserde_json = \"1\"\nfutures-util = \"0.3\"\nasync-trait = \"0.1\"\ntokio = {{ version = \"1\", features = [\"macros\", \"rt-multi-thread\", \"net\", \"time\"] }}\ntokio-util = \"0.7\"\n");
+        if example == "editor-server" {
+            manifest.push_str("axum = { version = \"0.8\", features = [\"json\"] }\nclap = { version = \"4\", features = [\"derive\"] }\nserde = { version = \"1\", features = [\"derive\"] }\nreqwest = { version = \"0.12\", default-features = false, features = [\"json\", \"rustls-tls\"] }\nuuid = { version = \"1\", features = [\"v4\"] }\ntempfile = \"3\"\n");
+        }
         for name in crates.keys() {
             manifest.push_str(&format!(
                 "{name} = {{ path = {:?} }}\n",
@@ -350,11 +353,28 @@ fn package(root: &Path) -> Result<()> {
             consumer.join("src/main.rs"),
             fs::read_to_string(root.join(format!("examples/{example}/src/main.rs")))?,
         )?;
+        if example == "editor-server" {
+            fs::write(
+                consumer.join("src/runtime.rs"),
+                fs::read(root.join("examples/editor-server/src/runtime.rs"))?,
+            )?;
+            fs::create_dir_all(consumer.join("fixtures"))?;
+            for name in ["nodes.json", "example.json"] {
+                fs::write(
+                    consumer.join("fixtures").join(name),
+                    fs::read(root.join("examples/editor-server/fixtures").join(name))?,
+                )?;
+            }
+        }
         run(
             &consumer,
             "cargo",
             &[
-                "run",
+                if example == "editor-server" {
+                    "test"
+                } else {
+                    "run"
+                },
                 "--offline",
                 "--target-dir",
                 unpack_root.path().join("consumer-target").to_str().unwrap(),

@@ -48,6 +48,19 @@
         "engine/config/flow-config.yaml",
         "engine/schemas/engine-config.schema.yaml"
       ]
+    },
+    {
+      "milestone": "M5",
+      "source_commit": "fa758c0569020bdf89bb1f7c068b99217b455001",
+      "source_paths": [
+        "gui/shared/components/authoring-graph-canvas.tsx",
+        "gui/shared/components/authoring-graph",
+        "gui/apps/engine-editor/src/tabs/dataflow",
+        "gui/shared/flow-list-control.ts",
+        "gui/shared/flow-activation.ts",
+        "engine/crates/primrose-engine-core/src/pianola.rs",
+        "engine/schemas/pianola-roll.schema.yaml"
+      ]
     }
   ]
 }
