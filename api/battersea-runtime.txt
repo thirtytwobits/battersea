@@ -6,6 +6,179 @@ pub async fn battersea_runtime::dispatch::execute_registered_flow_node<H: batter
 pub async fn battersea_runtime::dispatch::execute_registered_sink<H: battersea_runtime::ExecutionHost>(core: &H, runtime: &mut <H as battersea_runtime::ExecutionHost>::State, node: &battersea_flow::types::FlowNode, definition: &battersea_flow::types::FlowNodeDefinition, input_port: &str, token_value: battersea_runtime::Token) -> core::result::Result<(), <H as battersea_runtime::ExecutionHost>::Error>
 pub async fn battersea_runtime::dispatch::materialize_registered_flow_node<H: battersea_runtime::ExecutionHost>(core: &H, runtime: &mut <H as battersea_runtime::ExecutionHost>::State, node: &battersea_flow::types::FlowNode, definition: &battersea_flow::types::FlowNodeDefinition, token: &tokio_util::sync::cancellation_token::CancellationToken) -> core::result::Result<(), <H as battersea_runtime::ExecutionHost>::Error>
 pub async fn battersea_runtime::dispatch::receive_registered_input_token<H: battersea_runtime::ExecutionHost>(core: &H, runtime: &mut <H as battersea_runtime::ExecutionHost>::State, node: &battersea_flow::types::FlowNode, definition: &battersea_flow::types::FlowNodeDefinition, input_port: &str, token_value: &battersea_runtime::Token, token: &tokio_util::sync::cancellation_token::CancellationToken) -> core::result::Result<(), <H as battersea_runtime::ExecutionHost>::Error>
+pub mod battersea_runtime::pump
+pub enum battersea_runtime::pump::PumpError
+pub battersea_runtime::pump::PumpError::Cancelled
+pub battersea_runtime::pump::PumpError::InvalidLimits
+pub battersea_runtime::pump::PumpError::PayloadTooLarge
+pub battersea_runtime::pump::PumpError::PayloadTooLarge::limit: usize
+pub battersea_runtime::pump::PumpError::ProducerPanicked
+pub battersea_runtime::pump::PumpError::ProducerStopped
+pub battersea_runtime::pump::PumpError::Serialization(alloc::string::String)
+impl core::clone::Clone for battersea_runtime::pump::PumpError
+pub fn battersea_runtime::pump::PumpError::clone(&self) -> battersea_runtime::pump::PumpError
+impl core::cmp::Eq for battersea_runtime::pump::PumpError
+impl core::cmp::PartialEq for battersea_runtime::pump::PumpError
+pub fn battersea_runtime::pump::PumpError::eq(&self, other: &battersea_runtime::pump::PumpError) -> bool
+impl core::error::Error for battersea_runtime::pump::PumpError
+impl core::fmt::Debug for battersea_runtime::pump::PumpError
+pub fn battersea_runtime::pump::PumpError::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for battersea_runtime::pump::PumpError
+pub fn battersea_runtime::pump::PumpError::fmt(&self, formatter: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for battersea_runtime::pump::PumpError
+impl core::marker::Freeze for battersea_runtime::pump::PumpError
+impl core::marker::Send for battersea_runtime::pump::PumpError
+impl core::marker::Sync for battersea_runtime::pump::PumpError
+impl core::marker::Unpin for battersea_runtime::pump::PumpError
+impl core::panic::unwind_safe::RefUnwindSafe for battersea_runtime::pump::PumpError
+impl core::panic::unwind_safe::UnwindSafe for battersea_runtime::pump::PumpError
+impl<Q, K> equivalent::Equivalent<K> for battersea_runtime::pump::PumpError where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn battersea_runtime::pump::PumpError::equivalent(&self, key: &K) -> bool
+impl<Q, K> hashbrown::Equivalent<K> for battersea_runtime::pump::PumpError where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn battersea_runtime::pump::PumpError::equivalent(&self, key: &K) -> bool
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_runtime::pump::PumpError where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_runtime::pump::PumpError where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<T, U> core::convert::Into<U> for battersea_runtime::pump::PumpError where U: core::convert::From<T>
+pub fn battersea_runtime::pump::PumpError::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_runtime::pump::PumpError where U: core::convert::Into<T>
+pub type battersea_runtime::pump::PumpError::Error = core::convert::Infallible
+pub fn battersea_runtime::pump::PumpError::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for battersea_runtime::pump::PumpError where U: core::convert::TryFrom<T>
+pub type battersea_runtime::pump::PumpError::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_runtime::pump::PumpError::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for battersea_runtime::pump::PumpError where T: core::clone::Clone
+pub type battersea_runtime::pump::PumpError::Owned = T
+pub fn battersea_runtime::pump::PumpError::clone_into(&self, target: &mut T)
+pub fn battersea_runtime::pump::PumpError::to_owned(&self) -> T
+impl<T> alloc::string::ToString for battersea_runtime::pump::PumpError where T: core::fmt::Display + ?core::marker::Sized
+pub fn battersea_runtime::pump::PumpError::to_string(&self) -> alloc::string::String
+impl<T> core::any::Any for battersea_runtime::pump::PumpError where T: 'static + ?core::marker::Sized
+pub fn battersea_runtime::pump::PumpError::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_runtime::pump::PumpError where T: ?core::marker::Sized
+pub fn battersea_runtime::pump::PumpError::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_runtime::pump::PumpError where T: ?core::marker::Sized
+pub fn battersea_runtime::pump::PumpError::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for battersea_runtime::pump::PumpError where T: core::clone::Clone
+pub unsafe fn battersea_runtime::pump::PumpError::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for battersea_runtime::pump::PumpError
+pub fn battersea_runtime::pump::PumpError::from(t: T) -> T
+impl<T> dyn_clone::DynClone for battersea_runtime::pump::PumpError where T: core::clone::Clone
+pub fn battersea_runtime::pump::PumpError::__clone_box(&self, _: dyn_clone::sealed::Private) -> *mut ()
+impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_runtime::pump::PumpError where T: ?core::marker::Sized
+pub struct battersea_runtime::pump::EventDelivery<T>
+impl<T> battersea_runtime::pump::EventDelivery<T>
+pub fn battersea_runtime::pump::EventDelivery<T>::encoded_bytes(&self) -> usize
+pub fn battersea_runtime::pump::EventDelivery<T>::value(&self) -> &T
+impl<T: core::fmt::Debug> core::fmt::Debug for battersea_runtime::pump::EventDelivery<T>
+pub fn battersea_runtime::pump::EventDelivery<T>::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl<T> core::marker::Freeze for battersea_runtime::pump::EventDelivery<T> where T: core::marker::Freeze
+impl<T> core::marker::Send for battersea_runtime::pump::EventDelivery<T> where T: core::marker::Send
+impl<T> core::marker::Sync for battersea_runtime::pump::EventDelivery<T> where T: core::marker::Sync
+impl<T> core::marker::Unpin for battersea_runtime::pump::EventDelivery<T> where T: core::marker::Unpin
+impl<T> core::panic::unwind_safe::RefUnwindSafe for battersea_runtime::pump::EventDelivery<T> where T: core::panic::unwind_safe::RefUnwindSafe
+impl<T> core::panic::unwind_safe::UnwindSafe for battersea_runtime::pump::EventDelivery<T> where T: core::panic::unwind_safe::UnwindSafe
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_runtime::pump::EventDelivery<T> where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_runtime::pump::EventDelivery<T> where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<T, U> core::convert::Into<U> for battersea_runtime::pump::EventDelivery<T> where U: core::convert::From<T>
+pub fn battersea_runtime::pump::EventDelivery<T>::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_runtime::pump::EventDelivery<T> where U: core::convert::Into<T>
+pub type battersea_runtime::pump::EventDelivery<T>::Error = core::convert::Infallible
+pub fn battersea_runtime::pump::EventDelivery<T>::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for battersea_runtime::pump::EventDelivery<T> where U: core::convert::TryFrom<T>
+pub type battersea_runtime::pump::EventDelivery<T>::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_runtime::pump::EventDelivery<T>::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> core::any::Any for battersea_runtime::pump::EventDelivery<T> where T: 'static + ?core::marker::Sized
+pub fn battersea_runtime::pump::EventDelivery<T>::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_runtime::pump::EventDelivery<T> where T: ?core::marker::Sized
+pub fn battersea_runtime::pump::EventDelivery<T>::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_runtime::pump::EventDelivery<T> where T: ?core::marker::Sized
+pub fn battersea_runtime::pump::EventDelivery<T>::borrow_mut(&mut self) -> &mut T
+impl<T> core::convert::From<T> for battersea_runtime::pump::EventDelivery<T>
+pub fn battersea_runtime::pump::EventDelivery<T>::from(t: T) -> T
+impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_runtime::pump::EventDelivery<T> where T: ?core::marker::Sized
+pub struct battersea_runtime::pump::EventPump<T>
+impl<T: serde_core::ser::Serialize + core::marker::Send + 'static> battersea_runtime::pump::EventPump<T>
+pub fn battersea_runtime::pump::EventPump<T>::spawn(source: impl futures_core::stream::Stream<Item = T> + core::marker::Send + 'static, limits: battersea_runtime::pump::PumpLimits, parent: tokio_util::sync::cancellation_token::CancellationToken) -> Self
+impl<T> battersea_runtime::pump::EventPump<T>
+pub async fn battersea_runtime::pump::EventPump<T>::next(&mut self) -> core::result::Result<core::option::Option<battersea_runtime::pump::EventDelivery<T>>, battersea_runtime::pump::PumpError>
+impl<T> core::ops::drop::Drop for battersea_runtime::pump::EventPump<T>
+pub fn battersea_runtime::pump::EventPump<T>::drop(&mut self)
+impl<T> core::marker::Freeze for battersea_runtime::pump::EventPump<T>
+impl<T> core::marker::Send for battersea_runtime::pump::EventPump<T> where T: core::marker::Send
+impl<T> core::marker::Sync for battersea_runtime::pump::EventPump<T> where T: core::marker::Send
+impl<T> core::marker::Unpin for battersea_runtime::pump::EventPump<T>
+impl<T> core::panic::unwind_safe::RefUnwindSafe for battersea_runtime::pump::EventPump<T>
+impl<T> core::panic::unwind_safe::UnwindSafe for battersea_runtime::pump::EventPump<T>
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_runtime::pump::EventPump<T> where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_runtime::pump::EventPump<T> where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<T, U> core::convert::Into<U> for battersea_runtime::pump::EventPump<T> where U: core::convert::From<T>
+pub fn battersea_runtime::pump::EventPump<T>::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_runtime::pump::EventPump<T> where U: core::convert::Into<T>
+pub type battersea_runtime::pump::EventPump<T>::Error = core::convert::Infallible
+pub fn battersea_runtime::pump::EventPump<T>::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for battersea_runtime::pump::EventPump<T> where U: core::convert::TryFrom<T>
+pub type battersea_runtime::pump::EventPump<T>::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_runtime::pump::EventPump<T>::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> core::any::Any for battersea_runtime::pump::EventPump<T> where T: 'static + ?core::marker::Sized
+pub fn battersea_runtime::pump::EventPump<T>::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_runtime::pump::EventPump<T> where T: ?core::marker::Sized
+pub fn battersea_runtime::pump::EventPump<T>::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_runtime::pump::EventPump<T> where T: ?core::marker::Sized
+pub fn battersea_runtime::pump::EventPump<T>::borrow_mut(&mut self) -> &mut T
+impl<T> core::convert::From<T> for battersea_runtime::pump::EventPump<T>
+pub fn battersea_runtime::pump::EventPump<T>::from(t: T) -> T
+impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_runtime::pump::EventPump<T> where T: ?core::marker::Sized
+pub struct battersea_runtime::pump::PumpLimits
+impl battersea_runtime::pump::PumpLimits
+pub fn battersea_runtime::pump::PumpLimits::new(items: usize, bytes: usize, max_event_bytes: usize) -> core::result::Result<Self, battersea_runtime::pump::PumpError>
+impl core::clone::Clone for battersea_runtime::pump::PumpLimits
+pub fn battersea_runtime::pump::PumpLimits::clone(&self) -> battersea_runtime::pump::PumpLimits
+impl core::cmp::Eq for battersea_runtime::pump::PumpLimits
+impl core::cmp::PartialEq for battersea_runtime::pump::PumpLimits
+pub fn battersea_runtime::pump::PumpLimits::eq(&self, other: &battersea_runtime::pump::PumpLimits) -> bool
+impl core::fmt::Debug for battersea_runtime::pump::PumpLimits
+pub fn battersea_runtime::pump::PumpLimits::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for battersea_runtime::pump::PumpLimits
+impl core::marker::StructuralPartialEq for battersea_runtime::pump::PumpLimits
+impl core::marker::Freeze for battersea_runtime::pump::PumpLimits
+impl core::marker::Send for battersea_runtime::pump::PumpLimits
+impl core::marker::Sync for battersea_runtime::pump::PumpLimits
+impl core::marker::Unpin for battersea_runtime::pump::PumpLimits
+impl core::panic::unwind_safe::RefUnwindSafe for battersea_runtime::pump::PumpLimits
+impl core::panic::unwind_safe::UnwindSafe for battersea_runtime::pump::PumpLimits
+impl<Q, K> equivalent::Equivalent<K> for battersea_runtime::pump::PumpLimits where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn battersea_runtime::pump::PumpLimits::equivalent(&self, key: &K) -> bool
+impl<Q, K> hashbrown::Equivalent<K> for battersea_runtime::pump::PumpLimits where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn battersea_runtime::pump::PumpLimits::equivalent(&self, key: &K) -> bool
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_runtime::pump::PumpLimits where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_runtime::pump::PumpLimits where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<T, U> core::convert::Into<U> for battersea_runtime::pump::PumpLimits where U: core::convert::From<T>
+pub fn battersea_runtime::pump::PumpLimits::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_runtime::pump::PumpLimits where U: core::convert::Into<T>
+pub type battersea_runtime::pump::PumpLimits::Error = core::convert::Infallible
+pub fn battersea_runtime::pump::PumpLimits::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for battersea_runtime::pump::PumpLimits where U: core::convert::TryFrom<T>
+pub type battersea_runtime::pump::PumpLimits::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_runtime::pump::PumpLimits::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for battersea_runtime::pump::PumpLimits where T: core::clone::Clone
+pub type battersea_runtime::pump::PumpLimits::Owned = T
+pub fn battersea_runtime::pump::PumpLimits::clone_into(&self, target: &mut T)
+pub fn battersea_runtime::pump::PumpLimits::to_owned(&self) -> T
+impl<T> core::any::Any for battersea_runtime::pump::PumpLimits where T: 'static + ?core::marker::Sized
+pub fn battersea_runtime::pump::PumpLimits::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_runtime::pump::PumpLimits where T: ?core::marker::Sized
+pub fn battersea_runtime::pump::PumpLimits::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_runtime::pump::PumpLimits where T: ?core::marker::Sized
+pub fn battersea_runtime::pump::PumpLimits::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for battersea_runtime::pump::PumpLimits where T: core::clone::Clone
+pub unsafe fn battersea_runtime::pump::PumpLimits::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for battersea_runtime::pump::PumpLimits
+pub fn battersea_runtime::pump::PumpLimits::from(t: T) -> T
+impl<T> dyn_clone::DynClone for battersea_runtime::pump::PumpLimits where T: core::clone::Clone
+pub fn battersea_runtime::pump::PumpLimits::__clone_box(&self, _: dyn_clone::sealed::Private) -> *mut ()
+impl<T> outref::AsOut<T> for battersea_runtime::pump::PumpLimits where T: core::marker::Copy
+pub fn battersea_runtime::pump::PumpLimits::as_out(&mut self) -> outref::Out<'_, T>
+impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_runtime::pump::PumpLimits where T: ?core::marker::Sized
 pub enum battersea_runtime::EventKind
 pub battersea_runtime::EventKind::ActionInvoke
 pub battersea_runtime::EventKind::ActivationAccepted
