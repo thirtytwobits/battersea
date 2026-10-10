@@ -6,6 +6,7 @@ pub enum MediaCapability {
     PromptPlanner,
     ImageGeneration,
     VideoGeneration,
+    AudioGeneration,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, schemars::JsonSchema, PartialEq, Eq)]
@@ -13,6 +14,7 @@ pub enum MediaCapability {
 pub enum MediaKind {
     Image,
     Video,
+    Audio,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, schemars::JsonSchema, PartialEq, Eq)]
@@ -20,6 +22,7 @@ pub enum MediaKind {
 pub enum MediaRenderType {
     Image,
     Video,
+    Audio,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, schemars::JsonSchema, PartialEq, Eq)]
@@ -375,17 +378,26 @@ pub trait MediaGenerationAdapter: Send + Sync {
             activity_reporter,
             batch_reporter,
         );
-        let submission = match deadline {
-            Some(deadline) => tokio::time::timeout_at(deadline, submit)
-                .await
-                .map_err(|_| {
-                    EngineAdapterRequestError::new(
-                        &self.backend().provider,
-                        "Media submission deadline exceeded.",
-                        crate::ErrorKind::Timeout,
-                    )
-                })??,
-            None => submit.await?,
+        let submission_work = async {
+            Ok::<_, EngineAdapterRequestError>(match deadline {
+                Some(deadline) => {
+                    tokio::time::timeout_at(deadline, submit)
+                        .await
+                        .map_err(|_| {
+                            EngineAdapterRequestError::new(
+                                &self.backend().provider,
+                                "Media submission deadline exceeded.",
+                                crate::ErrorKind::Timeout,
+                            )
+                        })??
+                }
+                None => submit.await?,
+            })
+        };
+        let submission = tokio::select! {
+            biased;
+            _ = cancellation.cancelled() => return Err(EngineAdapterRequestError::new(&self.backend().provider, "Media submission cancelled.", crate::ErrorKind::Cancelled)),
+            result = submission_work => result?,
         };
         submission.wait(cancellation, deadline).await
     }
@@ -420,8 +432,89 @@ pub trait MediaJob: Send + Sync {
     async fn wait(
         &mut self,
         cancellation: CancellationToken,
+    ) -> Result<MediaRenderResult, EngineAdapterRequestError> {
+        let policy = self.poll_policy();
+        policy.validate()?;
+        let mut retries = 0_u32;
+        loop {
+            let result = tokio::select! {
+                biased;
+                _ = cancellation.cancelled() => return Err(EngineAdapterRequestError::new("media", "Media job cancelled.", crate::ErrorKind::Cancelled)),
+                result = self.poll(cancellation.clone()) => result,
+            };
+            let delay = match result {
+                Ok(MediaJobStatus::Succeeded) => return self.retrieve(cancellation).await,
+                Ok(MediaJobStatus::Queued | MediaJobStatus::Running) => {
+                    retries = 0;
+                    policy.interval_ms
+                }
+                Ok(status) => {
+                    return Err(EngineAdapterRequestError::new(
+                        "media",
+                        format!("Media job is {status:?}."),
+                        match status {
+                            MediaJobStatus::Cancelled => crate::ErrorKind::Cancelled,
+                            MediaJobStatus::Expired => crate::ErrorKind::Expired,
+                            _ => crate::ErrorKind::Provider,
+                        },
+                    ))
+                }
+                Err(error)
+                    if !self.snapshot().status.is_terminal()
+                        && matches!(
+                            error.classification,
+                            crate::ErrorKind::Transport
+                                | crate::ErrorKind::RateLimit
+                                | crate::ErrorKind::Server
+                        )
+                        && retries < policy.max_retries =>
+                {
+                    let delay = policy
+                        .retry_delay_ms
+                        .saturating_mul(1_u64 << retries.min(63))
+                        .min(policy.max_retry_delay_ms)
+                        .max(error.retry_after_ms.unwrap_or(0));
+                    if delay > policy.max_retry_delay_ms {
+                        return Err(error);
+                    }
+                    retries += 1;
+                    delay
+                }
+                Err(error) => return Err(error),
+            };
+            tokio::select! {
+                biased;
+                _ = cancellation.cancelled() => return Err(EngineAdapterRequestError::new("media", "Media job cancelled.", crate::ErrorKind::Cancelled)),
+                _ = tokio::time::sleep(std::time::Duration::from_millis(delay)) => {}
+            }
+        }
+    }
+    /// Inspect local state without I/O.
+    fn snapshot(&self) -> MediaJobSnapshot;
+    fn poll_policy(&self) -> MediaPollPolicy;
+    /// Retrieve one provider status; never submit generation.
+    async fn poll(
+        &mut self,
+        cancellation: CancellationToken,
+    ) -> Result<MediaJobStatus, EngineAdapterRequestError>;
+    /// Retrieve outputs of a succeeded job. Repeated calls return the retained result.
+    async fn retrieve(
+        &mut self,
+        cancellation: CancellationToken,
     ) -> Result<MediaRenderResult, EngineAdapterRequestError>;
-    async fn cancel(&self) -> Result<(), EngineAdapterRequestError>;
+    async fn cancel(&mut self) -> Result<(), EngineAdapterRequestError>;
+    async fn webhook(
+        &mut self,
+        _webhook: MediaWebhook<'_>,
+        _secret: &str,
+        _now: chrono::DateTime<chrono::Utc>,
+    ) -> Result<MediaJobStatus, EngineAdapterRequestError> {
+        Err(EngineAdapterRequestError::new(
+            "media",
+            "This job does not support webhooks.",
+            crate::ErrorKind::InvalidRequest,
+        ))
+    }
 }
 impl MediaSubmission {
     /// Wait for completion. Cancellation and expiry allow up to five seconds for remote cleanup.
@@ -438,24 +531,96 @@ impl MediaSubmission {
                     _ = cancellation.cancelled() => Err(EngineAdapterRequestError::new("media", "Media job cancelled.", crate::ErrorKind::Cancelled)),
                     result = async {
                         match deadline {
+                            Some(deadline) if deadline <= tokio::time::Instant::now() => Err(EngineAdapterRequestError::new("media", "Media job deadline exceeded.", crate::ErrorKind::Timeout)),
                             Some(deadline) => tokio::time::timeout_at(deadline, job.wait(cancellation.clone())).await
                                 .map_err(|_| EngineAdapterRequestError::new("media", "Media job deadline exceeded.", crate::ErrorKind::Timeout))?,
                             None => job.wait(cancellation.clone()).await,
                         }
                     } => result,
                 };
-                if result.as_ref().is_err_and(|error| {
-                    matches!(
-                        error.classification,
-                        crate::ErrorKind::Timeout | crate::ErrorKind::Cancelled
-                    )
-                }) {
-                    // An expired generation deadline cannot also be the cancellation deadline.
-                    let _ =
+                let mut result = result.map_err(|error| {
+                    error
+                        .with_request_id(Some(job.id().to_owned()))
+                        .with_dispatch(crate::adapter::error::DispatchState::Accepted)
+                });
+                if result.is_err() && !job.snapshot().status.is_terminal() {
+                    let cleanup =
                         tokio::time::timeout(std::time::Duration::from_secs(5), job.cancel()).await;
+                    if let Err(error) = &mut result {
+                        match cleanup {
+                            Ok(Ok(())) => {}
+                            Ok(Err(cleanup)) => {
+                                error.message = format!(
+                                    "{} Remote cancellation failed: {}",
+                                    error.message, cleanup.message
+                                )
+                                .into()
+                            }
+                            Err(_) => {
+                                error.message = format!(
+                                    "{} Remote cancellation timed out; remote outcome is unknown.",
+                                    error.message
+                                )
+                                .into()
+                            }
+                        }
+                    }
                 }
                 result
             }
         }
     }
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum MediaJobStatus {
+    Queued,
+    Running,
+    Succeeded,
+    Failed,
+    Cancelled,
+    Expired,
+}
+impl MediaJobStatus {
+    pub fn is_terminal(self) -> bool {
+        !matches!(self, Self::Queued | Self::Running)
+    }
+}
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct MediaJobSnapshot {
+    pub id: String,
+    pub status: MediaJobStatus,
+    pub output_expires_at: Option<chrono::DateTime<chrono::Utc>>,
+    pub expiry_is_estimate: bool,
+    pub outputs_retrieved: bool,
+}
+#[derive(Debug, Clone, Copy)]
+pub struct MediaPollPolicy {
+    pub interval_ms: u64,
+    pub retry_delay_ms: u64,
+    pub max_retry_delay_ms: u64,
+    pub max_retries: u32,
+}
+impl MediaPollPolicy {
+    pub fn validate(self) -> Result<(), EngineAdapterRequestError> {
+        if self.interval_ms == 0
+            || self.retry_delay_ms == 0
+            || self.max_retry_delay_ms < self.retry_delay_ms
+        {
+            return Err(EngineAdapterRequestError::new(
+                "media",
+                "Polling intervals must be positive and retry bounds ordered.",
+                crate::ErrorKind::InvalidRequest,
+            ));
+        }
+        Ok(())
+    }
+}
+/// Raw signed callback. Hosts own HTTP routing and pass the unmodified request body.
+pub struct MediaWebhook<'a> {
+    pub id: &'a str,
+    pub timestamp: &'a str,
+    pub signature: &'a str,
+    pub body: &'a [u8],
 }

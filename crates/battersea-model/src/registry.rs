@@ -41,6 +41,7 @@ pub struct MediaProviderCapabilities {
     pub partial_images: bool,
     pub remote_jobs: bool,
     pub remote_cancellation: bool,
+    pub webhooks: bool,
 }
 
 #[derive(Default)]
@@ -189,6 +190,7 @@ impl ProviderRegistry {
         let kind = match backend.capability {
             MediaCapability::ImageGeneration => MediaKind::Image,
             MediaCapability::VideoGeneration => MediaKind::Video,
+            MediaCapability::AudioGeneration => MediaKind::Audio,
             MediaCapability::PromptPlanner => {
                 return Err(invalid(&backend.provider, "Unsupported media capability."))
             }
@@ -235,6 +237,7 @@ impl ProviderRegistry {
         let provider = self.media_provider(&backend.provider)?;
         let configured_kind = match backend.capability {
             MediaCapability::ImageGeneration => MediaKind::Image,
+            MediaCapability::AudioGeneration => MediaKind::Audio,
             _ => MediaKind::Video,
         };
         if request.kind != configured_kind

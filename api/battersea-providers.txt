@@ -42,6 +42,8 @@ pub fn battersea_providers::media::MediaTimingRecorder::and<P, B, E>(self, other
 pub fn battersea_providers::media::MediaTimingRecorder::or<P, B, E>(self, other: P) -> tower_http::follow_redirect::policy::or::Or<T, P> where T: tower_http::follow_redirect::policy::Policy<B, E>, P: tower_http::follow_redirect::policy::Policy<B, E>
 impl<T> tracing::instrument::Instrument for battersea_providers::media::MediaTimingRecorder
 impl<T> tracing::instrument::WithSubscriber for battersea_providers::media::MediaTimingRecorder
+impl<T> typenum::type_operators::Same for battersea_providers::media::MediaTimingRecorder
+pub type battersea_providers::media::MediaTimingRecorder::Output = T
 impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_providers::media::MediaTimingRecorder where T: ?core::marker::Sized
 impl<V, T> ppv_lite86::types::VZip<V> for battersea_providers::media::MediaTimingRecorder where V: ppv_lite86::types::MultiLane<T>
 pub fn battersea_providers::media::MediaTimingRecorder::vzip(self) -> V

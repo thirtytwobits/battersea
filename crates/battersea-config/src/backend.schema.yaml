@@ -12,7 +12,7 @@ $defs:
         type: string
       capability:
         type: string
-        enum: [image-generation, prompt-planner, video-generation]
+        enum: [image-generation, prompt-planner, video-generation, audio-generation]
       label:
         type: string
       enabled:

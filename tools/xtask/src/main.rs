@@ -484,7 +484,14 @@ fn main() -> Result<()> {
                     "--locked",
                 ],
             )?;
-            for feature in ["openai", "anthropic", "google", "runway", "mock"] {
+            for feature in [
+                "openai",
+                "anthropic",
+                "google",
+                "runway",
+                "replicate",
+                "mock",
+            ] {
                 run(
                     &root,
                     "cargo",

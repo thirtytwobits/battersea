@@ -1,12 +1,18 @@
-# v0.8.0
+# Changelog
+
+## 0.9.0 — 2026-10-10
+
+- Expose remote media snapshots, single polling operations, bounded retries, cancellation and repeatable output retrieval.
+- Add Replicate image/video/audio predictions with explicit model input mapping and signed, idempotent callbacks.
+- Move Runway onto the shared job lifecycle with strict identity/status validation and expiry-aware, bounded output downloads.
+- Preserve synchronous provider completion and application-owned asset storage.
+## 0.8.0 — 2026-10-10
 
 - Preserve ordered multimodal conversations, native continuation signatures and provider capability declarations.
 - Request native JSON output and validate completed results before delivery.
 - Retry immutable HTTP requests only after known pre-dispatch failure or rate-limit rejection; keep ambiguous generation outcomes terminal.
 - Preserve tool effects across continuation retries, bound backoff by the operation deadline, and report retry observations.
 - Decode Gemini image and audio output and retain OpenAI and Anthropic continuation blocks.
-
-# Changelog
 
 ## 0.7.1 — 2026-10-10
 

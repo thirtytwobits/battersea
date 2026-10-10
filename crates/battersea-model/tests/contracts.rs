@@ -272,7 +272,36 @@ impl MediaJob for PendingJob {
     ) -> Result<MediaRenderResult, EngineAdapterRequestError> {
         std::future::pending().await
     }
-    async fn cancel(&self) -> Result<(), EngineAdapterRequestError> {
+    fn snapshot(&self) -> MediaJobSnapshot {
+        MediaJobSnapshot {
+            id: self.id().into(),
+            status: MediaJobStatus::Queued,
+            output_expires_at: None,
+            expiry_is_estimate: false,
+            outputs_retrieved: false,
+        }
+    }
+    fn poll_policy(&self) -> MediaPollPolicy {
+        MediaPollPolicy {
+            interval_ms: 1,
+            retry_delay_ms: 1,
+            max_retry_delay_ms: 1,
+            max_retries: 0,
+        }
+    }
+    async fn poll(
+        &mut self,
+        _: CancellationToken,
+    ) -> Result<MediaJobStatus, EngineAdapterRequestError> {
+        std::future::pending().await
+    }
+    async fn retrieve(
+        &mut self,
+        _: CancellationToken,
+    ) -> Result<MediaRenderResult, EngineAdapterRequestError> {
+        unreachable!()
+    }
+    async fn cancel(&mut self) -> Result<(), EngineAdapterRequestError> {
         self.0.fetch_add(1, Ordering::SeqCst);
         Ok(())
     }

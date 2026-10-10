@@ -1,15 +1,14 @@
 use super::{
     normalize_base_url, read_bool_option, read_string_option_opt, read_u64_option_opt,
     MediaBackendConfig, MediaGenerationActivityReporter, MediaGenerationActivityUpdate,
-    MediaGenerationAdapter, MediaRenderRequest, MediaRenderResult, MediaTimingRecorder,
+    MediaGenerationAdapter, MediaRenderRequest, MediaTimingRecorder,
 };
 use crate::adapter::error::EngineAdapterRequestError;
 use crate::http_payload::BoundedResponse as _;
 use async_trait::async_trait;
-use battersea_model::media::{ControllerActivityEvent, ControllerActivityState};
+use battersea_model::media::ControllerActivityState;
 use battersea_model::media::{MediaAsset, MediaKind, MediaReference, MediaRenderType};
 use reqwest::header::{HeaderMap, HeaderName, HeaderValue, AUTHORIZATION, CONTENT_TYPE};
-use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::sync::Arc;
 use tokio_util::sync::CancellationToken;
@@ -19,6 +18,7 @@ use tokio_util::sync::CancellationToken;
 pub(crate) fn create_runway_media_generator(
     backend: MediaBackendConfig,
 ) -> Result<Arc<dyn MediaGenerationAdapter>, EngineAdapterRequestError> {
+    super::jobs::poll_policy(&backend)?;
     let timeout_ms = require_timeout_ms(&backend)?;
     for (name, value) in [
         ("timeoutMs", timeout_ms),
@@ -33,6 +33,7 @@ pub(crate) fn create_runway_media_generator(
     }
     require_u64_option(&backend, "maxPollRetryCount")?;
     let client = reqwest::Client::builder()
+        .redirect(reqwest::redirect::Policy::none())
         .timeout(std::time::Duration::from_millis(timeout_ms))
         .default_headers(build_headers(&backend)?)
         .build()
@@ -154,7 +155,7 @@ impl MediaGenerationAdapter for RunwayMediaGenerator {
             .with_status_code(submit_status));
         }
 
-        let task: RunwayTask = submit_response.bounded_json().await.map_err(|error| {
+        let raw: Value = submit_response.bounded_json().await.map_err(|error| {
             EngineAdapterRequestError::invalid_response("runway", error.to_string())
         })?;
         timing.record_phase(
@@ -164,43 +165,23 @@ impl MediaGenerationAdapter for RunwayMediaGenerator {
             submit_started_at,
             submit_started_instant,
         );
-        if let Some(reporter) = &activity_reporter {
-            reporter
-                .report_activity(MediaGenerationActivityUpdate {
-                    state: ControllerActivityState::Waiting,
-                    event: None,
-                    message: String::new(),
-                    provider_job_id: Some(task.id.clone()),
-                    error_code: None,
-                    slot_id: None,
-                    slot_index: None,
-                    progress: None,
-                    eta_ms: None,
-                    preview_asset: None,
-                    partial_index: None,
-                })
-                .await?;
-        }
-
-        if task.id.trim().is_empty() {
-            return Err(EngineAdapterRequestError::invalid_response(
-                "runway",
-                "Provider returned a blank job identity.",
-            ));
-        }
-        let id = task.id.clone();
-        Ok(super::MediaSubmission::Pending(Box::new(RunwayJob {
-            id,
-            adapter: self.clone(),
-            task: Some(task),
-            request,
+        let job = super::jobs::RemoteJob::new(
+            Arc::new(RunwayTransport {
+                adapter: self.clone(),
+                kind: request.kind,
+            }),
+            raw,
             submit_body,
-            timing: Some(timing),
             activity_reporter,
-        })))
+            request.options.count.unwrap_or(1),
+            timing,
+        )?;
+        job.announce(cancellation).await?;
+        Ok(super::MediaSubmission::Pending(Box::new(job)))
     }
 
     async fn cancel(&self, provider_job_id: &str) -> Result<(), crate::EngineAdapterRequestError> {
+        super::jobs::validate_id("runway", provider_job_id)?;
         let response = self
             .client
             .delete(format!("{}/tasks/{}", self.base_url, provider_job_id))
@@ -336,6 +317,11 @@ pub(crate) fn build_submit_body(
     }
 
     match request.kind {
+        MediaKind::Audio => Err(EngineAdapterRequestError::new(
+            "runway",
+            "Runway transport does not support audio generation.",
+            "invalid_request",
+        )),
         MediaKind::Image => {
             if backend.options.transport.as_deref() == Some("model-router") {
                 let config_id = require_string_option(backend, "configId")?;
@@ -460,11 +446,23 @@ pub(crate) fn build_submit_path(
 ) -> Result<&'static str, EngineAdapterRequestError> {
     if backend.options.transport.as_deref() == Some("model-router") {
         return match request.kind {
+            MediaKind::Audio => Err(EngineAdapterRequestError::new(
+                "runway",
+                "Unsupported audio generation.",
+                "invalid_request",
+            )),
             MediaKind::Image => Ok("generate/image"),
             MediaKind::Video => Ok("generate/video"),
         };
     }
     Ok(match request.kind {
+        MediaKind::Audio => {
+            return Err(EngineAdapterRequestError::new(
+                "runway",
+                "Unsupported audio generation.",
+                "invalid_request",
+            ))
+        }
         MediaKind::Image => "text_to_image",
         MediaKind::Video => {
             if has_reference_image(&request.references) {
@@ -564,474 +562,125 @@ fn classify_http_status(status: u16) -> &'static str {
     }
 }
 
-/// Heuristically extracts media asset URLs of the requested kind from a Runway task payload.
-fn extract_asset_urls(value: Value, kind: MediaKind) -> Vec<String> {
-    let mut urls = Vec::new();
-    extract_urls_recursive(&value, &kind, &mut urls);
-    urls
-}
-
-/// Recursively walks a JSON value collecting strings that look like image or video asset URLs for the given kind.
-fn extract_urls_recursive(value: &Value, kind: &MediaKind, urls: &mut Vec<String>) {
-    match value {
-        Value::String(inner) => {
-            let looks_like_asset = if matches!(kind, &MediaKind::Video) {
-                inner.starts_with("http") && (inner.contains(".mp4") || inner.contains("video"))
-            } else {
-                inner.starts_with("http")
-                    && (inner.contains(".png")
-                        || inner.contains(".jpg")
-                        || inner.contains(".jpeg")
-                        || inner.contains(".webp")
-                        || inner.contains("image"))
-            };
-            if looks_like_asset {
-                urls.push(inner.clone());
-            }
-        }
-        Value::Array(items) => {
-            for item in items {
-                extract_urls_recursive(item, kind, urls);
-            }
-        }
-        Value::Object(map) => {
-            for item in map.values() {
-                extract_urls_recursive(item, kind, urls);
-            }
-        }
-        _ => {}
-    }
-}
-
-/// Normalises provider task-status strings into a small terminal-or-pending state machine.
-fn normalize_task_status(value: Option<&str>) -> TaskStatus {
-    match value.unwrap_or("").trim().to_ascii_uppercase().as_str() {
-        "SUCCEEDED" | "COMPLETED" => TaskStatus::Succeeded,
-        "FAILED" | "ERROR" => TaskStatus::Failed,
-        "CANCELLED" | "CANCELED" => TaskStatus::Cancelled,
-        _ => TaskStatus::Pending,
-    }
-}
-
-fn is_retryable_poll_error(error: &EngineAdapterRequestError) -> bool {
-    matches!(
-        error.classification.as_str(),
-        "transport" | "rate_limit" | "server"
-    )
-}
-
-async fn report_transient_poll_error(
-    activity_reporter: &Option<Arc<dyn MediaGenerationActivityReporter>>,
-    provider_job_id: &str,
-    error: &EngineAdapterRequestError,
-) -> Result<(), crate::EngineAdapterRequestError> {
-    if let Some(reporter) = activity_reporter {
-        reporter
-            .report_activity(MediaGenerationActivityUpdate {
-                state: ControllerActivityState::Waiting,
-                event: Some(ControllerActivityEvent::ErrorTransient),
-                message: error.message.to_string(),
-                provider_job_id: Some(provider_job_id.to_string()),
-                error_code: Some(error.classification.to_string()),
-                slot_id: None,
-                slot_index: None,
-                progress: None,
-                eta_ms: None,
-                preview_asset: None,
-                partial_index: None,
-            })
-            .await?;
-    }
-    Ok(())
-}
-
-/// Forwards Runway's task-level `progress` reading to the engine as a
-/// per-slot provider-sourced update for every requested image.
-///
-/// Runway returns one task per submit; the same progress value applies to
-/// all assets the task yields, so we broadcast it across every slot index
-/// the request asked for. The engine's slot tracker resolves
-/// `slot_index → slot_id` against the UUIDs minted at strike start.
-///
-/// A no-op when there's no reporter, when the poll didn't include a
-/// progress reading, or when the value isn't a finite number.
-async fn broadcast_runway_progress_to_all_slots(
-    activity_reporter: &Option<Arc<dyn MediaGenerationActivityReporter>>,
-    submitted_task: &RunwayTask,
-    polled_task: &RunwayTask,
-    request: &MediaRenderRequest,
-) -> Result<(), crate::EngineAdapterRequestError> {
-    let Some(reporter) = activity_reporter else {
-        return Ok(());
-    };
-    let Some(raw) = polled_task.progress else {
-        return Ok(());
-    };
-    if !raw.is_finite() {
-        return Ok(());
-    }
-    let progress = raw.clamp(0.0, 1.0) as f32;
-    let slot_count = request.options.count.unwrap_or(1).max(1);
-    for index in 0..slot_count {
-        reporter
-            .report_activity(MediaGenerationActivityUpdate {
-                state: ControllerActivityState::Working,
-                event: None,
-                message: String::new(),
-                provider_job_id: Some(submitted_task.id.clone()),
-                error_code: None,
-                slot_id: None,
-                slot_index: Some(index),
-                progress: Some(progress),
-                eta_ms: None,
-                preview_asset: None,
-                partial_index: None,
-            })
-            .await?;
-    }
-    Ok(())
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum TaskStatus {
-    Pending,
-    Succeeded,
-    Failed,
-    Cancelled,
-}
-
-#[derive(Debug, Deserialize, Serialize)]
-struct RunwayTask {
-    id: String,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    status: Option<String>,
-    /// Runway returns this on `RUNNING` tasks: a fractional 0..1 hint of how
-    /// much of the work is done. Forwarded to the editor as provider-sourced
-    /// per-slot progress so placeholders animate against real adapter state
-    /// instead of the engine's estimated timer.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    progress: Option<f64>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    output: Option<Value>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    failure: Option<RunwayFailure>,
-}
-
-#[derive(Debug, Deserialize, Serialize)]
-struct RunwayFailure {
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    message: Option<String>,
-}
-
-struct RunwayJob {
-    id: String,
+#[derive(Clone)]
+struct RunwayTransport {
     adapter: RunwayMediaGenerator,
-    task: Option<RunwayTask>,
-    request: MediaRenderRequest,
-    submit_body: Value,
-    timing: Option<MediaTimingRecorder>,
-    activity_reporter: Option<Arc<dyn MediaGenerationActivityReporter>>,
+    kind: MediaKind,
 }
 #[async_trait]
-impl super::MediaJob for RunwayJob {
-    fn id(&self) -> &str {
-        &self.id
+impl super::jobs::JobTransport for RunwayTransport {
+    fn provider(&self) -> &str {
+        "runway"
     }
-    async fn wait(
-        &mut self,
-        cancellation: CancellationToken,
-    ) -> Result<MediaRenderResult, EngineAdapterRequestError> {
-        let task = self.task.take().ok_or_else(|| {
-            EngineAdapterRequestError::new(
-                "runway",
-                "Job completion has already been consumed.",
-                "invalid_request",
-            )
-        })?;
-        self.adapter
-            .wait_for_task(
-                task,
-                self.request.clone(),
-                self.submit_body.clone(),
-                self.timing.take().expect("job timing"),
-                cancellation,
-                self.activity_reporter.clone(),
-            )
+    fn backend(&self) -> &MediaBackendConfig {
+        &self.adapter.backend
+    }
+    fn decode(
+        &self,
+        raw: Value,
+        submission: bool,
+    ) -> Result<super::jobs::RemoteUpdate, EngineAdapterRequestError> {
+        decode_task(raw, self.kind.clone(), submission)
+    }
+    async fn poll(&self, id: &str) -> Result<super::jobs::RemoteUpdate, EngineAdapterRequestError> {
+        let response = self
+            .adapter
+            .client
+            .get(format!("{}/tasks/{}", self.adapter.base_url, id))
+            .send()
             .await
+            .map_err(|e| EngineAdapterRequestError::transport("runway", e.to_string()))?;
+        decode_task(
+            super::jobs::json_response("runway", response).await?,
+            self.kind.clone(),
+            false,
+        )
     }
-    async fn cancel(&self) -> Result<(), crate::EngineAdapterRequestError> {
-        self.adapter.cancel(&self.id).await
+    async fn cancel(&self, id: &str) -> Result<super::MediaJobStatus, EngineAdapterRequestError> {
+        self.adapter.cancel(id).await?;
+        Ok(super::MediaJobStatus::Cancelled)
     }
 }
-impl RunwayMediaGenerator {
-    async fn wait_for_task(
-        &self,
-        task: RunwayTask,
-        request: MediaRenderRequest,
-        submit_body: Value,
-        mut timing: MediaTimingRecorder,
-        cancellation: CancellationToken,
-        activity_reporter: Option<Arc<dyn MediaGenerationActivityReporter>>,
-    ) -> Result<MediaRenderResult, EngineAdapterRequestError> {
-        let poll_interval_ms = require_u64_option(&self.backend, "pollIntervalMs")?;
-        // Retry backoff falls back to the (config-provided) poll interval when
-        // its own key is absent — a value derived from configuration, not a
-        // hardcoded literal.
-        let poll_retry_delay_ms =
-            read_u64_option_opt(&self.backend.options.extra, "pollRetryDelayMs")
-                .unwrap_or(poll_interval_ms);
-        let max_poll_retry_count = require_u64_option(&self.backend, "maxPollRetryCount")?;
-        let mut consecutive_retryable_errors = 0_u64;
-        loop {
-            if cancellation.is_cancelled() {
-                return Err(EngineAdapterRequestError::new(
-                    "runway",
-                    "Media generation cancelled.",
-                    "cancelled",
-                ));
-            }
-
-            let poll_started_at = chrono::Utc::now();
-            let poll_started_instant = std::time::Instant::now();
-            let poll = self
-                .client
-                .get(format!("{}/tasks/{}", self.base_url, task.id))
-                .send();
-            let poll_response = tokio::select! {
-                _ = cancellation.cancelled() => {
-                        return Err(EngineAdapterRequestError::new("runway", "Media generation cancelled.", "cancelled"));
-                }
-                result = poll => match result {
-                    Ok(response) => response,
-                    Err(error) => {
-                        let mapped = EngineAdapterRequestError::transport("runway", error.to_string());
-                        if is_retryable_poll_error(&mapped) && consecutive_retryable_errors < max_poll_retry_count {
-                            consecutive_retryable_errors += 1;
-                            report_transient_poll_error(&activity_reporter, &task.id, &mapped).await?;
-                            let retry_started_at = chrono::Utc::now();
-                            let retry_started_instant = std::time::Instant::now();
-                            tokio::select! {
-                                _ = cancellation.cancelled() => {
-                                                        return Err(EngineAdapterRequestError::new("runway", "Media generation cancelled.", "cancelled"));
-                                }
-                                _ = tokio::time::sleep(std::time::Duration::from_millis(poll_retry_delay_ms)) => {}
-                            }
-                            timing.record_phase(
-                                "poll retry wait",
-                                "retry-wait",
-                                false,
-                                retry_started_at,
-                                retry_started_instant,
-                            );
-                            continue;
-                        }
-                        return Err(mapped);
-                    }
-                }
-            };
-
-            let poll_status = poll_response.status().as_u16();
-            if !poll_response.status().is_success() {
-                let error_body = poll_response.bounded_text().await.unwrap_or_default();
-                let mapped = EngineAdapterRequestError::new(
-                    "runway",
-                    if error_body.trim().is_empty() {
-                        format!("Runway task polling failed with HTTP {}.", poll_status)
-                    } else {
-                        error_body
-                    },
-                    classify_http_status(poll_status),
-                )
-                .with_status_code(poll_status);
-                if is_retryable_poll_error(&mapped)
-                    && consecutive_retryable_errors < max_poll_retry_count
-                {
-                    consecutive_retryable_errors += 1;
-                    report_transient_poll_error(&activity_reporter, &task.id, &mapped).await?;
-                    let retry_started_at = chrono::Utc::now();
-                    let retry_started_instant = std::time::Instant::now();
-                    tokio::select! {
-                        _ = cancellation.cancelled() => {
-                                        return Err(EngineAdapterRequestError::new("runway", "Media generation cancelled.", "cancelled"));
-                        }
-                        _ = tokio::time::sleep(std::time::Duration::from_millis(poll_retry_delay_ms)) => {}
-                    }
-                    timing.record_phase(
-                        "poll retry wait",
-                        "retry-wait",
-                        false,
-                        retry_started_at,
-                        retry_started_instant,
-                    );
-                    continue;
-                }
-                return Err(mapped);
-            }
-
-            let task_state: RunwayTask = poll_response.bounded_json().await.map_err(|error| {
-                EngineAdapterRequestError::invalid_response("runway", error.to_string())
-            })?;
-            timing.record_phase(
-                "poll task",
-                "poll",
-                false,
-                poll_started_at,
-                poll_started_instant,
-            );
-            // Forward Runway's per-task progress to the engine as a per-slot
-            // reading for every requested image. Runway returns one task per
-            // submit; the same `progress` value applies to all assets the
-            // task will yield. The engine resolves `slot_index → slot_id`
-            // against the slot UUIDs it minted at strike start.
-            broadcast_runway_progress_to_all_slots(
-                &activity_reporter,
-                &task,
-                &task_state,
-                &request,
-            )
-            .await?;
-            if matches!(
-                task_state.status.as_deref().map(str::trim),
-                Some(status) if status.eq_ignore_ascii_case("THROTTLED")
-            ) {
-                if let Some(reporter) = &activity_reporter {
-                    reporter
-                        .report_activity(MediaGenerationActivityUpdate {
-                            state: ControllerActivityState::Waiting,
-                            event: Some(ControllerActivityEvent::ErrorTransient),
-                            message: "Runway task throttled.".to_string(),
-                            provider_job_id: Some(task.id.clone()),
-                            error_code: Some("rate_limit".to_string()),
-                            slot_id: None,
-                            slot_index: None,
-                            progress: None,
-                            eta_ms: None,
-                            preview_asset: None,
-                            partial_index: None,
-                        })
-                        .await?;
-                }
-                let retry_started_at = chrono::Utc::now();
-                let retry_started_instant = std::time::Instant::now();
-                tokio::select! {
-                    _ = cancellation.cancelled() => {
-                                return Err(EngineAdapterRequestError::new("runway", "Media generation cancelled.", "cancelled"));
-                    }
-                    _ = tokio::time::sleep(std::time::Duration::from_millis(poll_retry_delay_ms)) => {}
-                }
-                timing.record_phase(
-                    "throttled retry wait",
-                    "retry-wait",
-                    false,
-                    retry_started_at,
-                    retry_started_instant,
-                );
-                continue;
-            }
-
-            match normalize_task_status(task_state.status.as_deref()) {
-                TaskStatus::Succeeded => {
-                    let kind = request.kind.clone();
-                    let provider_response = serde_json::to_value(&task_state).ok();
-                    let assets =
-                        extract_asset_urls(task_state.output.unwrap_or(Value::Null), kind.clone())
-                            .into_iter()
-                            .map(|url| MediaAsset {
-                                url,
-                                mime_type: Some(
-                                    if matches!(kind, MediaKind::Video) {
-                                        "video/mp4"
-                                    } else {
-                                        "image/png"
-                                    }
-                                    .to_string(),
-                                ),
-                                media_type: if matches!(kind, MediaKind::Video) {
-                                    MediaRenderType::Video
-                                } else {
-                                    MediaRenderType::Image
-                                },
-
-                                width: None,
-                                height: None,
-                                duration_seconds: if matches!(kind, MediaKind::Video) {
-                                    request.options.duration_seconds
-                                } else {
-                                    None
-                                },
-
-                                provider_asset_id: None,
-                            })
-                            .collect::<Vec<_>>();
-                    return Ok(MediaRenderResult {
-                        provider_job_id: Some(task.id.clone()),
-                        assets,
-                        provider_request: Some(submit_body),
-                        provider_response,
-                        timing: Some(timing.finish_client_estimate()),
-                    });
-                }
-                TaskStatus::Failed => {
-                    return Err(EngineAdapterRequestError::new(
-                        "runway",
-                        task_state
-                            .failure
-                            .and_then(|failure| failure.message)
-                            .unwrap_or_else(|| "Runway task failed.".to_string()),
-                        "request",
-                    ));
-                }
-                TaskStatus::Cancelled => {
-                    return Err(EngineAdapterRequestError::new(
-                        "runway",
-                        "Runway task was cancelled.",
-                        "cancelled",
-                    ));
-                }
-                TaskStatus::Pending => {
-                    consecutive_retryable_errors = 0;
-                    let wait_started_at = chrono::Utc::now();
-                    let wait_started_instant = std::time::Instant::now();
-                    tokio::select! {
-                        _ = cancellation.cancelled() => {
-                                        return Err(EngineAdapterRequestError::new("runway", "Media generation cancelled.", "cancelled"));
-                        }
-                        _ = tokio::time::sleep(std::time::Duration::from_millis(poll_interval_ms)) => {}
-                    }
-                    timing.record_phase(
-                        "poll wait",
-                        "poll-wait",
-                        false,
-                        wait_started_at,
-                        wait_started_instant,
-                    );
-                }
-            }
+fn decode_task(
+    raw: Value,
+    kind: MediaKind,
+    submission: bool,
+) -> Result<super::jobs::RemoteUpdate, EngineAdapterRequestError> {
+    use super::MediaJobStatus as Status;
+    let bad = |message| EngineAdapterRequestError::invalid_response("runway", message);
+    let id = raw["id"]
+        .as_str()
+        .ok_or_else(|| bad("Task has no identity."))?
+        .to_owned();
+    super::jobs::validate_id("runway", &id)?;
+    let status = match raw["status"].as_str() {
+        None if submission => Status::Queued,
+        Some("PENDING" | "THROTTLED") => Status::Queued,
+        Some("RUNNING") => Status::Running,
+        Some("SUCCEEDED") => Status::Succeeded,
+        Some("FAILED") => Status::Failed,
+        Some("CANCELED" | "CANCELLED") => Status::Cancelled,
+        _ => return Err(bad("Unknown Runway task status.")),
+    };
+    let mut assets = Vec::new();
+    if status == Status::Succeeded {
+        let outputs = raw["output"]
+            .as_array()
+            .filter(|v| !v.is_empty())
+            .ok_or_else(|| bad("Succeeded task has no output URLs."))?;
+        for output in outputs {
+            let url = output
+                .as_str()
+                .ok_or_else(|| bad("Task output must be a URL."))?;
+            reqwest::Url::parse(url).map_err(|_| bad("Invalid task output URL."))?;
+            assets.push(MediaAsset {
+                url: url.into(),
+                mime_type: None,
+                media_type: if kind == MediaKind::Video {
+                    MediaRenderType::Video
+                } else {
+                    MediaRenderType::Image
+                },
+                width: None,
+                height: None,
+                duration_seconds: None,
+                provider_asset_id: Some(id.clone()),
+            });
         }
     }
+    Ok(super::jobs::RemoteUpdate {
+        id,
+        status,
+        assets,
+        expires_at: (status == Status::Succeeded)
+            .then(|| chrono::Utc::now() + chrono::Duration::hours(24)),
+        expiry_is_estimate: true,
+        failure: raw["failure"]
+            .as_str()
+            .or_else(|| raw["failure"]["message"].as_str())
+            .map(str::to_owned),
+        progress: raw["progress"]
+            .as_f64()
+            .filter(|v| v.is_finite())
+            .map(|v| v.clamp(0.0, 1.0) as f32),
+        raw,
+    })
 }
 
 #[cfg(test)]
 mod tests {
     use super::{
-        broadcast_runway_progress_to_all_slots, build_headers, build_submit_body,
-        build_submit_path, classify_http_status, create_runway_media_generator, derive_base_url,
-        extract_asset_urls, extract_urls_recursive, has_reference_image,
-        normalize_runway_image_ratio, normalize_task_status, reference_to_runway, RunwayTask,
-        TaskStatus,
+        build_headers, build_submit_body, build_submit_path, create_runway_media_generator,
+        derive_base_url, has_reference_image, normalize_runway_image_ratio, reference_to_runway,
     };
     use crate::adapter::{EngineAuthConfig, EngineBackendOptions};
-    use crate::media::{
-        MediaBackendConfig, MediaGenerationActivityReporter, MediaGenerationActivityUpdate,
-        MediaRenderRequest,
-    };
+    use crate::media::{MediaBackendConfig, MediaRenderRequest};
     use battersea_model::media::{
         MediaBackendCapabilities, MediaCapability, MediaGenerationHints, MediaKind, MediaReference,
         MediaReferenceRole,
     };
     use serde_json::json;
     use std::collections::BTreeMap;
-    use std::sync::{Arc, Mutex};
 
     fn sample_backend() -> MediaBackendConfig {
         MediaBackendConfig {
@@ -1420,193 +1069,5 @@ mod tests {
                 .as_str(),
             "transport"
         );
-    }
-
-    #[test]
-    fn classify_http_status_extract_urls_and_normalize_task_status_cover_known_cases() {
-        assert_eq!(classify_http_status(401), "auth");
-        assert_eq!(classify_http_status(429), "rate_limit");
-        assert_eq!(classify_http_status(503), "server");
-        assert_eq!(classify_http_status(400), "request");
-
-        let nested = json!({
-            "image": "https://example.test/frame.png",
-            "ignored": "not-a-url",
-            "nested": {
-                "video": "https://example.test/clip.mp4",
-                "list": [
-                    "https://example.test/extra.webp",
-                    42,
-                    {"deep": "https://example.test/also-image.jpg"}
-                ]
-            }
-        });
-        assert_eq!(
-            extract_asset_urls(nested.clone(), MediaKind::Image),
-            vec![
-                "https://example.test/frame.png".to_string(),
-                "https://example.test/extra.webp".to_string(),
-                "https://example.test/also-image.jpg".to_string(),
-            ]
-        );
-        assert_eq!(
-            extract_asset_urls(nested, MediaKind::Video),
-            vec!["https://example.test/clip.mp4".to_string()]
-        );
-
-        let mut urls = Vec::new();
-        extract_urls_recursive(
-            &json!({"items":["https://example.test/image.png", false, "text"]}),
-            &MediaKind::Image,
-            &mut urls,
-        );
-        assert_eq!(urls, vec!["https://example.test/image.png".to_string()]);
-
-        assert_eq!(
-            normalize_task_status(Some("SUCCEEDED")),
-            TaskStatus::Succeeded
-        );
-        assert_eq!(
-            normalize_task_status(Some("completed")),
-            TaskStatus::Succeeded
-        );
-        assert_eq!(normalize_task_status(Some("FAILED")), TaskStatus::Failed);
-        assert_eq!(normalize_task_status(Some("error")), TaskStatus::Failed);
-        assert_eq!(
-            normalize_task_status(Some("cancelled")),
-            TaskStatus::Cancelled
-        );
-        assert_eq!(
-            normalize_task_status(Some("canceled")),
-            TaskStatus::Cancelled
-        );
-        assert_eq!(normalize_task_status(Some("running")), TaskStatus::Pending);
-        assert_eq!(normalize_task_status(None), TaskStatus::Pending);
-    }
-
-    /// Captures every `report_activity` call so tests can assert on the
-    /// per-slot fan-out without standing up the real channel-backed reporter.
-    #[derive(Default)]
-    struct RecordingReporter {
-        updates: Mutex<Vec<MediaGenerationActivityUpdate>>,
-    }
-
-    #[async_trait::async_trait]
-    impl MediaGenerationActivityReporter for RecordingReporter {
-        async fn report_activity(
-            &self,
-            update: MediaGenerationActivityUpdate,
-        ) -> Result<(), crate::EngineAdapterRequestError> {
-            self.updates.lock().expect("lock").push(update);
-            Ok(())
-        }
-    }
-
-    fn make_request(count: Option<u8>) -> MediaRenderRequest {
-        MediaRenderRequest {
-            kind: MediaKind::Image,
-            prompt_text: "a lighthouse".to_string(),
-            negative_prompt: None,
-            references: Vec::new(),
-            options: MediaGenerationHints {
-                count,
-                ..MediaGenerationHints::default()
-            },
-        }
-    }
-
-    fn submitted(task_id: &str) -> RunwayTask {
-        RunwayTask {
-            id: task_id.to_string(),
-            status: Some("PENDING".to_string()),
-            progress: None,
-            output: None,
-            failure: None,
-        }
-    }
-
-    fn polled(progress: Option<f64>) -> RunwayTask {
-        RunwayTask {
-            id: "task-x".to_string(),
-            status: Some("RUNNING".to_string()),
-            progress,
-            output: None,
-            failure: None,
-        }
-    }
-
-    /// Builds the (concrete, trait-object) pair tests use: the concrete
-    /// `Arc<RecordingReporter>` to read the captured updates, plus a
-    /// `Some(Arc<dyn ...>)` to pass into the broadcaster, with the same
-    /// backing buffer.
-    fn make_test_reporter() -> (
-        Arc<RecordingReporter>,
-        Option<Arc<dyn MediaGenerationActivityReporter>>,
-    ) {
-        let concrete = Arc::new(RecordingReporter::default());
-        let dyn_handle: Arc<dyn MediaGenerationActivityReporter> = concrete.clone();
-        (concrete, Some(dyn_handle))
-    }
-
-    #[tokio::test]
-    async fn runway_progress_fans_out_one_per_slot_with_clamped_value_and_job_id() {
-        let (recorder, reporter) = make_test_reporter();
-        broadcast_runway_progress_to_all_slots(
-            &reporter,
-            &submitted("task-x"),
-            &polled(Some(0.42)),
-            &make_request(Some(3)),
-        )
-        .await
-        .expect("progress admitted");
-        let updates = recorder.updates.lock().unwrap().clone();
-        assert_eq!(updates.len(), 3, "one update per requested slot");
-        for (index, update) in updates.iter().enumerate() {
-            assert_eq!(update.slot_index, Some(index as u8));
-            assert_eq!(update.provider_job_id.as_deref(), Some("task-x"));
-            assert!(
-                (update.progress.unwrap() - 0.42_f32).abs() < 1e-6,
-                "expected ~0.42, got {:?}",
-                update.progress
-            );
-        }
-    }
-
-    #[tokio::test]
-    async fn runway_progress_clamps_out_of_range_readings_and_defaults_count_to_one() {
-        let (recorder, reporter) = make_test_reporter();
-        broadcast_runway_progress_to_all_slots(
-            &reporter,
-            &submitted("task-x"),
-            &polled(Some(1.7)),
-            &make_request(None),
-        )
-        .await
-        .expect("progress admitted");
-        let updates = recorder.updates.lock().unwrap().clone();
-        assert_eq!(updates.len(), 1, "count=None defaults to one slot");
-        assert_eq!(updates[0].progress, Some(1.0));
-    }
-
-    #[tokio::test]
-    async fn runway_progress_is_a_noop_when_the_poll_carried_no_progress_or_was_non_finite() {
-        let (recorder, reporter) = make_test_reporter();
-        broadcast_runway_progress_to_all_slots(
-            &reporter,
-            &submitted("task-x"),
-            &polled(None),
-            &make_request(Some(2)),
-        )
-        .await
-        .expect("progress admitted");
-        broadcast_runway_progress_to_all_slots(
-            &reporter,
-            &submitted("task-x"),
-            &polled(Some(f64::NAN)),
-            &make_request(Some(2)),
-        )
-        .await
-        .expect("progress admitted");
-        assert!(recorder.updates.lock().unwrap().is_empty());
     }
 }

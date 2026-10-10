@@ -22,7 +22,8 @@ scans source against the application's declared prompt roots. Applications retai
 prompts, product tools, storage and asset ownership.
 
 `examples/backend` runs mock chat, a registered local tool and media generation independently.
-Media submission returns either a completed result or a remote job with wait/cancel operations.
+Media submission returns either a completed result or a remote job with inspect/poll/cancel/retrieve operations.
+[Media job contracts](contracts/media-jobs.md) cover Runway and Replicate, output expiry and signed callbacks.
 
 `@battersea/flow` carries the generated TypeScript contract, JSON Schema, shared fixtures
 and token-connection compatibility. Rust types own the contract; `cargo xtask bindings`

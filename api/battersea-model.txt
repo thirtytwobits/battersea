@@ -60,6 +60,7 @@ impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusi
 pub enum battersea_model::adapter::error::ErrorKind
 pub battersea_model::adapter::error::ErrorKind::Authentication
 pub battersea_model::adapter::error::ErrorKind::Cancelled
+pub battersea_model::adapter::error::ErrorKind::Expired
 pub battersea_model::adapter::error::ErrorKind::InvalidRequest
 pub battersea_model::adapter::error::ErrorKind::InvalidResponse
 pub battersea_model::adapter::error::ErrorKind::Mock
@@ -68,6 +69,7 @@ pub battersea_model::adapter::error::ErrorKind::Permission
 pub battersea_model::adapter::error::ErrorKind::Provider
 pub battersea_model::adapter::error::ErrorKind::RateLimit
 pub battersea_model::adapter::error::ErrorKind::Request
+pub battersea_model::adapter::error::ErrorKind::Retrieval
 pub battersea_model::adapter::error::ErrorKind::Server
 pub battersea_model::adapter::error::ErrorKind::Timeout
 pub battersea_model::adapter::error::ErrorKind::Transport
@@ -2830,6 +2832,7 @@ impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusi
 pub enum battersea_model::error::ErrorKind
 pub battersea_model::error::ErrorKind::Authentication
 pub battersea_model::error::ErrorKind::Cancelled
+pub battersea_model::error::ErrorKind::Expired
 pub battersea_model::error::ErrorKind::InvalidRequest
 pub battersea_model::error::ErrorKind::InvalidResponse
 pub battersea_model::error::ErrorKind::Mock
@@ -2838,6 +2841,7 @@ pub battersea_model::error::ErrorKind::Permission
 pub battersea_model::error::ErrorKind::Provider
 pub battersea_model::error::ErrorKind::RateLimit
 pub battersea_model::error::ErrorKind::Request
+pub battersea_model::error::ErrorKind::Retrieval
 pub battersea_model::error::ErrorKind::Server
 pub battersea_model::error::ErrorKind::Timeout
 pub battersea_model::error::ErrorKind::Transport
@@ -3125,6 +3129,7 @@ pub fn battersea_model::media::ControllerActivityState::as_out(&mut self) -> out
 impl<T> serde_core::de::DeserializeOwned for battersea_model::media::ControllerActivityState where T: for<'de> serde_core::de::Deserialize<'de>
 impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_model::media::ControllerActivityState where T: ?core::marker::Sized
 pub enum battersea_model::media::MediaCapability
+pub battersea_model::media::MediaCapability::AudioGeneration
 pub battersea_model::media::MediaCapability::ImageGeneration
 pub battersea_model::media::MediaCapability::PromptPlanner
 pub battersea_model::media::MediaCapability::VideoGeneration
@@ -3179,7 +3184,66 @@ impl<T> dyn_clone::DynClone for battersea_model::media::MediaCapability where T:
 pub fn battersea_model::media::MediaCapability::__clone_box(&self, _: dyn_clone::sealed::Private) -> *mut ()
 impl<T> serde_core::de::DeserializeOwned for battersea_model::media::MediaCapability where T: for<'de> serde_core::de::Deserialize<'de>
 impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_model::media::MediaCapability where T: ?core::marker::Sized
+pub enum battersea_model::media::MediaJobStatus
+pub battersea_model::media::MediaJobStatus::Cancelled
+pub battersea_model::media::MediaJobStatus::Expired
+pub battersea_model::media::MediaJobStatus::Failed
+pub battersea_model::media::MediaJobStatus::Queued
+pub battersea_model::media::MediaJobStatus::Running
+pub battersea_model::media::MediaJobStatus::Succeeded
+impl battersea_model::media::MediaJobStatus
+pub fn battersea_model::media::MediaJobStatus::is_terminal(self) -> bool
+impl core::clone::Clone for battersea_model::media::MediaJobStatus
+pub fn battersea_model::media::MediaJobStatus::clone(&self) -> battersea_model::media::MediaJobStatus
+impl core::cmp::Eq for battersea_model::media::MediaJobStatus
+impl core::cmp::PartialEq for battersea_model::media::MediaJobStatus
+pub fn battersea_model::media::MediaJobStatus::eq(&self, other: &battersea_model::media::MediaJobStatus) -> bool
+impl core::fmt::Debug for battersea_model::media::MediaJobStatus
+pub fn battersea_model::media::MediaJobStatus::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for battersea_model::media::MediaJobStatus
+impl core::marker::StructuralPartialEq for battersea_model::media::MediaJobStatus
+impl serde_core::ser::Serialize for battersea_model::media::MediaJobStatus
+pub fn battersea_model::media::MediaJobStatus::serialize<__S>(&self, __serializer: __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for battersea_model::media::MediaJobStatus
+pub fn battersea_model::media::MediaJobStatus::deserialize<__D>(__deserializer: __D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for battersea_model::media::MediaJobStatus
+impl core::marker::Send for battersea_model::media::MediaJobStatus
+impl core::marker::Sync for battersea_model::media::MediaJobStatus
+impl core::marker::Unpin for battersea_model::media::MediaJobStatus
+impl core::panic::unwind_safe::RefUnwindSafe for battersea_model::media::MediaJobStatus
+impl core::panic::unwind_safe::UnwindSafe for battersea_model::media::MediaJobStatus
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_model::media::MediaJobStatus where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_model::media::MediaJobStatus where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<T, U> core::convert::Into<U> for battersea_model::media::MediaJobStatus where U: core::convert::From<T>
+pub fn battersea_model::media::MediaJobStatus::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_model::media::MediaJobStatus where U: core::convert::Into<T>
+pub type battersea_model::media::MediaJobStatus::Error = core::convert::Infallible
+pub fn battersea_model::media::MediaJobStatus::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for battersea_model::media::MediaJobStatus where U: core::convert::TryFrom<T>
+pub type battersea_model::media::MediaJobStatus::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_model::media::MediaJobStatus::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for battersea_model::media::MediaJobStatus where T: core::clone::Clone
+pub type battersea_model::media::MediaJobStatus::Owned = T
+pub fn battersea_model::media::MediaJobStatus::clone_into(&self, target: &mut T)
+pub fn battersea_model::media::MediaJobStatus::to_owned(&self) -> T
+impl<T> core::any::Any for battersea_model::media::MediaJobStatus where T: 'static + ?core::marker::Sized
+pub fn battersea_model::media::MediaJobStatus::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_model::media::MediaJobStatus where T: ?core::marker::Sized
+pub fn battersea_model::media::MediaJobStatus::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_model::media::MediaJobStatus where T: ?core::marker::Sized
+pub fn battersea_model::media::MediaJobStatus::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for battersea_model::media::MediaJobStatus where T: core::clone::Clone
+pub unsafe fn battersea_model::media::MediaJobStatus::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for battersea_model::media::MediaJobStatus
+pub fn battersea_model::media::MediaJobStatus::from(t: T) -> T
+impl<T> dyn_clone::DynClone for battersea_model::media::MediaJobStatus where T: core::clone::Clone
+pub fn battersea_model::media::MediaJobStatus::__clone_box(&self, _: dyn_clone::sealed::Private) -> *mut ()
+impl<T> outref::AsOut<T> for battersea_model::media::MediaJobStatus where T: core::marker::Copy
+pub fn battersea_model::media::MediaJobStatus::as_out(&mut self) -> outref::Out<'_, T>
+impl<T> serde_core::de::DeserializeOwned for battersea_model::media::MediaJobStatus where T: for<'de> serde_core::de::Deserialize<'de>
+impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_model::media::MediaJobStatus where T: ?core::marker::Sized
 pub enum battersea_model::media::MediaKind
+pub battersea_model::media::MediaKind::Audio
 pub battersea_model::media::MediaKind::Image
 pub battersea_model::media::MediaKind::Video
 impl core::clone::Clone for battersea_model::media::MediaKind
@@ -3400,6 +3464,7 @@ pub fn battersea_model::media::MediaReferenceRole::__clone_box(&self, _: dyn_clo
 impl<T> serde_core::de::DeserializeOwned for battersea_model::media::MediaReferenceRole where T: for<'de> serde_core::de::Deserialize<'de>
 impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_model::media::MediaReferenceRole where T: ?core::marker::Sized
 pub enum battersea_model::media::MediaRenderType
+pub battersea_model::media::MediaRenderType::Audio
 pub battersea_model::media::MediaRenderType::Image
 pub battersea_model::media::MediaRenderType::Video
 impl core::clone::Clone for battersea_model::media::MediaRenderType
@@ -3822,6 +3887,105 @@ impl<T> dyn_clone::DynClone for battersea_model::media::MediaGenerationHints whe
 pub fn battersea_model::media::MediaGenerationHints::__clone_box(&self, _: dyn_clone::sealed::Private) -> *mut ()
 impl<T> serde_core::de::DeserializeOwned for battersea_model::media::MediaGenerationHints where T: for<'de> serde_core::de::Deserialize<'de>
 impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_model::media::MediaGenerationHints where T: ?core::marker::Sized
+pub struct battersea_model::media::MediaJobSnapshot
+pub battersea_model::media::MediaJobSnapshot::expiry_is_estimate: bool
+pub battersea_model::media::MediaJobSnapshot::id: alloc::string::String
+pub battersea_model::media::MediaJobSnapshot::output_expires_at: core::option::Option<chrono::datetime::DateTime<chrono::offset::utc::Utc>>
+pub battersea_model::media::MediaJobSnapshot::outputs_retrieved: bool
+pub battersea_model::media::MediaJobSnapshot::status: battersea_model::media::MediaJobStatus
+impl core::clone::Clone for battersea_model::media::MediaJobSnapshot
+pub fn battersea_model::media::MediaJobSnapshot::clone(&self) -> battersea_model::media::MediaJobSnapshot
+impl core::cmp::Eq for battersea_model::media::MediaJobSnapshot
+impl core::cmp::PartialEq for battersea_model::media::MediaJobSnapshot
+pub fn battersea_model::media::MediaJobSnapshot::eq(&self, other: &battersea_model::media::MediaJobSnapshot) -> bool
+impl core::fmt::Debug for battersea_model::media::MediaJobSnapshot
+pub fn battersea_model::media::MediaJobSnapshot::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for battersea_model::media::MediaJobSnapshot
+impl serde_core::ser::Serialize for battersea_model::media::MediaJobSnapshot
+pub fn battersea_model::media::MediaJobSnapshot::serialize<__S>(&self, __serializer: __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for battersea_model::media::MediaJobSnapshot
+pub fn battersea_model::media::MediaJobSnapshot::deserialize<__D>(__deserializer: __D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for battersea_model::media::MediaJobSnapshot
+impl core::marker::Send for battersea_model::media::MediaJobSnapshot
+impl core::marker::Sync for battersea_model::media::MediaJobSnapshot
+impl core::marker::Unpin for battersea_model::media::MediaJobSnapshot
+impl core::panic::unwind_safe::RefUnwindSafe for battersea_model::media::MediaJobSnapshot
+impl core::panic::unwind_safe::UnwindSafe for battersea_model::media::MediaJobSnapshot
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_model::media::MediaJobSnapshot where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_model::media::MediaJobSnapshot where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<T, U> core::convert::Into<U> for battersea_model::media::MediaJobSnapshot where U: core::convert::From<T>
+pub fn battersea_model::media::MediaJobSnapshot::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_model::media::MediaJobSnapshot where U: core::convert::Into<T>
+pub type battersea_model::media::MediaJobSnapshot::Error = core::convert::Infallible
+pub fn battersea_model::media::MediaJobSnapshot::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for battersea_model::media::MediaJobSnapshot where U: core::convert::TryFrom<T>
+pub type battersea_model::media::MediaJobSnapshot::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_model::media::MediaJobSnapshot::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for battersea_model::media::MediaJobSnapshot where T: core::clone::Clone
+pub type battersea_model::media::MediaJobSnapshot::Owned = T
+pub fn battersea_model::media::MediaJobSnapshot::clone_into(&self, target: &mut T)
+pub fn battersea_model::media::MediaJobSnapshot::to_owned(&self) -> T
+impl<T> core::any::Any for battersea_model::media::MediaJobSnapshot where T: 'static + ?core::marker::Sized
+pub fn battersea_model::media::MediaJobSnapshot::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_model::media::MediaJobSnapshot where T: ?core::marker::Sized
+pub fn battersea_model::media::MediaJobSnapshot::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_model::media::MediaJobSnapshot where T: ?core::marker::Sized
+pub fn battersea_model::media::MediaJobSnapshot::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for battersea_model::media::MediaJobSnapshot where T: core::clone::Clone
+pub unsafe fn battersea_model::media::MediaJobSnapshot::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for battersea_model::media::MediaJobSnapshot
+pub fn battersea_model::media::MediaJobSnapshot::from(t: T) -> T
+impl<T> dyn_clone::DynClone for battersea_model::media::MediaJobSnapshot where T: core::clone::Clone
+pub fn battersea_model::media::MediaJobSnapshot::__clone_box(&self, _: dyn_clone::sealed::Private) -> *mut ()
+impl<T> serde_core::de::DeserializeOwned for battersea_model::media::MediaJobSnapshot where T: for<'de> serde_core::de::Deserialize<'de>
+impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_model::media::MediaJobSnapshot where T: ?core::marker::Sized
+pub struct battersea_model::media::MediaPollPolicy
+pub battersea_model::media::MediaPollPolicy::interval_ms: u64
+pub battersea_model::media::MediaPollPolicy::max_retries: u32
+pub battersea_model::media::MediaPollPolicy::max_retry_delay_ms: u64
+pub battersea_model::media::MediaPollPolicy::retry_delay_ms: u64
+impl battersea_model::media::MediaPollPolicy
+pub fn battersea_model::media::MediaPollPolicy::validate(self) -> core::result::Result<(), battersea_model::EngineAdapterRequestError>
+impl core::clone::Clone for battersea_model::media::MediaPollPolicy
+pub fn battersea_model::media::MediaPollPolicy::clone(&self) -> battersea_model::media::MediaPollPolicy
+impl core::fmt::Debug for battersea_model::media::MediaPollPolicy
+pub fn battersea_model::media::MediaPollPolicy::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for battersea_model::media::MediaPollPolicy
+impl core::marker::Freeze for battersea_model::media::MediaPollPolicy
+impl core::marker::Send for battersea_model::media::MediaPollPolicy
+impl core::marker::Sync for battersea_model::media::MediaPollPolicy
+impl core::marker::Unpin for battersea_model::media::MediaPollPolicy
+impl core::panic::unwind_safe::RefUnwindSafe for battersea_model::media::MediaPollPolicy
+impl core::panic::unwind_safe::UnwindSafe for battersea_model::media::MediaPollPolicy
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_model::media::MediaPollPolicy where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_model::media::MediaPollPolicy where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<T, U> core::convert::Into<U> for battersea_model::media::MediaPollPolicy where U: core::convert::From<T>
+pub fn battersea_model::media::MediaPollPolicy::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_model::media::MediaPollPolicy where U: core::convert::Into<T>
+pub type battersea_model::media::MediaPollPolicy::Error = core::convert::Infallible
+pub fn battersea_model::media::MediaPollPolicy::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for battersea_model::media::MediaPollPolicy where U: core::convert::TryFrom<T>
+pub type battersea_model::media::MediaPollPolicy::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_model::media::MediaPollPolicy::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for battersea_model::media::MediaPollPolicy where T: core::clone::Clone
+pub type battersea_model::media::MediaPollPolicy::Owned = T
+pub fn battersea_model::media::MediaPollPolicy::clone_into(&self, target: &mut T)
+pub fn battersea_model::media::MediaPollPolicy::to_owned(&self) -> T
+impl<T> core::any::Any for battersea_model::media::MediaPollPolicy where T: 'static + ?core::marker::Sized
+pub fn battersea_model::media::MediaPollPolicy::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_model::media::MediaPollPolicy where T: ?core::marker::Sized
+pub fn battersea_model::media::MediaPollPolicy::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_model::media::MediaPollPolicy where T: ?core::marker::Sized
+pub fn battersea_model::media::MediaPollPolicy::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for battersea_model::media::MediaPollPolicy where T: core::clone::Clone
+pub unsafe fn battersea_model::media::MediaPollPolicy::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for battersea_model::media::MediaPollPolicy
+pub fn battersea_model::media::MediaPollPolicy::from(t: T) -> T
+impl<T> dyn_clone::DynClone for battersea_model::media::MediaPollPolicy where T: core::clone::Clone
+pub fn battersea_model::media::MediaPollPolicy::__clone_box(&self, _: dyn_clone::sealed::Private) -> *mut ()
+impl<T> outref::AsOut<T> for battersea_model::media::MediaPollPolicy where T: core::marker::Copy
+pub fn battersea_model::media::MediaPollPolicy::as_out(&mut self) -> outref::Out<'_, T>
+impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_model::media::MediaPollPolicy where T: ?core::marker::Sized
 pub struct battersea_model::media::MediaProvenanceTiming
 pub battersea_model::media::MediaProvenanceTiming::completed_at: alloc::string::String
 pub battersea_model::media::MediaProvenanceTiming::confidence: battersea_model::media::MediaProvenanceTimingConfidence
@@ -4092,6 +4256,36 @@ impl<T> dyn_clone::DynClone for battersea_model::media::MediaRenderResult where 
 pub fn battersea_model::media::MediaRenderResult::__clone_box(&self, _: dyn_clone::sealed::Private) -> *mut ()
 impl<T> serde_core::de::DeserializeOwned for battersea_model::media::MediaRenderResult where T: for<'de> serde_core::de::Deserialize<'de>
 impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_model::media::MediaRenderResult where T: ?core::marker::Sized
+pub struct battersea_model::media::MediaWebhook<'a>
+pub battersea_model::media::MediaWebhook::body: &'a [u8]
+pub battersea_model::media::MediaWebhook::id: &'a str
+pub battersea_model::media::MediaWebhook::signature: &'a str
+pub battersea_model::media::MediaWebhook::timestamp: &'a str
+impl<'a> core::marker::Freeze for battersea_model::media::MediaWebhook<'a>
+impl<'a> core::marker::Send for battersea_model::media::MediaWebhook<'a>
+impl<'a> core::marker::Sync for battersea_model::media::MediaWebhook<'a>
+impl<'a> core::marker::Unpin for battersea_model::media::MediaWebhook<'a>
+impl<'a> core::panic::unwind_safe::RefUnwindSafe for battersea_model::media::MediaWebhook<'a>
+impl<'a> core::panic::unwind_safe::UnwindSafe for battersea_model::media::MediaWebhook<'a>
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_model::media::MediaWebhook<'a> where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_model::media::MediaWebhook<'a> where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<T, U> core::convert::Into<U> for battersea_model::media::MediaWebhook<'a> where U: core::convert::From<T>
+pub fn battersea_model::media::MediaWebhook<'a>::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_model::media::MediaWebhook<'a> where U: core::convert::Into<T>
+pub type battersea_model::media::MediaWebhook<'a>::Error = core::convert::Infallible
+pub fn battersea_model::media::MediaWebhook<'a>::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for battersea_model::media::MediaWebhook<'a> where U: core::convert::TryFrom<T>
+pub type battersea_model::media::MediaWebhook<'a>::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_model::media::MediaWebhook<'a>::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> core::any::Any for battersea_model::media::MediaWebhook<'a> where T: 'static + ?core::marker::Sized
+pub fn battersea_model::media::MediaWebhook<'a>::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_model::media::MediaWebhook<'a> where T: ?core::marker::Sized
+pub fn battersea_model::media::MediaWebhook<'a>::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_model::media::MediaWebhook<'a> where T: ?core::marker::Sized
+pub fn battersea_model::media::MediaWebhook<'a>::borrow_mut(&mut self) -> &mut T
+impl<T> core::convert::From<T> for battersea_model::media::MediaWebhook<'a>
+pub fn battersea_model::media::MediaWebhook<'a>::from(t: T) -> T
+impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_model::media::MediaWebhook<'a> where T: ?core::marker::Sized
 pub struct battersea_model::media::PreparedMediaRequest
 pub battersea_model::media::PreparedMediaRequest::body: serde_json::value::Value
 pub battersea_model::media::PreparedMediaRequest::path: alloc::string::String
@@ -4152,9 +4346,14 @@ pub fn battersea_model::media::MediaGenerationAdapter::submit<'life0, 'async_tra
 pub trait battersea_model::media::MediaGenerationBatchReporter: core::marker::Send + core::marker::Sync
 pub fn battersea_model::media::MediaGenerationBatchReporter::report_batch<'life0, 'async_trait>(&'life0 self, result: battersea_model::media::MediaRenderResult) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<(), battersea_model::EngineAdapterRequestError>> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait
 pub trait battersea_model::media::MediaJob: core::marker::Send + core::marker::Sync
-pub fn battersea_model::media::MediaJob::cancel<'life0, 'async_trait>(&'life0 self) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<(), battersea_model::EngineAdapterRequestError>> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait
+pub fn battersea_model::media::MediaJob::cancel<'life0, 'async_trait>(&'life0 mut self) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<(), battersea_model::EngineAdapterRequestError>> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait
 pub fn battersea_model::media::MediaJob::id(&self) -> &str
+pub fn battersea_model::media::MediaJob::poll<'life0, 'async_trait>(&'life0 mut self, cancellation: tokio_util::sync::cancellation_token::CancellationToken) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<battersea_model::media::MediaJobStatus, battersea_model::EngineAdapterRequestError>> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait
+pub fn battersea_model::media::MediaJob::poll_policy(&self) -> battersea_model::media::MediaPollPolicy
+pub fn battersea_model::media::MediaJob::retrieve<'life0, 'async_trait>(&'life0 mut self, cancellation: tokio_util::sync::cancellation_token::CancellationToken) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<battersea_model::media::MediaRenderResult, battersea_model::EngineAdapterRequestError>> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait
+pub fn battersea_model::media::MediaJob::snapshot(&self) -> battersea_model::media::MediaJobSnapshot
 pub fn battersea_model::media::MediaJob::wait<'life0, 'async_trait>(&'life0 mut self, cancellation: tokio_util::sync::cancellation_token::CancellationToken) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<battersea_model::media::MediaRenderResult, battersea_model::EngineAdapterRequestError>> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait
+pub fn battersea_model::media::MediaJob::webhook<'life0, 'life1, 'life2, 'async_trait>(&'life0 mut self, _webhook: battersea_model::media::MediaWebhook<'life1>, _secret: &'life2 str, _now: chrono::datetime::DateTime<chrono::offset::utc::Utc>) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<battersea_model::media::MediaJobStatus, battersea_model::EngineAdapterRequestError>> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait, 'life1: 'async_trait, 'life2: 'async_trait
 pub mod battersea_model::messages
 pub enum battersea_model::messages::ContentBlock
 pub battersea_model::messages::ContentBlock::Audio
@@ -4480,6 +4679,7 @@ pub battersea_model::registry::MediaProviderCapabilities::partial_images: bool
 pub battersea_model::registry::MediaProviderCapabilities::references: bool
 pub battersea_model::registry::MediaProviderCapabilities::remote_cancellation: bool
 pub battersea_model::registry::MediaProviderCapabilities::remote_jobs: bool
+pub battersea_model::registry::MediaProviderCapabilities::webhooks: bool
 impl core::clone::Clone for battersea_model::MediaProviderCapabilities
 pub fn battersea_model::MediaProviderCapabilities::clone(&self) -> battersea_model::MediaProviderCapabilities
 impl core::cmp::Eq for battersea_model::MediaProviderCapabilities
@@ -4952,6 +5152,7 @@ impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusi
 pub enum battersea_model::ErrorKind
 pub battersea_model::ErrorKind::Authentication
 pub battersea_model::ErrorKind::Cancelled
+pub battersea_model::ErrorKind::Expired
 pub battersea_model::ErrorKind::InvalidRequest
 pub battersea_model::ErrorKind::InvalidResponse
 pub battersea_model::ErrorKind::Mock
@@ -4960,6 +5161,7 @@ pub battersea_model::ErrorKind::Permission
 pub battersea_model::ErrorKind::Provider
 pub battersea_model::ErrorKind::RateLimit
 pub battersea_model::ErrorKind::Request
+pub battersea_model::ErrorKind::Retrieval
 pub battersea_model::ErrorKind::Server
 pub battersea_model::ErrorKind::Timeout
 pub battersea_model::ErrorKind::Transport
@@ -6441,6 +6643,7 @@ pub battersea_model::MediaProviderCapabilities::partial_images: bool
 pub battersea_model::MediaProviderCapabilities::references: bool
 pub battersea_model::MediaProviderCapabilities::remote_cancellation: bool
 pub battersea_model::MediaProviderCapabilities::remote_jobs: bool
+pub battersea_model::MediaProviderCapabilities::webhooks: bool
 impl core::clone::Clone for battersea_model::MediaProviderCapabilities
 pub fn battersea_model::MediaProviderCapabilities::clone(&self) -> battersea_model::MediaProviderCapabilities
 impl core::cmp::Eq for battersea_model::MediaProviderCapabilities

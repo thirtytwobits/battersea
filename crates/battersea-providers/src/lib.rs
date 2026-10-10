@@ -5,6 +5,7 @@ mod content;
     feature = "openai",
     feature = "anthropic",
     feature = "google",
+    feature = "replicate",
     feature = "runway"
 ))]
 mod http_payload;

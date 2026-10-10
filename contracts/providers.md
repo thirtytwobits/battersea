@@ -47,4 +47,4 @@ before publishing a structured result. Refusal, incomplete output and invalid JS
 text cannot contaminate the final result. Buffers obey the shared payload bound. Prompted JSON
 requires an application-authored prompt and is not a fallback for unsupported native output.
 
-Expanded media job lifecycle belongs to M6.4. Document format upgrades require explicit commands.
+[Media jobs](media-jobs.md) cover asynchronous generation. Document format upgrades require explicit commands.

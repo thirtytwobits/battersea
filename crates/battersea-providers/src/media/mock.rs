@@ -265,6 +265,7 @@ pub(crate) fn build_mock_request_envelope(
         "kind": match request.kind {
             MediaKind::Image => "image",
             MediaKind::Video => "video",
+            MediaKind::Audio => "audio",
         },
         "prompt_text": request.prompt_text,
         "negative_prompt": request.negative_prompt,

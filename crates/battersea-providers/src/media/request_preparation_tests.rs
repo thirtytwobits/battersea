@@ -64,27 +64,35 @@ async fn runway_pending_job_keeps_remote_identity_through_completion_and_cancell
     };
     use std::sync::atomic::{AtomicUsize, Ordering};
     const JOB_ID: &str = "accepted-fixture-job";
-    const ASSET_URL: &str = "https://example.invalid/fixture.png";
-    let cancellations = Arc::new(AtomicUsize::new(0));
-    let router = Router::new()
-        .route(
-            "/text_to_image",
-            post(|| async { Json(json!({"id": JOB_ID})) }),
-        )
-        .route(
-            &format!("/tasks/{JOB_ID}"),
-            get(|| async {
-                Json(json!({"id": JOB_ID, "status": "SUCCEEDED", "output": [ASSET_URL]}))
-            })
-            .delete(|State(count): State<Arc<AtomicUsize>>| async move {
-                count.fetch_add(1, Ordering::SeqCst);
-                axum::http::StatusCode::NO_CONTENT
-            }),
-        )
-        .with_state(cancellations.clone());
     let listener = tokio::net::TcpListener::bind(crate::test_endpoints::TEST_BIND_ADDRESS)
         .await
         .unwrap();
+    let asset_url = format!("http://{}/asset", listener.local_addr().unwrap());
+    let cancellations = Arc::new(AtomicUsize::new(0));
+    let router =
+        Router::new()
+            .route(
+                "/text_to_image",
+                post(|| async { Json(json!({"id": JOB_ID})) }),
+            )
+            .route(
+                &format!("/tasks/{JOB_ID}"),
+                get(move || {
+                    let asset_url = asset_url.clone();
+                    async move {
+                        Json(json!({"id": JOB_ID, "status": "SUCCEEDED", "output": [asset_url]}))
+                    }
+                })
+                .delete(|State(count): State<Arc<AtomicUsize>>| async move {
+                    count.fetch_add(1, Ordering::SeqCst);
+                    axum::http::StatusCode::NO_CONTENT
+                }),
+            )
+            .route(
+                "/asset",
+                get(|| async { ([("content-type", "image/png")], "retained fixture bytes") }),
+            )
+            .with_state(cancellations.clone());
     let mut config = backend("runway");
     config.endpoint = format!("http://{}", listener.local_addr().unwrap());
     config.capabilities.supports_partial_image_streaming = false;
@@ -141,7 +149,14 @@ async fn runway_pending_job_keeps_remote_identity_through_completion_and_cancell
             );
         } else {
             let result = result.unwrap();
-            assert!(result.assets.iter().any(|asset| asset.url == ASSET_URL));
+            use base64::Engine as _;
+            assert!(result
+                .assets
+                .iter()
+                .any(|asset| base64::engine::general_purpose::STANDARD
+                    .decode(asset.url.split_once(',').unwrap().1)
+                    .unwrap()
+                    == b"retained fixture bytes"));
             assert_eq!(cancellations.load(Ordering::SeqCst), 0);
         }
     }

@@ -4,6 +4,7 @@ use crate::adapter::*;
     feature = "openai",
     feature = "google",
     feature = "runway",
+    feature = "replicate",
     feature = "mock"
 ))]
 use crate::media::*;
@@ -19,6 +20,7 @@ use battersea_model::ProviderRegistry;
     feature = "openai",
     feature = "google",
     feature = "runway",
+    feature = "replicate",
     feature = "mock"
 ))]
 use battersea_model::{MediaProvider, MediaProviderCapabilities};
@@ -27,6 +29,7 @@ use battersea_model::{MediaProvider, MediaProviderCapabilities};
     feature = "anthropic",
     feature = "google",
     feature = "runway",
+    feature = "replicate",
     feature = "mock"
 ))]
 use std::sync::Arc;
@@ -48,6 +51,7 @@ pub fn register_builtin_providers(
         feature = "anthropic",
         feature = "google",
         feature = "runway",
+        feature = "replicate",
         feature = "mock"
     )))]
     let _ = registry;
@@ -56,7 +60,8 @@ pub fn register_builtin_providers(
         feature = "anthropic",
         feature = "google",
         feature = "mock",
-        feature = "runway"
+        feature = "runway",
+        feature = "replicate"
     ))]
     fn parameters(values: &str) -> Vec<String> {
         values.split_whitespace().map(str::to_owned).collect()
@@ -92,6 +97,7 @@ pub fn register_builtin_providers(
                 partial_images: true,
                 remote_jobs: false,
                 remote_cancellation: false,
+                webhooks: false,
             },
             accepts_aspect_ratio: |_, value| {
                 crate::media::openai::parse_size(Some(value)).is_some()
@@ -124,6 +130,7 @@ pub fn register_builtin_providers(
                 partial_images: true,
                 remote_jobs: false,
                 remote_cancellation: false,
+                webhooks: false,
             },
             accepts_aspect_ratio: |_, value| {
                 crate::media::google::normalize_aspect_ratio(Some(value)).is_some()
@@ -154,9 +161,30 @@ pub fn register_builtin_providers(
                 partial_images: false,
                 remote_jobs: true,
                 remote_cancellation: true,
+                webhooks: false,
             },
             accepts_aspect_ratio: |_, value| crate::media::runway::accepts_image_ratio(value),
             accepts_size: |_, _| false,
+        },
+    )?;
+    #[cfg(feature = "replicate")]
+    registry.register_media(
+        "replicate",
+        MediaProvider {
+            parameters: parameters("backend count size aspect_ratio seed duration_seconds"),
+            factory: Arc::new(crate::media::replicate::create),
+            prepare: Arc::new(crate::media::replicate::prepare),
+            capabilities: MediaProviderCapabilities {
+                kinds: vec![MediaKind::Image, MediaKind::Video, MediaKind::Audio],
+                references: true,
+                negative_prompt: true,
+                partial_images: false,
+                remote_jobs: true,
+                remote_cancellation: true,
+                webhooks: true,
+            },
+            accepts_aspect_ratio: |_, value| !value.trim().is_empty(),
+            accepts_size: |_, value| !value.trim().is_empty(),
         },
     )?;
     #[cfg(feature = "mock")]
@@ -176,6 +204,7 @@ pub fn register_builtin_providers(
                 partial_images: true,
                 remote_jobs: false,
                 remote_cancellation: false,
+                webhooks: false,
             },
             accepts_aspect_ratio: |_, _| true,
             accepts_size: |_, _| true,
