@@ -29,6 +29,7 @@ use super::{
     EngineBackendConfig, EngineLocalToolCall, EngineTextStream, EngineTextStreamEvent,
     EngineTextStreamRequest, EngineTokenUsage,
 };
+use crate::http_payload::BoundedResponse as _;
 use async_trait::async_trait;
 use battersea_model::engine::{
     EngineChatParameters, EngineChatToolChoiceMode, EngineThinkingVisibility,
@@ -132,10 +133,10 @@ impl EngineAdapter for GoogleEngineAdapter {
         if !response.status().is_success() {
             return Err(normalize_google_http_error(
                 status,
-                response.text().await.ok(),
+                response.bounded_text().await.ok(),
             ));
         }
-        let payload: Value = response.json().await.map_err(|error| {
+        let payload: Value = response.bounded_json().await.map_err(|error| {
             EngineAdapterRequestError::invalid_response("google", error.to_string())
         })?;
         payload
@@ -159,6 +160,7 @@ impl EngineAdapter for GoogleEngineAdapter {
         }
 
         let body = build_stream_body(&self.backend, &request)?;
+        battersea_model::adapter::payload::check_payload(&body, "google")?;
         emit_request(
             self.logger.as_ref(),
             &self.context,
@@ -180,7 +182,7 @@ impl EngineAdapter for GoogleEngineAdapter {
         if !response.status().is_success() {
             return Err(normalize_google_http_error(
                 status,
-                response.text().await.ok(),
+                response.bounded_text().await.ok(),
             ));
         }
         emit_response(
@@ -203,8 +205,7 @@ impl EngineAdapter for GoogleEngineAdapter {
         let logger = self.logger.clone();
         let context = self.context.clone();
         let operation = request.shared.operation;
-        let stream = response
-            .bytes_stream()
+        let stream = crate::http_payload::bounded_stream(response)
             .eventsource()
             .map(move |event| {
                 let logger = logger.clone();
@@ -371,6 +372,7 @@ impl ToolConversation for GoogleToolConversation {
             self.contents.push(json!({"role": "user", "parts": parts}));
         }
         let body = build_local_tool_body(&self.backend, request, self.contents.clone());
+        battersea_model::adapter::payload::check_payload(&body, "google")?;
         emit_request(
             self.logger.as_ref(),
             &self.context,
@@ -390,10 +392,10 @@ impl ToolConversation for GoogleToolConversation {
         if !response.status().is_success() {
             return Err(normalize_google_http_error(
                 status,
-                response.text().await.ok(),
+                response.bounded_text().await.ok(),
             ));
         }
-        let raw: Value = response.json().await.map_err(|error| {
+        let raw: Value = response.bounded_json().await.map_err(|error| {
             EngineAdapterRequestError::invalid_response("google", error.to_string())
         })?;
         let payload: GeminiGenerateContentResponse =

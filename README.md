@@ -1,6 +1,6 @@
 # Battersea
 
-Battersea is being extracted from Primrose Hill as an embeddable dataflow framework.
+Battersea is an embeddable dataflow framework.
 
 `battersea-flow` provides flow documents, ports, templates, extensible catalogues and pure
 graph validation. Applications register their handlers, nominal token schemas, parameter
@@ -40,10 +40,10 @@ its CLI uses the same activation endpoints.
 Document inspection reports unsupported versions before interpreting graph fields. Loading
 and canonical saving preserve opaque editor namespaces. Format upgrades are explicitly
 registered transformations; the host owns their invocation and persistence.
-The unreleased M6.1 work introduces version 2 execution policy and a v1 conversion API.
-The example host demonstrates revision fencing and original-document retention through
-an explicit upgrade command. Scheduler delivery and Primrose adoption remain in progress
-under the [execution contract](contracts/execution.md).
+Version 2 declares source order, port modes and finite execution limits. The runtime queues
+ordered fan-out, applies backpressure and owns cancellable provider pumps. The editor authors
+execution policies. The example host demonstrates revision fencing and original-document
+retention through an explicit upgrade command. See the [execution contract](contracts/execution.md).
 
 Battersea is licensed under the [MIT License](LICENSE).
 

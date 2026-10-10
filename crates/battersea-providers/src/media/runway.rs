@@ -4,6 +4,7 @@ use super::{
     MediaGenerationAdapter, MediaRenderRequest, MediaRenderResult, MediaTimingRecorder,
 };
 use crate::adapter::error::EngineAdapterRequestError;
+use crate::http_payload::BoundedResponse as _;
 use async_trait::async_trait;
 use battersea_model::media::{ControllerActivityEvent, ControllerActivityState};
 use battersea_model::media::{MediaAsset, MediaKind, MediaReference, MediaRenderType};
@@ -104,19 +105,21 @@ impl MediaGenerationAdapter for RunwayMediaGenerator {
     ) -> Result<super::MediaSubmission, EngineAdapterRequestError> {
         let request = prepared.render_input.clone();
         if let Some(reporter) = &activity_reporter {
-            reporter.report_activity(MediaGenerationActivityUpdate {
-                state: ControllerActivityState::Working,
-                event: None,
-                message: String::new(),
-                provider_job_id: None,
-                error_code: None,
-                slot_id: None,
-                slot_index: None,
-                progress: None,
-                eta_ms: None,
-                preview_asset: None,
-                partial_index: None,
-            });
+            reporter
+                .report_activity(MediaGenerationActivityUpdate {
+                    state: ControllerActivityState::Working,
+                    event: None,
+                    message: String::new(),
+                    provider_job_id: None,
+                    error_code: None,
+                    slot_id: None,
+                    slot_index: None,
+                    progress: None,
+                    eta_ms: None,
+                    preview_asset: None,
+                    partial_index: None,
+                })
+                .await?;
         }
 
         let submit_body = prepared.body;
@@ -138,7 +141,7 @@ impl MediaGenerationAdapter for RunwayMediaGenerator {
 
         let submit_status = submit_response.status().as_u16();
         if !submit_response.status().is_success() {
-            let error_body = submit_response.text().await.unwrap_or_default();
+            let error_body = submit_response.bounded_text().await.unwrap_or_default();
             return Err(EngineAdapterRequestError::new(
                 "runway",
                 if error_body.trim().is_empty() {
@@ -151,7 +154,7 @@ impl MediaGenerationAdapter for RunwayMediaGenerator {
             .with_status_code(submit_status));
         }
 
-        let task: RunwayTask = submit_response.json().await.map_err(|error| {
+        let task: RunwayTask = submit_response.bounded_json().await.map_err(|error| {
             EngineAdapterRequestError::invalid_response("runway", error.to_string())
         })?;
         timing.record_phase(
@@ -162,19 +165,21 @@ impl MediaGenerationAdapter for RunwayMediaGenerator {
             submit_started_instant,
         );
         if let Some(reporter) = &activity_reporter {
-            reporter.report_activity(MediaGenerationActivityUpdate {
-                state: ControllerActivityState::Waiting,
-                event: None,
-                message: String::new(),
-                provider_job_id: Some(task.id.clone()),
-                error_code: None,
-                slot_id: None,
-                slot_index: None,
-                progress: None,
-                eta_ms: None,
-                preview_asset: None,
-                partial_index: None,
-            });
+            reporter
+                .report_activity(MediaGenerationActivityUpdate {
+                    state: ControllerActivityState::Waiting,
+                    event: None,
+                    message: String::new(),
+                    provider_job_id: Some(task.id.clone()),
+                    error_code: None,
+                    slot_id: None,
+                    slot_index: None,
+                    progress: None,
+                    eta_ms: None,
+                    preview_asset: None,
+                    partial_index: None,
+                })
+                .await?;
         }
 
         if task.id.trim().is_empty() {
@@ -195,7 +200,7 @@ impl MediaGenerationAdapter for RunwayMediaGenerator {
         })))
     }
 
-    async fn cancel(&self, provider_job_id: &str) -> Result<(), EngineAdapterRequestError> {
+    async fn cancel(&self, provider_job_id: &str) -> Result<(), crate::EngineAdapterRequestError> {
         let response = self
             .client
             .delete(format!("{}/tasks/{}", self.base_url, provider_job_id))
@@ -615,26 +620,29 @@ fn is_retryable_poll_error(error: &EngineAdapterRequestError) -> bool {
     )
 }
 
-fn report_transient_poll_error(
+async fn report_transient_poll_error(
     activity_reporter: &Option<Arc<dyn MediaGenerationActivityReporter>>,
     provider_job_id: &str,
     error: &EngineAdapterRequestError,
-) {
+) -> Result<(), crate::EngineAdapterRequestError> {
     if let Some(reporter) = activity_reporter {
-        reporter.report_activity(MediaGenerationActivityUpdate {
-            state: ControllerActivityState::Waiting,
-            event: Some(ControllerActivityEvent::ErrorTransient),
-            message: error.message.clone(),
-            provider_job_id: Some(provider_job_id.to_string()),
-            error_code: Some(error.classification.to_string()),
-            slot_id: None,
-            slot_index: None,
-            progress: None,
-            eta_ms: None,
-            preview_asset: None,
-            partial_index: None,
-        });
+        reporter
+            .report_activity(MediaGenerationActivityUpdate {
+                state: ControllerActivityState::Waiting,
+                event: Some(ControllerActivityEvent::ErrorTransient),
+                message: error.message.clone(),
+                provider_job_id: Some(provider_job_id.to_string()),
+                error_code: Some(error.classification.to_string()),
+                slot_id: None,
+                slot_index: None,
+                progress: None,
+                eta_ms: None,
+                preview_asset: None,
+                partial_index: None,
+            })
+            .await?;
     }
+    Ok(())
 }
 
 /// Forwards Runway's task-level `progress` reading to the engine as a
@@ -647,38 +655,41 @@ fn report_transient_poll_error(
 ///
 /// A no-op when there's no reporter, when the poll didn't include a
 /// progress reading, or when the value isn't a finite number.
-fn broadcast_runway_progress_to_all_slots(
+async fn broadcast_runway_progress_to_all_slots(
     activity_reporter: &Option<Arc<dyn MediaGenerationActivityReporter>>,
     submitted_task: &RunwayTask,
     polled_task: &RunwayTask,
     request: &MediaRenderRequest,
-) {
+) -> Result<(), crate::EngineAdapterRequestError> {
     let Some(reporter) = activity_reporter else {
-        return;
+        return Ok(());
     };
     let Some(raw) = polled_task.progress else {
-        return;
+        return Ok(());
     };
     if !raw.is_finite() {
-        return;
+        return Ok(());
     }
     let progress = raw.clamp(0.0, 1.0) as f32;
     let slot_count = request.options.count.unwrap_or(1).max(1);
     for index in 0..slot_count {
-        reporter.report_activity(MediaGenerationActivityUpdate {
-            state: ControllerActivityState::Working,
-            event: None,
-            message: String::new(),
-            provider_job_id: Some(submitted_task.id.clone()),
-            error_code: None,
-            slot_id: None,
-            slot_index: Some(index),
-            progress: Some(progress),
-            eta_ms: None,
-            preview_asset: None,
-            partial_index: None,
-        });
+        reporter
+            .report_activity(MediaGenerationActivityUpdate {
+                state: ControllerActivityState::Working,
+                event: None,
+                message: String::new(),
+                provider_job_id: Some(submitted_task.id.clone()),
+                error_code: None,
+                slot_id: None,
+                slot_index: Some(index),
+                progress: Some(progress),
+                eta_ms: None,
+                preview_asset: None,
+                partial_index: None,
+            })
+            .await?;
     }
+    Ok(())
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -748,7 +759,7 @@ impl super::MediaJob for RunwayJob {
             )
             .await
     }
-    async fn cancel(&self) -> Result<(), EngineAdapterRequestError> {
+    async fn cancel(&self) -> Result<(), crate::EngineAdapterRequestError> {
         self.adapter.cancel(&self.id).await
     }
 }
@@ -796,7 +807,7 @@ impl RunwayMediaGenerator {
                         let mapped = EngineAdapterRequestError::transport("runway", error.to_string());
                         if is_retryable_poll_error(&mapped) && consecutive_retryable_errors < max_poll_retry_count {
                             consecutive_retryable_errors += 1;
-                            report_transient_poll_error(&activity_reporter, &task.id, &mapped);
+                            report_transient_poll_error(&activity_reporter, &task.id, &mapped).await?;
                             let retry_started_at = chrono::Utc::now();
                             let retry_started_instant = std::time::Instant::now();
                             tokio::select! {
@@ -821,7 +832,7 @@ impl RunwayMediaGenerator {
 
             let poll_status = poll_response.status().as_u16();
             if !poll_response.status().is_success() {
-                let error_body = poll_response.text().await.unwrap_or_default();
+                let error_body = poll_response.bounded_text().await.unwrap_or_default();
                 let mapped = EngineAdapterRequestError::new(
                     "runway",
                     if error_body.trim().is_empty() {
@@ -836,7 +847,7 @@ impl RunwayMediaGenerator {
                     && consecutive_retryable_errors < max_poll_retry_count
                 {
                     consecutive_retryable_errors += 1;
-                    report_transient_poll_error(&activity_reporter, &task.id, &mapped);
+                    report_transient_poll_error(&activity_reporter, &task.id, &mapped).await?;
                     let retry_started_at = chrono::Utc::now();
                     let retry_started_instant = std::time::Instant::now();
                     tokio::select! {
@@ -857,7 +868,7 @@ impl RunwayMediaGenerator {
                 return Err(mapped);
             }
 
-            let task_state: RunwayTask = poll_response.json().await.map_err(|error| {
+            let task_state: RunwayTask = poll_response.bounded_json().await.map_err(|error| {
                 EngineAdapterRequestError::invalid_response("runway", error.to_string())
             })?;
             timing.record_phase(
@@ -877,25 +888,28 @@ impl RunwayMediaGenerator {
                 &task,
                 &task_state,
                 &request,
-            );
+            )
+            .await?;
             if matches!(
                 task_state.status.as_deref().map(str::trim),
                 Some(status) if status.eq_ignore_ascii_case("THROTTLED")
             ) {
                 if let Some(reporter) = &activity_reporter {
-                    reporter.report_activity(MediaGenerationActivityUpdate {
-                        state: ControllerActivityState::Waiting,
-                        event: Some(ControllerActivityEvent::ErrorTransient),
-                        message: "Runway task throttled.".to_string(),
-                        provider_job_id: Some(task.id.clone()),
-                        error_code: Some("rate_limit".to_string()),
-                        slot_id: None,
-                        slot_index: None,
-                        progress: None,
-                        eta_ms: None,
-                        preview_asset: None,
-                        partial_index: None,
-                    });
+                    reporter
+                        .report_activity(MediaGenerationActivityUpdate {
+                            state: ControllerActivityState::Waiting,
+                            event: Some(ControllerActivityEvent::ErrorTransient),
+                            message: "Runway task throttled.".to_string(),
+                            provider_job_id: Some(task.id.clone()),
+                            error_code: Some("rate_limit".to_string()),
+                            slot_id: None,
+                            slot_index: None,
+                            progress: None,
+                            eta_ms: None,
+                            preview_asset: None,
+                            partial_index: None,
+                        })
+                        .await?;
                 }
                 let retry_started_at = chrono::Utc::now();
                 let retry_started_instant = std::time::Instant::now();
@@ -1477,9 +1491,14 @@ mod tests {
         updates: Mutex<Vec<MediaGenerationActivityUpdate>>,
     }
 
+    #[async_trait::async_trait]
     impl MediaGenerationActivityReporter for RecordingReporter {
-        fn report_activity(&self, update: MediaGenerationActivityUpdate) {
+        async fn report_activity(
+            &self,
+            update: MediaGenerationActivityUpdate,
+        ) -> Result<(), crate::EngineAdapterRequestError> {
             self.updates.lock().expect("lock").push(update);
+            Ok(())
         }
     }
 
@@ -1529,15 +1548,17 @@ mod tests {
         (concrete, Some(dyn_handle))
     }
 
-    #[test]
-    fn runway_progress_fans_out_one_per_slot_with_clamped_value_and_job_id() {
+    #[tokio::test]
+    async fn runway_progress_fans_out_one_per_slot_with_clamped_value_and_job_id() {
         let (recorder, reporter) = make_test_reporter();
         broadcast_runway_progress_to_all_slots(
             &reporter,
             &submitted("task-x"),
             &polled(Some(0.42)),
             &make_request(Some(3)),
-        );
+        )
+        .await
+        .expect("progress admitted");
         let updates = recorder.updates.lock().unwrap().clone();
         assert_eq!(updates.len(), 3, "one update per requested slot");
         for (index, update) in updates.iter().enumerate() {
@@ -1551,35 +1572,41 @@ mod tests {
         }
     }
 
-    #[test]
-    fn runway_progress_clamps_out_of_range_readings_and_defaults_count_to_one() {
+    #[tokio::test]
+    async fn runway_progress_clamps_out_of_range_readings_and_defaults_count_to_one() {
         let (recorder, reporter) = make_test_reporter();
         broadcast_runway_progress_to_all_slots(
             &reporter,
             &submitted("task-x"),
             &polled(Some(1.7)),
             &make_request(None),
-        );
+        )
+        .await
+        .expect("progress admitted");
         let updates = recorder.updates.lock().unwrap().clone();
         assert_eq!(updates.len(), 1, "count=None defaults to one slot");
         assert_eq!(updates[0].progress, Some(1.0));
     }
 
-    #[test]
-    fn runway_progress_is_a_noop_when_the_poll_carried_no_progress_or_was_non_finite() {
+    #[tokio::test]
+    async fn runway_progress_is_a_noop_when_the_poll_carried_no_progress_or_was_non_finite() {
         let (recorder, reporter) = make_test_reporter();
         broadcast_runway_progress_to_all_slots(
             &reporter,
             &submitted("task-x"),
             &polled(None),
             &make_request(Some(2)),
-        );
+        )
+        .await
+        .expect("progress admitted");
         broadcast_runway_progress_to_all_slots(
             &reporter,
             &submitted("task-x"),
             &polled(Some(f64::NAN)),
             &make_request(Some(2)),
-        );
+        )
+        .await
+        .expect("progress admitted");
         assert!(recorder.updates.lock().unwrap().is_empty());
     }
 }

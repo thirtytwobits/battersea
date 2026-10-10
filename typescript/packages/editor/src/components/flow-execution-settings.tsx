@@ -16,7 +16,9 @@ import {
   type ParameterPresentation,
 } from "./flow-parameter-control.js";
 
-type SettingsPresentation = Pick<ParameterPresentation, "Field" | "Select">;
+type SettingsPresentation = Pick<ParameterPresentation, "Field" | "Select"> & {
+  Button?: React.ComponentType<React.ButtonHTMLAttributes<HTMLButtonElement>>;
+};
 export interface FlowExecutionSettingsProps {
   document: FlowDocument;
   connections: readonly FlowExecutionConnection[];
@@ -97,6 +99,7 @@ function LimitsForm({
   onExecutionChange,
   presentation,
 }: FlowExecutionSettingsProps & { presentation: SettingsPresentation }) {
+  const Button = presentation.Button ?? "button";
   const limits = document.execution.limits;
   const [draft, setDraft] = React.useState(() =>
     Object.fromEntries(limitFields.map(([key]) => [key, String(limits[key])])),
@@ -146,7 +149,7 @@ function LimitsForm({
         />
       ))}
       <Errors errors={errors} />
-      <button type="submit">Apply activation limits</button>
+      <Button type="submit">Apply activation limits</Button>
     </form>
   );
 }
@@ -170,6 +173,7 @@ function ConnectionForm({
   );
   const [errors, setErrors] = React.useState<string[]>([]);
   const { Field, Select } = presentation;
+  const Button = presentation.Button ?? "button";
   return (
     <form
       noValidate
@@ -238,7 +242,7 @@ function ConnectionForm({
         </>
       ) : null}
       <Errors errors={errors} />
-      <button type="submit">Apply connection settings</button>
+      <Button type="submit">Apply connection settings</Button>
     </form>
   );
 }
@@ -246,12 +250,13 @@ function ConnectionForm({
 /** Editable scheduler policy with catalogue-owned mode and phase displayed read-only. */
 export function FlowExecutionSettings(props: FlowExecutionSettingsProps) {
   const { document, connections, onExecutionChange } = props;
-  const presentation = props.presentation ?? nativeParameterPresentation;
+  const presentation: SettingsPresentation = props.presentation ?? nativeParameterPresentation;
   const [selectedId, setSelectedId] = React.useState("");
   const connection =
     connections.find((item) => item.id === selectedId) ?? connections[0];
   const edge = document.edges.find((item) => item.id === connection?.id);
   const { Field, Select } = presentation;
+  const Button = presentation.Button ?? "button";
   return (
     <details className="battersea-execution-settings">
       <summary>Execution settings</summary>
@@ -264,7 +269,7 @@ export function FlowExecutionSettings(props: FlowExecutionSettingsProps) {
             <li key={id} data-source-id={id}>
               <span>{label}</span>
               <div>
-                <button
+                <Button
                   type="button"
                   aria-label={`Move ${label} earlier`}
                   disabled={index === 0}
@@ -275,8 +280,8 @@ export function FlowExecutionSettings(props: FlowExecutionSettingsProps) {
                   }
                 >
                   Earlier
-                </button>
-                <button
+                </Button>
+                <Button
                   type="button"
                   aria-label={`Move ${label} later`}
                   disabled={index === order.length - 1}
@@ -285,7 +290,7 @@ export function FlowExecutionSettings(props: FlowExecutionSettingsProps) {
                   }
                 >
                   Later
-                </button>
+                </Button>
               </div>
             </li>
           );

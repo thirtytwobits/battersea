@@ -27,7 +27,6 @@ use serde_json::Value;
 use std::collections::BTreeMap;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
-use tokio::task::JoinHandle;
 use tokio_util::sync::CancellationToken;
 
 #[cfg(feature = "google")]
@@ -142,70 +141,41 @@ pub fn accepts_size(provider: &str, model: &str, value: &str) -> bool {
         .is_ok_and(|p| (p.accepts_size)(model, value))
 }
 
-/// Carries provider-neutral activity updates for long-running media generation.
-///
-/// The optional per-slot fields (`slot_id`, `progress`, `eta_ms`,
-/// `preview_asset`) are set by adapters that have adapter-owned progress
-/// evidence or transient preview bytes: provider status events, provider
-/// polling, streaming partial images, or a configured duration estimate while a
-/// blocking provider request is still alive. The engine and UI treat every
-/// value here as authoritative adapter state; consumers must not invent
-/// percentages outside this channel.
-/// Keeps an estimate-backed progress ticker alive until its owning adapter
-/// request completes, fails, or is cancelled.
-#[derive(Debug)]
-pub struct EstimatedProgressGuard {
-    stop: CancellationToken,
-    handle: JoinHandle<()>,
-}
-
-impl EstimatedProgressGuard {
-    pub fn stop(self) {
-        self.stop.cancel();
-        self.handle.abort();
-    }
-}
-
-impl Drop for EstimatedProgressGuard {
-    fn drop(&mut self) {
-        self.stop.cancel();
-        self.handle.abort();
-    }
-}
-
-/// Starts adapter-owned estimate progress for a blocking media API.
-///
-/// This is for providers that do not expose semantic status updates for the
-/// request path being used. Progress is based on the same configured estimate
-/// the engine publishes on `slot.started`, is emitted only while the request's
-/// cancellation token remains live, and is capped below `1.0` so completion
-/// still belongs to the engine's final slot event.
-pub fn start_estimated_generation_progress(
+/// Runs estimate-backed progress for the lifetime of a media request. Reporter
+/// failure interrupts the request; completion drops any pending progress send.
+pub async fn with_estimated_generation_progress<T>(
     backend: &MediaBackendConfig,
     slot_count: usize,
     activity_reporter: Option<Arc<dyn MediaGenerationActivityReporter>>,
     cancellation: CancellationToken,
-) -> Option<EstimatedProgressGuard> {
-    let reporter = activity_reporter?;
-    let addressable_slots = slot_count.min(u8::MAX as usize);
-    if addressable_slots == 0 {
-        return None;
-    }
-    let estimated_ms = resolve_estimated_generation_ms(backend);
-    let interval_ms = read_estimated_progress_interval_ms(&backend.options.extra);
-    let stop = cancellation.child_token();
-    let task_stop = stop.clone();
-    let handle = tokio::spawn(async move {
+    work: impl std::future::Future<Output = Result<T, EngineAdapterRequestError>>,
+) -> Result<T, EngineAdapterRequestError> {
+    let progress = async {
+        let Some(reporter) = activity_reporter else {
+            return futures_util::future::pending().await;
+        };
+        let addressable_slots = slot_count.min(u8::MAX as usize);
+        if addressable_slots == 0 {
+            return futures_util::future::pending().await;
+        }
         emit_estimated_generation_progress_ticks(
             reporter,
             addressable_slots,
-            estimated_ms,
-            interval_ms,
-            task_stop,
+            resolve_estimated_generation_ms(backend),
+            read_estimated_progress_interval_ms(&backend.options.extra),
+            cancellation.clone(),
         )
-        .await;
-    });
-    Some(EstimatedProgressGuard { stop, handle })
+        .await
+    };
+    tokio::select! {
+        biased;
+        _ = cancellation.cancelled() => Err(EngineAdapterRequestError::new(&backend.provider, "Media generation cancelled.", "cancelled")),
+        result = progress => {
+            result?;
+            Err(EngineAdapterRequestError::new(&backend.provider, "Media generation cancelled.", "cancelled"))
+        },
+        result = work => result,
+    }
 }
 
 /// Normalises a configured base URL before provider-specific suffix trimming.
@@ -322,7 +292,7 @@ async fn emit_estimated_generation_progress_ticks(
     estimated_ms: u64,
     interval_ms: u64,
     cancellation: CancellationToken,
-) {
+) -> Result<(), crate::EngineAdapterRequestError> {
     const PROGRESS_CAP: f32 = 0.95;
     let started = Instant::now();
     let interval = Duration::from_millis(interval_ms);
@@ -341,21 +311,24 @@ async fn emit_estimated_generation_progress_ticks(
             ((elapsed_ms as f32) / (estimated_ms as f32) * PROGRESS_CAP).clamp(0.0, PROGRESS_CAP);
         let eta_ms = estimated_ms.saturating_sub(elapsed_ms);
         for index in 0..slot_count {
-            reporter.report_activity(MediaGenerationActivityUpdate {
-                state: ControllerActivityState::Working,
-                event: None,
-                message: String::new(),
-                provider_job_id: None,
-                error_code: None,
-                slot_id: None,
-                slot_index: Some(index as u8),
-                progress: Some(progress),
-                eta_ms: Some(eta_ms),
-                preview_asset: None,
-                partial_index: None,
-            });
+            reporter
+                .report_activity(MediaGenerationActivityUpdate {
+                    state: ControllerActivityState::Working,
+                    event: None,
+                    message: String::new(),
+                    provider_job_id: None,
+                    error_code: None,
+                    slot_id: None,
+                    slot_index: Some(index as u8),
+                    progress: Some(progress),
+                    eta_ms: Some(eta_ms),
+                    preview_asset: None,
+                    partial_index: None,
+                })
+                .await?;
         }
     }
+    Ok(())
 }
 
 /// Reads a boolean option from the backend options map, accepting boolean scalars and boolean
@@ -389,7 +362,7 @@ mod tests {
     use super::{
         normalize_base_url, read_bool_option, read_string_option, read_u64_option,
         resolve_estimated_generation_ms, resolve_openai_base_url,
-        start_estimated_generation_progress, MediaBackendConfig, MediaGenerationActivityReporter,
+        with_estimated_generation_progress, MediaBackendConfig, MediaGenerationActivityReporter,
         MediaGenerationActivityUpdate, MediaTimingRecorder,
     };
     use battersea_model::media::{MediaProvenanceTimingConfidence, MediaProvenanceTimingSource};
@@ -537,32 +510,15 @@ mod tests {
         assert_eq!(resolve_estimated_generation_ms(&backend_with(-3.0)), 1);
     }
 
-    #[tokio::test(flavor = "current_thread")]
-    async fn estimated_progress_ticker_reports_alive_request_progress_below_completion() {
-        #[cfg(test)]
+    fn progress_test_backend() -> MediaBackendConfig {
         use crate::adapter::{EngineAuthConfig, EngineBackendOptions};
         use battersea_model::media::{MediaBackendCapabilities, MediaCapability};
-        use std::sync::Mutex;
-
-        struct CapturingReporter {
-            updates: Mutex<Vec<MediaGenerationActivityUpdate>>,
-        }
-
-        impl MediaGenerationActivityReporter for CapturingReporter {
-            fn report_activity(&self, update: MediaGenerationActivityUpdate) {
-                self.updates.lock().expect("updates lock").push(update);
-            }
-        }
-
-        let reporter = Arc::new(CapturingReporter {
-            updates: Mutex::new(Vec::new()),
-        });
         let mut options = EngineBackendOptions::default();
         options.extra.insert(
             "estimatedProgressIntervalMs".to_string(),
             serde_json::json!(5),
         );
-        let backend = MediaBackendConfig {
+        MediaBackendConfig {
             id: "google-image".to_string(),
             provider: "google".to_string(),
             capability: MediaCapability::ImageGeneration,
@@ -589,23 +545,119 @@ mod tests {
             },
             short_description: String::new(),
             long_description: String::new(),
-        };
+        }
+    }
+
+    #[tokio::test]
+    async fn progress_failure_and_cancellation_drop_the_owned_media_request() {
+        use std::sync::atomic::{AtomicBool, Ordering};
+        struct WorkGuard(Arc<AtomicBool>);
+        impl Drop for WorkGuard {
+            fn drop(&mut self) {
+                self.0.store(true, Ordering::SeqCst);
+            }
+        }
+        struct Reporter {
+            block: bool,
+            entered: Arc<tokio::sync::Notify>,
+        }
+        #[async_trait::async_trait]
+        impl MediaGenerationActivityReporter for Reporter {
+            async fn report_activity(
+                &self,
+                _: MediaGenerationActivityUpdate,
+            ) -> Result<(), crate::EngineAdapterRequestError> {
+                self.entered.notify_one();
+                if self.block {
+                    futures_util::future::pending::<()>().await;
+                }
+                Err(crate::EngineAdapterRequestError::invalid_response(
+                    "test",
+                    "consumer refused progress",
+                ))
+            }
+        }
+        for block in [false, true] {
+            let dropped = Arc::new(AtomicBool::new(false));
+            let guard = WorkGuard(dropped.clone());
+            let entered = Arc::new(tokio::sync::Notify::new());
+            let cancellation = CancellationToken::new();
+            let reporter = Arc::new(Reporter {
+                block,
+                entered: entered.clone(),
+            });
+            let work = async move {
+                let _guard = guard;
+                futures_util::future::pending::<Result<(), crate::EngineAdapterRequestError>>()
+                    .await
+            };
+            let backend = progress_test_backend();
+            let run = with_estimated_generation_progress(
+                &backend,
+                1,
+                Some(reporter),
+                cancellation.clone(),
+                work,
+            );
+            let cancel = async {
+                entered.notified().await;
+                if block {
+                    cancellation.cancel();
+                }
+            };
+            let (result, ()) =
+                tokio::time::timeout(Duration::from_secs(2), async { tokio::join!(run, cancel) })
+                    .await
+                    .expect("blocked reporter must be interruptible");
+            assert!(result.is_err());
+            assert!(
+                dropped.load(Ordering::SeqCst),
+                "owned request drops on reporter failure or cancellation"
+            );
+        }
+    }
+
+    #[tokio::test(flavor = "current_thread")]
+    async fn estimated_progress_ticker_reports_alive_request_progress_below_completion() {
+        use std::sync::Mutex;
+
+        struct CapturingReporter {
+            updates: Mutex<Vec<MediaGenerationActivityUpdate>>,
+        }
+
+        #[async_trait::async_trait]
+        impl MediaGenerationActivityReporter for CapturingReporter {
+            async fn report_activity(
+                &self,
+                update: MediaGenerationActivityUpdate,
+            ) -> Result<(), crate::EngineAdapterRequestError> {
+                self.updates.lock().expect("updates lock").push(update);
+                Ok(())
+            }
+        }
+
+        let reporter = Arc::new(CapturingReporter {
+            updates: Mutex::new(Vec::new()),
+        });
+        let backend = progress_test_backend();
         let cancellation = CancellationToken::new();
-        let guard = start_estimated_generation_progress(
+        with_estimated_generation_progress(
             &backend,
             2,
             Some(reporter.clone()),
-            cancellation.clone(),
+            cancellation,
+            async {
+                for _ in 0..20 {
+                    if reporter.updates.lock().expect("updates lock").len() >= 4 {
+                        break;
+                    }
+                    tokio::time::sleep(Duration::from_millis(5)).await;
+                }
+                Ok(())
+            },
         )
-        .expect("ticker starts");
-
-        for _ in 0..20 {
-            if reporter.updates.lock().expect("updates lock").len() >= 4 {
-                break;
-            }
-            tokio::time::sleep(Duration::from_millis(5)).await;
-        }
-        guard.stop();
+        .await
+        .expect("progress delivery");
         let updates = reporter.updates.lock().expect("updates lock").clone();
 
         assert!(

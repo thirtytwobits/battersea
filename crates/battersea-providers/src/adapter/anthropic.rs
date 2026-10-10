@@ -8,6 +8,7 @@ use super::{
     EngineBackendConfig, EngineLocalToolCall, EngineTextStream, EngineTextStreamEvent,
     EngineTextStreamRequest, EngineTokenUsage,
 };
+use crate::http_payload::BoundedResponse as _;
 use async_trait::async_trait;
 use battersea_model::engine::{
     EngineChatToolChoiceMode, EngineReasoningEffort, EngineTemperatureDispatch,
@@ -91,6 +92,7 @@ impl EngineAdapter for AnthropicEngineAdapter {
         }
 
         let body = build_stream_body(&self.backend, &request)?;
+        battersea_model::adapter::payload::check_payload(&body, "anthropic")?;
         emit_request(
             self.logger.as_ref(),
             &self.context,
@@ -119,7 +121,7 @@ impl EngineAdapter for AnthropicEngineAdapter {
             return Err(normalize_anthropic_http_error(
                 status,
                 request_id,
-                response.text().await.ok(),
+                response.bounded_text().await.ok(),
             ));
         }
         emit_response(
@@ -142,8 +144,7 @@ impl EngineAdapter for AnthropicEngineAdapter {
         let logger = self.logger.clone();
         let context = self.context.clone();
         let operation = request.shared.operation;
-        let stream = response
-            .bytes_stream()
+        let stream = crate::http_payload::bounded_stream(response)
             .eventsource()
             .map(move |event| {
                 let logger = logger.clone();
@@ -270,7 +271,7 @@ impl EngineAdapter for AnthropicEngineAdapter {
             return Err(normalize_anthropic_http_error(
                 status,
                 request_id,
-                response.text().await.ok(),
+                response.bounded_text().await.ok(),
             ));
         }
         let payload: Value =
@@ -345,6 +346,7 @@ impl ToolConversation for AnthropicToolConversation {
             })).collect::<Vec<_>>()}));
         }
         let body = build_local_tool_body(&self.backend, request, self.messages.clone())?;
+        battersea_model::adapter::payload::check_payload(&body, "anthropic")?;
         emit_request(
             self.logger.as_ref(),
             &self.context,
@@ -372,7 +374,7 @@ impl ToolConversation for AnthropicToolConversation {
             return Err(normalize_anthropic_http_error(
                 status,
                 request_id,
-                response.text().await.ok(),
+                response.bounded_text().await.ok(),
             ));
         }
         let payload: AnthropicMessagesResponse =
@@ -713,7 +715,7 @@ async fn read_anthropic_json<T: DeserializeOwned>(
     context: &EngineAdapterDebugContext,
 ) -> Result<T, EngineAdapterRequestError> {
     let status = response.status().as_u16();
-    let body = response.text().await.map_err(|error| {
+    let body = response.bounded_text().await.map_err(|error| {
         EngineAdapterRequestError::transport(
             "anthropic",
             format!(

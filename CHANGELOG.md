@@ -1,12 +1,14 @@
 # Changelog
 
-## Unreleased
+## 0.6.0 — 2026-10-09
 
 - Require an explicit upgrade to version 2 with port modes, source order and finite limits.
 - Queue ordered token fan-out and control delivery with lossless admission and explicit lossy drops.
 - Consume streaming deltas once and wait for successful closure before final execution.
 - Drive owned provider pumps with cancellation, fair selection and retained-payload accounting.
 - Support token fan-out editing and exercise durable save/reload in the independent editor.
+- Author source priority, activation limits and connection capacity through shared editor controls.
+- Bound provider HTTP parsing and tool payloads; backpressure asynchronous media reporters.
 
 ## 0.5.0 — 2026-10-09
 

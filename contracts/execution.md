@@ -1,9 +1,7 @@
 # Execution contract
 
-Status: M6.1 design approved for implementation, 2026-10-09. The user requires an
-explicit upgrade for saved flows. The v0.5.0 runtime implements the
-[extraction contract](extraction.md). Adoption of this contract requires the new flow
-document version and an explicitly invoked upgrade.
+Status: implemented for v0.6.0. Saved flows require an explicitly invoked upgrade to
+flow document version 2.
 
 ## Ownership and admission
 
@@ -81,6 +79,12 @@ deliveries release it. Application parser buffers, collected text, tool results 
 controller snapshots have declared limits and release accounting on replacement or
 completion. Event retention is separately bounded by its owner. A custom in-process
 handler must honour the SDK's accounting contract; Rust code is not a memory sandbox.
+
+The built-in providers cap each encoded request and cumulative HTTP response body at
+64 MiB before decoding. The shared tool loop applies the same bound to accumulated
+call/result payloads. Media activity and batch reporters are asynchronous and fallible;
+provider work stops when a report fails or its activation is cancelled. Host limits can
+be smaller and reject admission explicitly.
 
 A capacity wait never holds the driver's exclusive state. If no runnable consumer or
 external producer can release a required reservation, fail with a capacity-deadlock

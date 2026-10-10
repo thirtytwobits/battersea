@@ -179,7 +179,38 @@ pub fn battersea_runtime::pump::PumpLimits::__clone_box(&self, _: dyn_clone::sea
 impl<T> outref::AsOut<T> for battersea_runtime::pump::PumpLimits where T: core::marker::Copy
 pub fn battersea_runtime::pump::PumpLimits::as_out(&mut self) -> outref::Out<'_, T>
 impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_runtime::pump::PumpLimits where T: ?core::marker::Sized
+pub fn battersea_runtime::pump::measure(value: &impl serde_core::ser::Serialize, limit: usize) -> core::result::Result<usize, battersea_runtime::pump::PumpError>
 pub mod battersea_runtime::retention
+pub struct battersea_runtime::retention::Reservation
+impl core::fmt::Debug for battersea_runtime::retention::Reservation
+pub fn battersea_runtime::retention::Reservation::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::ops::drop::Drop for battersea_runtime::retention::Reservation
+pub fn battersea_runtime::retention::Reservation::drop(&mut self)
+impl core::marker::Freeze for battersea_runtime::retention::Reservation
+impl core::marker::Send for battersea_runtime::retention::Reservation
+impl core::marker::Sync for battersea_runtime::retention::Reservation
+impl core::marker::Unpin for battersea_runtime::retention::Reservation
+impl core::panic::unwind_safe::RefUnwindSafe for battersea_runtime::retention::Reservation
+impl core::panic::unwind_safe::UnwindSafe for battersea_runtime::retention::Reservation
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_runtime::retention::Reservation where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_runtime::retention::Reservation where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<T, U> core::convert::Into<U> for battersea_runtime::retention::Reservation where U: core::convert::From<T>
+pub fn battersea_runtime::retention::Reservation::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_runtime::retention::Reservation where U: core::convert::Into<T>
+pub type battersea_runtime::retention::Reservation::Error = core::convert::Infallible
+pub fn battersea_runtime::retention::Reservation::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for battersea_runtime::retention::Reservation where U: core::convert::TryFrom<T>
+pub type battersea_runtime::retention::Reservation::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_runtime::retention::Reservation::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> core::any::Any for battersea_runtime::retention::Reservation where T: 'static + ?core::marker::Sized
+pub fn battersea_runtime::retention::Reservation::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_runtime::retention::Reservation where T: ?core::marker::Sized
+pub fn battersea_runtime::retention::Reservation::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_runtime::retention::Reservation where T: ?core::marker::Sized
+pub fn battersea_runtime::retention::Reservation::borrow_mut(&mut self) -> &mut T
+impl<T> core::convert::From<T> for battersea_runtime::retention::Reservation
+pub fn battersea_runtime::retention::Reservation::from(t: T) -> T
+impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_runtime::retention::Reservation where T: ?core::marker::Sized
 pub struct battersea_runtime::retention::Retained<T>(_)
 impl<T: core::fmt::Debug> core::fmt::Debug for battersea_runtime::retention::Retained<T>
 pub fn battersea_runtime::retention::Retained<T>::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
@@ -233,6 +264,7 @@ pub struct battersea_runtime::retention::RetentionBudget(_)
 impl battersea_runtime::retention::RetentionBudget
 pub fn battersea_runtime::retention::RetentionBudget::new(items: usize, bytes: usize, node_bytes: usize) -> Self
 pub fn battersea_runtime::retention::RetentionBudget::retain<T: serde_core::ser::Serialize>(&self, node: &str, value: T) -> core::result::Result<battersea_runtime::retention::Retained<T>, alloc::string::String>
+pub fn battersea_runtime::retention::RetentionBudget::retain_payload<T: serde_core::ser::Serialize>(&self, node: &str, value: &T) -> core::result::Result<battersea_runtime::retention::Reservation, alloc::string::String>
 pub fn battersea_runtime::retention::RetentionBudget::usage(&self) -> battersea_runtime::retention::Usage
 impl core::clone::Clone for battersea_runtime::retention::RetentionBudget
 pub fn battersea_runtime::retention::RetentionBudget::clone(&self) -> battersea_runtime::retention::RetentionBudget
@@ -761,6 +793,7 @@ pub struct battersea_runtime::RetentionBudget(_)
 impl battersea_runtime::retention::RetentionBudget
 pub fn battersea_runtime::retention::RetentionBudget::new(items: usize, bytes: usize, node_bytes: usize) -> Self
 pub fn battersea_runtime::retention::RetentionBudget::retain<T: serde_core::ser::Serialize>(&self, node: &str, value: T) -> core::result::Result<battersea_runtime::retention::Retained<T>, alloc::string::String>
+pub fn battersea_runtime::retention::RetentionBudget::retain_payload<T: serde_core::ser::Serialize>(&self, node: &str, value: &T) -> core::result::Result<battersea_runtime::retention::Reservation, alloc::string::String>
 pub fn battersea_runtime::retention::RetentionBudget::usage(&self) -> battersea_runtime::retention::Usage
 impl core::clone::Clone for battersea_runtime::retention::RetentionBudget
 pub fn battersea_runtime::retention::RetentionBudget::clone(&self) -> battersea_runtime::retention::RetentionBudget

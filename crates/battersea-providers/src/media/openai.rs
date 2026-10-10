@@ -1,9 +1,10 @@
 use super::{
-    read_u64_option_opt, resolve_openai_base_url, start_estimated_generation_progress,
+    read_u64_option_opt, resolve_openai_base_url, with_estimated_generation_progress,
     MediaBackendConfig, MediaGenerationActivityReporter, MediaGenerationActivityUpdate,
     MediaGenerationAdapter, MediaRenderRequest, MediaRenderResult, MediaTimingRecorder,
 };
 use crate::adapter::error::EngineAdapterRequestError;
+use crate::http_payload::BoundedResponse as _;
 use async_openai::config::{Config, OpenAIConfig};
 #[cfg(test)]
 use async_openai::error::OpenAIError;
@@ -132,19 +133,21 @@ impl OpenAiMediaGenerator {
         }
 
         if let Some(reporter) = &activity_reporter {
-            reporter.report_activity(MediaGenerationActivityUpdate {
-                state: ControllerActivityState::Working,
-                event: None,
-                message: String::new(),
-                provider_job_id: None,
-                error_code: None,
-                slot_id: None,
-                slot_index: None,
-                progress: None,
-                eta_ms: None,
-                preview_asset: None,
-                partial_index: None,
-            });
+            reporter
+                .report_activity(MediaGenerationActivityUpdate {
+                    state: ControllerActivityState::Working,
+                    event: None,
+                    message: String::new(),
+                    provider_job_id: None,
+                    error_code: None,
+                    slot_id: None,
+                    slot_index: None,
+                    progress: None,
+                    eta_ms: None,
+                    preview_asset: None,
+                    partial_index: None,
+                })
+                .await?;
         }
 
         let provider_request = prepared.body;
@@ -172,23 +175,18 @@ impl OpenAiMediaGenerator {
                 result = request_future => result?
             }
         } else {
-            let _estimated_progress = start_estimated_generation_progress(
+            with_estimated_generation_progress(
                 &self.backend,
                 target_asset_count,
                 activity_reporter.clone(),
                 cancellation.clone(),
-            );
-            let request_future = send_image_generation_json_request(
-                &self.http_client,
-                &self.config,
-                provider_request.clone(),
-            );
-            tokio::select! {
-                _ = cancellation.cancelled() => {
-                    return Err(EngineAdapterRequestError::new("openai", "Media generation cancelled.", "cancelled"));
-                }
-                result = request_future => result?
-            }
+                send_image_generation_json_request(
+                    &self.http_client,
+                    &self.config,
+                    provider_request.clone(),
+                ),
+            )
+            .await?
         };
         timing.record_phase(
             "image generation request",
@@ -274,7 +272,7 @@ async fn send_image_generation_json_request(
     let status = response.status();
     if !status.is_success() {
         let body = response
-            .text()
+            .bounded_text()
             .await
             .map_err(|error| EngineAdapterRequestError::transport("openai", error.to_string()))?;
         return Err(parse_openai_error_body(&body).unwrap_or_else(|| {
@@ -290,7 +288,7 @@ async fn send_image_generation_json_request(
     }
 
     response
-        .json::<OpenAiImagesResponse>()
+        .bounded_json::<OpenAiImagesResponse>()
         .await
         .map_err(|error| EngineAdapterRequestError::invalid_response("openai", error.to_string()))
 }
@@ -315,7 +313,7 @@ async fn send_image_generation_stream_request(
     let status = response.status();
     if !status.is_success() {
         let body = response
-            .text()
+            .bounded_text()
             .await
             .map_err(|error| EngineAdapterRequestError::transport("openai", error.to_string()))?;
         return Err(parse_openai_error_body(&body).unwrap_or_else(|| {
@@ -330,7 +328,7 @@ async fn send_image_generation_stream_request(
         }));
     }
 
-    let mut stream = response.bytes_stream().eventsource();
+    let mut stream = crate::http_payload::bounded_stream(response).eventsource();
     let mut completed_events = Vec::new();
     while let Some(event_result) = tokio::select! {
         _ = cancellation.cancelled() => {
@@ -353,7 +351,8 @@ async fn send_image_generation_stream_request(
                     target_asset_count,
                     &partial,
                     partial_images,
-                );
+                )
+                .await?;
             }
             ImageGenStreamEvent::Completed(completed) => {
                 completed_events.push(completed);
@@ -371,19 +370,19 @@ async fn send_image_generation_stream_request(
     Ok(openai_stream_events_to_response(completed_events))
 }
 
-fn emit_openai_partial_image_update(
+async fn emit_openai_partial_image_update(
     activity_reporter: &Option<Arc<dyn MediaGenerationActivityReporter>>,
     slot_count: usize,
     partial: &ImageGenPartialImageEvent,
     requested_partial_images: u8,
-) {
+) -> Result<(), crate::EngineAdapterRequestError> {
     const PROGRESS_CAP: f32 = 0.9;
     let Some(reporter) = activity_reporter else {
-        return;
+        return Ok(());
     };
     let addressable_slots = slot_count.min(u8::MAX as usize);
     if addressable_slots == 0 {
-        return;
+        return Ok(());
     }
     let denominator = u16::from(requested_partial_images.clamp(1, 3)) + 1;
     let ordinal = (u16::from(partial.partial_image_index) + 1).min(denominator - 1);
@@ -391,20 +390,23 @@ fn emit_openai_partial_image_update(
         ((ordinal as f32) / (denominator as f32) * PROGRESS_CAP).clamp(0.0, PROGRESS_CAP);
     let preview_asset = openai_partial_image_to_asset(partial);
     for index in 0..addressable_slots {
-        reporter.report_activity(MediaGenerationActivityUpdate {
-            state: ControllerActivityState::Working,
-            event: None,
-            message: String::new(),
-            provider_job_id: None,
-            error_code: None,
-            slot_id: None,
-            slot_index: Some(index as u8),
-            progress: Some(progress),
-            eta_ms: None,
-            preview_asset: Some(preview_asset.clone()),
-            partial_index: Some(partial.partial_image_index),
-        });
+        reporter
+            .report_activity(MediaGenerationActivityUpdate {
+                state: ControllerActivityState::Working,
+                event: None,
+                message: String::new(),
+                provider_job_id: None,
+                error_code: None,
+                slot_id: None,
+                slot_index: Some(index as u8),
+                progress: Some(progress),
+                eta_ms: None,
+                preview_asset: Some(preview_asset.clone()),
+                partial_index: Some(partial.partial_image_index),
+            })
+            .await?;
     }
+    Ok(())
 }
 
 fn openai_partial_image_to_asset(partial: &ImageGenPartialImageEvent) -> MediaAsset {
@@ -840,9 +842,14 @@ mod tests {
         }
     }
 
+    #[async_trait::async_trait]
     impl MediaGenerationActivityReporter for CapturingReporter {
-        fn report_activity(&self, update: MediaGenerationActivityUpdate) {
+        async fn report_activity(
+            &self,
+            update: MediaGenerationActivityUpdate,
+        ) -> Result<(), crate::EngineAdapterRequestError> {
             self.updates.lock().expect("updates lock").push(update);
+            Ok(())
         }
     }
 

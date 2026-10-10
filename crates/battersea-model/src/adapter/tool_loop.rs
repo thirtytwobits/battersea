@@ -60,6 +60,7 @@ pub async fn send_event(
     events: &ToolEventSender,
     event: EngineTextStreamEvent,
 ) -> Result<(), EngineAdapterRequestError> {
+    super::payload::check_payload(&event, "tools")?;
     events.send(Ok(event)).await.map_err(|_| {
         EngineAdapterRequestError::new("engine", "Tool stream consumer disconnected.", "cancelled")
     })
@@ -114,8 +115,10 @@ async fn drive_tool_loop(
     )
     .await;
     let mut results = Vec::new();
+    let mut retained_tool_bytes = 0usize;
     for _ in 0..request.max_tool_rounds {
         let calls = conversation.next_turn(request, results, events).await?;
+        super::payload::check_payload(&calls, &context.provider)?;
         if calls.is_empty() {
             return Ok(());
         }
@@ -205,6 +208,17 @@ async fn drive_tool_loop(
             )
             .await?;
             let result = executor.call(call.clone()).await;
+            if let Ok(result) = &result {
+                retained_tool_bytes = retained_tool_bytes.saturating_add(
+                    super::payload::check_payload(&(&call, &result.content), &context.provider)?,
+                );
+                if retained_tool_bytes > super::payload::PROVIDER_PAYLOAD_BYTES {
+                    return Err(EngineAdapterRequestError::invalid_response(
+                        &context.provider,
+                        "Tool transcript exceeds its encoded-byte limit.",
+                    ));
+                }
+            }
             let (content, message, classification) = match &result {
                 Ok(result) => (result.content.clone(), None, None),
                 Err(error) => (

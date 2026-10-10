@@ -5,11 +5,12 @@
 //! and output defaults.
 
 use super::{
-    read_string_option_opt, start_estimated_generation_progress, MediaBackendConfig,
+    read_string_option_opt, with_estimated_generation_progress, MediaBackendConfig,
     MediaGenerationActivityReporter, MediaGenerationActivityUpdate, MediaGenerationAdapter,
     MediaGenerationBatchReporter, MediaRenderRequest, MediaRenderResult, MediaTimingRecorder,
 };
 use crate::adapter::error::EngineAdapterRequestError;
+use crate::http_payload::BoundedResponse as _;
 use async_trait::async_trait;
 use battersea_model::media::ControllerActivityState;
 use battersea_model::media::{MediaAsset, MediaKind, MediaRenderType};
@@ -98,52 +99,57 @@ impl GoogleMediaGenerator {
             ));
         }
         if let Some(reporter) = &activity_reporter {
-            reporter.report_activity(MediaGenerationActivityUpdate {
-                state: ControllerActivityState::Working,
-                event: None,
-                message: String::new(),
-                provider_job_id: None,
-                error_code: None,
-                slot_id: None,
-                slot_index: None,
-                progress: None,
-                eta_ms: None,
-                preview_asset: None,
-                partial_index: None,
-            });
+            reporter
+                .report_activity(MediaGenerationActivityUpdate {
+                    state: ControllerActivityState::Working,
+                    event: None,
+                    message: String::new(),
+                    provider_job_id: None,
+                    error_code: None,
+                    slot_id: None,
+                    slot_index: None,
+                    progress: None,
+                    eta_ms: None,
+                    preview_asset: None,
+                    partial_index: None,
+                })
+                .await?;
         }
         let body = prepared.body;
         let default_mime_type =
             read_string_option_opt(&self.backend.options.extra, "defaultMimeType")
                 .ok_or_else(|| missing_google_media("options.defaultMimeType"))?;
-        let _estimated_progress = start_estimated_generation_progress(
+        let mut timing = MediaTimingRecorder::start();
+        let phase_started_at = chrono::Utc::now();
+        let phase_started_instant = std::time::Instant::now();
+        let payload: GeminiInteractionResponse = with_estimated_generation_progress(
             &self.backend,
             1,
             activity_reporter,
             cancellation.clone(),
-        );
-        let mut timing = MediaTimingRecorder::start();
-        let phase_started_at = chrono::Utc::now();
-        let phase_started_instant = std::time::Instant::now();
-        let request_future = self
-            .client
-            .post(self.build_interaction_url())
-            .header("x-goog-api-key", &self.api_key)
-            .json(&body)
-            .send();
-        let response = tokio::select! {
-            _ = cancellation.cancelled() => return Err(cancelled()),
-            result = request_future => result.map_err(|error| EngineAdapterRequestError::transport(PROVIDER, error.to_string()))?,
-        };
-        if !response.status().is_success() {
-            return Err(normalize_google_http_error(
-                response.status().as_u16(),
-                response.text().await.ok(),
-            ));
-        }
-        let payload: GeminiInteractionResponse = response.json().await.map_err(|error| {
-            EngineAdapterRequestError::invalid_response(PROVIDER, error.to_string())
-        })?;
+            async {
+                let response = self
+                    .client
+                    .post(self.build_interaction_url())
+                    .header("x-goog-api-key", &self.api_key)
+                    .json(&body)
+                    .send()
+                    .await
+                    .map_err(|error| {
+                        EngineAdapterRequestError::transport(PROVIDER, error.to_string())
+                    })?;
+                if !response.status().is_success() {
+                    return Err(normalize_google_http_error(
+                        response.status().as_u16(),
+                        response.bounded_text().await.ok(),
+                    ));
+                }
+                response.bounded_json().await.map_err(|error| {
+                    EngineAdapterRequestError::invalid_response(PROVIDER, error.to_string())
+                })
+            },
+        )
+        .await?;
         timing.record_phase(
             "Gemini image interaction",
             "provider-call",
@@ -174,10 +180,6 @@ fn missing_google_media(field: &str) -> EngineAdapterRequestError {
         format!("Gemini media backend must configure {field}."),
         "invalid_request",
     )
-}
-
-fn cancelled() -> EngineAdapterRequestError {
-    EngineAdapterRequestError::new(PROVIDER, "Media generation cancelled.", "cancelled")
 }
 
 pub(crate) fn build_interaction_body(

@@ -83,19 +83,21 @@ impl MockMediaGenerator {
     ) -> Result<MediaRenderResult, EngineAdapterRequestError> {
         let request = prepared.render_input.clone();
         if let Some(reporter) = &activity_reporter {
-            reporter.report_activity(MediaGenerationActivityUpdate {
-                state: ControllerActivityState::Working,
-                event: None,
-                message: String::new(),
-                provider_job_id: None,
-                error_code: None,
-                slot_id: None,
-                slot_index: None,
-                progress: None,
-                eta_ms: None,
-                preview_asset: None,
-                partial_index: None,
-            });
+            reporter
+                .report_activity(MediaGenerationActivityUpdate {
+                    state: ControllerActivityState::Working,
+                    event: None,
+                    message: String::new(),
+                    provider_job_id: None,
+                    error_code: None,
+                    slot_id: None,
+                    slot_index: None,
+                    progress: None,
+                    eta_ms: None,
+                    preview_asset: None,
+                    partial_index: None,
+                })
+                .await?;
         }
 
         // Mock renders never touch a network, but provenance rows
@@ -209,10 +211,12 @@ impl MockMediaGenerator {
             assets.truncate(remaining);
             all_assets.extend(assets.clone());
             if let Some(reporter) = &batch_reporter {
-                reporter.report_batch(MediaRenderResult::without_envelopes(
-                    Some("mock-job".to_string()),
-                    assets,
-                ));
+                reporter
+                    .report_batch(MediaRenderResult::without_envelopes(
+                        Some("mock-job".to_string()),
+                        assets,
+                    ))
+                    .await?;
             }
         }
         if all_assets.len() < target_asset_count {
@@ -221,10 +225,12 @@ impl MockMediaGenerator {
                 .collect::<Vec<_>>();
             all_assets.extend(assets.clone());
             if let Some(reporter) = &batch_reporter {
-                reporter.report_batch(MediaRenderResult::without_envelopes(
-                    Some("mock-job".to_string()),
-                    assets,
-                ));
+                reporter
+                    .report_batch(MediaRenderResult::without_envelopes(
+                        Some("mock-job".to_string()),
+                        assets,
+                    ))
+                    .await?;
             }
         }
 
@@ -334,7 +340,7 @@ fn read_mock_progress_step_count(
 async fn sleep_with_cancellation(
     delay_ms: u64,
     cancellation: &CancellationToken,
-) -> Result<(), EngineAdapterRequestError> {
+) -> Result<(), crate::EngineAdapterRequestError> {
     if delay_ms == 0 {
         if cancellation.is_cancelled() {
             return Err(EngineAdapterRequestError::new(
@@ -366,7 +372,7 @@ async fn emit_mock_progress_ticks(
     duration_ms: u64,
     step_count: u64,
     cancellation: &CancellationToken,
-) -> Result<(), EngineAdapterRequestError> {
+) -> Result<(), crate::EngineAdapterRequestError> {
     let Some(reporter) = activity_reporter else {
         return Ok(());
     };
@@ -381,19 +387,21 @@ async fn emit_mock_progress_ticks(
         let progress = (step as f32) / (steps as f32) * 0.9;
         let remaining_ms = duration_ms.saturating_sub(step * step_ms);
         for index in 0..addressable_slots {
-            reporter.report_activity(MediaGenerationActivityUpdate {
-                state: ControllerActivityState::Working,
-                event: None,
-                message: String::new(),
-                provider_job_id: None,
-                error_code: None,
-                slot_id: None,
-                slot_index: Some(index as u8),
-                progress: Some(progress),
-                eta_ms: Some(remaining_ms),
-                preview_asset: None,
-                partial_index: None,
-            });
+            reporter
+                .report_activity(MediaGenerationActivityUpdate {
+                    state: ControllerActivityState::Working,
+                    event: None,
+                    message: String::new(),
+                    provider_job_id: None,
+                    error_code: None,
+                    slot_id: None,
+                    slot_index: Some(index as u8),
+                    progress: Some(progress),
+                    eta_ms: Some(remaining_ms),
+                    preview_asset: None,
+                    partial_index: None,
+                })
+                .await?;
         }
     }
     Ok(())
@@ -811,9 +819,14 @@ mod tests {
         updates: Mutex<Vec<MediaGenerationActivityUpdate>>,
     }
 
+    #[async_trait::async_trait]
     impl MediaGenerationActivityReporter for RecordingActivityReporter {
-        fn report_activity(&self, update: MediaGenerationActivityUpdate) {
+        async fn report_activity(
+            &self,
+            update: MediaGenerationActivityUpdate,
+        ) -> Result<(), crate::EngineAdapterRequestError> {
             self.updates.lock().expect("updates lock").push(update);
+            Ok(())
         }
     }
 

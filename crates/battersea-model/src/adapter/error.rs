@@ -1,6 +1,7 @@
+use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
-#[derive(Debug, Clone, Error)]
+#[derive(Debug, Clone, Error, Serialize, Deserialize)]
 #[error("{message}")]
 pub struct EngineAdapterRequestError {
     pub provider: String,

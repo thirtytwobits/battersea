@@ -1,5 +1,12 @@
 //! Chat and media providers using Battersea's shared model and tool contracts.
 pub mod adapter;
+#[cfg(any(
+    feature = "openai",
+    feature = "anthropic",
+    feature = "google",
+    feature = "runway"
+))]
+mod http_payload;
 pub mod media;
 pub mod registry;
 #[cfg(feature = "mock")]

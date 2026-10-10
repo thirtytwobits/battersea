@@ -11,8 +11,8 @@ publish = false
 include = ["src/**", "Cargo.toml", "LICENSE", "NOTICE"]
 
 [dependencies]
-battersea-model = { path = "../battersea-model", version = "0.5.0" }
-battersea-flow = { path = "../battersea-flow", version = "0.5.0" }
+battersea-model = { path = "../battersea-model", version = "0.6.0" }
+battersea-flow = { path = "../battersea-flow", version = "0.6.0" }
 anyhow.workspace = true
 serde.workspace = true
 serde_json.workspace = true

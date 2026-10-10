@@ -5,6 +5,7 @@
 //! consumes the shared configuration, request, response, and logging shapes here.
 
 pub mod error;
+pub mod payload;
 pub mod tool_loop;
 
 pub use crate::engine::EngineToolExecutionMode;

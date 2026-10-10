@@ -61,6 +61,17 @@ impl RetentionBudget {
             node: node.map(String::from),
         })
     }
+    /// Charge an application-owned payload. Keep the reservation beside the payload,
+    /// admit replacements before mutation, and drop it when the payload is released.
+    pub fn retain_payload<T: Serialize>(
+        &self,
+        node: &str,
+        value: &T,
+    ) -> Result<Reservation, String> {
+        let limit = self.0.lock().unwrap().node_limit;
+        let bytes = crate::pump::measure(value, limit).map_err(|e| e.to_string())?;
+        self.reserve(0, bytes, Some(node))
+    }
     /// Retain a parser, collector, tool result or controller value under its node's budget.
     /// A replacement must be admitted while the old value remains charged, then swapped.
     pub fn retain<T: Serialize>(&self, node: &str, value: T) -> Result<Retained<T>, String> {
@@ -71,7 +82,8 @@ impl RetentionBudget {
     }
 }
 #[derive(Debug)]
-pub(crate) struct Reservation {
+/// Keeps an application payload charged until its owner releases it.
+pub struct Reservation {
     budget: RetentionBudget,
     items: usize,
     bytes: usize,

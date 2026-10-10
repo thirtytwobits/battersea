@@ -237,7 +237,7 @@ pub struct MediaRenderRequest {
 }
 
 /// Returns the provider job handle and the assets produced for a render request.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct MediaRenderResult {
     pub provider_job_id: Option<String>,
     pub assets: Vec<MediaAsset>,
@@ -274,7 +274,7 @@ impl MediaRenderResult {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct MediaGenerationActivityUpdate {
     pub state: ControllerActivityState,
     pub event: Option<ControllerActivityEvent>,
@@ -304,13 +304,23 @@ pub struct MediaGenerationActivityUpdate {
 }
 
 /// Receives coarse activity updates from provider-specific media generators.
+#[allow(clippy::double_must_use)] // async_trait marks its boxed Future must_use.
+#[async_trait]
 pub trait MediaGenerationActivityReporter: Send + Sync {
-    fn report_activity(&self, update: MediaGenerationActivityUpdate);
+    async fn report_activity(
+        &self,
+        update: MediaGenerationActivityUpdate,
+    ) -> Result<(), EngineAdapterRequestError>;
 }
 
 /// Receives staged partial media batches while a generation call is still running.
+#[allow(clippy::double_must_use)] // async_trait marks its boxed Future must_use.
+#[async_trait]
 pub trait MediaGenerationBatchReporter: Send + Sync {
-    fn report_batch(&self, result: MediaRenderResult);
+    async fn report_batch(
+        &self,
+        result: MediaRenderResult,
+    ) -> Result<(), EngineAdapterRequestError>;
 }
 
 /// Immutable inputs shared by capture and dispatch. Only preparation constructs this value.

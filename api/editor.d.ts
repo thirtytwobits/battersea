@@ -106,7 +106,9 @@ import React from "react";
 import type { FlowDocument, FlowEdge, FlowExecutionPolicy } from "@battersea/flow";
 import { type FlowExecutionConnection } from "../core/flow-execution-settings.js";
 import { type ParameterPresentation } from "./flow-parameter-control.js";
-type SettingsPresentation = Pick<ParameterPresentation, "Field" | "Select">;
+type SettingsPresentation = Pick<ParameterPresentation, "Field" | "Select"> & {
+    Button?: React.ComponentType<React.ButtonHTMLAttributes<HTMLButtonElement>>;
+};
 export interface FlowExecutionSettingsProps {
     document: FlowDocument;
     connections: readonly FlowExecutionConnection[];

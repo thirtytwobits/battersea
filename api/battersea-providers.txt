@@ -6,45 +6,6 @@ pub mod battersea_providers::adapter
 pub use battersea_providers::adapter::<<battersea_model::adapter::*>>
 pub mod battersea_providers::media
 pub use battersea_providers::media::<<battersea_model::media::*>>
-pub struct battersea_providers::media::EstimatedProgressGuard
-impl battersea_providers::media::EstimatedProgressGuard
-pub fn battersea_providers::media::EstimatedProgressGuard::stop(self)
-impl core::fmt::Debug for battersea_providers::media::EstimatedProgressGuard
-pub fn battersea_providers::media::EstimatedProgressGuard::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
-impl core::ops::drop::Drop for battersea_providers::media::EstimatedProgressGuard
-pub fn battersea_providers::media::EstimatedProgressGuard::drop(&mut self)
-impl core::marker::Freeze for battersea_providers::media::EstimatedProgressGuard
-impl core::marker::Send for battersea_providers::media::EstimatedProgressGuard
-impl core::marker::Sync for battersea_providers::media::EstimatedProgressGuard
-impl core::marker::Unpin for battersea_providers::media::EstimatedProgressGuard
-impl core::panic::unwind_safe::RefUnwindSafe for battersea_providers::media::EstimatedProgressGuard
-impl core::panic::unwind_safe::UnwindSafe for battersea_providers::media::EstimatedProgressGuard
-impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_providers::media::EstimatedProgressGuard where ST: ?core::marker::Sized, DT: ?core::marker::Sized
-impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_providers::media::EstimatedProgressGuard where ST: ?core::marker::Sized, DT: ?core::marker::Sized
-impl<T, U> core::convert::Into<U> for battersea_providers::media::EstimatedProgressGuard where U: core::convert::From<T>
-pub fn battersea_providers::media::EstimatedProgressGuard::into(self) -> U
-impl<T, U> core::convert::TryFrom<U> for battersea_providers::media::EstimatedProgressGuard where U: core::convert::Into<T>
-pub type battersea_providers::media::EstimatedProgressGuard::Error = core::convert::Infallible
-pub fn battersea_providers::media::EstimatedProgressGuard::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
-impl<T, U> core::convert::TryInto<U> for battersea_providers::media::EstimatedProgressGuard where U: core::convert::TryFrom<T>
-pub type battersea_providers::media::EstimatedProgressGuard::Error = <U as core::convert::TryFrom<T>>::Error
-pub fn battersea_providers::media::EstimatedProgressGuard::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
-impl<T> core::any::Any for battersea_providers::media::EstimatedProgressGuard where T: 'static + ?core::marker::Sized
-pub fn battersea_providers::media::EstimatedProgressGuard::type_id(&self) -> core::any::TypeId
-impl<T> core::borrow::Borrow<T> for battersea_providers::media::EstimatedProgressGuard where T: ?core::marker::Sized
-pub fn battersea_providers::media::EstimatedProgressGuard::borrow(&self) -> &T
-impl<T> core::borrow::BorrowMut<T> for battersea_providers::media::EstimatedProgressGuard where T: ?core::marker::Sized
-pub fn battersea_providers::media::EstimatedProgressGuard::borrow_mut(&mut self) -> &mut T
-impl<T> core::convert::From<T> for battersea_providers::media::EstimatedProgressGuard
-pub fn battersea_providers::media::EstimatedProgressGuard::from(t: T) -> T
-impl<T> tower_http::follow_redirect::policy::PolicyExt for battersea_providers::media::EstimatedProgressGuard where T: ?core::marker::Sized
-pub fn battersea_providers::media::EstimatedProgressGuard::and<P, B, E>(self, other: P) -> tower_http::follow_redirect::policy::and::And<T, P> where T: tower_http::follow_redirect::policy::Policy<B, E>, P: tower_http::follow_redirect::policy::Policy<B, E>
-pub fn battersea_providers::media::EstimatedProgressGuard::or<P, B, E>(self, other: P) -> tower_http::follow_redirect::policy::or::Or<T, P> where T: tower_http::follow_redirect::policy::Policy<B, E>, P: tower_http::follow_redirect::policy::Policy<B, E>
-impl<T> tracing::instrument::Instrument for battersea_providers::media::EstimatedProgressGuard
-impl<T> tracing::instrument::WithSubscriber for battersea_providers::media::EstimatedProgressGuard
-impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_providers::media::EstimatedProgressGuard where T: ?core::marker::Sized
-impl<V, T> ppv_lite86::types::VZip<V> for battersea_providers::media::EstimatedProgressGuard where V: ppv_lite86::types::MultiLane<T>
-pub fn battersea_providers::media::EstimatedProgressGuard::vzip(self) -> V
 pub struct battersea_providers::media::MediaTimingRecorder
 impl battersea_providers::media::MediaTimingRecorder
 pub fn battersea_providers::media::MediaTimingRecorder::finish_client_estimate(self) -> battersea_providers::media::MediaRenderTiming
@@ -89,7 +50,7 @@ pub fn battersea_providers::media::accepts_size(provider: &str, model: &str, val
 pub fn battersea_providers::media::duration_ms(duration: core::time::Duration) -> u64
 pub fn battersea_providers::media::prepare_media_request(backend: &battersea_model::media::MediaBackendConfig, request: battersea_model::media::MediaRenderRequest) -> core::result::Result<battersea_model::media::PreparedMediaRequest, battersea_model::adapter::error::EngineAdapterRequestError>
 pub fn battersea_providers::media::resolve_estimated_generation_ms(backend: &battersea_model::media::MediaBackendConfig) -> u64
-pub fn battersea_providers::media::start_estimated_generation_progress(backend: &battersea_model::media::MediaBackendConfig, slot_count: usize, activity_reporter: core::option::Option<alloc::sync::Arc<dyn battersea_model::media::MediaGenerationActivityReporter>>, cancellation: tokio_util::sync::cancellation_token::CancellationToken) -> core::option::Option<battersea_providers::media::EstimatedProgressGuard>
+pub async fn battersea_providers::media::with_estimated_generation_progress<T>(backend: &battersea_model::media::MediaBackendConfig, slot_count: usize, activity_reporter: core::option::Option<alloc::sync::Arc<dyn battersea_model::media::MediaGenerationActivityReporter>>, cancellation: tokio_util::sync::cancellation_token::CancellationToken, work: impl core::future::future::Future<Output = core::result::Result<T, battersea_model::adapter::error::EngineAdapterRequestError>>) -> core::result::Result<T, battersea_model::adapter::error::EngineAdapterRequestError>
 pub type battersea_providers::media::MediaRenderTiming = battersea_model::media::MediaProvenanceTiming
 pub mod battersea_providers::registry
 pub fn battersea_providers::registry::builtin_registry() -> &'static battersea_model::registry::ProviderRegistry
