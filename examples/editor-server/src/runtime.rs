@@ -210,6 +210,7 @@ impl Application {
         let phase: RunPhase = serde_json::from_value(value["phase"].clone())
             .map_err(|e| Error::internal(e.to_string()))?;
         let event = ExecutionEvent {
+            attempt: 0,
             run_id: run.run_id.clone(),
             flow_key: run.flow.flow_key.clone(),
             node_id: String::new(),

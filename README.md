@@ -8,7 +8,10 @@ schemas and product validators. `examples/catalogue` is an independent host appl
 
 `battersea-runtime` supplies node handlers, token and signal scheduling, typed execution events
 and the activation lifecycle. Applications supply their state, effects and durable acceptance
-through host interfaces. `examples/custom-node` runs a separately compiled node without a
+through host interfaces. Optional durable execution captures versioned scheduler and host state,
+pins accepted inputs, and fences explicit resume and effect resolution. Hosts implement the
+storage and commit reconciliation ports described by the [recovery contract](contracts/recovery.md).
+`examples/custom-node` runs a separately compiled node without a
 product session.
 
 `battersea-model` supplies content-block messages, provider and tool registration, typed errors,

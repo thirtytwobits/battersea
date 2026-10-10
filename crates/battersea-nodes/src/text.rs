@@ -7,11 +7,33 @@ const MIN_CAPACITY: u32 = 1;
 /// codepoint at the boundary, producing invalid text. `dropped_chars` is a
 /// monotonic counter of characters evicted since the buffer was created so
 /// widgets can render a "log truncated" hint when useful.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[serde(try_from = "RingBufferState")]
 pub struct RingBuffer {
     capacity: u32,
     text: String,
     dropped_chars: u64,
+}
+
+#[derive(serde::Deserialize)]
+#[serde(deny_unknown_fields)]
+struct RingBufferState {
+    capacity: u32,
+    text: String,
+    dropped_chars: u64,
+}
+impl TryFrom<RingBufferState> for RingBuffer {
+    type Error = String;
+    fn try_from(state: RingBufferState) -> Result<Self, Self::Error> {
+        if state.capacity < MIN_CAPACITY || state.text.chars().count() > state.capacity as usize {
+            return Err("Invalid ring buffer checkpoint capacity.".into());
+        }
+        Ok(Self {
+            capacity: state.capacity,
+            text: state.text,
+            dropped_chars: state.dropped_chars,
+        })
+    }
 }
 
 impl RingBuffer {
@@ -109,4 +131,34 @@ pub fn activation_text(
                 "Flow activation requires a string {name} activation value."
             ))
         })
+}
+
+#[cfg(test)]
+mod checkpoint_tests {
+    use super::RingBuffer;
+
+    #[test]
+    fn restored_buffer_continues_the_same_unicode_capacity_and_drop_accounting() {
+        let mut original = RingBuffer::new(5);
+        original.append("abcdef猫犬");
+        let mut restored: RingBuffer =
+            serde_json::from_slice(&serde_json::to_vec(&original).unwrap()).unwrap();
+        for delta in ["λ", "zebra", "界界"] {
+            original.append(delta);
+            restored.append(delta);
+            assert_eq!(restored.text(), original.text());
+            assert_eq!(restored.dropped_chars(), original.dropped_chars());
+            assert!(restored.text().chars().count() <= restored.capacity() as usize);
+        }
+    }
+
+    #[test]
+    fn restoration_rejects_an_impossible_capacity_or_occupancy() {
+        for value in [
+            serde_json::json!({"capacity":0,"text":"","dropped_chars":0}),
+            serde_json::json!({"capacity":1,"text":"猫犬","dropped_chars":0}),
+        ] {
+            assert!(serde_json::from_value::<RingBuffer>(value).is_err());
+        }
+    }
 }

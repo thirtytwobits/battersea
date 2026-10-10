@@ -13,6 +13,12 @@ pub trait NodeHandler<H: ExecutionHost>: Send + Sync {
     /// node definitions at runtime.
     fn handler_id(&self) -> &'static str;
 
+    /// Version of this handler's state in the host checkpoint. Changing its
+    /// meaning requires an explicit upgrade; resume cannot infer a conversion.
+    fn checkpoint_version(&self) -> u32 {
+        1
+    }
+
     /// Materialises one source-style node without requiring queued inputs.
     ///
     /// The default implementation rejects materialisation for handlers that do

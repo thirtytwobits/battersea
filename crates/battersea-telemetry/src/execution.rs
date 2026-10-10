@@ -136,7 +136,10 @@ impl View {
                 )
             }
             _ => (
-                format!("event:{}:{}", event.run_id, event.sequence),
+                format!(
+                    "event:{}:{}:{}",
+                    event.run_id, event.attempt, event.sequence
+                ),
                 State::Diagnostic {
                     attributes: Default::default(),
                     category: event.kind.category().into(),

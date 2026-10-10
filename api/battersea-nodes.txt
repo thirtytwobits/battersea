@@ -28,6 +28,8 @@ impl<T> core::borrow::BorrowMut<T> for battersea_nodes::concatenate::Concatenate
 pub fn battersea_nodes::concatenate::ConcatenateHandler::borrow_mut(&mut self) -> &mut T
 impl<T> core::convert::From<T> for battersea_nodes::concatenate::ConcatenateHandler
 pub fn battersea_nodes::concatenate::ConcatenateHandler::from(t: T) -> T
+impl<T> typenum::type_operators::Same for battersea_nodes::concatenate::ConcatenateHandler
+pub type battersea_nodes::concatenate::ConcatenateHandler::Output = T
 impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_nodes::concatenate::ConcatenateHandler where T: ?core::marker::Sized
 pub fn battersea_nodes::concatenate::prepare_concatenate(flow: &battersea_flow::types::FlowDocument, node: &battersea_flow::types::FlowNode, definition: &battersea_flow::types::FlowNodeDefinition, inputs: &std::collections::hash::map::HashMap<alloc::string::String, impl core::borrow::Borrow<battersea_runtime::Token>>) -> battersea_nodes::NodeResult<battersea_runtime::Token>
 pub mod battersea_nodes::logic
@@ -59,6 +61,8 @@ impl<T> core::borrow::BorrowMut<T> for battersea_nodes::logic::AndGateHandler wh
 pub fn battersea_nodes::logic::AndGateHandler::borrow_mut(&mut self) -> &mut T
 impl<T> core::convert::From<T> for battersea_nodes::logic::AndGateHandler
 pub fn battersea_nodes::logic::AndGateHandler::from(t: T) -> T
+impl<T> typenum::type_operators::Same for battersea_nodes::logic::AndGateHandler
+pub type battersea_nodes::logic::AndGateHandler::Output = T
 impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_nodes::logic::AndGateHandler where T: ?core::marker::Sized
 pub struct battersea_nodes::logic::InvertGateHandler
 impl<H: battersea_runtime::host::ExecutionHost> battersea_runtime::handler::NodeHandler<H> for battersea_nodes::logic::InvertGateHandler
@@ -88,6 +92,8 @@ impl<T> core::borrow::BorrowMut<T> for battersea_nodes::logic::InvertGateHandler
 pub fn battersea_nodes::logic::InvertGateHandler::borrow_mut(&mut self) -> &mut T
 impl<T> core::convert::From<T> for battersea_nodes::logic::InvertGateHandler
 pub fn battersea_nodes::logic::InvertGateHandler::from(t: T) -> T
+impl<T> typenum::type_operators::Same for battersea_nodes::logic::InvertGateHandler
+pub type battersea_nodes::logic::InvertGateHandler::Output = T
 impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_nodes::logic::InvertGateHandler where T: ?core::marker::Sized
 pub struct battersea_nodes::logic::LogicDemultiplexerHandler
 impl<H: battersea_runtime::host::ExecutionHost> battersea_runtime::handler::NodeHandler<H> for battersea_nodes::logic::LogicDemultiplexerHandler
@@ -117,6 +123,8 @@ impl<T> core::borrow::BorrowMut<T> for battersea_nodes::logic::LogicDemultiplexe
 pub fn battersea_nodes::logic::LogicDemultiplexerHandler::borrow_mut(&mut self) -> &mut T
 impl<T> core::convert::From<T> for battersea_nodes::logic::LogicDemultiplexerHandler
 pub fn battersea_nodes::logic::LogicDemultiplexerHandler::from(t: T) -> T
+impl<T> typenum::type_operators::Same for battersea_nodes::logic::LogicDemultiplexerHandler
+pub type battersea_nodes::logic::LogicDemultiplexerHandler::Output = T
 impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_nodes::logic::LogicDemultiplexerHandler where T: ?core::marker::Sized
 pub struct battersea_nodes::logic::LogicMultiplexerHandler
 impl<H: battersea_runtime::host::ExecutionHost> battersea_runtime::handler::NodeHandler<H> for battersea_nodes::logic::LogicMultiplexerHandler
@@ -146,6 +154,8 @@ impl<T> core::borrow::BorrowMut<T> for battersea_nodes::logic::LogicMultiplexerH
 pub fn battersea_nodes::logic::LogicMultiplexerHandler::borrow_mut(&mut self) -> &mut T
 impl<T> core::convert::From<T> for battersea_nodes::logic::LogicMultiplexerHandler
 pub fn battersea_nodes::logic::LogicMultiplexerHandler::from(t: T) -> T
+impl<T> typenum::type_operators::Same for battersea_nodes::logic::LogicMultiplexerHandler
+pub type battersea_nodes::logic::LogicMultiplexerHandler::Output = T
 impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_nodes::logic::LogicMultiplexerHandler where T: ?core::marker::Sized
 pub struct battersea_nodes::logic::OrGateHandler
 impl<H: battersea_runtime::host::ExecutionHost> battersea_runtime::handler::NodeHandler<H> for battersea_nodes::logic::OrGateHandler
@@ -175,6 +185,8 @@ impl<T> core::borrow::BorrowMut<T> for battersea_nodes::logic::OrGateHandler whe
 pub fn battersea_nodes::logic::OrGateHandler::borrow_mut(&mut self) -> &mut T
 impl<T> core::convert::From<T> for battersea_nodes::logic::OrGateHandler
 pub fn battersea_nodes::logic::OrGateHandler::from(t: T) -> T
+impl<T> typenum::type_operators::Same for battersea_nodes::logic::OrGateHandler
+pub type battersea_nodes::logic::OrGateHandler::Output = T
 impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_nodes::logic::OrGateHandler where T: ?core::marker::Sized
 pub fn battersea_nodes::logic::prepare_logic_outputs(node: &battersea_flow::types::FlowNode, definition: &battersea_flow::types::FlowNodeDefinition, action_ports: &[battersea_flow::types::FlowActionPortDefinition], signal_ports: &[battersea_flow::types::FlowSignalPortDefinition], fired_ports: &std::collections::hash::set::HashSet<alloc::string::String>, enabled: bool) -> battersea_nodes::NodeResult<alloc::vec::Vec<alloc::string::String>>
 pub mod battersea_nodes::multiplexer
@@ -206,6 +218,8 @@ impl<T> core::borrow::BorrowMut<T> for battersea_nodes::multiplexer::Multiplexer
 pub fn battersea_nodes::multiplexer::MultiplexerHandler::borrow_mut(&mut self) -> &mut T
 impl<T> core::convert::From<T> for battersea_nodes::multiplexer::MultiplexerHandler
 pub fn battersea_nodes::multiplexer::MultiplexerHandler::from(t: T) -> T
+impl<T> typenum::type_operators::Same for battersea_nodes::multiplexer::MultiplexerHandler
+pub type battersea_nodes::multiplexer::MultiplexerHandler::Output = T
 impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_nodes::multiplexer::MultiplexerHandler where T: ?core::marker::Sized
 pub mod battersea_nodes::text
 pub struct battersea_nodes::text::RingBuffer
@@ -220,6 +234,10 @@ impl core::clone::Clone for battersea_nodes::text::RingBuffer
 pub fn battersea_nodes::text::RingBuffer::clone(&self) -> battersea_nodes::text::RingBuffer
 impl core::fmt::Debug for battersea_nodes::text::RingBuffer
 pub fn battersea_nodes::text::RingBuffer::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl serde_core::ser::Serialize for battersea_nodes::text::RingBuffer
+pub fn battersea_nodes::text::RingBuffer::serialize<__S>(&self, __serializer: __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for battersea_nodes::text::RingBuffer
+pub fn battersea_nodes::text::RingBuffer::deserialize<__D>(__deserializer: __D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
 impl core::marker::Freeze for battersea_nodes::text::RingBuffer
 impl core::marker::Send for battersea_nodes::text::RingBuffer
 impl core::marker::Sync for battersea_nodes::text::RingBuffer
@@ -252,6 +270,9 @@ impl<T> core::convert::From<T> for battersea_nodes::text::RingBuffer
 pub fn battersea_nodes::text::RingBuffer::from(t: T) -> T
 impl<T> dyn_clone::DynClone for battersea_nodes::text::RingBuffer where T: core::clone::Clone
 pub fn battersea_nodes::text::RingBuffer::__clone_box(&self, _: dyn_clone::sealed::Private) -> *mut ()
+impl<T> serde_core::de::DeserializeOwned for battersea_nodes::text::RingBuffer where T: for<'de> serde_core::de::Deserialize<'de>
+impl<T> typenum::type_operators::Same for battersea_nodes::text::RingBuffer
+pub type battersea_nodes::text::RingBuffer::Output = T
 impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_nodes::text::RingBuffer where T: ?core::marker::Sized
 pub fn battersea_nodes::text::activation_text(values: core::option::Option<&std::collections::hash::map::HashMap<alloc::string::String, serde_json::value::Value>>, name: &str) -> battersea_nodes::NodeResult<alloc::string::String>
 pub fn battersea_nodes::text::prepare_static_prompt(node: &battersea_flow::types::FlowNode, definition: &battersea_flow::types::FlowNodeDefinition) -> battersea_runtime::Token
@@ -292,6 +313,8 @@ impl<T> core::borrow::BorrowMut<T> for battersea_nodes::NodeError where T: ?core
 pub fn battersea_nodes::NodeError::borrow_mut(&mut self) -> &mut T
 impl<T> core::convert::From<T> for battersea_nodes::NodeError
 pub fn battersea_nodes::NodeError::from(t: T) -> T
+impl<T> typenum::type_operators::Same for battersea_nodes::NodeError
+pub type battersea_nodes::NodeError::Output = T
 impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_nodes::NodeError where T: ?core::marker::Sized
 pub const battersea_nodes::MANIFEST: &str
 pub fn battersea_nodes::register_handlers<H: battersea_runtime::host::ExecutionHost>(builder: &mut battersea_runtime::registry::RegistryBuilder<H>) -> core::result::Result<(), alloc::string::String>

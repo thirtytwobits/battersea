@@ -52,6 +52,8 @@ impl EventKind {
 pub struct ExecutionEvent {
     pub run_id: String,
     pub flow_key: String,
+    /// Recovery attempt identity; sequence numbers are local to this attempt.
+    pub attempt: u64,
     pub sequence: u64,
     pub node_id: String,
     pub kind: EventKind,

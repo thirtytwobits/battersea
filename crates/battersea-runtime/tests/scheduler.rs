@@ -66,6 +66,70 @@ struct Host {
     phases: Mutex<Vec<RunPhase>>,
     polled: Arc<AtomicUsize>,
     entered: Arc<tokio::sync::Notify>,
+    recovery_store: Option<Arc<RecoveryStore>>,
+}
+
+#[derive(Default)]
+struct RecoveryStore {
+    record: Mutex<Option<battersea_runtime::recovery::JournalRecord>>,
+    fault: AtomicUsize,
+    writes: AtomicUsize,
+    fail_write: AtomicUsize,
+    fail_after: std::sync::atomic::AtomicBool,
+}
+impl battersea_runtime::recovery::JournalStore for RecoveryStore {
+    fn load(
+        &self,
+        _: &str,
+    ) -> Result<
+        Option<battersea_runtime::recovery::JournalRecord>,
+        battersea_runtime::recovery::RecoveryError,
+    > {
+        Ok(self.record.lock().unwrap().clone())
+    }
+    fn compare_exchange(
+        &self,
+        _: &str,
+        expected: Option<u64>,
+        next: &battersea_runtime::recovery::JournalRecord,
+    ) -> Result<(), battersea_runtime::recovery::RecoveryError> {
+        use battersea_runtime::recovery::{EffectState, RecoveryError};
+        let write = self.writes.fetch_add(1, Ordering::SeqCst) + 1;
+        let inject = self.fail_write.load(Ordering::SeqCst) == write;
+        if inject && !self.fail_after.load(Ordering::SeqCst) {
+            return Err(RecoveryError::Storage("before publication".into()));
+        }
+        let mut record = self.record.lock().unwrap();
+        if record.as_ref().map(|record| record.revision) != expected {
+            return Err(RecoveryError::Conflict);
+        }
+        let completed_source = next.checkpoint.value["scheduler"]["executed_nodes"]
+            .as_array()
+            .is_some_and(|nodes| nodes.contains(&json!("source")));
+        let intent = next
+            .effects
+            .values()
+            .any(|effect| matches!(effect.state, EffectState::Intent));
+        let fault = self.fault.load(Ordering::SeqCst);
+        let triggered = (matches!(fault, 1 | 3) && completed_source) || (fault == 2 && intent);
+        if triggered && fault == 3 {
+            self.fault.store(0, Ordering::SeqCst);
+            return Err(RecoveryError::Storage(
+                "failure before result publication".into(),
+            ));
+        }
+        *record = Some(next.clone());
+        if inject {
+            return Err(RecoveryError::Storage("after publication".into()));
+        }
+        if triggered {
+            self.fault.store(0, Ordering::SeqCst);
+            return Err(RecoveryError::Storage(
+                "lost durable write acknowledgement".into(),
+            ));
+        }
+        Ok(())
+    }
 }
 struct Handler;
 #[async_trait]
@@ -279,6 +343,20 @@ impl NodeHandler<Host> for Handler {
 impl ExecutionHost for Host {
     type State = Run;
     type Error = Error;
+    fn checkpoint_host_state(
+        &self,
+        run: &Run,
+    ) -> Result<battersea_runtime::recovery::VersionedState, Error> {
+        if !run.held.is_empty() {
+            return Err(Error::invalid_request(
+                "Fixture does not checkpoint borrowed join results.",
+            ));
+        }
+        Ok(battersea_runtime::recovery::VersionedState {
+            version: 1,
+            value: json!({"seen":run.seen,"calls":run.calls}),
+        })
+    }
     fn controller_activation_effects(&self, _: &mut Run, _: &str, _: &HashMap<String, Value>) {}
     fn handlers(&self) -> &HandlerRegistry<Self> {
         &self.handlers
@@ -325,6 +403,33 @@ impl ExecutionHost for Host {
 }
 #[async_trait]
 impl ActivationHost for Host {
+    fn durability(&self, _: &Run) -> Result<Option<battersea_runtime::durable::Durability>, Error> {
+        Ok(self
+            .recovery_store
+            .as_ref()
+            .map(|store| battersea_runtime::durable::Durability {
+                store: store.clone(),
+                configuration_revision: "fixture-configuration".into(),
+            }))
+    }
+    fn restore_host_state(
+        &self,
+        scheduler: SchedulerState,
+        state: battersea_runtime::recovery::VersionedState,
+    ) -> Result<Run, Error> {
+        if state.version != 1 {
+            return Err(Error::invalid_request("Unknown fixture state version."));
+        }
+        Ok(Run {
+            scheduler,
+            seen: serde_json::from_value(state.value["seen"].clone())
+                .map_err(|error| Error::invalid_request(error.to_string()))?,
+            calls: serde_json::from_value(state.value["calls"].clone())
+                .map_err(|error| Error::invalid_request(error.to_string()))?,
+            held: vec![],
+            max_usage: Default::default(),
+        })
+    }
     fn validate_activation(&self, run: &Run) -> Result<(), Error> {
         validate_execution_contract(&run.flow, &run.definitions).map_err(Error::invalid_request)
     }
@@ -375,6 +480,7 @@ fn fixture(nodes: Vec<Value>, edges: Vec<Value>, mode: &str) -> (Host, Run) {
             phases: Mutex::default(),
             polled: Arc::default(),
             entered: Arc::default(),
+            recovery_store: None,
         },
         Run {
             scheduler,
@@ -402,6 +508,214 @@ fn signal(id: &str, source: &str, target: &str, port: &str) -> Value {
 async fn run(host: &Host, run: &mut Run) -> Result<(), Error> {
     host.run_activation(run, "source", HashMap::new(), CancellationToken::new())
         .await
+}
+
+#[tokio::test]
+async fn durable_driver_resumes_after_a_saved_result_without_reexecuting_the_source() {
+    use battersea_runtime::recovery::Journal;
+    let (mut host, mut original) = fixture(
+        vec![
+            node("source", "Source", json!({"values":["retained"]})),
+            node("sink", "Sink", json!({})),
+        ],
+        vec![edge("output", "source", "sink", 0, "final_value")],
+        "final_value",
+    );
+    let store = Arc::new(RecoveryStore::default());
+    store.fault.store(1, Ordering::SeqCst);
+    host.recovery_store = Some(store.clone());
+    assert!(run(&host, &mut original).await.is_err());
+    drop(original);
+    let journal = Journal::open(store, "test-run").unwrap();
+    journal.require_resumable().unwrap();
+    let revision = journal.record().revision;
+    let mut restored = host.restore_activation(&journal).unwrap();
+    host.resume_activation(&mut restored, journal, revision, CancellationToken::new())
+        .await
+        .unwrap();
+    assert_eq!(restored.seen, vec![("sink".into(), json!("retained"))]);
+    let starts = host
+        .events
+        .lock()
+        .unwrap()
+        .iter()
+        .filter(|event| event.node_id == "source" && event.kind == EventKind::NodeStart)
+        .count();
+    assert_eq!(
+        starts, 1,
+        "resuming must not dispatch the completed source again"
+    );
+    assert!(matches!(
+        restored.recovery_record().unwrap().phase,
+        battersea_runtime::recovery::RecoveryPhase::ExecutionComplete
+    ));
+}
+
+#[tokio::test]
+async fn a_dispatched_step_without_a_durable_result_blocks_reexecution() {
+    use battersea_runtime::recovery::{Journal, RecoveryError};
+    let (mut host, mut original) = fixture(
+        vec![node("source", "Source", json!({"values":["effect"]}))],
+        vec![],
+        "final_value",
+    );
+    let store = Arc::new(RecoveryStore::default());
+    store.fault.store(3, Ordering::SeqCst);
+    host.recovery_store = Some(store.clone());
+    assert!(run(&host, &mut original).await.is_err());
+    let journal = Journal::open(store, "test-run").unwrap();
+    assert!(matches!(
+        journal.require_resumable(),
+        Err(RecoveryError::UnresolvedEffects(_))
+    ));
+    let revision = journal.record().revision;
+    let mut restored = host.restore_activation(&journal).unwrap();
+    assert!(host
+        .resume_activation(&mut restored, journal, revision, CancellationToken::new())
+        .await
+        .is_err());
+    let starts = host
+        .events
+        .lock()
+        .unwrap()
+        .iter()
+        .filter(|event| event.node_id == "source" && event.kind == EventKind::NodeStart)
+        .count();
+    assert_eq!(
+        starts, 1,
+        "an uncertain effect cannot be repeated by resume"
+    );
+}
+
+#[tokio::test]
+async fn explicit_not_applied_resolution_allows_a_step_that_never_dispatched() {
+    use battersea_runtime::recovery::{EffectState, Journal};
+    let (mut host, mut original) = fixture(
+        vec![node("source", "Source", json!({}))],
+        vec![],
+        "final_value",
+    );
+    let store = Arc::new(RecoveryStore::default());
+    store.fault.store(2, Ordering::SeqCst);
+    host.recovery_store = Some(store.clone());
+    assert!(run(&host, &mut original).await.is_err());
+    assert!(original.calls.is_empty());
+    let mut journal = Journal::open(store, "test-run").unwrap();
+    let effect = journal
+        .record()
+        .effects
+        .iter()
+        .find(|(_, effect)| matches!(effect.state, EffectState::Intent))
+        .unwrap()
+        .0
+        .clone();
+    journal
+        .resolve_not_applied(
+            &effect,
+            "fixture-operator",
+            "The injected write error prevented dispatch.",
+        )
+        .unwrap();
+    let revision = journal.record().revision;
+    let mut restored = host.restore_activation(&journal).unwrap();
+    host.resume_activation(&mut restored, journal, revision, CancellationToken::new())
+        .await
+        .unwrap();
+    assert_eq!(
+        restored.calls.iter().filter(|id| *id == "source").count(),
+        1
+    );
+}
+
+#[tokio::test]
+async fn checkpoint_preserves_pending_fanout_order_and_completed_source() {
+    let (host, mut original) = fixture(
+        vec![
+            node("source", "Source", json!({"values":["retained"]})),
+            node("later", "Sink", json!({})),
+            node("earlier", "Sink", json!({})),
+        ],
+        vec![
+            edge("later-edge", "source", "later", 2, "final_value"),
+            edge("earlier-edge", "source", "earlier", 1, "final_value"),
+        ],
+        "final_value",
+    );
+    let cancel = CancellationToken::new();
+    host.execute_flow_node(&mut original, "source", None, &cancel)
+        .await
+        .unwrap();
+    let before = original.retention.usage();
+    let checkpoint =
+        battersea_runtime::checkpoint::SchedulerCheckpoint::capture(&original.scheduler).unwrap();
+    let bytes = serde_json::to_vec(&checkpoint).unwrap();
+    drop(original);
+    let checkpoint: battersea_runtime::checkpoint::SchedulerCheckpoint =
+        serde_json::from_slice(&bytes).unwrap();
+    let mut restored = Run {
+        scheduler: checkpoint.restore().unwrap(),
+        seen: vec![],
+        calls: vec![],
+        held: vec![],
+        max_usage: Default::default(),
+    };
+    assert_eq!(restored.retention.usage(), before);
+    assert!(restored.executed_nodes.contains("source"));
+    host.drain_flow_work(&mut restored, &cancel).await.unwrap();
+    assert_eq!(
+        restored
+            .seen
+            .iter()
+            .map(|(id, _)| id.as_str())
+            .collect::<Vec<_>>(),
+        vec!["earlier", "later"]
+    );
+    assert!(!restored.calls.iter().any(|id| id == "source"));
+    assert!(restored
+        .seen
+        .iter()
+        .all(|(_, value)| value == &json!("retained")));
+    assert_eq!(restored.retention.usage().bytes, 0);
+}
+
+#[tokio::test]
+async fn a_live_provider_cannot_be_misrepresented_as_a_restorable_checkpoint() {
+    let (host, mut original) = fixture(
+        vec![node(
+            "source",
+            "Source",
+            json!({"values":["pending"],"pump":true,"never_close":true}),
+        )],
+        vec![],
+        "stream",
+    );
+    host.execute_flow_node(&mut original, "source", None, &CancellationToken::new())
+        .await
+        .unwrap();
+    assert!(
+        battersea_runtime::checkpoint::SchedulerCheckpoint::capture(&original.scheduler).is_err()
+    );
+}
+
+#[test]
+fn checkpoint_versions_and_invalid_graph_state_are_rejected() {
+    let (_, original) = fixture(
+        vec![node("source", "Source", json!({}))],
+        vec![],
+        "final_value",
+    );
+    let checkpoint =
+        battersea_runtime::checkpoint::SchedulerCheckpoint::capture(&original.scheduler).unwrap();
+    let mut value = serde_json::to_value(&checkpoint).unwrap();
+    value["version"] = json!(u32::MAX);
+    let unknown: battersea_runtime::checkpoint::SchedulerCheckpoint =
+        serde_json::from_value(value).unwrap();
+    assert!(unknown.restore().is_err());
+    let mut value = serde_json::to_value(&checkpoint).unwrap();
+    value["executed_nodes"] = json!(["missing-node"]);
+    let corrupt: battersea_runtime::checkpoint::SchedulerCheckpoint =
+        serde_json::from_value(value).unwrap();
+    assert!(corrupt.restore().is_err());
 }
 
 #[tokio::test]
@@ -987,4 +1301,108 @@ async fn hybrid_snapshot_and_execution_outputs_close_only_in_their_own_phase() {
         1
     );
     assert_eq!(state.retention.usage(), retention::Usage::default());
+}
+
+#[tokio::test]
+async fn every_driver_publication_boundary_stops_or_resumes_without_repeating_effects() {
+    use battersea_runtime::recovery::{Journal, RecoveryError, RecoveryPhase};
+    let make = || {
+        fixture(
+            vec![
+                node("source", "Source", json!({"values":["retained"]})),
+                node("sink", "Sink", json!({})),
+            ],
+            vec![edge("output", "source", "sink", 0, "final_value")],
+            "final_value",
+        )
+    };
+    let (mut host, mut state) = make();
+    let baseline = Arc::new(RecoveryStore::default());
+    host.recovery_store = Some(baseline.clone());
+    run(&host, &mut state).await.unwrap();
+    let writes = baseline.writes.load(Ordering::SeqCst);
+    assert!(writes > 1);
+    for after in [false, true] {
+        for boundary in 1..=writes {
+            let (mut host, mut state) = make();
+            let store = Arc::new(RecoveryStore::default());
+            store.fail_write.store(boundary, Ordering::SeqCst);
+            store.fail_after.store(after, Ordering::SeqCst);
+            host.recovery_store = Some(store.clone());
+            assert!(
+                run(&host, &mut state).await.is_err(),
+                "boundary {boundary}, after {after}"
+            );
+            drop(state);
+            match Journal::open(store, "test-run") {
+                Err(RecoveryError::Missing) => {}
+                Ok(journal) => match journal.require_resumable() {
+                    Ok(()) => {
+                        let revision = journal.record().revision;
+                        let mut resumed = host.restore_activation(&journal).unwrap();
+                        host.resume_activation(
+                            &mut resumed,
+                            journal,
+                            revision,
+                            CancellationToken::new(),
+                        )
+                        .await
+                        .unwrap();
+                        assert!(matches!(
+                            resumed.recovery_record().unwrap().phase,
+                            RecoveryPhase::ExecutionComplete
+                        ));
+                    }
+                    Err(RecoveryError::UnresolvedEffects(_))
+                    | Err(RecoveryError::CommitPending) => {}
+                    other => panic!("unexpected recovery result: {other:?}"),
+                },
+                Err(error) => panic!("unexpected journal error: {error}"),
+            }
+            let events = host.events.lock().unwrap();
+            let identities: HashSet<_> = events
+                .iter()
+                .map(|event| (&event.run_id, event.attempt, event.sequence))
+                .collect();
+            assert_eq!(
+                identities.len(),
+                events.len(),
+                "resumed observations keep distinct identities"
+            );
+            assert!(
+                events
+                    .iter()
+                    .filter(|event| event.node_id == "source" && event.kind == EventKind::NodeStart)
+                    .count()
+                    <= 1
+            );
+            assert!(events.iter().filter(|event| event.node_id == "sink" && event.kind == EventKind::TokenReceive).count() <= 1);
+        }
+    }
+}
+
+#[tokio::test]
+async fn incompatible_handler_state_is_rejected_without_dispatch_or_publication() {
+    use battersea_runtime::recovery::Journal;
+    let (mut host, mut original) = fixture(
+        vec![node("source", "Source", json!({}))],
+        vec![],
+        "final_value",
+    );
+    let store = Arc::new(RecoveryStore::default());
+    store.fault.store(2, Ordering::SeqCst);
+    host.recovery_store = Some(store.clone());
+    assert!(run(&host, &mut original).await.is_err());
+    {
+        let mut stored = store.record.lock().unwrap();
+        stored.as_mut().unwrap().checkpoint.value["handler_versions"]["test.node"] = json!(2);
+    }
+    let before = serde_json::to_vec(store.record.lock().unwrap().as_ref().unwrap()).unwrap();
+    let journal = Journal::open(store.clone(), "test-run").unwrap();
+    assert!(host.restore_activation(&journal).is_err());
+    assert_eq!(
+        serde_json::to_vec(store.record.lock().unwrap().as_ref().unwrap()).unwrap(),
+        before
+    );
+    assert!(original.calls.is_empty());
 }

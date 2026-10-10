@@ -1,4 +1,5 @@
 //! Encoded-payload accounting shared by mailboxes and application-owned buffers.
+use serde::Deserialize;
 use serde::Serialize;
 use std::{
     collections::HashMap,
@@ -21,6 +22,9 @@ struct Inner {
 #[derive(Debug, Clone)]
 pub struct RetentionBudget(Arc<Mutex<Inner>>);
 impl RetentionBudget {
+    pub fn restore_reservation(&self, saved: &ReservationSnapshot) -> Result<Reservation, String> {
+        self.reserve(saved.items, saved.bytes, saved.node.as_deref())
+    }
     pub fn new(items: usize, bytes: usize, node_bytes: usize) -> Self {
         Self(Arc::new(Mutex::new(Inner {
             limit: Usage { items, bytes },
@@ -89,6 +93,22 @@ pub struct Reservation {
     bytes: usize,
     node: Option<String>,
 }
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct ReservationSnapshot {
+    pub items: usize,
+    pub bytes: usize,
+    pub node: Option<String>,
+}
+impl Reservation {
+    pub fn checkpoint(&self) -> ReservationSnapshot {
+        ReservationSnapshot {
+            items: self.items,
+            bytes: self.bytes,
+            node: self.node.clone(),
+        }
+    }
+}
 impl Drop for Reservation {
     fn drop(&mut self) {
         let mut inner = self.budget.0.lock().unwrap();
@@ -118,6 +138,16 @@ impl<T> Clone for Retained<T> {
     }
 }
 impl<T> Retained<T> {
+    pub(crate) fn primary_usage(&self) -> Usage {
+        self.0
+            ._reservations
+            .first()
+            .map(|reservation| Usage {
+                items: reservation.items,
+                bytes: reservation.bytes,
+            })
+            .unwrap_or_default()
+    }
     pub(crate) fn charged(value: T, reservations: Vec<Reservation>) -> Self {
         Self(Arc::new(RetainedInner {
             value,

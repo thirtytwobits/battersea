@@ -374,6 +374,7 @@ fn scheduler_observations_update_typed_live_state_without_tracing() {
     use battersea_runtime::{EventKind, ExecutionEvent};
     let mut view = view();
     let mut event = ExecutionEvent {
+        attempt: 0,
         run_id: "run".into(),
         flow_key: "flow".into(),
         sequence: 0,
@@ -596,6 +597,7 @@ fn closing_a_port_preserves_its_type_and_reports_direction_without_payload() {
     use battersea_runtime::{EventKind, ExecutionEvent};
     let mut view = view();
     let mut event = ExecutionEvent {
+        attempt: 0,
         run_id: "run".into(),
         flow_key: "flow".into(),
         node_id: "node".into(),
@@ -642,6 +644,7 @@ fn signal_observations_preserve_the_output_and_input_port_identities() {
         ),
     ] {
         let event = ExecutionEvent {
+            attempt: 0,
             run_id: "run".into(),
             flow_key: "flow".into(),
             node_id: "node".into(),

@@ -22,7 +22,7 @@ pub(crate) struct DataDelivery {
     pub value: Retained<Token>,
     pub cause: Cause,
 }
-#[derive(Debug)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub(crate) enum Control {
     Signal(FlowEdge),
     Controller(String),

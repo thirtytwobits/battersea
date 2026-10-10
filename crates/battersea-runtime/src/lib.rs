@@ -1,6 +1,9 @@
 //! Session-independent node execution and host contracts.
 mod delivery;
 pub use delivery::ProviderEvent;
+pub mod checkpoint;
+pub mod durable;
+pub mod recovery;
 pub mod retention;
 pub use retention::{Retained, RetentionBudget};
 mod event;
@@ -31,6 +34,12 @@ pub trait ExecutionError: std::error::Error + Send + Sync + 'static {
     fn internal(message: impl Into<String>) -> Self;
     fn cancelled(message: impl Into<String>) -> Self;
     fn interrupted(message: impl Into<String>) -> Self;
+    fn recovery_required(message: impl Into<String>) -> Self
+    where
+        Self: Sized,
+    {
+        Self::interrupted(message)
+    }
     fn code(&self) -> &str;
     fn message(&self) -> &str;
 }

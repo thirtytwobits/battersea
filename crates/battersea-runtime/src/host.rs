@@ -16,6 +16,16 @@ use tokio_util::sync::CancellationToken;
 pub trait ExecutionHost: Sized + Send + Sync {
     type State: std::ops::Deref<Target = SchedulerState> + std::ops::DerefMut + Send + Sync;
     type Error: ExecutionError;
+    /// Durable hosts encode all application-owned node state and resource references.
+    /// This is called only when a checkpoint journal is enabled by the activation host.
+    fn checkpoint_host_state(
+        &self,
+        _runtime: &Self::State,
+    ) -> Result<crate::recovery::VersionedState, Self::Error> {
+        Err(Self::Error::invalid_request(
+            "Host does not implement durable state checkpoints.",
+        ))
+    }
     fn controller_activation_effects(
         &self,
         runtime: &mut Self::State,
@@ -33,6 +43,7 @@ pub trait ExecutionHost: Sized + Send + Sync {
         detail: Option<Value>,
     ) {
         let event = ExecutionEvent {
+            attempt: runtime.event_attempt,
             run_id: runtime.run_id.clone(),
             flow_key: runtime.flow.flow_key.clone(),
             sequence: runtime
@@ -283,6 +294,7 @@ pub trait ExecutionHost: Sized + Send + Sync {
                 continue;
             }
             self.check_cancelled(runtime, token)?;
+            crate::durable::begin::<Self>(runtime, &node.id, "materialize")?;
             runtime
                 .node_phases
                 .insert(node.id.clone(), FlowPortPhase::Snapshot);
@@ -297,6 +309,7 @@ pub trait ExecutionHost: Sized + Send + Sync {
             while self.evaluate_ready_logic_nodes(runtime).await? {
                 while self.progress_delivery(runtime, token).await? {}
             }
+            crate::durable::finish(self, runtime)?;
         }
         Ok(())
     }
@@ -308,105 +321,111 @@ pub trait ExecutionHost: Sized + Send + Sync {
         activation_values: Option<&HashMap<String, Value>>,
         token: &CancellationToken,
     ) -> Result<(), Self::Error> {
-        let node = runtime.nodes_by_id.get(node_id).cloned().ok_or_else(|| {
-            Self::Error::invalid_request(format!("Unknown flow node \"{node_id}\"."))
-        })?;
-        let definition = node_definition(&runtime.definitions, &node)
-            .ok_or_else(|| {
-                Self::Error::invalid_request(format!(
-                    "Unknown flow node definition \"{}\".",
-                    node.definition_name
-                ))
-            })?
-            .clone();
-        if self.node_is_disabled_output_capable(runtime, &node, &definition) {
-            self.publish_execution_record(
-                runtime,
-                node_id,
-                EventKind::NodeSkipped,
-                format!("Skipped disabled flow node \"{node_id}\"."),
-                Some(json!({
-                    "definitionName": node.definition_name,
-                    "handlerId": definition.handler_id,
-                    "reason": "disabled",
-                })),
-            )
-            .await;
-            runtime.executed_nodes.insert(node.id.clone());
-            if matches!(
-                definition.kind,
-                battersea_flow::FlowNodeClass::Source | battersea_flow::FlowNodeClass::Hybrid
-            ) {
-                runtime.materialized_sources.insert(node.id.clone());
-            }
-            self.discard_queued_input_tokens_for_node(runtime, &node.id);
-            self.mark_node_signal_ports_settled_except(runtime, &node, &[])?;
-            return Ok(());
-        }
-        self.publish_execution_record(
-            runtime,
-            node_id,
-            EventKind::NodeStart,
-            format!("Executing flow node \"{node_id}\"."),
-            Some(json!({
-                "definitionName": node.definition_name,
-                "handlerId": definition.handler_id,
-                "activationValueCount": activation_values.map_or(0, HashMap::len),
-            })),
-        )
-        .await;
-
-        self.check_cancelled(runtime, token)?;
-        runtime.started_nodes.insert(node.id.clone());
-        let phase = if definition.kind == FlowNodeClass::Source
-            && !expanded_output_ports_for_node(&runtime.definitions, &node)
-                .map_err(Self::Error::internal)?
-                .iter()
-                .any(|p| p.phase == FlowPortPhase::Execution)
-        {
-            FlowPortPhase::Snapshot
-        } else {
-            FlowPortPhase::Execution
-        };
-        runtime.node_phases.insert(node.id.clone(), phase);
-        let result = execute_registered_flow_node(
-            self,
-            runtime,
-            &node,
-            &definition,
-            activation_values,
-            token,
-        )
-        .await;
-
-        match result {
-            Ok(()) => {
-                if runtime.producers.contains_key(node_id) {
-                    runtime.executed_nodes.remove(node_id);
-                } else {
-                    self.finish_node_phase(runtime, &node, phase).await?;
-                }
-                Ok(())
-            }
-            Err(error) => {
+        crate::durable::begin::<Self>(runtime, node_id, "execute_node")?;
+        let step: Result<(), Self::Error> = async {
+            let node = runtime.nodes_by_id.get(node_id).cloned().ok_or_else(|| {
+                Self::Error::invalid_request(format!("Unknown flow node \"{node_id}\"."))
+            })?;
+            let definition = node_definition(&runtime.definitions, &node)
+                .ok_or_else(|| {
+                    Self::Error::invalid_request(format!(
+                        "Unknown flow node definition \"{}\".",
+                        node.definition_name
+                    ))
+                })?
+                .clone();
+            if self.node_is_disabled_output_capable(runtime, &node, &definition) {
                 self.publish_execution_record(
                     runtime,
                     node_id,
-                    EventKind::NodeError,
-                    format!("Flow node \"{node_id}\" failed."),
+                    EventKind::NodeSkipped,
+                    format!("Skipped disabled flow node \"{node_id}\"."),
                     Some(json!({
                         "definitionName": node.definition_name,
                         "handlerId": definition.handler_id,
-                        "error": {
-                            "code": error.code(),
-                            "message": error.message(),
-                        },
+                        "reason": "disabled",
                     })),
                 )
                 .await;
-                Err(error)
+                runtime.executed_nodes.insert(node.id.clone());
+                if matches!(
+                    definition.kind,
+                    battersea_flow::FlowNodeClass::Source | battersea_flow::FlowNodeClass::Hybrid
+                ) {
+                    runtime.materialized_sources.insert(node.id.clone());
+                }
+                self.discard_queued_input_tokens_for_node(runtime, &node.id);
+                self.mark_node_signal_ports_settled_except(runtime, &node, &[])?;
+                return Ok(());
+            }
+            self.publish_execution_record(
+                runtime,
+                node_id,
+                EventKind::NodeStart,
+                format!("Executing flow node \"{node_id}\"."),
+                Some(json!({
+                    "definitionName": node.definition_name,
+                    "handlerId": definition.handler_id,
+                    "activationValueCount": activation_values.map_or(0, HashMap::len),
+                })),
+            )
+            .await;
+
+            self.check_cancelled(runtime, token)?;
+            runtime.started_nodes.insert(node.id.clone());
+            let phase = if definition.kind == FlowNodeClass::Source
+                && !expanded_output_ports_for_node(&runtime.definitions, &node)
+                    .map_err(Self::Error::internal)?
+                    .iter()
+                    .any(|p| p.phase == FlowPortPhase::Execution)
+            {
+                FlowPortPhase::Snapshot
+            } else {
+                FlowPortPhase::Execution
+            };
+            runtime.node_phases.insert(node.id.clone(), phase);
+            let result = execute_registered_flow_node(
+                self,
+                runtime,
+                &node,
+                &definition,
+                activation_values,
+                token,
+            )
+            .await;
+
+            match result {
+                Ok(()) => {
+                    if runtime.producers.contains_key(node_id) {
+                        runtime.executed_nodes.remove(node_id);
+                    } else {
+                        self.finish_node_phase(runtime, &node, phase).await?;
+                    }
+                    Ok(())
+                }
+                Err(error) => {
+                    self.publish_execution_record(
+                        runtime,
+                        node_id,
+                        EventKind::NodeError,
+                        format!("Flow node \"{node_id}\" failed."),
+                        Some(json!({
+                            "definitionName": node.definition_name,
+                            "handlerId": definition.handler_id,
+                            "error": {
+                                "code": error.code(),
+                                "message": error.message(),
+                            },
+                        })),
+                    )
+                    .await;
+                    Err(error)
+                }
             }
         }
+        .await;
+        step?;
+        crate::durable::finish(self, runtime)
     }
 
     fn connected_input_ports(&self, runtime: &Self::State, node_id: &str) -> Vec<String> {
@@ -885,68 +904,74 @@ pub trait ExecutionHost: Sized + Send + Sync {
         runtime: &mut Self::State,
         node: &FlowNode,
     ) -> Result<(), Self::Error> {
-        let definition = node_definition(&runtime.definitions, node)
-            .ok_or_else(|| Self::Error::internal("Flow runtime lost a logic definition."))?
-            .clone();
-        let action_ports = expanded_action_ports_for_node(&runtime.definitions, node)
-            .map_err(Self::Error::internal)?;
-        let fired_ports = action_ports
-            .iter()
-            .filter(|port| {
-                runtime
-                    .signal_action_latches
-                    .contains(&(node.id.clone(), port.name.clone()))
-            })
-            .map(|port| port.name.clone())
-            .collect::<HashSet<_>>();
-        let signal_ports = expanded_signal_ports_for_node(&runtime.definitions, node)
-            .map_err(Self::Error::internal)?;
-        let enabled = if runtime
-            .incoming_signal_edges
-            .get(&(node.id.clone(), "enable".to_string()))
-            .is_some_and(|edge| !self.edge_source_is_disabled(runtime, edge))
-        {
-            fired_ports.contains("enable")
-        } else {
-            true
-        };
+        crate::durable::begin::<Self>(runtime, &node.id, "logic")?;
+        let step: Result<(), Self::Error> = async {
+            let definition = node_definition(&runtime.definitions, node)
+                .ok_or_else(|| Self::Error::internal("Flow runtime lost a logic definition."))?
+                .clone();
+            let action_ports = expanded_action_ports_for_node(&runtime.definitions, node)
+                .map_err(Self::Error::internal)?;
+            let fired_ports = action_ports
+                .iter()
+                .filter(|port| {
+                    runtime
+                        .signal_action_latches
+                        .contains(&(node.id.clone(), port.name.clone()))
+                })
+                .map(|port| port.name.clone())
+                .collect::<HashSet<_>>();
+            let signal_ports = expanded_signal_ports_for_node(&runtime.definitions, node)
+                .map_err(Self::Error::internal)?;
+            let enabled = if runtime
+                .incoming_signal_edges
+                .get(&(node.id.clone(), "enable".to_string()))
+                .is_some_and(|edge| !self.edge_source_is_disabled(runtime, edge))
+            {
+                fired_ports.contains("enable")
+            } else {
+                true
+            };
 
-        let output_ports = self.prepare_logic_outputs(
-            node,
-            &definition,
-            &action_ports,
-            &signal_ports,
-            &fired_ports,
-            enabled,
-        )?;
+            let output_ports = self.prepare_logic_outputs(
+                node,
+                &definition,
+                &action_ports,
+                &signal_ports,
+                &fired_ports,
+                enabled,
+            )?;
 
-        runtime.logic_nodes_evaluated.insert(node.id.clone());
-        self.publish_execution_record(
-            runtime,
-            &node.id,
-            EventKind::LogicEvaluate,
-            format!(
-                "Evaluated logic node \"{}\" as {}.",
-                node.id,
-                self.logic_gate_label(node, &definition)
-            ),
-            Some(json!({
-                "definitionName": node.definition_name,
-                "handlerId": definition.handler_id,
-                "gate": self.logic_gate_label(node, &definition),
-                "enabled": enabled,
-                "receivedInputs": fired_ports.iter().cloned().collect::<Vec<_>>(),
-                "emittedSignals": output_ports,
-            })),
-        )
-        .await;
+            runtime.logic_nodes_evaluated.insert(node.id.clone());
+            self.publish_execution_record(
+                runtime,
+                &node.id,
+                EventKind::LogicEvaluate,
+                format!(
+                    "Evaluated logic node \"{}\" as {}.",
+                    node.id,
+                    self.logic_gate_label(node, &definition)
+                ),
+                Some(json!({
+                    "definitionName": node.definition_name,
+                    "handlerId": definition.handler_id,
+                    "gate": self.logic_gate_label(node, &definition),
+                    "enabled": enabled,
+                    "receivedInputs": fired_ports.iter().cloned().collect::<Vec<_>>(),
+                    "emittedSignals": output_ports,
+                })),
+            )
+            .await;
 
-        let emitted = output_ports.clone();
-        for output_port in output_ports {
-            self.emit_flow_signal(runtime, node, &output_port).await?;
+            let emitted = output_ports.clone();
+            for output_port in output_ports {
+                self.emit_flow_signal(runtime, node, &output_port).await?;
+            }
+            self.mark_node_signal_ports_settled_except(runtime, node, &emitted)?;
+            Ok(())
         }
-        self.mark_node_signal_ports_settled_except(runtime, node, &emitted)?;
-        Ok(())
+        .await;
+        step?;
+        crate::durable::finish(self, runtime)
     }
 
     fn request_activation_cancel(
@@ -1312,6 +1337,11 @@ pub trait ExecutionHost: Sized + Send + Sync {
         runtime: &mut Self::State,
         token: &CancellationToken,
     ) -> Result<bool, Self::Error> {
+        if runtime.data_queue.is_empty() && runtime.control_queue.is_empty() {
+            return Ok(false);
+        }
+        crate::durable::begin::<Self>(runtime, "$scheduler", "deliver")?;
+        let progress: Result<bool, Self::Error> = async {
         self.check_cancelled(runtime, token)?;
         let data_first = match (runtime.data_queue.front(), runtime.control_queue.front()) {
             (Some(data), Some(control)) => data.sequence < control.sequence,
@@ -1384,6 +1414,10 @@ pub trait ExecutionHost: Sized + Send + Sync {
         }
         self.check_cancelled(runtime, token)?;
         Ok(true)
+        }.await;
+        let progressed = progress?;
+        crate::durable::finish(self, runtime)?;
+        Ok(progressed)
     }
 
     async fn deliver_flow_token(
@@ -1501,6 +1535,8 @@ pub trait ExecutionHost: Sized + Send + Sync {
         runtime: &mut Self::State,
         token: &CancellationToken,
     ) -> Result<(), Self::Error> {
+        crate::durable::begin::<Self>(runtime, "$providers", "provider_event")?;
+        let step: Result<(), Self::Error> = async {
         use futures_util::future::select_all;
         // Each future borrows only its mailbox. No producer has access to graph state.
         let last = runtime.last_provider.clone();
@@ -1591,6 +1627,9 @@ pub trait ExecutionHost: Sized + Send + Sync {
             }
         }
         Ok(())
+        }.await;
+        step?;
+        crate::durable::finish(self, runtime)
     }
 }
 

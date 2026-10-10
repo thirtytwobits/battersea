@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.10.0 — 2026-10-10
+
+- Capture versioned scheduler and host state at resumable driver boundaries, with pinned graph, catalogue, configuration and handler versions.
+- Publish effect intents before driver segments and commit their results with checkpoints; retain interrupted segments for explicit resolution.
+- Fence resume by revision and host ownership, preserving run identity and completed work.
+- Separate host commit reconciliation from graph execution, including lost write acknowledgements.
+- Preserve bounded queue accounting, closure state, temporary host resources and serialisable text buffers.
+- Attribute execution observations by run, resume attempt and sequence.
+
 ## 0.9.0 — 2026-10-10
 
 - Expose remote media snapshots, single polling operations, bounded retries, cancellation and repeatable output retrieval.

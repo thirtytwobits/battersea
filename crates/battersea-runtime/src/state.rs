@@ -7,6 +7,9 @@ use tokio_util::sync::CancellationToken;
 
 #[derive(Debug)]
 pub struct SchedulerState {
+    pub(crate) recovery: Option<crate::durable::DurableExecution>,
+    pub(crate) continuation: crate::durable::Continuation,
+    pub event_attempt: u64,
     pub event_sequence: std::sync::Arc<std::sync::atomic::AtomicU64>,
     pub run_id: String,
     pub flow: FlowDocument,
@@ -52,6 +55,17 @@ fn str_error(s: String) -> String {
     s
 }
 impl SchedulerState {
+    pub fn retained_values(&self) -> impl Iterator<Item = &serde_json::Value> {
+        self.input_tokens
+            .values()
+            .map(|token| &token.value)
+            .chain(self.data_queue.iter().map(|delivery| &delivery.value.value))
+    }
+    pub fn recovery_record(&self) -> Option<&crate::recovery::JournalRecord> {
+        self.recovery
+            .as_ref()
+            .map(|recovery| recovery.journal.record())
+    }
     pub fn new(
         run_id: String,
         flow: &FlowDocument,
@@ -120,6 +134,9 @@ impl SchedulerState {
             })
             .collect();
         Ok(Self {
+            recovery: None,
+            continuation: crate::durable::Continuation::Preflight,
+            event_attempt: 0,
             event_sequence: Default::default(),
             run_id,
             flow: flow.clone(),
