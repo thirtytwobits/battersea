@@ -38,6 +38,9 @@ impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusi
 pub const battersea_flow::catalog::FLOW_ACTION_DISABLE: &str
 pub const battersea_flow::catalog::FLOW_INSTRUMENT_INTERFACE: &str
 pub const battersea_flow::catalog::FLOW_NODE_ACTIVATE_INTERFACE: &str
+pub trait battersea_flow::catalog::NodeDefinition
+pub const battersea_flow::catalog::NodeDefinition::DEFINITION_MANIFEST: &'static str
+pub fn battersea_flow::catalog::NodeDefinition::definition(registry: &battersea_flow::registry::Registry) -> core::result::Result<battersea_flow::FlowNodeDefinition, alloc::string::String>
 pub fn battersea_flow::catalog::node_definition<'a>(definitions: &'a std::collections::hash::map::HashMap<alloc::string::String, battersea_flow::FlowNodeDefinition>, node: &battersea_flow::FlowNode) -> core::option::Option<&'a battersea_flow::FlowNodeDefinition>
 pub fn battersea_flow::catalog::node_implements_interface(definitions: &std::collections::hash::map::HashMap<alloc::string::String, battersea_flow::FlowNodeDefinition>, node: &battersea_flow::FlowNode, interface_name: &str) -> bool
 pub fn battersea_flow::catalog::parse_definition_manifest(registry: &battersea_flow::registry::Registry, source: &str) -> core::result::Result<alloc::vec::Vec<battersea_flow::FlowNodeDefinition>, alloc::string::String>
@@ -132,8 +135,64 @@ pub fn battersea_flow::document::inspect_document(source: &str) -> anyhow::Resul
 pub fn battersea_flow::document::load_document(source: &str) -> anyhow::Result<battersea_flow::FlowDocument>
 pub fn battersea_flow::document::serialize_canonical_document(flow: &battersea_flow::FlowDocument) -> anyhow::Result<alloc::string::String>
 pub mod battersea_flow::dsl
+pub struct battersea_flow::dsl::ParseError
+pub battersea_flow::dsl::ParseError::column: usize
+pub battersea_flow::dsl::ParseError::line: usize
+pub battersea_flow::dsl::ParseError::message: alloc::string::String
+impl core::clone::Clone for battersea_flow::dsl::ParseError
+pub fn battersea_flow::dsl::ParseError::clone(&self) -> battersea_flow::dsl::ParseError
+impl core::cmp::Eq for battersea_flow::dsl::ParseError
+impl core::cmp::PartialEq for battersea_flow::dsl::ParseError
+pub fn battersea_flow::dsl::ParseError::eq(&self, other: &battersea_flow::dsl::ParseError) -> bool
+impl core::error::Error for battersea_flow::dsl::ParseError
+impl core::fmt::Debug for battersea_flow::dsl::ParseError
+pub fn battersea_flow::dsl::ParseError::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for battersea_flow::dsl::ParseError
+pub fn battersea_flow::dsl::ParseError::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for battersea_flow::dsl::ParseError
+impl core::marker::Freeze for battersea_flow::dsl::ParseError
+impl core::marker::Send for battersea_flow::dsl::ParseError
+impl core::marker::Sync for battersea_flow::dsl::ParseError
+impl core::marker::Unpin for battersea_flow::dsl::ParseError
+impl core::panic::unwind_safe::RefUnwindSafe for battersea_flow::dsl::ParseError
+impl core::panic::unwind_safe::UnwindSafe for battersea_flow::dsl::ParseError
+impl<Q, K> equivalent::Equivalent<K> for battersea_flow::dsl::ParseError where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn battersea_flow::dsl::ParseError::equivalent(&self, key: &K) -> bool
+impl<Q, K> hashbrown::Equivalent<K> for battersea_flow::dsl::ParseError where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn battersea_flow::dsl::ParseError::equivalent(&self, key: &K) -> bool
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_flow::dsl::ParseError where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_flow::dsl::ParseError where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<T, U> core::convert::Into<U> for battersea_flow::dsl::ParseError where U: core::convert::From<T>
+pub fn battersea_flow::dsl::ParseError::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_flow::dsl::ParseError where U: core::convert::Into<T>
+pub type battersea_flow::dsl::ParseError::Error = core::convert::Infallible
+pub fn battersea_flow::dsl::ParseError::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for battersea_flow::dsl::ParseError where U: core::convert::TryFrom<T>
+pub type battersea_flow::dsl::ParseError::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_flow::dsl::ParseError::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for battersea_flow::dsl::ParseError where T: core::clone::Clone
+pub type battersea_flow::dsl::ParseError::Owned = T
+pub fn battersea_flow::dsl::ParseError::clone_into(&self, target: &mut T)
+pub fn battersea_flow::dsl::ParseError::to_owned(&self) -> T
+impl<T> alloc::string::ToString for battersea_flow::dsl::ParseError where T: core::fmt::Display + ?core::marker::Sized
+pub fn battersea_flow::dsl::ParseError::to_string(&self) -> alloc::string::String
+impl<T> core::any::Any for battersea_flow::dsl::ParseError where T: 'static + ?core::marker::Sized
+pub fn battersea_flow::dsl::ParseError::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_flow::dsl::ParseError where T: ?core::marker::Sized
+pub fn battersea_flow::dsl::ParseError::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_flow::dsl::ParseError where T: ?core::marker::Sized
+pub fn battersea_flow::dsl::ParseError::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for battersea_flow::dsl::ParseError where T: core::clone::Clone
+pub unsafe fn battersea_flow::dsl::ParseError::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for battersea_flow::dsl::ParseError
+pub fn battersea_flow::dsl::ParseError::from(t: T) -> T
+impl<T> dyn_clone::DynClone for battersea_flow::dsl::ParseError where T: core::clone::Clone
+pub fn battersea_flow::dsl::ParseError::__clone_box(&self, _: dyn_clone::sealed::Private) -> *mut ()
+impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_flow::dsl::ParseError where T: ?core::marker::Sized
+pub const battersea_flow::dsl::FLOW_DSL_VERSION: u32
 pub fn battersea_flow::dsl::activatable_node_ids(flow: &battersea_flow::FlowDocument, definitions: &std::collections::hash::map::HashMap<alloc::string::String, battersea_flow::FlowNodeDefinition>) -> alloc::vec::Vec<alloc::string::String>
-pub fn battersea_flow::dsl::export_flow_dsl(flow: &battersea_flow::FlowDocument, definitions: &std::collections::hash::map::HashMap<alloc::string::String, battersea_flow::FlowNodeDefinition>) -> alloc::string::String
+pub fn battersea_flow::dsl::export_flow_dsl(flow: &battersea_flow::FlowDocument) -> anyhow::Result<alloc::string::String>
+pub fn battersea_flow::dsl::parse_flow_dsl(source: &str) -> core::result::Result<battersea_flow::FlowDocument, battersea_flow::dsl::ParseError>
 pub mod battersea_flow::execution
 pub enum battersea_flow::execution::FlowPortMode
 pub battersea_flow::execution::FlowPortMode::FinalValue

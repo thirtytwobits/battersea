@@ -25,5 +25,8 @@
   "battersea-telemetry": [
     "battersea-runtime",
     "battersea-model"
+  ],
+  "battersea-derive": [
+    "battersea-flow"
   ]
 }

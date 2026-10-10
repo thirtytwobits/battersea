@@ -21,6 +21,10 @@ pub enum DocumentInspection {
 /// Inspect the version before interpreting executable fields. Never rewrites the input.
 pub fn inspect_document(source: &str) -> Result<DocumentInspection> {
     let raw: Value = serde_json::from_str(source)?;
+    inspect_value(raw)
+}
+
+pub(crate) fn inspect_value(raw: Value) -> Result<DocumentInspection> {
     let version = raw
         .get("version")
         .and_then(Value::as_u64)
@@ -41,7 +45,9 @@ pub fn inspect_document(source: &str) -> Result<DocumentInspection> {
             raw,
         });
     }
-    Ok(DocumentInspection::Supported(serde_json::from_value(raw)?))
+    Ok(DocumentInspection::Supported(
+        serde_path_to_error::deserialize(raw)?,
+    ))
 }
 
 pub fn load_document(source: &str) -> Result<FlowDocument> {

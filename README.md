@@ -3,14 +3,18 @@
 Battersea is an embeddable dataflow framework.
 
 `battersea-flow` provides flow documents, ports, templates, extensible catalogues and pure
-graph validation. Applications register their handlers, nominal token schemas, parameter
-schemas and product validators. `examples/catalogue` is an independent host application.
+graph validation. Its versioned [text source](contracts/text-source.md) round-trips graph data
+and editor layout through `dsl::parse_flow_dsl` and `dsl::export_flow_dsl`. Applications register
+their handlers, nominal token schemas, parameter schemas and product validators. `examples/catalogue` is an independent host application.
 
 `battersea-runtime` supplies node handlers, token and signal scheduling, typed execution events
 and the activation lifecycle. Applications supply their state, effects and durable acceptance
 through host interfaces. Optional durable execution captures versioned scheduler and host state,
 pins accepted inputs, and fences explicit resume and effect resolution. Hosts implement the
 storage and commit reconciliation ports described by the [recovery contract](contracts/recovery.md).
+`battersea-derive` attaches inline manifest metadata to a Rust node type; definitions share the
+manifest parser and host registry. The [isolation evaluation](contracts/isolation.md) defines the
+requirements for untrusted execution.
 `examples/custom-node` runs a separately compiled node without a
 product session.
 

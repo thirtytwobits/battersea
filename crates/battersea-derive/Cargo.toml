@@ -1,0 +1,24 @@
+[package]
+name = "battersea-derive"
+description = "Derive code-defined Battersea node metadata"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish = false
+readme = "README.md"
+include = ["src/**", "Cargo.toml", "README.md", "LICENSE", "NOTICE"]
+
+[lib]
+proc-macro = true
+
+[dependencies]
+syn = { version = "2", features = ["full"] }
+quote = "1"
+proc-macro2 = "1"
+serde_yaml = "0.9"
+
+[dev-dependencies]
+flow-sdk = { package = "battersea-flow", path = "../battersea-flow", version = "0.11.0" }
+serde_json.workspace = true

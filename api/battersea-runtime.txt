@@ -1467,6 +1467,7 @@ pub struct battersea_runtime::RegistryBuilder<H: battersea_runtime::ExecutionHos
 impl<H: battersea_runtime::ExecutionHost> battersea_runtime::RegistryBuilder<H>
 pub fn battersea_runtime::RegistryBuilder<H>::build(self) -> battersea_runtime::HandlerRegistry<H>
 pub fn battersea_runtime::RegistryBuilder<H>::register(&mut self, handler: impl battersea_runtime::NodeHandler<H> + 'static) -> core::result::Result<(), alloc::string::String>
+pub fn battersea_runtime::RegistryBuilder<H>::register_defined<T: battersea_runtime::NodeHandler<H> + battersea_flow::catalog::NodeDefinition + 'static>(&mut self, handler: T, registry: &battersea_flow::registry::Registry) -> core::result::Result<battersea_flow::types::FlowNodeDefinition, alloc::string::String>
 impl<H: battersea_runtime::ExecutionHost> core::default::Default for battersea_runtime::RegistryBuilder<H>
 pub fn battersea_runtime::RegistryBuilder<H>::default() -> Self
 impl<H> core::marker::Freeze for battersea_runtime::RegistryBuilder<H>

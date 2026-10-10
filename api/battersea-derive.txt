@@ -1,0 +1,2 @@
+pub mod battersea_derive
+pub proc macro battersea_derive::#[derive(NodeDefinition)]

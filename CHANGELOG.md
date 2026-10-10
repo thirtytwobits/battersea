@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.11.0 — 2026-10-10
+
+- Parse and export versioned flow source with lossless graph, execution policy and editor layout round trips.
+- Reject unsupported versions, ambiguous identities and malformed source with location diagnostics.
+- Derive node metadata from inline manifests using the shared catalogue parser and host registry.
+- Validate definition/handler identity during code-defined registration; execute parsed flows in the independent custom-node application.
+- Record the trust boundary and requirements for a separately designed sandbox ABI.
+
 ## 0.10.0 — 2026-10-10
 
 - Capture versioned scheduler and host state at resumable driver boundaries, with pinned graph, catalogue, configuration and handler versions.

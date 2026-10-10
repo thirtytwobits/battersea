@@ -414,6 +414,19 @@ pub fn parse_definition_manifest(
         .collect()
 }
 
+/// Metadata attached to a Rust node type, normalised with the host's datatype registry.
+pub trait NodeDefinition {
+    const DEFINITION_MANIFEST: &'static str;
+
+    fn definition(registry: &Registry) -> Result<FlowNodeDefinition, String> {
+        let mut entries = parse_definition_manifest(registry, Self::DEFINITION_MANIFEST)?;
+        if entries.len() != 1 {
+            return Err("A code-defined node requires exactly one definition".into());
+        }
+        Ok(entries.remove(0))
+    }
+}
+
 /// Immutable definitions validated against an explicit host registry.
 pub struct Catalog {
     order: Vec<String>,

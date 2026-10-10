@@ -22,6 +22,26 @@ impl<H: ExecutionHost> RegistryBuilder<H> {
         self.handlers.insert(id, Arc::new(handler));
         Ok(())
     }
+    /// Register a code-defined handler and return its metadata for catalogue composition.
+    /// Catalogue validation is performed when the combined definitions are assembled.
+    pub fn register_defined<
+        T: NodeHandler<H> + battersea_flow::catalog::NodeDefinition + 'static,
+    >(
+        &mut self,
+        handler: T,
+        registry: &battersea_flow::registry::Registry,
+    ) -> Result<FlowNodeDefinition, String> {
+        let definition = T::definition(registry)?;
+        if definition.handler_id != handler.handler_id() {
+            return Err(format!(
+                "Definition handler {:?} differs from runtime handler {:?}",
+                definition.handler_id,
+                handler.handler_id()
+            ));
+        }
+        self.register(handler)?;
+        Ok(definition)
+    }
     pub fn build(self) -> HandlerRegistry<H> {
         HandlerRegistry {
             handlers: self.handlers,
