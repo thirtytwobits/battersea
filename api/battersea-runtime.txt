@@ -370,6 +370,7 @@ pub battersea_runtime::EventKind::NodeStart
 pub battersea_runtime::EventKind::ProviderEvent
 pub battersea_runtime::EventKind::SignalEmit
 pub battersea_runtime::EventKind::SignalReceive
+pub battersea_runtime::EventKind::TokenClose
 pub battersea_runtime::EventKind::TokenDrop
 pub battersea_runtime::EventKind::TokenEmit
 pub battersea_runtime::EventKind::TokenReceive

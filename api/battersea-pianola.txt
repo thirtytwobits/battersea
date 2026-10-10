@@ -617,9 +617,8 @@ impl battersea_pianola::PianolaTap
 pub fn battersea_pianola::PianolaTap::capture(&mut self, flow_key: &str, node_id: &str, port: &str, token_type: &str, value: &serde_json::value::Value)
 pub fn battersea_pianola::PianolaTap::captured_len(&self) -> usize
 pub fn battersea_pianola::PianolaTap::emissions_from(&self, start: usize) -> alloc::vec::Vec<battersea_pianola::TappedEmission>
-pub fn battersea_pianola::PianolaTap::new(targets: alloc::vec::Vec<battersea_pianola::PianolaTapTarget>) -> Self
-impl core::default::Default for battersea_pianola::PianolaTap
-pub fn battersea_pianola::PianolaTap::default() -> battersea_pianola::PianolaTap
+pub fn battersea_pianola::PianolaTap::error(&self) -> core::option::Option<&str>
+pub fn battersea_pianola::PianolaTap::new(targets: alloc::vec::Vec<battersea_pianola::PianolaTapTarget>, max_bytes: usize) -> Self
 impl core::fmt::Debug for battersea_pianola::PianolaTap
 pub fn battersea_pianola::PianolaTap::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 impl core::marker::Freeze for battersea_pianola::PianolaTap

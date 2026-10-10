@@ -32,6 +32,12 @@ generates its distributable forms.
 Applications inject document, catalogue, validation and activation services, parameter renderers
 and presentation. Dagre and force/geographic layouts load on demand.
 
+`battersea-telemetry` supplies revisioned runtime snapshots and deltas, bounded retention,
+content masking, OTLP export, usage accounting and atomic budget reservations. Hosts provide
+durable ledger writes and finite request bounds. `@battersea/flow` exports its generated
+runtime types and gap-detecting client reducer. [The observation contract](contracts/observability.md)
+defines retention, pricing and reconciliation.
+
 `battersea-pianola` supplies roll grammar, lossless port capture, generic assertions and grading.
 Hosts register domain assertions and supply their setup, actions and observation timeline.
 `examples/editor-server` connects an installed editor to application-owned documents and execution;

@@ -201,6 +201,9 @@ impl ToolConversation for MockConversation {
                         input_tokens: Some(input_tokens),
                         output_tokens: Some(output_tokens),
                         total_tokens: Some(input_tokens + output_tokens),
+                        cached_input_tokens: Some(0),
+                        cache_write_input_tokens: Some(0),
+                        ..Default::default()
                     },
                 },
             )

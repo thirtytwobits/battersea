@@ -332,7 +332,252 @@ export type * from "./contract.js";
 export { tokenConnectionCompatible } from "./ports.js";
 export { FLOW_DOCUMENT_VERSION } from "./defaults.js";
 export { createFlowExecutionPolicy, requireSupportedFlowVersion } from "./execution.js";
+export type * as Runtime from "./runtime-contract.js";
+export { applyRuntimeDelta, applyRuntimeUpdate, RuntimeResyncRequired } from "./runtime-view.js";
 
 // ports.d.ts
 /** Nominal token compatibility, including pass-through outputs with inferred input types. */
 export declare function tokenConnectionCompatible(sourceTokenType: string, sourceNodeInputAccepted: readonly string[], targetAccepted: readonly string[]): boolean;
+
+// runtime-contract.d.ts
+export type Budget = {
+    "limit": Money;
+    "reserved_micros": number;
+    "spent_micros": number;
+};
+export type BudgetRule = {
+    "backends": Array<string>;
+    "flows": Array<string>;
+    "limit": Money;
+};
+export type Change = {
+    "kind": "upsert";
+    "record": RuntimeRecord;
+} | {
+    "id": string;
+    "kind": "remove";
+};
+export type Content = {
+    "byte_length": number;
+    "masked"?: string;
+    "sha256": string;
+};
+export type Context = {
+    "activation_id": string;
+    "flow_key": string;
+    "node_id"?: string;
+    "session_id"?: string;
+};
+export type Cost = {
+    "reason": string;
+    "source": "unknown";
+} | {
+    "amount": Money;
+    "source": "provider_reported";
+} | {
+    "amount": Money;
+    "catalogue_version": string;
+    "effective_date": string;
+    "source": "calculated";
+};
+export type Cursor = {
+    "epoch": string;
+    "revision": string;
+};
+export type Delta = {
+    "base": Cursor;
+    "changes": Array<Change>;
+    "cursor": Cursor;
+};
+export type Direction = "input" | "output";
+export type Ledger = {
+    "budgets": {
+        [key: string]: Budget;
+    };
+    "max_requests": number;
+    "requests": {
+        [key: string]: Reservation;
+    };
+    "version": number;
+};
+export type MaskConfig = {
+    "max_content_bytes": number;
+    "replacements": {
+        [key: string]: string;
+    };
+};
+export type Money = {
+    "currency": string;
+    "micros": number;
+};
+export type OtlpConfig = {
+    "endpoint": string;
+    "max_batch_bytes": number;
+    "max_queued_batches": number;
+    "timeout_ms": number;
+};
+export type PortAction = "emit" | "receive" | "skip" | "drop" | "close";
+export type Price = {
+    "cache_write_input_micros_per_million"?: number;
+    "cached_input_micros_per_million"?: number;
+    "currency": string;
+    "input_micros_per_million": number;
+    "output_micros_per_million": number;
+    "request_micros": number;
+};
+export type PriceCatalogue = {
+    "effective_date": string;
+    "prices": {
+        [key: string]: Price;
+    };
+    "source": string;
+    "version": string;
+};
+export type PriceSource = {
+    "format": "battersea";
+    "path": string;
+} | {
+    "effective_date": string;
+    "format": "litellm";
+    "path": string;
+};
+export type Reservation = {
+    "budgets": Array<string>;
+    "ceiling": Money;
+    "reconciliation"?: string;
+    "request_id": string;
+    "state": ReservationState;
+};
+export type ReservationState = {
+    "status": "reserved";
+} | {
+    "status": "ambiguous";
+} | {
+    "cost": Cost;
+    "status": "settled";
+} | {
+    "reason": string;
+    "status": "released";
+};
+export type Retention = {
+    "max_age_ms": number;
+    "max_delta_bytes": number;
+    "max_deltas": number;
+    "max_record_bytes": number;
+    "max_records": number;
+};
+export type RetryState = {
+    "kind": "none";
+} | {
+    "at_ms": number;
+    "attempt": number;
+    "kind": "scheduled";
+} | {
+    "kind": "ambiguous";
+};
+export type RuntimeRecord = {
+    "context": Context;
+    "id": string;
+    "started_at_ms": number;
+    "state": State;
+    "updated_at_ms": number;
+};
+export type Snapshot = {
+    "cursor": Cursor;
+    "records": Array<RuntimeRecord>;
+};
+export type State = {
+    "kind": "activation";
+    "status": Status;
+} | {
+    "error_code"?: string;
+    "kind": "node";
+    "status": Status;
+} | {
+    "action": PortAction;
+    "content"?: Content;
+    "direction": Direction;
+    "kind": "port";
+    "port": string;
+    "token_type": string;
+} | {
+    "chunk_timing": TimingSummary;
+    "cost": Cost;
+    "elapsed_ms": number;
+    "first_chunk_ms"?: number;
+    "input"?: Content;
+    "kind": "request";
+    "model": string;
+    "operation": string;
+    "output"?: Content;
+    "provider": string;
+    "request_id": string;
+    "retry": RetryState;
+    "status": Status;
+    "usage": Usage;
+} | {
+    "job_id": string;
+    "kind": "media_job";
+    "provider": string;
+    "retry": RetryState;
+    "status": Status;
+} | {
+    "elapsed_ms": number;
+    "idle_limit_ms": number;
+    "kind": "watchdog";
+    "request_id": string;
+    "timed_out": boolean;
+} | {
+    "call_id": string;
+    "kind": "tool";
+    "name": string;
+    "status": Status;
+} | {
+    "attributes": {
+        [key: string]: string;
+    };
+    "category": string;
+    "content"?: Content;
+    "kind": "diagnostic";
+    "message": string;
+};
+export type Status = "accepted" | "running" | "waiting" | "succeeded" | "failed" | "cancelled" | "interrupted" | "completion_pending";
+export type TelemetryConfig = {
+    "budgets": {
+        [key: string]: BudgetRule;
+    };
+    "capture"?: MaskConfig;
+    "max_accounting_requests": number;
+    "otlp"?: OtlpConfig;
+    "price_catalogue"?: PriceSource;
+    "retention": Retention;
+};
+export type TimingSummary = {
+    "count": number;
+    "maximum_ms"?: number;
+    "minimum_ms"?: number;
+    "total_ms": number;
+};
+export type Update = {
+    "cursor": Cursor;
+    "deltas": Array<Delta>;
+    "kind": "deltas";
+} | {
+    "kind": "resync";
+    "snapshot": Snapshot;
+};
+export type Usage = {
+    "cache_write_input_tokens"?: number;
+    "cached_input_tokens"?: number;
+    "input_tokens"?: number;
+    "output_tokens"?: number;
+};
+
+// runtime-view.d.ts
+import type { Delta, Snapshot } from "./runtime-contract.js";
+export declare class RuntimeResyncRequired extends Error {
+    constructor();
+}
+/** Returns a replacement snapshot; stale, duplicate and missing deltas cannot mutate it. */
+export declare function applyRuntimeDelta(snapshot: Snapshot, delta: Delta): Snapshot;
+export declare function applyRuntimeUpdate(snapshot: Snapshot | null, update: import("./runtime-contract.js").Update): Snapshot;

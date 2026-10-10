@@ -21,5 +21,9 @@
     "battersea-runtime",
     "battersea-model"
   ],
-  "battersea-guard": []
+  "battersea-guard": [],
+  "battersea-telemetry": [
+    "battersea-runtime",
+    "battersea-model"
+  ]
 }

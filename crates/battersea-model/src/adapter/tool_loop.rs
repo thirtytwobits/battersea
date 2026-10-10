@@ -95,6 +95,18 @@ pub async fn run_tool_loop(
     }
 }
 
+async fn forward_turn_event(
+    events: &ToolEventSender,
+    event: Result<EngineTextStreamEvent, EngineAdapterRequestError>,
+    turn_index: u32,
+) -> Result<(), EngineAdapterRequestError> {
+    let mut event = event?;
+    if let EngineTextStreamEvent::TokenUsage { usage } = &mut event {
+        usage.turn_index = turn_index;
+    }
+    send_event(events, event).await
+}
+
 async fn drive_tool_loop(
     conversation: &mut impl ToolConversation,
     request: &EngineTextStreamRequest,
@@ -116,8 +128,36 @@ async fn drive_tool_loop(
     .await;
     let mut results = Vec::new();
     let mut retained_tool_bytes = 0usize;
-    for _ in 0..request.max_tool_rounds {
-        let calls = conversation.next_turn(request, results, events).await?;
+    for turn in 0..request.max_tool_rounds {
+        let turn = u32::try_from(turn).map_err(|_| {
+            EngineAdapterRequestError::invalid_response(
+                &context.provider,
+                "Tool turn index overflow.",
+            )
+        })?;
+        send_event(
+            events,
+            EngineTextStreamEvent::TokenUsage {
+                usage: super::EngineTokenUsage {
+                    turn_index: turn,
+                    ..Default::default()
+                },
+            },
+        )
+        .await?;
+        let (turn_tx, mut turn_rx) = mpsc::channel(1);
+        let provider_turn = conversation.next_turn(request, results, &turn_tx);
+        tokio::pin!(provider_turn);
+        let calls = loop {
+            tokio::select! {
+                result = &mut provider_turn => {
+                    turn_rx.close();
+                    while let Some(event) = turn_rx.recv().await { forward_turn_event(events,event,turn).await?; }
+                    break result?;
+                }
+                Some(event) = turn_rx.recv() => { forward_turn_event(events,event,turn).await?; }
+            }
+        };
         super::payload::check_payload(&calls, &context.provider)?;
         if calls.is_empty() {
             return Ok(());
@@ -361,7 +401,11 @@ mod tests {
         run_tool_loop(script, request, executor, None, context(), tx).await;
         let mut events = Vec::new();
         while let Some(event) = rx.recv().await {
-            events.push(event);
+            // These tests specify tool effects and lifecycle ordering. Usage
+            // scopes have independent accounting coverage below.
+            if !matches!(event, Ok(EngineTextStreamEvent::TokenUsage { .. })) {
+                events.push(event);
+            }
         }
         events
     }

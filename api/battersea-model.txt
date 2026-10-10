@@ -77,11 +77,13 @@ pub battersea_model::adapter::error::EngineAdapterRequestError::message: alloc::
 pub battersea_model::adapter::error::EngineAdapterRequestError::provider: alloc::string::String
 pub battersea_model::adapter::error::EngineAdapterRequestError::request_id: core::option::Option<alloc::string::String>
 pub battersea_model::adapter::error::EngineAdapterRequestError::status_code: core::option::Option<u16>
+pub battersea_model::adapter::error::EngineAdapterRequestError::watchdog: core::option::Option<battersea_model::WatchdogFailure>
 impl battersea_model::EngineAdapterRequestError
 pub fn battersea_model::EngineAdapterRequestError::invalid_response(provider: impl core::convert::Into<alloc::string::String>, message: impl core::convert::Into<alloc::string::String>) -> Self
 pub fn battersea_model::EngineAdapterRequestError::mock(message: impl core::convert::Into<alloc::string::String>) -> Self
 pub fn battersea_model::EngineAdapterRequestError::new(provider: impl core::convert::Into<alloc::string::String>, message: impl core::convert::Into<alloc::string::String>, classification: impl core::convert::Into<battersea_model::ErrorKind>) -> Self
 pub fn battersea_model::EngineAdapterRequestError::transport(provider: impl core::convert::Into<alloc::string::String>, message: impl core::convert::Into<alloc::string::String>) -> Self
+pub fn battersea_model::EngineAdapterRequestError::with_idle_watchdog(self, limit_ms: u64) -> Self
 pub fn battersea_model::EngineAdapterRequestError::with_request_id(self, request_id: core::option::Option<alloc::string::String>) -> Self
 pub fn battersea_model::EngineAdapterRequestError::with_status_code(self, status_code: u16) -> Self
 impl core::clone::Clone for battersea_model::EngineAdapterRequestError
@@ -131,6 +133,50 @@ impl<T> dyn_clone::DynClone for battersea_model::EngineAdapterRequestError where
 pub fn battersea_model::EngineAdapterRequestError::__clone_box(&self, _: dyn_clone::sealed::Private) -> *mut ()
 impl<T> serde_core::de::DeserializeOwned for battersea_model::EngineAdapterRequestError where T: for<'de> serde_core::de::Deserialize<'de>
 impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_model::EngineAdapterRequestError where T: ?core::marker::Sized
+pub struct battersea_model::adapter::error::WatchdogFailure
+pub battersea_model::adapter::error::WatchdogFailure::limit_ms: u64
+impl core::clone::Clone for battersea_model::WatchdogFailure
+pub fn battersea_model::WatchdogFailure::clone(&self) -> battersea_model::WatchdogFailure
+impl core::fmt::Debug for battersea_model::WatchdogFailure
+pub fn battersea_model::WatchdogFailure::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl serde_core::ser::Serialize for battersea_model::WatchdogFailure
+pub fn battersea_model::WatchdogFailure::serialize<__S>(&self, __serializer: __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for battersea_model::WatchdogFailure
+pub fn battersea_model::WatchdogFailure::deserialize<__D>(__deserializer: __D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for battersea_model::WatchdogFailure
+impl core::marker::Send for battersea_model::WatchdogFailure
+impl core::marker::Sync for battersea_model::WatchdogFailure
+impl core::marker::Unpin for battersea_model::WatchdogFailure
+impl core::panic::unwind_safe::RefUnwindSafe for battersea_model::WatchdogFailure
+impl core::panic::unwind_safe::UnwindSafe for battersea_model::WatchdogFailure
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_model::WatchdogFailure where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_model::WatchdogFailure where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<T, U> core::convert::Into<U> for battersea_model::WatchdogFailure where U: core::convert::From<T>
+pub fn battersea_model::WatchdogFailure::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_model::WatchdogFailure where U: core::convert::Into<T>
+pub type battersea_model::WatchdogFailure::Error = core::convert::Infallible
+pub fn battersea_model::WatchdogFailure::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for battersea_model::WatchdogFailure where U: core::convert::TryFrom<T>
+pub type battersea_model::WatchdogFailure::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_model::WatchdogFailure::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for battersea_model::WatchdogFailure where T: core::clone::Clone
+pub type battersea_model::WatchdogFailure::Owned = T
+pub fn battersea_model::WatchdogFailure::clone_into(&self, target: &mut T)
+pub fn battersea_model::WatchdogFailure::to_owned(&self) -> T
+impl<T> core::any::Any for battersea_model::WatchdogFailure where T: 'static + ?core::marker::Sized
+pub fn battersea_model::WatchdogFailure::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_model::WatchdogFailure where T: ?core::marker::Sized
+pub fn battersea_model::WatchdogFailure::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_model::WatchdogFailure where T: ?core::marker::Sized
+pub fn battersea_model::WatchdogFailure::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for battersea_model::WatchdogFailure where T: core::clone::Clone
+pub unsafe fn battersea_model::WatchdogFailure::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for battersea_model::WatchdogFailure
+pub fn battersea_model::WatchdogFailure::from(t: T) -> T
+impl<T> dyn_clone::DynClone for battersea_model::WatchdogFailure where T: core::clone::Clone
+pub fn battersea_model::WatchdogFailure::__clone_box(&self, _: dyn_clone::sealed::Private) -> *mut ()
+impl<T> serde_core::de::DeserializeOwned for battersea_model::WatchdogFailure where T: for<'de> serde_core::de::Deserialize<'de>
+impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_model::WatchdogFailure where T: ?core::marker::Sized
 pub mod battersea_model::adapter::payload
 pub const battersea_model::adapter::payload::PROVIDER_PAYLOAD_BYTES: usize
 pub fn battersea_model::adapter::payload::check_payload<T: serde_core::ser::Serialize + ?core::marker::Sized>(value: &T, provider: &str) -> core::result::Result<usize, battersea_model::EngineAdapterRequestError>
@@ -1170,9 +1216,13 @@ impl<T> dyn_clone::DynClone for battersea_model::EngineTextStreamRequest where T
 pub fn battersea_model::EngineTextStreamRequest::__clone_box(&self, _: dyn_clone::sealed::Private) -> *mut ()
 impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_model::EngineTextStreamRequest where T: ?core::marker::Sized
 pub struct battersea_model::adapter::EngineTokenUsage
+pub battersea_model::adapter::EngineTokenUsage::cache_write_input_tokens: core::option::Option<u64>
+pub battersea_model::adapter::EngineTokenUsage::cached_input_tokens: core::option::Option<u64>
 pub battersea_model::adapter::EngineTokenUsage::input_tokens: core::option::Option<u64>
 pub battersea_model::adapter::EngineTokenUsage::output_tokens: core::option::Option<u64>
+pub battersea_model::adapter::EngineTokenUsage::reasoning_output_tokens: core::option::Option<u64>
 pub battersea_model::adapter::EngineTokenUsage::total_tokens: core::option::Option<u64>
+pub battersea_model::adapter::EngineTokenUsage::turn_index: u32
 impl core::clone::Clone for battersea_model::EngineTokenUsage
 pub fn battersea_model::EngineTokenUsage::clone(&self) -> battersea_model::EngineTokenUsage
 impl core::cmp::Eq for battersea_model::EngineTokenUsage
@@ -2322,11 +2372,13 @@ pub battersea_model::error::EngineAdapterRequestError::message: alloc::string::S
 pub battersea_model::error::EngineAdapterRequestError::provider: alloc::string::String
 pub battersea_model::error::EngineAdapterRequestError::request_id: core::option::Option<alloc::string::String>
 pub battersea_model::error::EngineAdapterRequestError::status_code: core::option::Option<u16>
+pub battersea_model::error::EngineAdapterRequestError::watchdog: core::option::Option<battersea_model::WatchdogFailure>
 impl battersea_model::EngineAdapterRequestError
 pub fn battersea_model::EngineAdapterRequestError::invalid_response(provider: impl core::convert::Into<alloc::string::String>, message: impl core::convert::Into<alloc::string::String>) -> Self
 pub fn battersea_model::EngineAdapterRequestError::mock(message: impl core::convert::Into<alloc::string::String>) -> Self
 pub fn battersea_model::EngineAdapterRequestError::new(provider: impl core::convert::Into<alloc::string::String>, message: impl core::convert::Into<alloc::string::String>, classification: impl core::convert::Into<battersea_model::ErrorKind>) -> Self
 pub fn battersea_model::EngineAdapterRequestError::transport(provider: impl core::convert::Into<alloc::string::String>, message: impl core::convert::Into<alloc::string::String>) -> Self
+pub fn battersea_model::EngineAdapterRequestError::with_idle_watchdog(self, limit_ms: u64) -> Self
 pub fn battersea_model::EngineAdapterRequestError::with_request_id(self, request_id: core::option::Option<alloc::string::String>) -> Self
 pub fn battersea_model::EngineAdapterRequestError::with_status_code(self, status_code: u16) -> Self
 impl core::clone::Clone for battersea_model::EngineAdapterRequestError
@@ -2376,6 +2428,50 @@ impl<T> dyn_clone::DynClone for battersea_model::EngineAdapterRequestError where
 pub fn battersea_model::EngineAdapterRequestError::__clone_box(&self, _: dyn_clone::sealed::Private) -> *mut ()
 impl<T> serde_core::de::DeserializeOwned for battersea_model::EngineAdapterRequestError where T: for<'de> serde_core::de::Deserialize<'de>
 impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_model::EngineAdapterRequestError where T: ?core::marker::Sized
+pub struct battersea_model::error::WatchdogFailure
+pub battersea_model::error::WatchdogFailure::limit_ms: u64
+impl core::clone::Clone for battersea_model::WatchdogFailure
+pub fn battersea_model::WatchdogFailure::clone(&self) -> battersea_model::WatchdogFailure
+impl core::fmt::Debug for battersea_model::WatchdogFailure
+pub fn battersea_model::WatchdogFailure::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl serde_core::ser::Serialize for battersea_model::WatchdogFailure
+pub fn battersea_model::WatchdogFailure::serialize<__S>(&self, __serializer: __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for battersea_model::WatchdogFailure
+pub fn battersea_model::WatchdogFailure::deserialize<__D>(__deserializer: __D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for battersea_model::WatchdogFailure
+impl core::marker::Send for battersea_model::WatchdogFailure
+impl core::marker::Sync for battersea_model::WatchdogFailure
+impl core::marker::Unpin for battersea_model::WatchdogFailure
+impl core::panic::unwind_safe::RefUnwindSafe for battersea_model::WatchdogFailure
+impl core::panic::unwind_safe::UnwindSafe for battersea_model::WatchdogFailure
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_model::WatchdogFailure where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_model::WatchdogFailure where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<T, U> core::convert::Into<U> for battersea_model::WatchdogFailure where U: core::convert::From<T>
+pub fn battersea_model::WatchdogFailure::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_model::WatchdogFailure where U: core::convert::Into<T>
+pub type battersea_model::WatchdogFailure::Error = core::convert::Infallible
+pub fn battersea_model::WatchdogFailure::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for battersea_model::WatchdogFailure where U: core::convert::TryFrom<T>
+pub type battersea_model::WatchdogFailure::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_model::WatchdogFailure::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for battersea_model::WatchdogFailure where T: core::clone::Clone
+pub type battersea_model::WatchdogFailure::Owned = T
+pub fn battersea_model::WatchdogFailure::clone_into(&self, target: &mut T)
+pub fn battersea_model::WatchdogFailure::to_owned(&self) -> T
+impl<T> core::any::Any for battersea_model::WatchdogFailure where T: 'static + ?core::marker::Sized
+pub fn battersea_model::WatchdogFailure::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_model::WatchdogFailure where T: ?core::marker::Sized
+pub fn battersea_model::WatchdogFailure::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_model::WatchdogFailure where T: ?core::marker::Sized
+pub fn battersea_model::WatchdogFailure::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for battersea_model::WatchdogFailure where T: core::clone::Clone
+pub unsafe fn battersea_model::WatchdogFailure::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for battersea_model::WatchdogFailure
+pub fn battersea_model::WatchdogFailure::from(t: T) -> T
+impl<T> dyn_clone::DynClone for battersea_model::WatchdogFailure where T: core::clone::Clone
+pub fn battersea_model::WatchdogFailure::__clone_box(&self, _: dyn_clone::sealed::Private) -> *mut ()
+impl<T> serde_core::de::DeserializeOwned for battersea_model::WatchdogFailure where T: for<'de> serde_core::de::Deserialize<'de>
+impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_model::WatchdogFailure where T: ?core::marker::Sized
 pub mod battersea_model::media
 pub enum battersea_model::media::ControllerActivityEvent
 pub battersea_model::media::ControllerActivityEvent::Error
@@ -4578,11 +4674,13 @@ pub battersea_model::EngineAdapterRequestError::message: alloc::string::String
 pub battersea_model::EngineAdapterRequestError::provider: alloc::string::String
 pub battersea_model::EngineAdapterRequestError::request_id: core::option::Option<alloc::string::String>
 pub battersea_model::EngineAdapterRequestError::status_code: core::option::Option<u16>
+pub battersea_model::EngineAdapterRequestError::watchdog: core::option::Option<battersea_model::WatchdogFailure>
 impl battersea_model::EngineAdapterRequestError
 pub fn battersea_model::EngineAdapterRequestError::invalid_response(provider: impl core::convert::Into<alloc::string::String>, message: impl core::convert::Into<alloc::string::String>) -> Self
 pub fn battersea_model::EngineAdapterRequestError::mock(message: impl core::convert::Into<alloc::string::String>) -> Self
 pub fn battersea_model::EngineAdapterRequestError::new(provider: impl core::convert::Into<alloc::string::String>, message: impl core::convert::Into<alloc::string::String>, classification: impl core::convert::Into<battersea_model::ErrorKind>) -> Self
 pub fn battersea_model::EngineAdapterRequestError::transport(provider: impl core::convert::Into<alloc::string::String>, message: impl core::convert::Into<alloc::string::String>) -> Self
+pub fn battersea_model::EngineAdapterRequestError::with_idle_watchdog(self, limit_ms: u64) -> Self
 pub fn battersea_model::EngineAdapterRequestError::with_request_id(self, request_id: core::option::Option<alloc::string::String>) -> Self
 pub fn battersea_model::EngineAdapterRequestError::with_status_code(self, status_code: u16) -> Self
 impl core::clone::Clone for battersea_model::EngineAdapterRequestError
@@ -5206,9 +5304,13 @@ impl<T> dyn_clone::DynClone for battersea_model::EngineTextStreamRequest where T
 pub fn battersea_model::EngineTextStreamRequest::__clone_box(&self, _: dyn_clone::sealed::Private) -> *mut ()
 impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_model::EngineTextStreamRequest where T: ?core::marker::Sized
 pub struct battersea_model::EngineTokenUsage
+pub battersea_model::EngineTokenUsage::cache_write_input_tokens: core::option::Option<u64>
+pub battersea_model::EngineTokenUsage::cached_input_tokens: core::option::Option<u64>
 pub battersea_model::EngineTokenUsage::input_tokens: core::option::Option<u64>
 pub battersea_model::EngineTokenUsage::output_tokens: core::option::Option<u64>
+pub battersea_model::EngineTokenUsage::reasoning_output_tokens: core::option::Option<u64>
 pub battersea_model::EngineTokenUsage::total_tokens: core::option::Option<u64>
+pub battersea_model::EngineTokenUsage::turn_index: u32
 impl core::clone::Clone for battersea_model::EngineTokenUsage
 pub fn battersea_model::EngineTokenUsage::clone(&self) -> battersea_model::EngineTokenUsage
 impl core::cmp::Eq for battersea_model::EngineTokenUsage
@@ -5561,6 +5663,50 @@ pub fn battersea_model::ToolRegistry::borrow_mut(&mut self) -> &mut T
 impl<T> core::convert::From<T> for battersea_model::ToolRegistry
 pub fn battersea_model::ToolRegistry::from(t: T) -> T
 impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_model::ToolRegistry where T: ?core::marker::Sized
+pub struct battersea_model::WatchdogFailure
+pub battersea_model::WatchdogFailure::limit_ms: u64
+impl core::clone::Clone for battersea_model::WatchdogFailure
+pub fn battersea_model::WatchdogFailure::clone(&self) -> battersea_model::WatchdogFailure
+impl core::fmt::Debug for battersea_model::WatchdogFailure
+pub fn battersea_model::WatchdogFailure::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl serde_core::ser::Serialize for battersea_model::WatchdogFailure
+pub fn battersea_model::WatchdogFailure::serialize<__S>(&self, __serializer: __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for battersea_model::WatchdogFailure
+pub fn battersea_model::WatchdogFailure::deserialize<__D>(__deserializer: __D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for battersea_model::WatchdogFailure
+impl core::marker::Send for battersea_model::WatchdogFailure
+impl core::marker::Sync for battersea_model::WatchdogFailure
+impl core::marker::Unpin for battersea_model::WatchdogFailure
+impl core::panic::unwind_safe::RefUnwindSafe for battersea_model::WatchdogFailure
+impl core::panic::unwind_safe::UnwindSafe for battersea_model::WatchdogFailure
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_model::WatchdogFailure where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_model::WatchdogFailure where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<T, U> core::convert::Into<U> for battersea_model::WatchdogFailure where U: core::convert::From<T>
+pub fn battersea_model::WatchdogFailure::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_model::WatchdogFailure where U: core::convert::Into<T>
+pub type battersea_model::WatchdogFailure::Error = core::convert::Infallible
+pub fn battersea_model::WatchdogFailure::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for battersea_model::WatchdogFailure where U: core::convert::TryFrom<T>
+pub type battersea_model::WatchdogFailure::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_model::WatchdogFailure::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for battersea_model::WatchdogFailure where T: core::clone::Clone
+pub type battersea_model::WatchdogFailure::Owned = T
+pub fn battersea_model::WatchdogFailure::clone_into(&self, target: &mut T)
+pub fn battersea_model::WatchdogFailure::to_owned(&self) -> T
+impl<T> core::any::Any for battersea_model::WatchdogFailure where T: 'static + ?core::marker::Sized
+pub fn battersea_model::WatchdogFailure::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_model::WatchdogFailure where T: ?core::marker::Sized
+pub fn battersea_model::WatchdogFailure::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_model::WatchdogFailure where T: ?core::marker::Sized
+pub fn battersea_model::WatchdogFailure::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for battersea_model::WatchdogFailure where T: core::clone::Clone
+pub unsafe fn battersea_model::WatchdogFailure::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for battersea_model::WatchdogFailure
+pub fn battersea_model::WatchdogFailure::from(t: T) -> T
+impl<T> dyn_clone::DynClone for battersea_model::WatchdogFailure where T: core::clone::Clone
+pub fn battersea_model::WatchdogFailure::__clone_box(&self, _: dyn_clone::sealed::Private) -> *mut ()
+impl<T> serde_core::de::DeserializeOwned for battersea_model::WatchdogFailure where T: for<'de> serde_core::de::Deserialize<'de>
+impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_model::WatchdogFailure where T: ?core::marker::Sized
 pub trait battersea_model::EngineAdapter: core::marker::Send + core::marker::Sync
 pub fn battersea_model::EngineAdapter::count_text_stream_input_tokens<'life0, 'async_trait>(&'life0 self, request: battersea_model::EngineTextStreamRequest) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<u64, battersea_model::EngineAdapterRequestError>> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait
 pub fn battersea_model::EngineAdapter::describe_debug_context(&self) -> battersea_model::EngineAdapterDebugContext

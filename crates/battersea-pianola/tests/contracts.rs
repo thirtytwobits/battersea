@@ -5,18 +5,21 @@ use std::collections::HashMap;
 fn pianola_tap_captures_only_matching_ports_in_full_and_in_order() {
     // Port-only target matches that port on any node; node-scoped
     // target matches only its node. Untenanted ports are ignored.
-    let mut tap = PianolaTap::new(vec![
-        PianolaTapTarget {
-            flow_key: "test-flow".to_string(),
-            node_id: None,
-            port: "user_response".to_string(),
-        },
-        PianolaTapTarget {
-            flow_key: "test-flow".to_string(),
-            node_id: Some("parser-1".to_string()),
-            port: "out_of_story".to_string(),
-        },
-    ]);
+    let mut tap = PianolaTap::new(
+        vec![
+            PianolaTapTarget {
+                flow_key: "test-flow".to_string(),
+                node_id: None,
+                port: "user_response".to_string(),
+            },
+            PianolaTapTarget {
+                flow_key: "test-flow".to_string(),
+                node_id: Some("parser-1".to_string()),
+                port: "out_of_story".to_string(),
+            },
+        ],
+        16 * 1024 * 1024,
+    );
 
     // Matches (port-only), full value preserved.
     tap.capture(
@@ -241,11 +244,14 @@ fn independent_roll_captures_asserts_and_resolves_a_grade() {
     let step = &roll.steps[0];
     let port = step.action["port"].as_str().unwrap();
     let value = &step.action["value"];
-    let mut tap = PianolaTap::new(vec![PianolaTapTarget {
-        flow_key: roll.name.clone(),
-        node_id: None,
-        port: port.into(),
-    }]);
+    let mut tap = PianolaTap::new(
+        vec![PianolaTapTarget {
+            flow_key: roll.name.clone(),
+            node_id: None,
+            port: port.into(),
+        }],
+        16 * 1024 * 1024,
+    );
     tap.capture(&roll.name, "external-node", port, "text", value);
     let captured = tap.emissions_from(0);
     assert_eq!(captured[0].value, *value);
@@ -323,4 +329,31 @@ fn grade_separation_requires_both_identities_and_a_different_model() {
     assert!(resolve_grade(&mut report, 1.0, String::new(), Some("subject")).is_err());
     resolve_grade(&mut report, 1.0, String::new(), Some("grader")).unwrap();
     assert!(report.all_criteria_held);
+}
+
+#[test]
+fn capture_capacity_failure_is_sticky_and_preserves_complete_prior_emissions() {
+    let target = PianolaTapTarget {
+        flow_key: "bounded".into(),
+        node_id: None,
+        port: "text".into(),
+    };
+    let first = json!({"text":"complete emission"});
+    let mut tap = PianolaTap::new(vec![target], 512);
+    tap.capture("bounded", "source", "text", "text", &first);
+    assert!(tap.error().is_none());
+    let accepted = tap.emissions_from(0);
+    assert_eq!(accepted.len(), 1);
+    assert_eq!(accepted[0].value, first);
+    tap.capture(
+        "bounded",
+        "source",
+        "text",
+        "text",
+        &json!("x".repeat(1024)),
+    );
+    assert!(tap.error().is_some());
+    tap.capture("bounded", "source", "text", "text", &json!("later"));
+    assert_eq!(tap.captured_len(), accepted.len());
+    assert_eq!(tap.emissions_from(0)[0].value, accepted[0].value);
 }

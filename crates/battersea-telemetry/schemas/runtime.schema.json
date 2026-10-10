@@ -1,0 +1,1149 @@
+{
+  "$defs": {
+    "Budget": {
+      "additionalProperties": false,
+      "properties": {
+        "limit": {
+          "$ref": "#/$defs/Money"
+        },
+        "reserved_micros": {
+          "maximum": 9007199254740991,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "spent_micros": {
+          "maximum": 9007199254740991,
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "limit",
+        "spent_micros",
+        "reserved_micros"
+      ],
+      "type": "object"
+    },
+    "BudgetRule": {
+      "additionalProperties": false,
+      "properties": {
+        "backends": {
+          "description": "Empty selectors apply to every request.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "flows": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "limit": {
+          "$ref": "#/$defs/Money"
+        }
+      },
+      "required": [
+        "limit",
+        "backends",
+        "flows"
+      ],
+      "type": "object"
+    },
+    "Change": {
+      "oneOf": [
+        {
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "const": "upsert",
+              "type": "string"
+            },
+            "record": {
+              "$ref": "#/$defs/RuntimeRecord"
+            }
+          },
+          "required": [
+            "kind",
+            "record"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "kind": {
+              "const": "remove",
+              "type": "string"
+            }
+          },
+          "required": [
+            "kind",
+            "id"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    "Content": {
+      "additionalProperties": false,
+      "description": "Metadata describes the original bytes; captured text has passed the host mask.",
+      "properties": {
+        "byte_length": {
+          "maximum": 9007199254740991,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "masked": {
+          "type": "string"
+        },
+        "sha256": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "sha256",
+        "byte_length"
+      ],
+      "type": "object"
+    },
+    "Context": {
+      "additionalProperties": false,
+      "properties": {
+        "activation_id": {
+          "type": "string"
+        },
+        "flow_key": {
+          "type": "string"
+        },
+        "node_id": {
+          "type": "string"
+        },
+        "session_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "activation_id",
+        "flow_key"
+      ],
+      "type": "object"
+    },
+    "Cost": {
+      "oneOf": [
+        {
+          "additionalProperties": false,
+          "properties": {
+            "reason": {
+              "type": "string"
+            },
+            "source": {
+              "const": "unknown",
+              "type": "string"
+            }
+          },
+          "required": [
+            "source",
+            "reason"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "amount": {
+              "$ref": "#/$defs/Money"
+            },
+            "source": {
+              "const": "provider_reported",
+              "type": "string"
+            }
+          },
+          "required": [
+            "source",
+            "amount"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "amount": {
+              "$ref": "#/$defs/Money"
+            },
+            "catalogue_version": {
+              "type": "string"
+            },
+            "effective_date": {
+              "type": "string"
+            },
+            "source": {
+              "const": "calculated",
+              "type": "string"
+            }
+          },
+          "required": [
+            "source",
+            "amount",
+            "catalogue_version",
+            "effective_date"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    "Cursor": {
+      "additionalProperties": false,
+      "properties": {
+        "epoch": {
+          "type": "string"
+        },
+        "revision": {
+          "description": "Decimal string so JavaScript clients preserve every revision.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "epoch",
+        "revision"
+      ],
+      "type": "object"
+    },
+    "Delta": {
+      "additionalProperties": false,
+      "properties": {
+        "base": {
+          "$ref": "#/$defs/Cursor"
+        },
+        "changes": {
+          "items": {
+            "$ref": "#/$defs/Change"
+          },
+          "type": "array"
+        },
+        "cursor": {
+          "$ref": "#/$defs/Cursor"
+        }
+      },
+      "required": [
+        "base",
+        "cursor",
+        "changes"
+      ],
+      "type": "object"
+    },
+    "Direction": {
+      "enum": [
+        "input",
+        "output"
+      ],
+      "type": "string"
+    },
+    "Ledger": {
+      "additionalProperties": false,
+      "properties": {
+        "budgets": {
+          "additionalProperties": {
+            "$ref": "#/$defs/Budget"
+          },
+          "type": "object"
+        },
+        "max_requests": {
+          "maximum": 9007199254740991,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "requests": {
+          "additionalProperties": {
+            "$ref": "#/$defs/Reservation"
+          },
+          "type": "object"
+        },
+        "version": {
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "version",
+        "budgets",
+        "requests",
+        "max_requests"
+      ],
+      "type": "object"
+    },
+    "MaskConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "max_content_bytes": {
+          "maximum": 9007199254740991,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "replacements": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object"
+        }
+      },
+      "required": [
+        "replacements",
+        "max_content_bytes"
+      ],
+      "type": "object"
+    },
+    "Money": {
+      "additionalProperties": false,
+      "properties": {
+        "currency": {
+          "type": "string"
+        },
+        "micros": {
+          "maximum": 9007199254740991,
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "currency",
+        "micros"
+      ],
+      "type": "object"
+    },
+    "OtlpConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "endpoint": {
+          "type": "string"
+        },
+        "max_batch_bytes": {
+          "maximum": 9007199254740991,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "max_queued_batches": {
+          "maximum": 9007199254740991,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "timeout_ms": {
+          "maximum": 9007199254740991,
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "endpoint",
+        "timeout_ms",
+        "max_batch_bytes",
+        "max_queued_batches"
+      ],
+      "type": "object"
+    },
+    "PortAction": {
+      "enum": [
+        "emit",
+        "receive",
+        "skip",
+        "drop",
+        "close"
+      ],
+      "type": "string"
+    },
+    "Price": {
+      "additionalProperties": false,
+      "properties": {
+        "cache_write_input_micros_per_million": {
+          "maximum": 9007199254740991,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "cached_input_micros_per_million": {
+          "maximum": 9007199254740991,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "currency": {
+          "type": "string"
+        },
+        "input_micros_per_million": {
+          "maximum": 9007199254740991,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "output_micros_per_million": {
+          "maximum": 9007199254740991,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "request_micros": {
+          "maximum": 9007199254740991,
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "currency",
+        "input_micros_per_million",
+        "output_micros_per_million",
+        "request_micros"
+      ],
+      "type": "object"
+    },
+    "PriceCatalogue": {
+      "additionalProperties": false,
+      "properties": {
+        "effective_date": {
+          "type": "string"
+        },
+        "prices": {
+          "additionalProperties": {
+            "$ref": "#/$defs/Price"
+          },
+          "description": "Keys are provider/model, not a display name or configured backend alias.",
+          "type": "object"
+        },
+        "source": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "version",
+        "source",
+        "effective_date",
+        "prices"
+      ],
+      "type": "object"
+    },
+    "PriceSource": {
+      "oneOf": [
+        {
+          "additionalProperties": false,
+          "properties": {
+            "format": {
+              "const": "battersea",
+              "type": "string"
+            },
+            "path": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "format",
+            "path"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "effective_date": {
+              "type": "string"
+            },
+            "format": {
+              "const": "litellm",
+              "type": "string"
+            },
+            "path": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "format",
+            "path",
+            "effective_date"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    "Reservation": {
+      "additionalProperties": false,
+      "properties": {
+        "budgets": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "ceiling": {
+          "$ref": "#/$defs/Money"
+        },
+        "reconciliation": {
+          "type": "string"
+        },
+        "request_id": {
+          "type": "string"
+        },
+        "state": {
+          "$ref": "#/$defs/ReservationState"
+        }
+      },
+      "required": [
+        "request_id",
+        "budgets",
+        "ceiling",
+        "state"
+      ],
+      "type": "object"
+    },
+    "ReservationState": {
+      "oneOf": [
+        {
+          "additionalProperties": false,
+          "properties": {
+            "status": {
+              "const": "reserved",
+              "type": "string"
+            }
+          },
+          "required": [
+            "status"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "status": {
+              "const": "ambiguous",
+              "type": "string"
+            }
+          },
+          "required": [
+            "status"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "cost": {
+              "$ref": "#/$defs/Cost"
+            },
+            "status": {
+              "const": "settled",
+              "type": "string"
+            }
+          },
+          "required": [
+            "status",
+            "cost"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "reason": {
+              "type": "string"
+            },
+            "status": {
+              "const": "released",
+              "type": "string"
+            }
+          },
+          "required": [
+            "status",
+            "reason"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    "Retention": {
+      "additionalProperties": false,
+      "properties": {
+        "max_age_ms": {
+          "maximum": 9007199254740991,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "max_delta_bytes": {
+          "maximum": 9007199254740991,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "max_deltas": {
+          "maximum": 9007199254740991,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "max_record_bytes": {
+          "maximum": 9007199254740991,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "max_records": {
+          "maximum": 9007199254740991,
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "max_records",
+        "max_record_bytes",
+        "max_delta_bytes",
+        "max_deltas",
+        "max_age_ms"
+      ],
+      "type": "object"
+    },
+    "RetryState": {
+      "oneOf": [
+        {
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "const": "none",
+              "type": "string"
+            }
+          },
+          "required": [
+            "kind"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "at_ms": {
+              "maximum": 9007199254740991,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "attempt": {
+              "format": "uint32",
+              "minimum": 0,
+              "type": "integer"
+            },
+            "kind": {
+              "const": "scheduled",
+              "type": "string"
+            }
+          },
+          "required": [
+            "kind",
+            "attempt",
+            "at_ms"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "const": "ambiguous",
+              "type": "string"
+            }
+          },
+          "required": [
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    "RuntimeRecord": {
+      "additionalProperties": false,
+      "properties": {
+        "context": {
+          "$ref": "#/$defs/Context"
+        },
+        "id": {
+          "description": "Stable identity of this observed resource, scoped by its activation.",
+          "type": "string"
+        },
+        "started_at_ms": {
+          "maximum": 9007199254740991,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "state": {
+          "$ref": "#/$defs/State"
+        },
+        "updated_at_ms": {
+          "maximum": 9007199254740991,
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "id",
+        "context",
+        "started_at_ms",
+        "updated_at_ms",
+        "state"
+      ],
+      "type": "object"
+    },
+    "Snapshot": {
+      "additionalProperties": false,
+      "properties": {
+        "cursor": {
+          "$ref": "#/$defs/Cursor"
+        },
+        "records": {
+          "items": {
+            "$ref": "#/$defs/RuntimeRecord"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "cursor",
+        "records"
+      ],
+      "type": "object"
+    },
+    "State": {
+      "oneOf": [
+        {
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "const": "activation",
+              "type": "string"
+            },
+            "status": {
+              "$ref": "#/$defs/Status"
+            }
+          },
+          "required": [
+            "kind",
+            "status"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "error_code": {
+              "type": "string"
+            },
+            "kind": {
+              "const": "node",
+              "type": "string"
+            },
+            "status": {
+              "$ref": "#/$defs/Status"
+            }
+          },
+          "required": [
+            "kind",
+            "status"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "action": {
+              "$ref": "#/$defs/PortAction"
+            },
+            "content": {
+              "$ref": "#/$defs/Content"
+            },
+            "direction": {
+              "$ref": "#/$defs/Direction"
+            },
+            "kind": {
+              "const": "port",
+              "type": "string"
+            },
+            "port": {
+              "type": "string"
+            },
+            "token_type": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "kind",
+            "port",
+            "token_type",
+            "direction",
+            "action"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "chunk_timing": {
+              "$ref": "#/$defs/TimingSummary"
+            },
+            "cost": {
+              "$ref": "#/$defs/Cost"
+            },
+            "elapsed_ms": {
+              "maximum": 9007199254740991,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "first_chunk_ms": {
+              "maximum": 9007199254740991,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "input": {
+              "$ref": "#/$defs/Content"
+            },
+            "kind": {
+              "const": "request",
+              "type": "string"
+            },
+            "model": {
+              "type": "string"
+            },
+            "operation": {
+              "type": "string"
+            },
+            "output": {
+              "$ref": "#/$defs/Content"
+            },
+            "provider": {
+              "type": "string"
+            },
+            "request_id": {
+              "type": "string"
+            },
+            "retry": {
+              "$ref": "#/$defs/RetryState"
+            },
+            "status": {
+              "$ref": "#/$defs/Status"
+            },
+            "usage": {
+              "$ref": "#/$defs/Usage"
+            }
+          },
+          "required": [
+            "kind",
+            "request_id",
+            "provider",
+            "model",
+            "operation",
+            "status",
+            "retry",
+            "usage",
+            "cost",
+            "elapsed_ms",
+            "chunk_timing"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "job_id": {
+              "type": "string"
+            },
+            "kind": {
+              "const": "media_job",
+              "type": "string"
+            },
+            "provider": {
+              "type": "string"
+            },
+            "retry": {
+              "$ref": "#/$defs/RetryState"
+            },
+            "status": {
+              "$ref": "#/$defs/Status"
+            }
+          },
+          "required": [
+            "kind",
+            "job_id",
+            "provider",
+            "status",
+            "retry"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "elapsed_ms": {
+              "maximum": 9007199254740991,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "idle_limit_ms": {
+              "maximum": 9007199254740991,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "kind": {
+              "const": "watchdog",
+              "type": "string"
+            },
+            "request_id": {
+              "type": "string"
+            },
+            "timed_out": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "kind",
+            "request_id",
+            "elapsed_ms",
+            "idle_limit_ms",
+            "timed_out"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "call_id": {
+              "type": "string"
+            },
+            "kind": {
+              "const": "tool",
+              "type": "string"
+            },
+            "name": {
+              "type": "string"
+            },
+            "status": {
+              "$ref": "#/$defs/Status"
+            }
+          },
+          "required": [
+            "kind",
+            "call_id",
+            "name",
+            "status"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "attributes": {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "type": "object"
+            },
+            "category": {
+              "type": "string"
+            },
+            "content": {
+              "$ref": "#/$defs/Content"
+            },
+            "kind": {
+              "const": "diagnostic",
+              "type": "string"
+            },
+            "message": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "kind",
+            "category",
+            "attributes",
+            "message"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    "Status": {
+      "enum": [
+        "accepted",
+        "running",
+        "waiting",
+        "succeeded",
+        "failed",
+        "cancelled",
+        "interrupted",
+        "completion_pending"
+      ],
+      "type": "string"
+    },
+    "TelemetryConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "budgets": {
+          "additionalProperties": {
+            "$ref": "#/$defs/BudgetRule"
+          },
+          "type": "object"
+        },
+        "capture": {
+          "$ref": "#/$defs/MaskConfig",
+          "description": "Exact strings replaced before opt-in content enters any observation.\nOmission disables content capture."
+        },
+        "max_accounting_requests": {
+          "maximum": 9007199254740991,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "otlp": {
+          "$ref": "#/$defs/OtlpConfig"
+        },
+        "price_catalogue": {
+          "$ref": "#/$defs/PriceSource"
+        },
+        "retention": {
+          "$ref": "#/$defs/Retention"
+        }
+      },
+      "required": [
+        "retention",
+        "budgets",
+        "max_accounting_requests"
+      ],
+      "type": "object"
+    },
+    "TimingSummary": {
+      "additionalProperties": false,
+      "properties": {
+        "count": {
+          "maximum": 9007199254740991,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "maximum_ms": {
+          "maximum": 9007199254740991,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "minimum_ms": {
+          "maximum": 9007199254740991,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "total_ms": {
+          "maximum": 9007199254740991,
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "count",
+        "total_ms"
+      ],
+      "type": "object"
+    },
+    "Update": {
+      "oneOf": [
+        {
+          "additionalProperties": false,
+          "properties": {
+            "cursor": {
+              "$ref": "#/$defs/Cursor"
+            },
+            "deltas": {
+              "items": {
+                "$ref": "#/$defs/Delta"
+              },
+              "type": "array"
+            },
+            "kind": {
+              "const": "deltas",
+              "type": "string"
+            }
+          },
+          "required": [
+            "kind",
+            "deltas",
+            "cursor"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "const": "resync",
+              "type": "string"
+            },
+            "snapshot": {
+              "$ref": "#/$defs/Snapshot"
+            }
+          },
+          "required": [
+            "kind",
+            "snapshot"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    "Usage": {
+      "additionalProperties": false,
+      "properties": {
+        "cache_write_input_tokens": {
+          "maximum": 9007199254740991,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "cached_input_tokens": {
+          "maximum": 9007199254740991,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "input_tokens": {
+          "description": "Inclusive of cache reads and writes.",
+          "maximum": 9007199254740991,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "output_tokens": {
+          "description": "Inclusive of billed reasoning tokens.",
+          "maximum": 9007199254740991,
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "type": "object"
+    }
+  },
+  "$id": "https://battersea.dev/schemas/runtime.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+    "catalogue": {
+      "$ref": "#/$defs/PriceCatalogue"
+    },
+    "config": {
+      "$ref": "#/$defs/TelemetryConfig"
+    },
+    "ledger": {
+      "$ref": "#/$defs/Ledger"
+    },
+    "retention": {
+      "$ref": "#/$defs/Retention"
+    },
+    "snapshot": {
+      "$ref": "#/$defs/Snapshot"
+    },
+    "update": {
+      "$ref": "#/$defs/Update"
+    }
+  },
+  "required": [
+    "config",
+    "snapshot",
+    "update",
+    "retention",
+    "catalogue",
+    "ledger"
+  ],
+  "title": "RuntimeContract",
+  "type": "object"
+}

@@ -249,15 +249,15 @@ pub struct TappedEmission {
 }
 
 /// The lossless capture buffer a roll's runner installs on its sandbox
-/// engine for the duration of a run. Unbounded and ordered: every teed
-/// port emission is appended in full at the `emit_flow_token`
-/// chokepoint, so the recording cannot drop or truncate data the way
-/// the bounded procfs rings or the lossy broadcast firehose can.
-#[derive(Debug, Default)]
+/// engine for the duration of a run. Capture is ordered and byte-bounded;
+/// exceeding capacity records a sticky failure instead of truncating a value.
+#[derive(Debug)]
 pub struct PianolaTap {
     targets: Vec<PianolaTapTarget>,
     emissions: Vec<TappedEmission>,
     next_ordinal: u64,
+    remaining_bytes: usize,
+    error: Option<String>,
 }
 
 /// One captured port emission attributed to a roll step. Serialised one
@@ -527,12 +527,18 @@ pub fn severity_str(severity: Severity) -> &'static str {
 }
 
 impl PianolaTap {
-    pub fn new(targets: Vec<PianolaTapTarget>) -> Self {
+    pub fn new(targets: Vec<PianolaTapTarget>, max_bytes: usize) -> Self {
         Self {
             targets,
             emissions: Vec::new(),
             next_ordinal: 0,
+            remaining_bytes: max_bytes,
+            error: None,
         }
+    }
+
+    pub fn error(&self) -> Option<&str> {
+        self.error.as_deref()
     }
 
     /// Captures one emission iff a target matches its `port` (and
@@ -552,9 +558,32 @@ impl PianolaTap {
                 && target.port == port
                 && target.node_id.as_deref().is_none_or(|n| n == node_id)
         });
-        if !matched {
+        if !matched || self.error.is_some() {
             return;
         }
+        struct Capacity(usize);
+        impl std::io::Write for Capacity {
+            fn write(&mut self, bytes: &[u8]) -> std::io::Result<usize> {
+                self.0 = self.0.checked_sub(bytes.len()).ok_or_else(|| {
+                    std::io::Error::other("Pianola capture exceeded its byte limit")
+                })?;
+                Ok(bytes.len())
+            }
+            fn flush(&mut self) -> std::io::Result<()> {
+                Ok(())
+            }
+        }
+        let mut capacity = Capacity(
+            self.remaining_bytes
+                .saturating_sub(std::mem::size_of::<TappedEmission>()),
+        );
+        if let Err(error) =
+            serde_json::to_writer(&mut capacity, &(node_id, port, token_type, value))
+        {
+            self.error = Some(error.to_string());
+            return;
+        }
+        self.remaining_bytes = capacity.0;
         let ordinal = self.next_ordinal;
         self.next_ordinal += 1;
         self.emissions.push(TappedEmission {

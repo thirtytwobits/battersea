@@ -193,7 +193,14 @@ async fn mock_stream_reports_cumulative_usage_as_text_arrives() {
         match event.unwrap() {
             EngineTextStreamEvent::TextDelta { text } => output.push_str(&text),
             EngineTextStreamEvent::TokenUsage { usage } => {
-                let output_tokens = usage.output_tokens.expect("streamed output usage");
+                let Some(output_tokens) = usage.output_tokens else {
+                    assert!(
+                        output.is_empty(),
+                        "turn admission precedes streamed content"
+                    );
+                    assert!(usage.input_tokens.is_none());
+                    continue;
+                };
                 assert!(output_tokens > last_output_tokens);
                 assert!(!output.is_empty());
                 assert_eq!(usage.input_tokens, Some(input_tokens));
@@ -483,8 +490,9 @@ async fn truncation_and_malformed_calls_never_reach_the_executor() {
             .collect()
             .await;
         assert!(
-            matches!(&events[..], [Err(error)] if error.classification.as_str() == "invalid_response")
+            matches!(events.last(), Some(Err(error)) if error.classification.as_str() == "invalid_response")
         );
+        assert!(events[..events.len()-1].iter().all(|event|matches!(event,Ok(EngineTextStreamEvent::TokenUsage { usage }) if usage.input_tokens.is_none() && usage.output_tokens.is_none())));
         assert!(executor.0.lock().unwrap().is_empty());
         assert_eq!(state.requests.lock().unwrap().len(), 1);
         server.abort();

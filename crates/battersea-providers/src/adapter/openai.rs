@@ -1548,6 +1548,17 @@ fn extract_token_usage(value: &Value) -> Option<EngineTokenUsage> {
     let total_tokens = usage.get("total_tokens").and_then(Value::as_u64);
     (input_tokens.is_some() || output_tokens.is_some() || total_tokens.is_some()).then_some(
         EngineTokenUsage {
+            cached_input_tokens: usage
+                .get("input_tokens_details")
+                .and_then(|v| v.get("cached_tokens"))
+                .and_then(Value::as_u64)
+                .or(input_tokens.map(|_| 0)),
+            cache_write_input_tokens: input_tokens.map(|_| 0),
+            reasoning_output_tokens: usage
+                .get("output_tokens_details")
+                .and_then(|v| v.get("reasoning_tokens"))
+                .and_then(Value::as_u64),
+            turn_index: 0,
             input_tokens,
             output_tokens,
             total_tokens,

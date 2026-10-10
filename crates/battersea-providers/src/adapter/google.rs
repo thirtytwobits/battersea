@@ -843,6 +843,10 @@ struct GeminiPart {
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 struct GeminiUsageMetadata {
+    #[serde(default, rename = "cachedContentTokenCount")]
+    cached_content_token_count: Option<u64>,
+    #[serde(default, rename = "thoughtsTokenCount")]
+    thoughts_token_count: Option<u64>,
     #[serde(default, rename = "promptTokenCount")]
     prompt_token_count: Option<u64>,
     #[serde(default, rename = "candidatesTokenCount")]
@@ -883,8 +887,16 @@ impl GeminiGenerateContentResponse {
     fn token_usage(&self) -> Option<EngineTokenUsage> {
         self.usage_metadata.as_ref().map(|usage| EngineTokenUsage {
             input_tokens: usage.prompt_token_count,
-            output_tokens: usage.candidates_token_count,
+            output_tokens: usage
+                .candidates_token_count
+                .and_then(|n| n.checked_add(usage.thoughts_token_count.unwrap_or(0))),
             total_tokens: usage.total_token_count,
+            cached_input_tokens: usage
+                .cached_content_token_count
+                .or(usage.prompt_token_count.map(|_| 0)),
+            cache_write_input_tokens: usage.prompt_token_count.map(|_| 0),
+            reasoning_output_tokens: usage.thoughts_token_count,
+            ..Default::default()
         })
     }
 
@@ -1309,6 +1321,8 @@ mod tests {
                 finish_reason: None,
             }],
             usage_metadata: Some(GeminiUsageMetadata {
+                cached_content_token_count: None,
+                thoughts_token_count: None,
                 prompt_token_count: Some(12),
                 candidates_token_count: Some(3),
                 total_token_count: Some(15),

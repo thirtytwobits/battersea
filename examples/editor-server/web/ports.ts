@@ -1,3 +1,4 @@
+import {applyRuntimeUpdate,RuntimeResyncRequired,type Runtime} from "@battersea/flow";
 import type { FlowEditorPorts, FlowDiagnostic } from "@battersea/editor";
 async function request<T>(
   path: string,
@@ -29,35 +30,31 @@ export const ports: FlowEditorPorts = {
     subscribe: (id, listener) => {
       let stopped = false;
       let timer: ReturnType<typeof setTimeout>;
-      let sequence = -1;
+      let sequence = 0;
+      let snapshot:Runtime.Snapshot | null = null;
       const controller = new AbortController();
       const poll = async () => {
         try {
-          const response = await fetch(
-            `/api/activations/${encodeURIComponent(id)}`,
-            { signal: controller.signal },
-          );
+          const cursor = snapshot?.cursor;
+          const query = cursor ? `?epoch=${encodeURIComponent(cursor.epoch)}&revision=${encodeURIComponent(cursor.revision)}` : "";
+          const response = await fetch(`/api/runtime${query}`,{signal:controller.signal});
           if (!response.ok) throw new Error(await response.text());
-          const snapshot = (await response.json()) as {
-            status: string;
-            events: FlowDiagnostic[];
-          };
+          const update:Runtime.Update = await response.json();
           if (stopped) return;
-          for (const event of snapshot.events)
-            if (event.sequence > sequence) {
-              listener(event);
-              sequence = event.sequence;
-            }
-          if (snapshot.status === "running")
-            timer = setTimeout(() => void poll(), 100);
-        } catch (error) {
-          if (!stopped)
-            listener({
-              activation_id: id,
-              sequence: sequence + 1,
-              phase: "transport_error",
-              detail: String(error),
-            });
+          const previous = new Map(snapshot?.records.map(record=>[record.id,record]) ?? []);
+          snapshot = applyRuntimeUpdate(snapshot,update);
+          for (const record of snapshot.records) {
+            if (record.context.activation_id !== id || JSON.stringify(previous.get(record.id)) === JSON.stringify(record)) continue;
+            const state = record.state;
+            const phase = state.kind === "activation" && ["succeeded","failed","cancelled","interrupted"].includes(state.status) ? state.status
+              : state.kind === "port" ? `flow.token.${state.action}` : `runtime.${state.kind}`;
+            listener({activation_id:id,node_id:record.context.node_id,sequence:++sequence,phase,detail:state});
+          }
+          const terminal = snapshot.records.some(record=>record.context.activation_id===id && record.state.kind==="activation" && ["succeeded","failed","cancelled","interrupted"].includes(record.state.status));
+          if (!terminal) timer=setTimeout(()=>void poll(),100);
+        } catch(error) {
+          if (!stopped && error instanceof RuntimeResyncRequired) { snapshot = null; timer = setTimeout(() => void poll(),100); return; }
+          if (!stopped) listener({activation_id:id,sequence:++sequence,phase:"transport_error",detail:String(error)});
         }
       };
       void poll();

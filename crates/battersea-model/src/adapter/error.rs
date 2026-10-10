@@ -9,6 +9,8 @@ pub struct EngineAdapterRequestError {
     pub classification: ErrorKind,
     pub status_code: Option<u16>,
     pub request_id: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub watchdog: Option<WatchdogFailure>,
 }
 
 impl EngineAdapterRequestError {
@@ -23,9 +25,14 @@ impl EngineAdapterRequestError {
             classification: classification.into(),
             status_code: None,
             request_id: None,
+            watchdog: None,
         }
     }
 
+    pub fn with_idle_watchdog(mut self, limit_ms: u64) -> Self {
+        self.watchdog = Some(WatchdogFailure { limit_ms });
+        self
+    }
     pub fn with_status_code(mut self, status_code: u16) -> Self {
         self.status_code = Some(status_code);
         self
@@ -123,4 +130,9 @@ impl<'de> serde::Deserialize<'de> for ErrorKind {
     fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
         <String as serde::Deserialize>::deserialize(deserializer).map(Self::from)
     }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct WatchdogFailure {
+    pub limit_ms: u64,
 }

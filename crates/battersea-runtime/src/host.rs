@@ -621,7 +621,7 @@ pub trait ExecutionHost: Sized + Send + Sync {
                                 .map_err(|e| Self::Error::internal(e.to_string()))?;
                                 let sequence = old.sequence;
                                 drop(old);
-                                self.publish_execution_record(runtime, source_node_id, EventKind::TokenDrop, "Discarded oldest streaming delivery.".into(), Some(json!({"edgeId":edge.id,"sequence":sequence,"encodedBytes":discarded_bytes}))).await;
+                                self.publish_execution_record(runtime, source_node_id, EventKind::TokenDrop, "Discarded oldest streaming delivery.".into(), Some(json!({"edgeId":edge.id,"sourcePort":source_port,"tokenType":value.token_type,"sequence":sequence,"encodedBytes":discarded_bytes}))).await;
                             } else {
                                 blocked = Some(format!("edge {:?}: {reason}", edge.id));
                                 break;
@@ -1128,6 +1128,14 @@ pub trait ExecutionHost: Sized + Send + Sync {
             }
         };
         runtime.closed_outputs.insert(key);
+        self.publish_execution_record(
+            runtime,
+            node_id,
+            EventKind::TokenClose,
+            "Output closed.".into(),
+            Some(json!({"sourcePort":port,"direction":"output"})),
+        )
+        .await;
         let sequence = runtime.delivery_sequence;
         runtime.delivery_sequence += 1;
         let cause = runtime.signal_cause.clone();
@@ -1214,7 +1222,7 @@ pub trait ExecutionHost: Sized + Send + Sync {
             &node.id,
             EventKind::NodeComplete,
             format!("Completed {:?} phase.", phase),
-            Some(json!({"definitionName":node.definition_name,"handlerId":definition.handler_id})),
+            Some(json!({"definitionName":node.definition_name,"handlerId":definition.handler_id,"complete":runtime.executed_nodes.contains(&node.id),"phase":phase})),
         )
         .await;
         self.enqueue_ready_nodes(runtime);
@@ -1351,6 +1359,7 @@ pub trait ExecutionHost: Sized + Send + Sync {
                         let edges = runtime.outgoing_edges.get(&(node.clone(), port.clone())).cloned().unwrap_or_default();
                         for edge in edges {
                             runtime.closed_inputs.insert((edge.target_node_id.clone(), edge.target_port.clone()));
+                            self.publish_execution_record(runtime,&edge.target_node_id,EventKind::TokenClose,"Input closed.".into(),Some(json!({"targetPort":edge.target_port,"sourceNode":node,"sourcePort":port,"direction":"input"}))).await;
                             let target = runtime.nodes_by_id.get(&edge.target_node_id).cloned().ok_or_else(|| Self::Error::internal("Missing closure target."))?;
                             self.finish_sink_if_ready(runtime, &target).await?;
                         }
@@ -1400,7 +1409,7 @@ pub trait ExecutionHost: Sized + Send + Sync {
                 &target.id,
                 EventKind::TokenSkip,
                 "Disabled token target.".into(),
-                Some(json!({"edgeId":edge.id})),
+                Some(json!({"edgeId":edge.id,"targetPort":edge.target_port,"tokenType":value.token_type})),
             )
             .await;
             return Ok(());

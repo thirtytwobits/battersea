@@ -11,8 +11,8 @@ publish = false
 include = ["src/**", "Cargo.toml", "LICENSE", "NOTICE"]
 
 [dependencies]
-battersea-flow = { path = "../battersea-flow", version = "0.6.0" }
-battersea-runtime = { path = "../battersea-runtime", version = "0.6.0" }
+battersea-flow = { path = "../battersea-flow", version = "0.7.0" }
+battersea-runtime = { path = "../battersea-runtime", version = "0.7.0" }
 async-trait.workspace = true
 serde_json.workspace = true
 thiserror.workspace = true

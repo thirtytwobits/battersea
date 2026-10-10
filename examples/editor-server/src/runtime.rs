@@ -74,7 +74,9 @@ pub struct Application {
     pub handlers: HandlerRegistry<Self>,
     pub catalog: Catalog,
     pub root: PathBuf,
-    pub events: Mutex<HashMap<String, Vec<ExecutionEvent>>>,
+    pub view: Mutex<battersea_telemetry::view::View>,
+    pub observation_error: Mutex<Option<String>>,
+    exporter: Option<battersea_telemetry::otlp::Exporter>,
     pub acceptance: Mutex<HashMap<String, tokio::sync::oneshot::Sender<Result<(), String>>>>,
 }
 struct TextSource;
@@ -172,22 +174,133 @@ impl Application {
             handlers,
             catalog,
             root,
-            events: Mutex::default(),
+            view: Mutex::new(
+                battersea_telemetry::view::View::new(
+                    uuid::Uuid::new_v4().to_string(),
+                    battersea_telemetry::view::Retention {
+                        max_records: 4096,
+                        max_record_bytes: 8 * 1024 * 1024,
+                        max_delta_bytes: 8 * 1024 * 1024,
+                        max_deltas: 8192,
+                        max_age_ms: 3_600_000,
+                    },
+                )
+                .map_err(|e| Error::internal(e.to_string()))?,
+            ),
+            observation_error: Mutex::default(),
+            exporter: std::env::var("BATTERSEA_OTLP_ENDPOINT")
+                .ok()
+                .map(|endpoint| {
+                    battersea_telemetry::otlp::Exporter::new(
+                        &endpoint,
+                        std::time::Duration::from_secs(5),
+                        1024 * 1024,
+                    )
+                    .map_err(|e| Error::invalid_request(e.to_string()))
+                })
+                .transpose()?,
             acceptance: Mutex::default(),
         })
+    }
+    pub async fn publish_retained_outcome(&self, run: &Run) -> Result<(), Error> {
+        let bytes = std::fs::read(self.root.join("runs").join(format!("{}.json", run.run_id)))
+            .map_err(|e| Error::internal(e.to_string()))?;
+        let value: Value =
+            serde_json::from_slice(&bytes).map_err(|e| Error::internal(e.to_string()))?;
+        let phase: RunPhase = serde_json::from_value(value["phase"].clone())
+            .map_err(|e| Error::internal(e.to_string()))?;
+        let event = ExecutionEvent {
+            run_id: run.run_id.clone(),
+            flow_key: run.flow.flow_key.clone(),
+            node_id: String::new(),
+            sequence: 0,
+            kind: EventKind::ActivationExecutionFinished,
+            summary: String::new(),
+            detail: Some(serde_json::to_value(phase).map_err(|e| Error::internal(e.to_string()))?),
+        };
+        self.execution_event(run, event).await;
+        {
+            use battersea_telemetry::view::{active, State, Status};
+            let mut view = self.view.lock().unwrap();
+            let status = view
+                .get(&battersea_telemetry::otlp::activation_resource_id(
+                    &run.run_id,
+                ))
+                .and_then(|r| match &r.state {
+                    State::Activation { status } => Some(status.clone()),
+                    _ => None,
+                });
+            if let Some(status) = status.filter(|status| !active(status)) {
+                let children = view
+                    .records()
+                    .filter(|r| {
+                        r.context.activation_id == run.run_id
+                            && matches!(&r.state, State::Node { status, .. } if active(status))
+                    })
+                    .cloned()
+                    .collect::<Vec<_>>();
+                for mut child in children {
+                    if let State::Node {
+                        status: child_status,
+                        ..
+                    } = &mut child.state
+                    {
+                        *child_status = if status == Status::Succeeded {
+                            status.clone()
+                        } else {
+                            Status::Interrupted
+                        };
+                    }
+                    if let Err(error) = view.record(child, |_| Ok(())) {
+                        *self.observation_error.lock().unwrap() = Some(error.to_string());
+                    }
+                }
+            }
+        }
+        if let Some(exporter) = &self.exporter {
+            let (records, in_flight) = {
+                let view = self.view.lock().unwrap();
+                (
+                    view.records()
+                        .filter(|record| record.context.activation_id == run.run_id)
+                        .cloned()
+                        .collect::<Vec<_>>(),
+                    view.in_flight_requests() as u64,
+                )
+            };
+            let now = std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_millis() as u64;
+            match battersea_telemetry::otlp::Batch::from_records(
+                "battersea-example",
+                &records,
+                in_flight,
+                now,
+            ) {
+                Ok(batch) => {
+                    if let Err(error) = exporter.export(&batch).await {
+                        *self.observation_error.lock().unwrap() = Some(error.to_string());
+                    }
+                }
+                Err(error) => *self.observation_error.lock().unwrap() = Some(error.to_string()),
+            }
+        }
+        Ok(())
     }
     pub fn run(&self, id: String, flow: &FlowDocument) -> Result<Run, Error> {
         Ok(Run {
             scheduler: SchedulerState::new(id, flow, self.catalog.definitions().clone())
                 .map_err(Error::invalid_request)?,
             output: vec![],
-            tap: Mutex::new(battersea_pianola::PianolaTap::new(vec![
-                battersea_pianola::PianolaTapTarget {
+            tap: Mutex::new(battersea_pianola::PianolaTap::new(
+                vec![battersea_pianola::PianolaTapTarget {
                     flow_key: flow.flow_key.clone(),
                     node_id: None,
                     port: "text".into(),
-                },
-            ])),
+                }],
+                16 * 1024 * 1024,
+            )),
         })
     }
     pub fn write_record(&self, id: &str, value: &Value, create: bool) -> Result<(), Error> {
@@ -222,12 +335,18 @@ impl ExecutionHost for Application {
         &self.handlers
     }
     async fn execution_event(&self, _: &Run, event: ExecutionEvent) {
-        self.events
-            .lock()
-            .unwrap()
-            .entry(event.run_id.clone())
-            .or_default()
-            .push(event);
+        let now = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .expect("wall clock")
+            .as_millis() as u64;
+        if let Err(error) =
+            self.view
+                .lock()
+                .unwrap()
+                .observe_execution(&event, None, now, None, |_| Ok(()))
+        {
+            *self.observation_error.lock().unwrap() = Some(error.to_string());
+        }
     }
     fn observe_token(&self, run: &Run, node: &str, port: &str, token: &Token) {
         run.tap.lock().unwrap().capture(
@@ -310,14 +429,16 @@ impl ActivationHost for Application {
             },
             other => other,
         };
-        let capture: Vec<_> = run
-            .tap
-            .lock()
-            .unwrap()
+        let tap = run.tap.lock().unwrap();
+        if let Some(error) = tap.error() {
+            return Err(Error::invalid_request(error));
+        }
+        let capture: Vec<_> = tap
             .emissions_from(0)
             .into_iter()
             .map(|e| json!({"node_id":e.node_id,"port":e.port,"value":e.value,"ordinal":e.ordinal}))
             .collect();
-        self.write_record(&run.run_id, &json!({"id":run.run_id,"flow":run.flow,"phase":phase,"output":run.output,"capture":capture}), false)
+        self.write_record(&run.run_id, &json!({"id":run.run_id,"flow":run.flow,"phase":phase,"output":run.output,"capture":capture}), false)?;
+        Ok(())
     }
 }

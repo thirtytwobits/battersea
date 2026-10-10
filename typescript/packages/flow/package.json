@@ -1,6 +1,6 @@
 {
   "name": "@battersea/flow",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "description": "Battersea flow contracts, schema and port compatibility",
   "type": "module",
   "license": "MIT",
@@ -10,7 +10,8 @@
       "import": "./dist/index.js"
     },
     "./schema": "./schemas/flow.schema.json",
-    "./fixtures/*": "./fixtures/*"
+    "./fixtures/*": "./fixtures/*",
+    "./runtime-schema": "./schemas/runtime.schema.json"
   },
   "files": [
     "dist",

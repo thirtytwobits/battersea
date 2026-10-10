@@ -6,6 +6,7 @@ rust-version.workspace = true
 license.workspace = true
 publish = false
 [dependencies]
+battersea-telemetry = { path = "../../crates/battersea-telemetry" }
 battersea-flow = { path = "../../crates/battersea-flow" }
 battersea-runtime = { path = "../../crates/battersea-runtime" }
 battersea-nodes = { path = "../../crates/battersea-nodes" }

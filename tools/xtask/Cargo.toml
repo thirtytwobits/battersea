@@ -14,3 +14,4 @@ toml.workspace = true
 tempfile.workspace = true
 battersea-flow = { path = "../../crates/battersea-flow" }
 battersea-guard = { path = "../../crates/battersea-guard" }
+battersea-telemetry = { path = "../../crates/battersea-telemetry" }

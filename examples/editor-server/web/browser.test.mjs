@@ -175,6 +175,16 @@ for (const [name, engine] of Object.entries({ chromium, webkit })) {
     assert.equal(snapshot.status, "succeeded");
     assert(snapshot.events.length > 1);
     assert(snapshot.events.every((e) => e.activation_id === id));
+    const runtime = await (await page.request.get(`${origin}/api/runtime`)).json();
+    assert.equal(runtime.kind, "resync");
+    assert(runtime.snapshot.records.some(record => record.context.activation_id === id && record.state.kind === "activation" && record.state.status === "succeeded"));
+    assert(runtime.snapshot.records.every(record => record.context.activation_id !== id || record.state.kind !== "node" || !["accepted", "running", "waiting"].includes(record.state.status)));
+    const cursor = runtime.snapshot.cursor;
+    const unchanged = await (await page.request.get(`${origin}/api/runtime?epoch=${encodeURIComponent(cursor.epoch)}&revision=${cursor.revision}`)).json();
+    assert.equal(unchanged.kind, "deltas");
+    assert.deepEqual(unchanged.deltas, []);
+    const resync = await (await page.request.get(`${origin}/api/runtime?epoch=other-process&revision=0`)).json();
+    assert.equal(resync.kind, "resync");
     await capture(page, name, "succeeded");
     await page
       .getByRole("button", { name: "Activate node", exact: true })

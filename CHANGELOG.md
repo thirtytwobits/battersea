@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.7.0 — 2026-10-10
+
+- Publish typed runtime snapshots, contiguous deltas and bounded retention independently of tracing.
+- Export bounded OTLP GenAI spans and metrics, with opt-in masked content capture.
+- Calculate attributed costs from complete usage and versioned price catalogues; atomically reserve concurrent budgets and reconcile ambiguous charges explicitly.
+- Carry provider usage, per-turn billing and watchdog metadata through the shared model.
+- Bound Pianola execution capture and report lossless-capture failures.
+- Drive the independent editor from the runtime view with cursor resynchronisation.
+
 ## 0.6.0 — 2026-10-09
 
 - Require an explicit upgrade to version 2 with port modes, source order and finite limits.

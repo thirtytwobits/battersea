@@ -433,6 +433,14 @@ pub struct EngineTextStreamRequest {
 /// Provider-neutral token usage reported before, during, or after text generation.
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Default)]
 pub struct EngineTokenUsage {
+    #[serde(default)]
+    pub turn_index: u32,
+    #[serde(default)]
+    pub cached_input_tokens: Option<u64>,
+    #[serde(default)]
+    pub cache_write_input_tokens: Option<u64>,
+    #[serde(default)]
+    pub reasoning_output_tokens: Option<u64>,
     pub input_tokens: Option<u64>,
     pub output_tokens: Option<u64>,
     pub total_tokens: Option<u64>,
@@ -523,7 +531,8 @@ pub fn with_stream_idle_watchdog(
                             idle.as_millis()
                         ),
                         error::ErrorKind::Timeout,
-                    )),
+                    )
+                    .with_idle_watchdog(idle.as_millis().min(u64::MAX as u128) as u64)),
                     None,
                 )),
             }

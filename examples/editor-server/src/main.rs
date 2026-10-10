@@ -1,7 +1,7 @@
 mod runtime;
 mod upgrade;
 use axum::{
-    extract::{Path, State},
+    extract::{Path, Query, State},
     http::StatusCode,
     response::{IntoResponse, Response},
     routing::{get, post},
@@ -293,6 +293,9 @@ async fn activate(
                 ToString::to_string,
             )));
         }
+        if let Err(error) = app.runtime.publish_retained_outcome(&run).await {
+            *app.runtime.observation_error.lock().unwrap() = Some(error.to_string());
+        }
         let status = match result {
             Ok(()) => "succeeded",
             Err(ref e) if e.code() == "cancelled" => "cancelled",
@@ -311,13 +314,66 @@ async fn inspect(State(app): State<App>, Path(id): Path<String>) -> Result<Json<
     let live = runs
         .get(&id)
         .ok_or_else(|| Error::invalid_request("unknown activation"))?;
-    let events = app.runtime.events.lock().unwrap();
-    let source = events.get(&id).cloned().unwrap_or_default();
-    let mut events: Vec<_> = source.iter().map(|e|json!({"activation_id":id,"node_id":e.node_id,"sequence":e.sequence,"phase":e.kind.category(),"detail":e.detail})).collect();
-    if live.status != "running" {
-        events.push(json!({"activation_id":id,"sequence":source.last().map_or(0,|e|e.sequence+1),"phase":live.status}));
+    let view = app.runtime.view.lock().unwrap();
+    let mut events = Vec::new();
+    for delta in view.history() {
+        for change in &delta.changes {
+            if let battersea_telemetry::view::Change::Upsert { record } = change {
+                if record.context.activation_id != id {
+                    continue;
+                }
+                use battersea_telemetry::view::{PortAction, State as RuntimeState};
+                let phase = match &record.state {
+                    RuntimeState::Port {
+                        action: PortAction::Receive,
+                        ..
+                    } => "flow.token.receive",
+                    RuntimeState::Port {
+                        action: PortAction::Emit,
+                        ..
+                    } => "flow.token.emit",
+                    RuntimeState::Activation { .. } => "activation.state",
+                    RuntimeState::Node { .. } => "flow.node.state",
+                    _ => "runtime.state",
+                };
+                events.push(json!({"activation_id":id,"node_id":record.context.node_id,"sequence":delta.cursor.revision,"phase":phase,"detail":record.state}));
+            }
+        }
     }
-    Ok(Json(json!({"id":id,"status":live.status,"events":events})))
+    if live.status != "running" {
+        events.push(json!({"activation_id":id,"sequence":view.snapshot().cursor.revision,"phase":live.status}));
+    }
+    Ok(Json(
+        json!({"id":id,"status":live.status,"events":events,"observation_error":*app.runtime.observation_error.lock().unwrap()}),
+    ))
+}
+#[derive(Deserialize)]
+struct RuntimeQuery {
+    epoch: Option<String>,
+    revision: Option<String>,
+}
+async fn runtime_view(
+    State(app): State<App>,
+    Query(query): Query<RuntimeQuery>,
+) -> Result<Json<Value>, Error> {
+    if let Some(error) = app.runtime.observation_error.lock().unwrap().clone() {
+        return Err(Error::internal(error));
+    }
+    let view = app.runtime.view.lock().unwrap();
+    let update = match (query.epoch, query.revision) {
+        (Some(epoch), Some(revision)) => {
+            view.updates(&battersea_telemetry::view::Cursor { epoch, revision })
+        }
+        (None, None) => battersea_telemetry::view::Update::Resync {
+            snapshot: view.snapshot(),
+        },
+        _ => {
+            return Err(Error::invalid_request(
+                "Runtime cursor requires epoch and revision",
+            ))
+        }
+    };
+    Ok(Json(serde_json::to_value(update).map_err(io)?))
 }
 async fn cancel(State(app): State<App>, Path(id): Path<String>) -> Result<Json<Value>, Error> {
     let runs = app.runs.lock().unwrap();
@@ -329,6 +385,7 @@ async fn cancel(State(app): State<App>, Path(id): Path<String>) -> Result<Json<V
 }
 fn router(app: App) -> Router {
     Router::new()
+        .route("/api/runtime", get(runtime_view))
         .route("/api/catalogue", get(catalogue))
         .route("/api/flows", get(list).put(save))
         .route("/api/flows/clone", post(clone_flow))

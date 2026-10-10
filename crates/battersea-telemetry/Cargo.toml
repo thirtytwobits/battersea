@@ -1,0 +1,25 @@
+[package]
+name = "battersea-telemetry"
+description = "Typed runtime observations, bounded views, cost admission and OTLP export"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+readme = "../../README.md"
+publish = false
+include = ["src/**", "Cargo.toml", "LICENSE", "NOTICE", "schemas/**"]
+
+[dependencies]
+battersea-model = { path = "../battersea-model", version = "0.7.0" }
+battersea-runtime = { path = "../battersea-runtime", version = "0.7.0" }
+serde.workspace = true
+serde_json.workspace = true
+schemars.workspace = true
+thiserror.workspace = true
+reqwest.workspace = true
+sha2 = "0.10"
+
+[dev-dependencies]
+tokio.workspace = true
+axum.workspace = true

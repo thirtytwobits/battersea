@@ -1025,6 +1025,10 @@ fn parse_anthropic_usage(value: &Value) -> Option<EngineTokenUsage> {
     let input_tokens = input.map(|tokens| tokens + cache_creation + cache_read);
     let output_tokens = value.get("output_tokens").and_then(Value::as_u64);
     (input_tokens.is_some() || output_tokens.is_some()).then_some(EngineTokenUsage {
+        cached_input_tokens: input.map(|_| cache_read),
+        cache_write_input_tokens: input.map(|_| cache_creation),
+        reasoning_output_tokens: None,
+        turn_index: 0,
         input_tokens,
         output_tokens,
         total_tokens: input_tokens
