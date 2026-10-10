@@ -286,10 +286,10 @@ async fn otlp_collector_receives_masked_typed_spans_and_metrics_and_rejection_is
         operation: "chat".into(),
         status: Status::Succeeded,
         retry: RetryState::None,
-        input: Some(Content::observe(
+        input: Some(Box::new(Content::observe(
             b"private credential",
             Some(&|_| "masked".into()),
-        )),
+        ))),
         output: None,
         usage: Box::default(),
         cost: Box::default(),

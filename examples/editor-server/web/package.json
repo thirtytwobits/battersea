@@ -8,8 +8,8 @@
     "test": "node browser.test.mjs"
   },
   "dependencies": {
-    "@battersea/editor": "https://github.com/thirtytwobits/battersea/releases/download/v0.7.0/battersea-editor-0.7.0.tgz",
-    "@battersea/flow": "https://github.com/thirtytwobits/battersea/releases/download/v0.7.0/battersea-flow-0.7.0.tgz",
+    "@battersea/editor": "https://github.com/thirtytwobits/battersea/releases/download/v0.7.1/battersea-editor-0.7.1.tgz",
+    "@battersea/flow": "https://github.com/thirtytwobits/battersea/releases/download/v0.7.1/battersea-flow-0.7.1.tgz",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "@xyflow/react": "^12.8.5",

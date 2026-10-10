@@ -1492,10 +1492,10 @@ pub battersea_telemetry::view::State::Request::chunk_timing: battersea_telemetry
 pub battersea_telemetry::view::State::Request::cost: alloc::boxed::Box<battersea_telemetry::accounting::Cost>
 pub battersea_telemetry::view::State::Request::elapsed_ms: u64
 pub battersea_telemetry::view::State::Request::first_chunk_ms: core::option::Option<u64>
-pub battersea_telemetry::view::State::Request::input: core::option::Option<battersea_telemetry::content::Content>
+pub battersea_telemetry::view::State::Request::input: core::option::Option<alloc::boxed::Box<battersea_telemetry::content::Content>>
 pub battersea_telemetry::view::State::Request::model: alloc::string::String
 pub battersea_telemetry::view::State::Request::operation: alloc::string::String
-pub battersea_telemetry::view::State::Request::output: core::option::Option<battersea_telemetry::content::Content>
+pub battersea_telemetry::view::State::Request::output: core::option::Option<alloc::boxed::Box<battersea_telemetry::content::Content>>
 pub battersea_telemetry::view::State::Request::provider: alloc::string::String
 pub battersea_telemetry::view::State::Request::request_id: alloc::string::String
 pub battersea_telemetry::view::State::Request::retry: battersea_telemetry::view::RetryState

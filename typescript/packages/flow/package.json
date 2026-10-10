@@ -1,6 +1,6 @@
 {
   "name": "@battersea/flow",
-  "version": "0.7.0",
+  "version": "0.7.1",
   "description": "Battersea flow contracts, schema and port compatibility",
   "type": "module",
   "license": "MIT",

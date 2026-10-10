@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.7.0 — 2026-10-10
+## 0.7.1 — 2026-10-10
 
 - Publish typed runtime snapshots, contiguous deltas and bounded retention independently of tracing.
 - Export bounded OTLP GenAI spans and metrics, with opt-in masked content capture.

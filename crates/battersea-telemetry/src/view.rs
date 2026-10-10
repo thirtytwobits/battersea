@@ -82,10 +82,10 @@ pub enum State {
         retry: RetryState,
         #[serde(default, skip_serializing_if = "Option::is_none")]
         #[schemars(with = "Content")]
-        input: Option<Content>,
+        input: Option<Box<Content>>,
         #[serde(default, skip_serializing_if = "Option::is_none")]
         #[schemars(with = "Content")]
-        output: Option<Content>,
+        output: Option<Box<Content>>,
         usage: Box<crate::accounting::Usage>,
         cost: Box<crate::accounting::Cost>,
         elapsed_ms: u64,
