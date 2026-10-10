@@ -101,6 +101,9 @@ async fn forward_turn_event(
     turn_index: u32,
 ) -> Result<(), EngineAdapterRequestError> {
     let mut event = event?;
+    if matches!(event, EngineTextStreamEvent::MessageStop { .. }) {
+        return Ok(());
+    }
     if let EngineTextStreamEvent::TokenUsage { usage } = &mut event {
         usage.turn_index = turn_index;
     }
@@ -137,6 +140,11 @@ async fn drive_tool_loop(
         })?;
         send_event(
             events,
+            EngineTextStreamEvent::MessageStart { turn_index: turn },
+        )
+        .await?;
+        send_event(
+            events,
             EngineTextStreamEvent::TokenUsage {
                 usage: super::EngineTokenUsage {
                     turn_index: turn,
@@ -160,6 +168,13 @@ async fn drive_tool_loop(
         };
         super::payload::check_payload(&calls, &context.provider)?;
         if calls.is_empty() {
+            send_event(
+                events,
+                EngineTextStreamEvent::MessageStop {
+                    reason: super::StopReason::Complete,
+                },
+            )
+            .await?;
             return Ok(());
         }
         if request.shared.chat.tool_choice.mode == crate::engine::EngineChatToolChoiceMode::None {
@@ -263,7 +278,7 @@ async fn drive_tool_loop(
                 Ok(result) => (result.content.clone(), None, None),
                 Err(error) => (
                     Value::Null,
-                    Some(error.message.clone()),
+                    Some(error.message.to_string()),
                     Some(error.classification.to_string()),
                 ),
             };
@@ -403,7 +418,12 @@ mod tests {
         while let Some(event) = rx.recv().await {
             // These tests specify tool effects and lifecycle ordering. Usage
             // scopes have independent accounting coverage below.
-            if !matches!(event, Ok(EngineTextStreamEvent::TokenUsage { .. })) {
+            if !matches!(
+                event,
+                Ok(EngineTextStreamEvent::TokenUsage { .. }
+                    | EngineTextStreamEvent::MessageStart { .. }
+                    | EngineTextStreamEvent::MessageStop { .. })
+            ) {
                 events.push(event);
             }
         }

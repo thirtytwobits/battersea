@@ -4,13 +4,19 @@ use thiserror::Error;
 #[derive(Debug, Clone, Error, Serialize, Deserialize)]
 #[error("{message}")]
 pub struct EngineAdapterRequestError {
-    pub provider: String,
-    pub message: String,
+    pub provider: Box<str>,
+    pub message: Box<str>,
     pub classification: ErrorKind,
     pub status_code: Option<u16>,
     pub request_id: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub watchdog: Option<WatchdogFailure>,
+    pub watchdog: Option<Box<WatchdogFailure>>,
+    #[serde(default)]
+    pub dispatch: DispatchState,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub retry_after_ms: Option<u64>,
+    #[serde(default)]
+    pub attempts: u32,
 }
 
 impl EngineAdapterRequestError {
@@ -19,18 +25,32 @@ impl EngineAdapterRequestError {
         message: impl Into<String>,
         classification: impl Into<ErrorKind>,
     ) -> Self {
+        let classification = classification.into();
+        let dispatch = if classification == ErrorKind::InvalidRequest {
+            DispatchState::NotSent
+        } else {
+            DispatchState::Unknown
+        };
         Self {
-            provider: provider.into(),
-            message: message.into(),
-            classification: classification.into(),
+            provider: provider.into().into_boxed_str(),
+            message: message.into().into_boxed_str(),
+            classification,
             status_code: None,
             request_id: None,
             watchdog: None,
+            dispatch,
+            retry_after_ms: None,
+            attempts: 0,
         }
     }
 
+    pub fn with_dispatch(mut self, dispatch: DispatchState) -> Self {
+        self.dispatch = dispatch;
+        self
+    }
+
     pub fn with_idle_watchdog(mut self, limit_ms: u64) -> Self {
-        self.watchdog = Some(WatchdogFailure { limit_ms });
+        self.watchdog = Some(Box::new(WatchdogFailure { limit_ms }));
         self
     }
     pub fn with_status_code(mut self, status_code: u16) -> Self {
@@ -71,7 +91,7 @@ pub enum ErrorKind {
     Cancelled,
     Provider,
     Mock,
-    Other(String),
+    Other(Box<str>),
 }
 impl ErrorKind {
     pub fn as_str(&self) -> &str {
@@ -135,4 +155,15 @@ impl<'de> serde::Deserialize<'de> for ErrorKind {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct WatchdogFailure {
     pub limit_ms: u64,
+}
+
+/// What is known about the remote effect, independently of the failure category.
+#[derive(Debug, Clone, Copy, Default, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum DispatchState {
+    NotSent,
+    Rejected,
+    Accepted,
+    #[default]
+    Unknown,
 }

@@ -110,10 +110,59 @@ $defs:
       should write each section with its own heading so the seams are
       explicit when sections combine.
 
+  contentCapabilities:
+    type: object
+    additionalProperties: false
+    required: [inputModalities, outputModalities, structuredOutput, nativeContinuation, promptCaching]
+    properties:
+      inputModalities:
+        type: array
+        minItems: 1
+        uniqueItems: true
+        items:
+          enum: [text, image, document, audio, video]
+      outputModalities:
+        type: array
+        minItems: 1
+        uniqueItems: true
+        items:
+          enum: [text, image, document, audio, video]
+      structuredOutput:
+        type: array
+        uniqueItems: true
+        items:
+          enum: [json_object, json_schema]
+      nativeContinuation:
+        type: boolean
+      promptCaching:
+        type: boolean
+
+  responseFormat:
+    oneOf:
+      - type: object
+        additionalProperties: false
+        required: [type]
+        properties:
+          type:
+            const: json_object
+      - type: object
+        additionalProperties: false
+        required: [type, name, schema]
+        properties:
+          type:
+            const: json_schema
+          name:
+            type: string
+            pattern: '^[a-zA-Z0-9_-]{1,64}$'
+          schema:
+            type: object
+
   chatProperties:
     type: object
     additionalProperties: false
     propertyOrder:
+      - responseFormat
+      - outputModalities
       - stream
       - maxOutputTokens
       - temperature
@@ -141,6 +190,16 @@ $defs:
       - logprobs
       - topLogprobs
     properties:
+      responseFormat:
+        $ref: "#/$defs/responseFormat"
+        short_description: Require a provider-native JSON result validated against the declared format.
+      outputModalities:
+        type: array
+        minItems: 1
+        uniqueItems: true
+        items:
+          enum: [text, image, audio]
+        short_description: Requested output modalities, restricted by the selected model.
       stream:
         type: boolean
         short_description: Stream response deltas while the provider is generating. Required — the engine applies no default.
@@ -271,12 +330,15 @@ $defs:
     type: object
     additionalProperties: false
     required:
+      - content
       - supportedChatParameters
       - supportedToolExecutionModes
       - supportedToolChoices
       - supportedReasoningEfforts
       - temperatureDispatch
     properties:
+      content:
+        $ref: "#/$defs/contentCapabilities"
       supportedChatParameters:
         type: array
         items:

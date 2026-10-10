@@ -1,9 +1,8 @@
 //! Provider-neutral input. Hosts assemble their own messages and prompt text.
-use crate::EngineAdapterRequestError;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, schemars::JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 pub enum Role {
     System,
@@ -12,7 +11,7 @@ pub enum Role {
     Tool,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, schemars::JsonSchema, PartialEq, Eq)]
 #[serde(tag = "kind", rename_all = "snake_case")]
 pub enum ContentBlock {
     Text {
@@ -29,6 +28,11 @@ pub enum ContentBlock {
     Video {
         url: String,
         mime_type: String,
+    },
+    Document {
+        url: String,
+        mime_type: String,
+        filename: String,
     },
     ToolCall {
         id: String,
@@ -50,7 +54,7 @@ pub enum ContentBlock {
     },
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, schemars::JsonSchema, PartialEq, Eq)]
 pub struct Message {
     pub role: Role,
     pub content: Vec<ContentBlock>,
@@ -71,41 +75,6 @@ impl Message {
             })
             .collect()
     }
-}
-
-/// Admission for the extracted text paths. Provider-native continuation remains in each
-/// conversation, including opaque fields and signatures returned by the provider.
-pub fn validate_text_messages(
-    provider: &str,
-    messages: &[Message],
-) -> Result<(), EngineAdapterRequestError> {
-    let mut conversation_started = false;
-    for message in messages {
-        if message.role == Role::System && conversation_started {
-            return Err(EngineAdapterRequestError::new(
-                provider,
-                "System messages must precede the conversation.",
-                "invalid_request",
-            ));
-        }
-        conversation_started |= message.role != Role::System;
-        if message.role == Role::Tool
-            || message
-                .content
-                .iter()
-                .any(|block| !matches!(block, ContentBlock::Text { .. }))
-        {
-            return Err(EngineAdapterRequestError::new(provider, "This provider path accepts text messages; the requested content or continuation mode is unsupported.", "invalid_request"));
-        }
-    }
-    if !conversation_started {
-        return Err(EngineAdapterRequestError::new(
-            provider,
-            "A conversation message is required.",
-            "invalid_request",
-        ));
-    }
-    Ok(())
 }
 
 #[cfg(test)]
@@ -129,7 +98,12 @@ mod tests {
     #[test]
     fn text_admission_rejects_unsupported_content_and_late_system_messages() {
         let text = Message::text(Role::User, "input".into());
-        assert!(validate_text_messages("fixture", std::slice::from_ref(&text)).is_ok());
+        assert!(crate::validate_messages(
+            "fixture",
+            &crate::ContentCapabilities::text(),
+            std::slice::from_ref(&text)
+        )
+        .is_ok());
         for block in [
             ContentBlock::Image {
                 url: "fixture".into(),
@@ -140,8 +114,9 @@ mod tests {
                 payload: Value::Null,
             },
         ] {
-            assert!(validate_text_messages(
+            assert!(crate::validate_messages(
                 "fixture",
+                &crate::ContentCapabilities::text(),
                 &[Message {
                     role: Role::User,
                     content: vec![block]
@@ -149,8 +124,9 @@ mod tests {
             )
             .is_err());
         }
-        assert!(validate_text_messages(
+        assert!(crate::validate_messages(
             "fixture",
+            &crate::ContentCapabilities::text(),
             &[text, Message::text(Role::System, "instructions".into())]
         )
         .is_err());

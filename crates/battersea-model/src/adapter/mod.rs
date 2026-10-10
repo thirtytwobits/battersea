@@ -5,7 +5,9 @@
 //! consumes the shared configuration, request, response, and logging shapes here.
 
 pub mod error;
+pub mod output;
 pub mod payload;
+pub use output::StopReason;
 pub mod tool_loop;
 
 pub use crate::engine::EngineToolExecutionMode;
@@ -90,6 +92,10 @@ pub struct EngineBackendOptions {
     pub timeout_ms: Option<u64>,
     #[serde(rename = "maxRetries")]
     pub max_retries: Option<u32>,
+    #[serde(rename = "retryInitialDelayMs")]
+    pub retry_initial_delay_ms: Option<u64>,
+    #[serde(rename = "retryMaxDelayMs")]
+    pub retry_max_delay_ms: Option<u64>,
     /// Maximum time to wait for the *next* streamed event before treating the
     /// provider stream as stalled and aborting it with an error. This is the
     /// watchdog that prevents a silent, unbounded hang (and the money burn
@@ -362,18 +368,32 @@ pub struct EngineAdapterErrorLog {
     pub detail: EngineAdapterErrorInfo,
 }
 
+/// One retry of a prepared HTTP request; it never represents a tool-loop restart.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct EngineAdapterRetryLog {
+    pub provider: String,
+    pub backend: String,
+    pub attempt: u32,
+    pub delay_ms: u64,
+    pub dispatch: error::DispatchState,
+    pub status_code: Option<u16>,
+    pub request_id: Option<String>,
+    pub resume: bool,
+}
+
 /// Receives adapter telemetry without constraining the concrete logging backend.
 // async-trait adds must_use to boxed futures, which already carry it.
 #[allow(clippy::double_must_use)]
 #[async_trait]
 pub trait EngineAdapterLogger: Send + Sync {
+    async fn on_retry(&self, _entry: EngineAdapterRetryLog) {}
     async fn on_request(&self, _entry: EngineAdapterRequestLog) {}
     async fn on_response(&self, _entry: EngineAdapterResponseLog) {}
     async fn on_stream_event(&self, _entry: EngineAdapterStreamLog) {}
     async fn on_error(&self, _entry: EngineAdapterErrorLog) {}
 }
 
-/// Represents a plain-text backend request after prompt assembly is complete.
+/// A conversation after application-owned prompt assembly.
 #[derive(Debug, Clone)]
 pub struct EngineAdapterRequest {
     pub operation: EngineOperation,
@@ -450,6 +470,18 @@ pub struct EngineTokenUsage {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(tag = "kind", rename_all = "snake_case")]
 pub enum EngineTextStreamEvent {
+    MessageStart {
+        turn_index: u32,
+    },
+    MessageStop {
+        reason: StopReason,
+    },
+    ContentBlock {
+        block: crate::ContentBlock,
+    },
+    StructuredOutput {
+        value: Value,
+    },
     TextDelta {
         text: String,
     },
@@ -549,7 +581,11 @@ pub fn validate_chat_request(
     backend: &EngineBackendConfig,
     request: &EngineTextStreamRequest,
 ) -> Result<(), EngineAdapterRequestError> {
-    crate::messages::validate_text_messages(&backend.provider, &request.shared.messages)?;
+    crate::validate_messages(
+        &backend.provider,
+        &backend.capabilities.content,
+        &request.shared.messages,
+    )?;
     if !request.shared.chat.stream {
         return Err(EngineAdapterRequestError::new(
             &backend.provider,
@@ -703,7 +739,7 @@ pub async fn emit_error(
                 context: context.clone(),
                 operation,
                 detail: EngineAdapterErrorInfo {
-                    message: error.message.clone(),
+                    message: error.message.to_string(),
                     status_code: error.status_code,
                     request_id: error.request_id.clone(),
                     classification: error.classification.to_string(),
@@ -802,6 +838,8 @@ mod tests {
         let configured = EngineBackendOptions {
             timeout_ms: Some(9000),
             max_retries: Some(4),
+            retry_initial_delay_ms: Some(1),
+            retry_max_delay_ms: Some(20),
             stream_idle_timeout_ms: Some(180_000),
             background: None,
             background_mode: None,

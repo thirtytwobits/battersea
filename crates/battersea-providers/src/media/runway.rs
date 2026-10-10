@@ -630,7 +630,7 @@ async fn report_transient_poll_error(
             .report_activity(MediaGenerationActivityUpdate {
                 state: ControllerActivityState::Waiting,
                 event: Some(ControllerActivityEvent::ErrorTransient),
-                message: error.message.clone(),
+                message: error.message.to_string(),
                 provider_job_id: Some(provider_job_id.to_string()),
                 error_code: Some(error.classification.to_string()),
                 slot_id: None,
@@ -1159,7 +1159,7 @@ mod tests {
             Ok(_) => panic!("invalid header should fail"),
             Err(error) => error,
         };
-        assert_eq!(error.provider, "runway");
+        assert_eq!(&*error.provider, "runway");
         assert_eq!(error.classification.as_str(), "transport");
     }
 

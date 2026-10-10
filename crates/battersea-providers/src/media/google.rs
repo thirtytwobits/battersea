@@ -424,6 +424,6 @@ mod tests {
             Ok(_) => panic!("missing key should fail"),
             Err(error) => error,
         };
-        assert_eq!(error.provider, PROVIDER);
+        assert_eq!(&*error.provider, PROVIDER);
     }
 }

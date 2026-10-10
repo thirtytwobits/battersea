@@ -964,7 +964,7 @@ mod tests {
             .generate(request, CancellationToken::new(), None, None)
             .await
             .expect_err("video should be rejected");
-        assert_eq!(error.provider, "openai");
+        assert_eq!(&*error.provider, "openai");
         assert_eq!(error.classification.as_str(), "invalid_request");
     }
 
@@ -1202,9 +1202,9 @@ mod tests {
             param: None,
             code: None,
         }));
-        assert_eq!(api.provider, "openai");
+        assert_eq!(&*api.provider, "openai");
         assert_eq!(api.classification.as_str(), "request");
-        assert_eq!(api.message, "invalid prompt");
+        assert_eq!(&*api.message, "invalid prompt");
 
         let transport = normalize_openai_error(OpenAIError::StreamError(Box::new(
             async_openai::error::StreamError::EventStream("socket closed".to_string()),

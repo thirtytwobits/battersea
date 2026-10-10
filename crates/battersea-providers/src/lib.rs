@@ -1,5 +1,6 @@
 //! Chat and media providers using Battersea's shared model and tool contracts.
 pub mod adapter;
+mod content;
 #[cfg(any(
     feature = "openai",
     feature = "anthropic",
@@ -9,6 +10,8 @@ pub mod adapter;
 mod http_payload;
 pub mod media;
 pub mod registry;
+#[cfg(any(feature = "openai", feature = "anthropic", feature = "google"))]
+mod retry;
 #[cfg(feature = "mock")]
 pub use adapter::mock::estimate_mock_token_count;
 #[cfg(test)]

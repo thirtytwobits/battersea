@@ -36,6 +36,8 @@ pub struct EngineBackendConfigFile {
 #[derive(Debug, Clone, Deserialize, Default)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct EngineChatConfigFile {
+    pub response_format: Option<battersea_model::ResponseFormat>,
+    pub output_modalities: Option<Vec<battersea_model::Modality>>,
     #[serde(default)]
     pub stream: Option<bool>,
     #[serde(default)]
@@ -265,6 +267,8 @@ pub fn resolve_chat_parameters(
     }
 
     let chat = EngineChatParameters {
+        response_format: configured.response_format,
+        output_modalities: configured.output_modalities,
         stream: required(configured.stream, "stream")?,
         max_output_tokens: configured.max_output_tokens,
         temperature: required(configured.temperature, "temperature")?,
@@ -306,6 +310,12 @@ pub fn merge_chat_parameters(
     mut chat: EngineChatParameters,
     configured: EngineChatConfigFile,
 ) -> std::result::Result<EngineChatParameters, String> {
+    if let Some(format) = configured.response_format {
+        chat.response_format = Some(format);
+    }
+    if let Some(modalities) = configured.output_modalities {
+        chat.output_modalities = Some(modalities);
+    }
     if let Some(stream) = configured.stream {
         chat.stream = stream;
     }

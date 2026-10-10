@@ -68,6 +68,7 @@ fn registry(calls: Arc<AtomicUsize>) -> ProviderRegistry {
         .register_chat(
             "external",
             ChatProvider {
+                content: crate::ContentCapabilities::text(),
                 background_modes: vec![],
                 parameters: backend().capabilities.supported_chat_parameters,
                 factory: Arc::new(move |_, _| Ok(Arc::new(Transport(calls.clone())))),

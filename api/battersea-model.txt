@@ -1,13 +1,69 @@
 pub mod battersea_model
 pub mod battersea_model::adapter
 pub mod battersea_model::adapter::error
+pub enum battersea_model::adapter::error::DispatchState
+pub battersea_model::adapter::error::DispatchState::Accepted
+pub battersea_model::adapter::error::DispatchState::NotSent
+pub battersea_model::adapter::error::DispatchState::Rejected
+pub battersea_model::adapter::error::DispatchState::Unknown
+impl core::clone::Clone for battersea_model::DispatchState
+pub fn battersea_model::DispatchState::clone(&self) -> battersea_model::DispatchState
+impl core::cmp::Eq for battersea_model::DispatchState
+impl core::cmp::PartialEq for battersea_model::DispatchState
+pub fn battersea_model::DispatchState::eq(&self, other: &battersea_model::DispatchState) -> bool
+impl core::default::Default for battersea_model::DispatchState
+pub fn battersea_model::DispatchState::default() -> battersea_model::DispatchState
+impl core::fmt::Debug for battersea_model::DispatchState
+pub fn battersea_model::DispatchState::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for battersea_model::DispatchState
+impl core::marker::StructuralPartialEq for battersea_model::DispatchState
+impl serde_core::ser::Serialize for battersea_model::DispatchState
+pub fn battersea_model::DispatchState::serialize<__S>(&self, __serializer: __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for battersea_model::DispatchState
+pub fn battersea_model::DispatchState::deserialize<__D>(__deserializer: __D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for battersea_model::DispatchState
+impl core::marker::Send for battersea_model::DispatchState
+impl core::marker::Sync for battersea_model::DispatchState
+impl core::marker::Unpin for battersea_model::DispatchState
+impl core::panic::unwind_safe::RefUnwindSafe for battersea_model::DispatchState
+impl core::panic::unwind_safe::UnwindSafe for battersea_model::DispatchState
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_model::DispatchState where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_model::DispatchState where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<T, U> core::convert::Into<U> for battersea_model::DispatchState where U: core::convert::From<T>
+pub fn battersea_model::DispatchState::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_model::DispatchState where U: core::convert::Into<T>
+pub type battersea_model::DispatchState::Error = core::convert::Infallible
+pub fn battersea_model::DispatchState::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for battersea_model::DispatchState where U: core::convert::TryFrom<T>
+pub type battersea_model::DispatchState::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_model::DispatchState::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for battersea_model::DispatchState where T: core::clone::Clone
+pub type battersea_model::DispatchState::Owned = T
+pub fn battersea_model::DispatchState::clone_into(&self, target: &mut T)
+pub fn battersea_model::DispatchState::to_owned(&self) -> T
+impl<T> core::any::Any for battersea_model::DispatchState where T: 'static + ?core::marker::Sized
+pub fn battersea_model::DispatchState::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_model::DispatchState where T: ?core::marker::Sized
+pub fn battersea_model::DispatchState::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_model::DispatchState where T: ?core::marker::Sized
+pub fn battersea_model::DispatchState::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for battersea_model::DispatchState where T: core::clone::Clone
+pub unsafe fn battersea_model::DispatchState::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for battersea_model::DispatchState
+pub fn battersea_model::DispatchState::from(t: T) -> T
+impl<T> dyn_clone::DynClone for battersea_model::DispatchState where T: core::clone::Clone
+pub fn battersea_model::DispatchState::__clone_box(&self, _: dyn_clone::sealed::Private) -> *mut ()
+impl<T> outref::AsOut<T> for battersea_model::DispatchState where T: core::marker::Copy
+pub fn battersea_model::DispatchState::as_out(&mut self) -> outref::Out<'_, T>
+impl<T> serde_core::de::DeserializeOwned for battersea_model::DispatchState where T: for<'de> serde_core::de::Deserialize<'de>
+impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_model::DispatchState where T: ?core::marker::Sized
 pub enum battersea_model::adapter::error::ErrorKind
 pub battersea_model::adapter::error::ErrorKind::Authentication
 pub battersea_model::adapter::error::ErrorKind::Cancelled
 pub battersea_model::adapter::error::ErrorKind::InvalidRequest
 pub battersea_model::adapter::error::ErrorKind::InvalidResponse
 pub battersea_model::adapter::error::ErrorKind::Mock
-pub battersea_model::adapter::error::ErrorKind::Other(alloc::string::String)
+pub battersea_model::adapter::error::ErrorKind::Other(alloc::boxed::Box<str>)
 pub battersea_model::adapter::error::ErrorKind::Permission
 pub battersea_model::adapter::error::ErrorKind::Provider
 pub battersea_model::adapter::error::ErrorKind::RateLimit
@@ -72,17 +128,21 @@ pub fn battersea_model::ErrorKind::__clone_box(&self, _: dyn_clone::sealed::Priv
 impl<T> serde_core::de::DeserializeOwned for battersea_model::ErrorKind where T: for<'de> serde_core::de::Deserialize<'de>
 impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_model::ErrorKind where T: ?core::marker::Sized
 pub struct battersea_model::adapter::error::EngineAdapterRequestError
+pub battersea_model::adapter::error::EngineAdapterRequestError::attempts: u32
 pub battersea_model::adapter::error::EngineAdapterRequestError::classification: battersea_model::ErrorKind
-pub battersea_model::adapter::error::EngineAdapterRequestError::message: alloc::string::String
-pub battersea_model::adapter::error::EngineAdapterRequestError::provider: alloc::string::String
+pub battersea_model::adapter::error::EngineAdapterRequestError::dispatch: battersea_model::DispatchState
+pub battersea_model::adapter::error::EngineAdapterRequestError::message: alloc::boxed::Box<str>
+pub battersea_model::adapter::error::EngineAdapterRequestError::provider: alloc::boxed::Box<str>
 pub battersea_model::adapter::error::EngineAdapterRequestError::request_id: core::option::Option<alloc::string::String>
+pub battersea_model::adapter::error::EngineAdapterRequestError::retry_after_ms: core::option::Option<u64>
 pub battersea_model::adapter::error::EngineAdapterRequestError::status_code: core::option::Option<u16>
-pub battersea_model::adapter::error::EngineAdapterRequestError::watchdog: core::option::Option<battersea_model::WatchdogFailure>
+pub battersea_model::adapter::error::EngineAdapterRequestError::watchdog: core::option::Option<alloc::boxed::Box<battersea_model::WatchdogFailure>>
 impl battersea_model::EngineAdapterRequestError
 pub fn battersea_model::EngineAdapterRequestError::invalid_response(provider: impl core::convert::Into<alloc::string::String>, message: impl core::convert::Into<alloc::string::String>) -> Self
 pub fn battersea_model::EngineAdapterRequestError::mock(message: impl core::convert::Into<alloc::string::String>) -> Self
 pub fn battersea_model::EngineAdapterRequestError::new(provider: impl core::convert::Into<alloc::string::String>, message: impl core::convert::Into<alloc::string::String>, classification: impl core::convert::Into<battersea_model::ErrorKind>) -> Self
 pub fn battersea_model::EngineAdapterRequestError::transport(provider: impl core::convert::Into<alloc::string::String>, message: impl core::convert::Into<alloc::string::String>) -> Self
+pub fn battersea_model::EngineAdapterRequestError::with_dispatch(self, dispatch: battersea_model::DispatchState) -> Self
 pub fn battersea_model::EngineAdapterRequestError::with_idle_watchdog(self, limit_ms: u64) -> Self
 pub fn battersea_model::EngineAdapterRequestError::with_request_id(self, request_id: core::option::Option<alloc::string::String>) -> Self
 pub fn battersea_model::EngineAdapterRequestError::with_status_code(self, status_code: u16) -> Self
@@ -177,6 +237,60 @@ impl<T> dyn_clone::DynClone for battersea_model::WatchdogFailure where T: core::
 pub fn battersea_model::WatchdogFailure::__clone_box(&self, _: dyn_clone::sealed::Private) -> *mut ()
 impl<T> serde_core::de::DeserializeOwned for battersea_model::WatchdogFailure where T: for<'de> serde_core::de::Deserialize<'de>
 impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_model::WatchdogFailure where T: ?core::marker::Sized
+pub mod battersea_model::adapter::output
+pub enum battersea_model::adapter::output::StopReason
+pub battersea_model::adapter::output::StopReason::Complete
+pub battersea_model::adapter::output::StopReason::Length
+pub battersea_model::adapter::output::StopReason::Other(alloc::string::String)
+pub battersea_model::adapter::output::StopReason::Refusal
+pub battersea_model::adapter::output::StopReason::ToolUse
+impl core::clone::Clone for battersea_model::output::StopReason
+pub fn battersea_model::output::StopReason::clone(&self) -> battersea_model::output::StopReason
+impl core::cmp::Eq for battersea_model::output::StopReason
+impl core::cmp::PartialEq for battersea_model::output::StopReason
+pub fn battersea_model::output::StopReason::eq(&self, other: &battersea_model::output::StopReason) -> bool
+impl core::fmt::Debug for battersea_model::output::StopReason
+pub fn battersea_model::output::StopReason::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for battersea_model::output::StopReason
+impl serde_core::ser::Serialize for battersea_model::output::StopReason
+pub fn battersea_model::output::StopReason::serialize<__S>(&self, __serializer: __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for battersea_model::output::StopReason
+pub fn battersea_model::output::StopReason::deserialize<__D>(__deserializer: __D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for battersea_model::output::StopReason
+impl core::marker::Send for battersea_model::output::StopReason
+impl core::marker::Sync for battersea_model::output::StopReason
+impl core::marker::Unpin for battersea_model::output::StopReason
+impl core::panic::unwind_safe::RefUnwindSafe for battersea_model::output::StopReason
+impl core::panic::unwind_safe::UnwindSafe for battersea_model::output::StopReason
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_model::output::StopReason where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_model::output::StopReason where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<T, U> core::convert::Into<U> for battersea_model::output::StopReason where U: core::convert::From<T>
+pub fn battersea_model::output::StopReason::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_model::output::StopReason where U: core::convert::Into<T>
+pub type battersea_model::output::StopReason::Error = core::convert::Infallible
+pub fn battersea_model::output::StopReason::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for battersea_model::output::StopReason where U: core::convert::TryFrom<T>
+pub type battersea_model::output::StopReason::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_model::output::StopReason::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for battersea_model::output::StopReason where T: core::clone::Clone
+pub type battersea_model::output::StopReason::Owned = T
+pub fn battersea_model::output::StopReason::clone_into(&self, target: &mut T)
+pub fn battersea_model::output::StopReason::to_owned(&self) -> T
+impl<T> core::any::Any for battersea_model::output::StopReason where T: 'static + ?core::marker::Sized
+pub fn battersea_model::output::StopReason::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_model::output::StopReason where T: ?core::marker::Sized
+pub fn battersea_model::output::StopReason::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_model::output::StopReason where T: ?core::marker::Sized
+pub fn battersea_model::output::StopReason::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for battersea_model::output::StopReason where T: core::clone::Clone
+pub unsafe fn battersea_model::output::StopReason::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for battersea_model::output::StopReason
+pub fn battersea_model::output::StopReason::from(t: T) -> T
+impl<T> dyn_clone::DynClone for battersea_model::output::StopReason where T: core::clone::Clone
+pub fn battersea_model::output::StopReason::__clone_box(&self, _: dyn_clone::sealed::Private) -> *mut ()
+impl<T> serde_core::de::DeserializeOwned for battersea_model::output::StopReason where T: for<'de> serde_core::de::Deserialize<'de>
+impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_model::output::StopReason where T: ?core::marker::Sized
+pub fn battersea_model::adapter::output::validate_output(stream: battersea_model::EngineTextStream, provider: alloc::string::String, format: core::option::Option<battersea_model::ResponseFormat>, modalities: alloc::vec::Vec<battersea_model::Modality>) -> battersea_model::EngineTextStream
 pub mod battersea_model::adapter::payload
 pub const battersea_model::adapter::payload::PROVIDER_PAYLOAD_BYTES: usize
 pub fn battersea_model::adapter::payload::check_payload<T: serde_core::ser::Serialize + ?core::marker::Sized>(value: &T, provider: &str) -> core::result::Result<usize, battersea_model::EngineAdapterRequestError>
@@ -269,8 +383,16 @@ pub fn battersea_model::EngineOperation::as_out(&mut self) -> outref::Out<'_, T>
 impl<T> serde_core::de::DeserializeOwned for battersea_model::EngineOperation where T: for<'de> serde_core::de::Deserialize<'de>
 impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_model::EngineOperation where T: ?core::marker::Sized
 pub enum battersea_model::adapter::EngineTextStreamEvent
+pub battersea_model::adapter::EngineTextStreamEvent::ContentBlock
+pub battersea_model::adapter::EngineTextStreamEvent::ContentBlock::block: battersea_model::ContentBlock
+pub battersea_model::adapter::EngineTextStreamEvent::MessageStart
+pub battersea_model::adapter::EngineTextStreamEvent::MessageStart::turn_index: u32
+pub battersea_model::adapter::EngineTextStreamEvent::MessageStop
+pub battersea_model::adapter::EngineTextStreamEvent::MessageStop::reason: battersea_model::output::StopReason
 pub battersea_model::adapter::EngineTextStreamEvent::ReasoningDelta
 pub battersea_model::adapter::EngineTextStreamEvent::ReasoningDelta::text: alloc::string::String
+pub battersea_model::adapter::EngineTextStreamEvent::StructuredOutput
+pub battersea_model::adapter::EngineTextStreamEvent::StructuredOutput::value: serde_json::value::Value
 pub battersea_model::adapter::EngineTextStreamEvent::TextDelta
 pub battersea_model::adapter::EngineTextStreamEvent::TextDelta::text: alloc::string::String
 pub battersea_model::adapter::EngineTextStreamEvent::TokenUsage
@@ -392,6 +514,58 @@ impl<T> outref::AsOut<T> for battersea_model::engine::EngineToolExecutionMode wh
 pub fn battersea_model::engine::EngineToolExecutionMode::as_out(&mut self) -> outref::Out<'_, T>
 impl<T> serde_core::de::DeserializeOwned for battersea_model::engine::EngineToolExecutionMode where T: for<'de> serde_core::de::Deserialize<'de>
 impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_model::engine::EngineToolExecutionMode where T: ?core::marker::Sized
+pub enum battersea_model::adapter::StopReason
+pub battersea_model::adapter::StopReason::Complete
+pub battersea_model::adapter::StopReason::Length
+pub battersea_model::adapter::StopReason::Other(alloc::string::String)
+pub battersea_model::adapter::StopReason::Refusal
+pub battersea_model::adapter::StopReason::ToolUse
+impl core::clone::Clone for battersea_model::output::StopReason
+pub fn battersea_model::output::StopReason::clone(&self) -> battersea_model::output::StopReason
+impl core::cmp::Eq for battersea_model::output::StopReason
+impl core::cmp::PartialEq for battersea_model::output::StopReason
+pub fn battersea_model::output::StopReason::eq(&self, other: &battersea_model::output::StopReason) -> bool
+impl core::fmt::Debug for battersea_model::output::StopReason
+pub fn battersea_model::output::StopReason::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for battersea_model::output::StopReason
+impl serde_core::ser::Serialize for battersea_model::output::StopReason
+pub fn battersea_model::output::StopReason::serialize<__S>(&self, __serializer: __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for battersea_model::output::StopReason
+pub fn battersea_model::output::StopReason::deserialize<__D>(__deserializer: __D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for battersea_model::output::StopReason
+impl core::marker::Send for battersea_model::output::StopReason
+impl core::marker::Sync for battersea_model::output::StopReason
+impl core::marker::Unpin for battersea_model::output::StopReason
+impl core::panic::unwind_safe::RefUnwindSafe for battersea_model::output::StopReason
+impl core::panic::unwind_safe::UnwindSafe for battersea_model::output::StopReason
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_model::output::StopReason where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_model::output::StopReason where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<T, U> core::convert::Into<U> for battersea_model::output::StopReason where U: core::convert::From<T>
+pub fn battersea_model::output::StopReason::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_model::output::StopReason where U: core::convert::Into<T>
+pub type battersea_model::output::StopReason::Error = core::convert::Infallible
+pub fn battersea_model::output::StopReason::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for battersea_model::output::StopReason where U: core::convert::TryFrom<T>
+pub type battersea_model::output::StopReason::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_model::output::StopReason::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for battersea_model::output::StopReason where T: core::clone::Clone
+pub type battersea_model::output::StopReason::Owned = T
+pub fn battersea_model::output::StopReason::clone_into(&self, target: &mut T)
+pub fn battersea_model::output::StopReason::to_owned(&self) -> T
+impl<T> core::any::Any for battersea_model::output::StopReason where T: 'static + ?core::marker::Sized
+pub fn battersea_model::output::StopReason::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_model::output::StopReason where T: ?core::marker::Sized
+pub fn battersea_model::output::StopReason::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_model::output::StopReason where T: ?core::marker::Sized
+pub fn battersea_model::output::StopReason::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for battersea_model::output::StopReason where T: core::clone::Clone
+pub unsafe fn battersea_model::output::StopReason::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for battersea_model::output::StopReason
+pub fn battersea_model::output::StopReason::from(t: T) -> T
+impl<T> dyn_clone::DynClone for battersea_model::output::StopReason where T: core::clone::Clone
+pub fn battersea_model::output::StopReason::__clone_box(&self, _: dyn_clone::sealed::Private) -> *mut ()
+impl<T> serde_core::de::DeserializeOwned for battersea_model::output::StopReason where T: for<'de> serde_core::de::Deserialize<'de>
+impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_model::output::StopReason where T: ?core::marker::Sized
 pub struct battersea_model::adapter::EngineAdapterDebugContext
 pub battersea_model::adapter::EngineAdapterDebugContext::backend: alloc::string::String
 pub battersea_model::adapter::EngineAdapterDebugContext::base_url: core::option::Option<alloc::string::String>
@@ -794,6 +968,61 @@ impl<T> dyn_clone::DynClone for battersea_model::EngineAdapterResponseLog where 
 pub fn battersea_model::EngineAdapterResponseLog::__clone_box(&self, _: dyn_clone::sealed::Private) -> *mut ()
 impl<T> serde_core::de::DeserializeOwned for battersea_model::EngineAdapterResponseLog where T: for<'de> serde_core::de::Deserialize<'de>
 impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_model::EngineAdapterResponseLog where T: ?core::marker::Sized
+pub struct battersea_model::adapter::EngineAdapterRetryLog
+pub battersea_model::adapter::EngineAdapterRetryLog::attempt: u32
+pub battersea_model::adapter::EngineAdapterRetryLog::backend: alloc::string::String
+pub battersea_model::adapter::EngineAdapterRetryLog::delay_ms: u64
+pub battersea_model::adapter::EngineAdapterRetryLog::dispatch: battersea_model::DispatchState
+pub battersea_model::adapter::EngineAdapterRetryLog::provider: alloc::string::String
+pub battersea_model::adapter::EngineAdapterRetryLog::request_id: core::option::Option<alloc::string::String>
+pub battersea_model::adapter::EngineAdapterRetryLog::resume: bool
+pub battersea_model::adapter::EngineAdapterRetryLog::status_code: core::option::Option<u16>
+impl core::clone::Clone for battersea_model::EngineAdapterRetryLog
+pub fn battersea_model::EngineAdapterRetryLog::clone(&self) -> battersea_model::EngineAdapterRetryLog
+impl core::cmp::Eq for battersea_model::EngineAdapterRetryLog
+impl core::cmp::PartialEq for battersea_model::EngineAdapterRetryLog
+pub fn battersea_model::EngineAdapterRetryLog::eq(&self, other: &battersea_model::EngineAdapterRetryLog) -> bool
+impl core::fmt::Debug for battersea_model::EngineAdapterRetryLog
+pub fn battersea_model::EngineAdapterRetryLog::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for battersea_model::EngineAdapterRetryLog
+impl serde_core::ser::Serialize for battersea_model::EngineAdapterRetryLog
+pub fn battersea_model::EngineAdapterRetryLog::serialize<__S>(&self, __serializer: __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for battersea_model::EngineAdapterRetryLog
+pub fn battersea_model::EngineAdapterRetryLog::deserialize<__D>(__deserializer: __D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for battersea_model::EngineAdapterRetryLog
+impl core::marker::Send for battersea_model::EngineAdapterRetryLog
+impl core::marker::Sync for battersea_model::EngineAdapterRetryLog
+impl core::marker::Unpin for battersea_model::EngineAdapterRetryLog
+impl core::panic::unwind_safe::RefUnwindSafe for battersea_model::EngineAdapterRetryLog
+impl core::panic::unwind_safe::UnwindSafe for battersea_model::EngineAdapterRetryLog
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_model::EngineAdapterRetryLog where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_model::EngineAdapterRetryLog where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<T, U> core::convert::Into<U> for battersea_model::EngineAdapterRetryLog where U: core::convert::From<T>
+pub fn battersea_model::EngineAdapterRetryLog::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_model::EngineAdapterRetryLog where U: core::convert::Into<T>
+pub type battersea_model::EngineAdapterRetryLog::Error = core::convert::Infallible
+pub fn battersea_model::EngineAdapterRetryLog::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for battersea_model::EngineAdapterRetryLog where U: core::convert::TryFrom<T>
+pub type battersea_model::EngineAdapterRetryLog::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_model::EngineAdapterRetryLog::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for battersea_model::EngineAdapterRetryLog where T: core::clone::Clone
+pub type battersea_model::EngineAdapterRetryLog::Owned = T
+pub fn battersea_model::EngineAdapterRetryLog::clone_into(&self, target: &mut T)
+pub fn battersea_model::EngineAdapterRetryLog::to_owned(&self) -> T
+impl<T> core::any::Any for battersea_model::EngineAdapterRetryLog where T: 'static + ?core::marker::Sized
+pub fn battersea_model::EngineAdapterRetryLog::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_model::EngineAdapterRetryLog where T: ?core::marker::Sized
+pub fn battersea_model::EngineAdapterRetryLog::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_model::EngineAdapterRetryLog where T: ?core::marker::Sized
+pub fn battersea_model::EngineAdapterRetryLog::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for battersea_model::EngineAdapterRetryLog where T: core::clone::Clone
+pub unsafe fn battersea_model::EngineAdapterRetryLog::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for battersea_model::EngineAdapterRetryLog
+pub fn battersea_model::EngineAdapterRetryLog::from(t: T) -> T
+impl<T> dyn_clone::DynClone for battersea_model::EngineAdapterRetryLog where T: core::clone::Clone
+pub fn battersea_model::EngineAdapterRetryLog::__clone_box(&self, _: dyn_clone::sealed::Private) -> *mut ()
+impl<T> serde_core::de::DeserializeOwned for battersea_model::EngineAdapterRetryLog where T: for<'de> serde_core::de::Deserialize<'de>
+impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_model::EngineAdapterRetryLog where T: ?core::marker::Sized
 pub struct battersea_model::adapter::EngineAdapterStreamLog
 pub battersea_model::adapter::EngineAdapterStreamLog::context: battersea_model::EngineAdapterDebugContext
 pub battersea_model::adapter::EngineAdapterStreamLog::detail: serde_json::value::Value
@@ -972,6 +1201,8 @@ pub battersea_model::adapter::EngineBackendOptions::mock_response_target_chars: 
 pub battersea_model::adapter::EngineBackendOptions::mock_stream_delay_multiplier: core::option::Option<f64>
 pub battersea_model::adapter::EngineBackendOptions::mock_streaming_reasoning_chunks: core::option::Option<alloc::vec::Vec<alloc::string::String>>
 pub battersea_model::adapter::EngineBackendOptions::mock_tool_calls: core::option::Option<alloc::vec::Vec<battersea_model::MockToolCallSpec>>
+pub battersea_model::adapter::EngineBackendOptions::retry_initial_delay_ms: core::option::Option<u64>
+pub battersea_model::adapter::EngineBackendOptions::retry_max_delay_ms: core::option::Option<u64>
 pub battersea_model::adapter::EngineBackendOptions::stream_idle_timeout_ms: core::option::Option<u64>
 pub battersea_model::adapter::EngineBackendOptions::timeout_ms: core::option::Option<u64>
 pub battersea_model::adapter::EngineBackendOptions::transport: core::option::Option<alloc::string::String>
@@ -1381,6 +1612,7 @@ pub trait battersea_model::adapter::EngineAdapterLogger: core::marker::Send + co
 pub fn battersea_model::adapter::EngineAdapterLogger::on_error<'life0, 'async_trait>(&'life0 self, _entry: battersea_model::EngineAdapterErrorLog) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = ()> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait
 pub fn battersea_model::adapter::EngineAdapterLogger::on_request<'life0, 'async_trait>(&'life0 self, _entry: battersea_model::EngineAdapterRequestLog) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = ()> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait
 pub fn battersea_model::adapter::EngineAdapterLogger::on_response<'life0, 'async_trait>(&'life0 self, _entry: battersea_model::EngineAdapterResponseLog) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = ()> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait
+pub fn battersea_model::adapter::EngineAdapterLogger::on_retry<'life0, 'async_trait>(&'life0 self, _entry: battersea_model::EngineAdapterRetryLog) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = ()> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait
 pub fn battersea_model::adapter::EngineAdapterLogger::on_stream_event<'life0, 'async_trait>(&'life0 self, _entry: battersea_model::EngineAdapterStreamLog) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = ()> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait
 pub trait battersea_model::adapter::EngineLocalToolExecutor: core::marker::Send + core::marker::Sync
 pub fn battersea_model::adapter::EngineLocalToolExecutor::call<'life0, 'async_trait>(&'life0 self, call: battersea_model::EngineLocalToolCall) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<battersea_model::EngineLocalToolResult, battersea_model::EngineAdapterRequestError>> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait
@@ -1396,6 +1628,245 @@ pub fn battersea_model::adapter::validate_chat_request(backend: &battersea_model
 pub fn battersea_model::adapter::with_stream_idle_watchdog(stream: battersea_model::EngineTextStream, idle: core::time::Duration, provider: impl core::convert::Into<alloc::string::String>) -> battersea_model::EngineTextStream
 pub type battersea_model::adapter::EngineTextStream = futures_core::stream::BoxStream<'static, core::result::Result<battersea_model::EngineTextStreamEvent, battersea_model::EngineAdapterRequestError>>
 pub type battersea_model::adapter::MockResponseRenderer = (dyn core::ops::function::Fn(&str) -> alloc::string::String + core::marker::Send + core::marker::Sync)
+pub mod battersea_model::content
+pub enum battersea_model::content::Modality
+pub battersea_model::content::Modality::Audio
+pub battersea_model::content::Modality::Document
+pub battersea_model::content::Modality::Image
+pub battersea_model::content::Modality::Text
+pub battersea_model::content::Modality::Video
+impl core::clone::Clone for battersea_model::Modality
+pub fn battersea_model::Modality::clone(&self) -> battersea_model::Modality
+impl core::cmp::Eq for battersea_model::Modality
+impl core::cmp::PartialEq for battersea_model::Modality
+pub fn battersea_model::Modality::eq(&self, other: &battersea_model::Modality) -> bool
+impl core::fmt::Debug for battersea_model::Modality
+pub fn battersea_model::Modality::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for battersea_model::Modality
+impl core::marker::StructuralPartialEq for battersea_model::Modality
+impl schemars::JsonSchema for battersea_model::Modality
+pub fn battersea_model::Modality::inline_schema() -> bool
+pub fn battersea_model::Modality::json_schema(generator: &mut schemars::generate::SchemaGenerator) -> schemars::schema::Schema
+pub fn battersea_model::Modality::schema_id() -> alloc::borrow::Cow<'static, str>
+pub fn battersea_model::Modality::schema_name() -> alloc::borrow::Cow<'static, str>
+impl serde_core::ser::Serialize for battersea_model::Modality
+pub fn battersea_model::Modality::serialize<__S>(&self, __serializer: __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for battersea_model::Modality
+pub fn battersea_model::Modality::deserialize<__D>(__deserializer: __D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for battersea_model::Modality
+impl core::marker::Send for battersea_model::Modality
+impl core::marker::Sync for battersea_model::Modality
+impl core::marker::Unpin for battersea_model::Modality
+impl core::panic::unwind_safe::RefUnwindSafe for battersea_model::Modality
+impl core::panic::unwind_safe::UnwindSafe for battersea_model::Modality
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_model::Modality where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_model::Modality where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<T, U> core::convert::Into<U> for battersea_model::Modality where U: core::convert::From<T>
+pub fn battersea_model::Modality::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_model::Modality where U: core::convert::Into<T>
+pub type battersea_model::Modality::Error = core::convert::Infallible
+pub fn battersea_model::Modality::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for battersea_model::Modality where U: core::convert::TryFrom<T>
+pub type battersea_model::Modality::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_model::Modality::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for battersea_model::Modality where T: core::clone::Clone
+pub type battersea_model::Modality::Owned = T
+pub fn battersea_model::Modality::clone_into(&self, target: &mut T)
+pub fn battersea_model::Modality::to_owned(&self) -> T
+impl<T> core::any::Any for battersea_model::Modality where T: 'static + ?core::marker::Sized
+pub fn battersea_model::Modality::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_model::Modality where T: ?core::marker::Sized
+pub fn battersea_model::Modality::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_model::Modality where T: ?core::marker::Sized
+pub fn battersea_model::Modality::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for battersea_model::Modality where T: core::clone::Clone
+pub unsafe fn battersea_model::Modality::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for battersea_model::Modality
+pub fn battersea_model::Modality::from(t: T) -> T
+impl<T> dyn_clone::DynClone for battersea_model::Modality where T: core::clone::Clone
+pub fn battersea_model::Modality::__clone_box(&self, _: dyn_clone::sealed::Private) -> *mut ()
+impl<T> outref::AsOut<T> for battersea_model::Modality where T: core::marker::Copy
+pub fn battersea_model::Modality::as_out(&mut self) -> outref::Out<'_, T>
+impl<T> serde_core::de::DeserializeOwned for battersea_model::Modality where T: for<'de> serde_core::de::Deserialize<'de>
+impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_model::Modality where T: ?core::marker::Sized
+pub enum battersea_model::content::ResponseFormat
+pub battersea_model::content::ResponseFormat::JsonObject
+pub battersea_model::content::ResponseFormat::JsonSchema
+pub battersea_model::content::ResponseFormat::JsonSchema::name: alloc::string::String
+pub battersea_model::content::ResponseFormat::JsonSchema::schema: serde_json::value::Value
+impl battersea_model::ResponseFormat
+pub fn battersea_model::ResponseFormat::mode(&self) -> battersea_model::StructuredOutputMode
+pub fn battersea_model::ResponseFormat::parse(&self, provider: &str, text: &str) -> core::result::Result<serde_json::value::Value, battersea_model::EngineAdapterRequestError>
+pub fn battersea_model::ResponseFormat::validate(&self) -> core::result::Result<(), alloc::string::String>
+impl core::clone::Clone for battersea_model::ResponseFormat
+pub fn battersea_model::ResponseFormat::clone(&self) -> battersea_model::ResponseFormat
+impl core::cmp::Eq for battersea_model::ResponseFormat
+impl core::cmp::PartialEq for battersea_model::ResponseFormat
+pub fn battersea_model::ResponseFormat::eq(&self, other: &battersea_model::ResponseFormat) -> bool
+impl core::fmt::Debug for battersea_model::ResponseFormat
+pub fn battersea_model::ResponseFormat::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for battersea_model::ResponseFormat
+impl schemars::JsonSchema for battersea_model::ResponseFormat
+pub fn battersea_model::ResponseFormat::inline_schema() -> bool
+pub fn battersea_model::ResponseFormat::json_schema(generator: &mut schemars::generate::SchemaGenerator) -> schemars::schema::Schema
+pub fn battersea_model::ResponseFormat::schema_id() -> alloc::borrow::Cow<'static, str>
+pub fn battersea_model::ResponseFormat::schema_name() -> alloc::borrow::Cow<'static, str>
+impl serde_core::ser::Serialize for battersea_model::ResponseFormat
+pub fn battersea_model::ResponseFormat::serialize<__S>(&self, __serializer: __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for battersea_model::ResponseFormat
+pub fn battersea_model::ResponseFormat::deserialize<__D>(__deserializer: __D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for battersea_model::ResponseFormat
+impl core::marker::Send for battersea_model::ResponseFormat
+impl core::marker::Sync for battersea_model::ResponseFormat
+impl core::marker::Unpin for battersea_model::ResponseFormat
+impl core::panic::unwind_safe::RefUnwindSafe for battersea_model::ResponseFormat
+impl core::panic::unwind_safe::UnwindSafe for battersea_model::ResponseFormat
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_model::ResponseFormat where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_model::ResponseFormat where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<T, U> core::convert::Into<U> for battersea_model::ResponseFormat where U: core::convert::From<T>
+pub fn battersea_model::ResponseFormat::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_model::ResponseFormat where U: core::convert::Into<T>
+pub type battersea_model::ResponseFormat::Error = core::convert::Infallible
+pub fn battersea_model::ResponseFormat::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for battersea_model::ResponseFormat where U: core::convert::TryFrom<T>
+pub type battersea_model::ResponseFormat::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_model::ResponseFormat::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for battersea_model::ResponseFormat where T: core::clone::Clone
+pub type battersea_model::ResponseFormat::Owned = T
+pub fn battersea_model::ResponseFormat::clone_into(&self, target: &mut T)
+pub fn battersea_model::ResponseFormat::to_owned(&self) -> T
+impl<T> core::any::Any for battersea_model::ResponseFormat where T: 'static + ?core::marker::Sized
+pub fn battersea_model::ResponseFormat::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_model::ResponseFormat where T: ?core::marker::Sized
+pub fn battersea_model::ResponseFormat::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_model::ResponseFormat where T: ?core::marker::Sized
+pub fn battersea_model::ResponseFormat::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for battersea_model::ResponseFormat where T: core::clone::Clone
+pub unsafe fn battersea_model::ResponseFormat::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for battersea_model::ResponseFormat
+pub fn battersea_model::ResponseFormat::from(t: T) -> T
+impl<T> dyn_clone::DynClone for battersea_model::ResponseFormat where T: core::clone::Clone
+pub fn battersea_model::ResponseFormat::__clone_box(&self, _: dyn_clone::sealed::Private) -> *mut ()
+impl<T> serde_core::de::DeserializeOwned for battersea_model::ResponseFormat where T: for<'de> serde_core::de::Deserialize<'de>
+impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_model::ResponseFormat where T: ?core::marker::Sized
+pub enum battersea_model::content::StructuredOutputMode
+pub battersea_model::content::StructuredOutputMode::JsonObject
+pub battersea_model::content::StructuredOutputMode::JsonSchema
+impl core::clone::Clone for battersea_model::StructuredOutputMode
+pub fn battersea_model::StructuredOutputMode::clone(&self) -> battersea_model::StructuredOutputMode
+impl core::cmp::Eq for battersea_model::StructuredOutputMode
+impl core::cmp::PartialEq for battersea_model::StructuredOutputMode
+pub fn battersea_model::StructuredOutputMode::eq(&self, other: &battersea_model::StructuredOutputMode) -> bool
+impl core::fmt::Debug for battersea_model::StructuredOutputMode
+pub fn battersea_model::StructuredOutputMode::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for battersea_model::StructuredOutputMode
+impl core::marker::StructuralPartialEq for battersea_model::StructuredOutputMode
+impl schemars::JsonSchema for battersea_model::StructuredOutputMode
+pub fn battersea_model::StructuredOutputMode::inline_schema() -> bool
+pub fn battersea_model::StructuredOutputMode::json_schema(generator: &mut schemars::generate::SchemaGenerator) -> schemars::schema::Schema
+pub fn battersea_model::StructuredOutputMode::schema_id() -> alloc::borrow::Cow<'static, str>
+pub fn battersea_model::StructuredOutputMode::schema_name() -> alloc::borrow::Cow<'static, str>
+impl serde_core::ser::Serialize for battersea_model::StructuredOutputMode
+pub fn battersea_model::StructuredOutputMode::serialize<__S>(&self, __serializer: __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for battersea_model::StructuredOutputMode
+pub fn battersea_model::StructuredOutputMode::deserialize<__D>(__deserializer: __D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for battersea_model::StructuredOutputMode
+impl core::marker::Send for battersea_model::StructuredOutputMode
+impl core::marker::Sync for battersea_model::StructuredOutputMode
+impl core::marker::Unpin for battersea_model::StructuredOutputMode
+impl core::panic::unwind_safe::RefUnwindSafe for battersea_model::StructuredOutputMode
+impl core::panic::unwind_safe::UnwindSafe for battersea_model::StructuredOutputMode
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_model::StructuredOutputMode where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_model::StructuredOutputMode where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<T, U> core::convert::Into<U> for battersea_model::StructuredOutputMode where U: core::convert::From<T>
+pub fn battersea_model::StructuredOutputMode::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_model::StructuredOutputMode where U: core::convert::Into<T>
+pub type battersea_model::StructuredOutputMode::Error = core::convert::Infallible
+pub fn battersea_model::StructuredOutputMode::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for battersea_model::StructuredOutputMode where U: core::convert::TryFrom<T>
+pub type battersea_model::StructuredOutputMode::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_model::StructuredOutputMode::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for battersea_model::StructuredOutputMode where T: core::clone::Clone
+pub type battersea_model::StructuredOutputMode::Owned = T
+pub fn battersea_model::StructuredOutputMode::clone_into(&self, target: &mut T)
+pub fn battersea_model::StructuredOutputMode::to_owned(&self) -> T
+impl<T> core::any::Any for battersea_model::StructuredOutputMode where T: 'static + ?core::marker::Sized
+pub fn battersea_model::StructuredOutputMode::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_model::StructuredOutputMode where T: ?core::marker::Sized
+pub fn battersea_model::StructuredOutputMode::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_model::StructuredOutputMode where T: ?core::marker::Sized
+pub fn battersea_model::StructuredOutputMode::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for battersea_model::StructuredOutputMode where T: core::clone::Clone
+pub unsafe fn battersea_model::StructuredOutputMode::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for battersea_model::StructuredOutputMode
+pub fn battersea_model::StructuredOutputMode::from(t: T) -> T
+impl<T> dyn_clone::DynClone for battersea_model::StructuredOutputMode where T: core::clone::Clone
+pub fn battersea_model::StructuredOutputMode::__clone_box(&self, _: dyn_clone::sealed::Private) -> *mut ()
+impl<T> outref::AsOut<T> for battersea_model::StructuredOutputMode where T: core::marker::Copy
+pub fn battersea_model::StructuredOutputMode::as_out(&mut self) -> outref::Out<'_, T>
+impl<T> serde_core::de::DeserializeOwned for battersea_model::StructuredOutputMode where T: for<'de> serde_core::de::Deserialize<'de>
+impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_model::StructuredOutputMode where T: ?core::marker::Sized
+pub struct battersea_model::content::ContentCapabilities
+pub battersea_model::content::ContentCapabilities::input_modalities: alloc::vec::Vec<battersea_model::Modality>
+pub battersea_model::content::ContentCapabilities::native_continuation: bool
+pub battersea_model::content::ContentCapabilities::output_modalities: alloc::vec::Vec<battersea_model::Modality>
+pub battersea_model::content::ContentCapabilities::prompt_caching: bool
+pub battersea_model::content::ContentCapabilities::structured_output: alloc::vec::Vec<battersea_model::StructuredOutputMode>
+impl battersea_model::ContentCapabilities
+pub fn battersea_model::ContentCapabilities::text() -> Self
+pub fn battersea_model::ContentCapabilities::validate_subset(&self, transport: &Self) -> core::result::Result<(), alloc::string::String>
+impl core::clone::Clone for battersea_model::ContentCapabilities
+pub fn battersea_model::ContentCapabilities::clone(&self) -> battersea_model::ContentCapabilities
+impl core::cmp::Eq for battersea_model::ContentCapabilities
+impl core::cmp::PartialEq for battersea_model::ContentCapabilities
+pub fn battersea_model::ContentCapabilities::eq(&self, other: &battersea_model::ContentCapabilities) -> bool
+impl core::fmt::Debug for battersea_model::ContentCapabilities
+pub fn battersea_model::ContentCapabilities::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for battersea_model::ContentCapabilities
+impl schemars::JsonSchema for battersea_model::ContentCapabilities
+pub fn battersea_model::ContentCapabilities::inline_schema() -> bool
+pub fn battersea_model::ContentCapabilities::json_schema(generator: &mut schemars::generate::SchemaGenerator) -> schemars::schema::Schema
+pub fn battersea_model::ContentCapabilities::schema_id() -> alloc::borrow::Cow<'static, str>
+pub fn battersea_model::ContentCapabilities::schema_name() -> alloc::borrow::Cow<'static, str>
+impl serde_core::ser::Serialize for battersea_model::ContentCapabilities
+pub fn battersea_model::ContentCapabilities::serialize<__S>(&self, __serializer: __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for battersea_model::ContentCapabilities
+pub fn battersea_model::ContentCapabilities::deserialize<__D>(__deserializer: __D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for battersea_model::ContentCapabilities
+impl core::marker::Send for battersea_model::ContentCapabilities
+impl core::marker::Sync for battersea_model::ContentCapabilities
+impl core::marker::Unpin for battersea_model::ContentCapabilities
+impl core::panic::unwind_safe::RefUnwindSafe for battersea_model::ContentCapabilities
+impl core::panic::unwind_safe::UnwindSafe for battersea_model::ContentCapabilities
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_model::ContentCapabilities where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_model::ContentCapabilities where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<T, U> core::convert::Into<U> for battersea_model::ContentCapabilities where U: core::convert::From<T>
+pub fn battersea_model::ContentCapabilities::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_model::ContentCapabilities where U: core::convert::Into<T>
+pub type battersea_model::ContentCapabilities::Error = core::convert::Infallible
+pub fn battersea_model::ContentCapabilities::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for battersea_model::ContentCapabilities where U: core::convert::TryFrom<T>
+pub type battersea_model::ContentCapabilities::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_model::ContentCapabilities::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for battersea_model::ContentCapabilities where T: core::clone::Clone
+pub type battersea_model::ContentCapabilities::Owned = T
+pub fn battersea_model::ContentCapabilities::clone_into(&self, target: &mut T)
+pub fn battersea_model::ContentCapabilities::to_owned(&self) -> T
+impl<T> core::any::Any for battersea_model::ContentCapabilities where T: 'static + ?core::marker::Sized
+pub fn battersea_model::ContentCapabilities::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_model::ContentCapabilities where T: ?core::marker::Sized
+pub fn battersea_model::ContentCapabilities::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_model::ContentCapabilities where T: ?core::marker::Sized
+pub fn battersea_model::ContentCapabilities::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for battersea_model::ContentCapabilities where T: core::clone::Clone
+pub unsafe fn battersea_model::ContentCapabilities::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for battersea_model::ContentCapabilities
+pub fn battersea_model::ContentCapabilities::from(t: T) -> T
+impl<T> dyn_clone::DynClone for battersea_model::ContentCapabilities where T: core::clone::Clone
+pub fn battersea_model::ContentCapabilities::__clone_box(&self, _: dyn_clone::sealed::Private) -> *mut ()
+impl<T> serde_core::de::DeserializeOwned for battersea_model::ContentCapabilities where T: for<'de> serde_core::de::Deserialize<'de>
+impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_model::ContentCapabilities where T: ?core::marker::Sized
+pub fn battersea_model::content::validate_messages(provider: &str, capabilities: &battersea_model::ContentCapabilities, messages: &[battersea_model::Message]) -> core::result::Result<(), battersea_model::EngineAdapterRequestError>
 pub mod battersea_model::engine
 pub enum battersea_model::engine::EngineChatToolChoiceMode
 pub battersea_model::engine::EngineChatToolChoiceMode::Any
@@ -1985,6 +2456,7 @@ impl<T> serde_core::de::DeserializeOwned for battersea_model::engine::EngineAnth
 impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_model::engine::EngineAnthropicThinkingCapabilities where T: ?core::marker::Sized
 pub struct battersea_model::engine::EngineBackendCapabilities
 pub battersea_model::engine::EngineBackendCapabilities::anthropic_thinking: core::option::Option<battersea_model::engine::EngineAnthropicThinkingCapabilities>
+pub battersea_model::engine::EngineBackendCapabilities::content: battersea_model::ContentCapabilities
 pub battersea_model::engine::EngineBackendCapabilities::google_thinking: core::option::Option<battersea_model::engine::EngineGoogleThinkingCapabilities>
 pub battersea_model::engine::EngineBackendCapabilities::reasoning_effort_when_unset: core::option::Option<battersea_model::engine::EngineReasoningEffort>
 pub battersea_model::engine::EngineBackendCapabilities::supported_chat_parameters: alloc::vec::Vec<alloc::string::String>
@@ -2050,6 +2522,7 @@ pub fn battersea_model::engine::EngineBackendCapabilities::__clone_box(&self, _:
 impl<T> serde_core::de::DeserializeOwned for battersea_model::engine::EngineBackendCapabilities where T: for<'de> serde_core::de::Deserialize<'de>
 impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_model::engine::EngineBackendCapabilities where T: ?core::marker::Sized
 pub struct battersea_model::engine::EngineBackendSummaryCapabilities
+pub battersea_model::engine::EngineBackendSummaryCapabilities::content: battersea_model::ContentCapabilities
 pub battersea_model::engine::EngineBackendSummaryCapabilities::reasoning_effort_when_unset: core::option::Option<battersea_model::engine::EngineReasoningEffort>
 pub battersea_model::engine::EngineBackendSummaryCapabilities::supported_chat_parameters: alloc::vec::Vec<alloc::string::String>
 pub battersea_model::engine::EngineBackendSummaryCapabilities::supported_reasoning_efforts: alloc::vec::Vec<battersea_model::engine::EngineReasoningEffort>
@@ -2112,12 +2585,14 @@ pub battersea_model::engine::EngineChatParameters::logprobs: core::option::Optio
 pub battersea_model::engine::EngineChatParameters::max_output_tokens: core::option::Option<u32>
 pub battersea_model::engine::EngineChatParameters::max_provider_tool_calls: core::option::Option<u32>
 pub battersea_model::engine::EngineChatParameters::max_tool_rounds: u32
+pub battersea_model::engine::EngineChatParameters::output_modalities: core::option::Option<alloc::vec::Vec<battersea_model::Modality>>
 pub battersea_model::engine::EngineChatParameters::parallel_tool_calls: core::option::Option<bool>
 pub battersea_model::engine::EngineChatParameters::prompt_cache_key: core::option::Option<alloc::string::String>
 pub battersea_model::engine::EngineChatParameters::prompt_cache_retention: core::option::Option<battersea_model::engine::EnginePromptCacheRetention>
 pub battersea_model::engine::EngineChatParameters::reasoning_effort: core::option::Option<battersea_model::engine::EngineReasoningEffort>
 pub battersea_model::engine::EngineChatParameters::reasoning_summary: core::option::Option<battersea_model::engine::EngineReasoningSummary>
 pub battersea_model::engine::EngineChatParameters::request_metadata: core::option::Option<serde_json::value::Value>
+pub battersea_model::engine::EngineChatParameters::response_format: core::option::Option<battersea_model::ResponseFormat>
 pub battersea_model::engine::EngineChatParameters::response_verbosity: core::option::Option<battersea_model::engine::EngineResponseVerbosity>
 pub battersea_model::engine::EngineChatParameters::safety_identifier: core::option::Option<alloc::string::String>
 pub battersea_model::engine::EngineChatParameters::service_tier: core::option::Option<alloc::string::String>
@@ -2296,13 +2771,69 @@ pub fn battersea_model::engine::EngineGoogleThinkingCapabilities::__clone_box(&s
 impl<T> serde_core::de::DeserializeOwned for battersea_model::engine::EngineGoogleThinkingCapabilities where T: for<'de> serde_core::de::Deserialize<'de>
 impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_model::engine::EngineGoogleThinkingCapabilities where T: ?core::marker::Sized
 pub mod battersea_model::error
+pub enum battersea_model::error::DispatchState
+pub battersea_model::error::DispatchState::Accepted
+pub battersea_model::error::DispatchState::NotSent
+pub battersea_model::error::DispatchState::Rejected
+pub battersea_model::error::DispatchState::Unknown
+impl core::clone::Clone for battersea_model::DispatchState
+pub fn battersea_model::DispatchState::clone(&self) -> battersea_model::DispatchState
+impl core::cmp::Eq for battersea_model::DispatchState
+impl core::cmp::PartialEq for battersea_model::DispatchState
+pub fn battersea_model::DispatchState::eq(&self, other: &battersea_model::DispatchState) -> bool
+impl core::default::Default for battersea_model::DispatchState
+pub fn battersea_model::DispatchState::default() -> battersea_model::DispatchState
+impl core::fmt::Debug for battersea_model::DispatchState
+pub fn battersea_model::DispatchState::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for battersea_model::DispatchState
+impl core::marker::StructuralPartialEq for battersea_model::DispatchState
+impl serde_core::ser::Serialize for battersea_model::DispatchState
+pub fn battersea_model::DispatchState::serialize<__S>(&self, __serializer: __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for battersea_model::DispatchState
+pub fn battersea_model::DispatchState::deserialize<__D>(__deserializer: __D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for battersea_model::DispatchState
+impl core::marker::Send for battersea_model::DispatchState
+impl core::marker::Sync for battersea_model::DispatchState
+impl core::marker::Unpin for battersea_model::DispatchState
+impl core::panic::unwind_safe::RefUnwindSafe for battersea_model::DispatchState
+impl core::panic::unwind_safe::UnwindSafe for battersea_model::DispatchState
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_model::DispatchState where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_model::DispatchState where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<T, U> core::convert::Into<U> for battersea_model::DispatchState where U: core::convert::From<T>
+pub fn battersea_model::DispatchState::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_model::DispatchState where U: core::convert::Into<T>
+pub type battersea_model::DispatchState::Error = core::convert::Infallible
+pub fn battersea_model::DispatchState::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for battersea_model::DispatchState where U: core::convert::TryFrom<T>
+pub type battersea_model::DispatchState::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_model::DispatchState::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for battersea_model::DispatchState where T: core::clone::Clone
+pub type battersea_model::DispatchState::Owned = T
+pub fn battersea_model::DispatchState::clone_into(&self, target: &mut T)
+pub fn battersea_model::DispatchState::to_owned(&self) -> T
+impl<T> core::any::Any for battersea_model::DispatchState where T: 'static + ?core::marker::Sized
+pub fn battersea_model::DispatchState::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_model::DispatchState where T: ?core::marker::Sized
+pub fn battersea_model::DispatchState::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_model::DispatchState where T: ?core::marker::Sized
+pub fn battersea_model::DispatchState::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for battersea_model::DispatchState where T: core::clone::Clone
+pub unsafe fn battersea_model::DispatchState::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for battersea_model::DispatchState
+pub fn battersea_model::DispatchState::from(t: T) -> T
+impl<T> dyn_clone::DynClone for battersea_model::DispatchState where T: core::clone::Clone
+pub fn battersea_model::DispatchState::__clone_box(&self, _: dyn_clone::sealed::Private) -> *mut ()
+impl<T> outref::AsOut<T> for battersea_model::DispatchState where T: core::marker::Copy
+pub fn battersea_model::DispatchState::as_out(&mut self) -> outref::Out<'_, T>
+impl<T> serde_core::de::DeserializeOwned for battersea_model::DispatchState where T: for<'de> serde_core::de::Deserialize<'de>
+impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_model::DispatchState where T: ?core::marker::Sized
 pub enum battersea_model::error::ErrorKind
 pub battersea_model::error::ErrorKind::Authentication
 pub battersea_model::error::ErrorKind::Cancelled
 pub battersea_model::error::ErrorKind::InvalidRequest
 pub battersea_model::error::ErrorKind::InvalidResponse
 pub battersea_model::error::ErrorKind::Mock
-pub battersea_model::error::ErrorKind::Other(alloc::string::String)
+pub battersea_model::error::ErrorKind::Other(alloc::boxed::Box<str>)
 pub battersea_model::error::ErrorKind::Permission
 pub battersea_model::error::ErrorKind::Provider
 pub battersea_model::error::ErrorKind::RateLimit
@@ -2367,17 +2898,21 @@ pub fn battersea_model::ErrorKind::__clone_box(&self, _: dyn_clone::sealed::Priv
 impl<T> serde_core::de::DeserializeOwned for battersea_model::ErrorKind where T: for<'de> serde_core::de::Deserialize<'de>
 impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_model::ErrorKind where T: ?core::marker::Sized
 pub struct battersea_model::error::EngineAdapterRequestError
+pub battersea_model::error::EngineAdapterRequestError::attempts: u32
 pub battersea_model::error::EngineAdapterRequestError::classification: battersea_model::ErrorKind
-pub battersea_model::error::EngineAdapterRequestError::message: alloc::string::String
-pub battersea_model::error::EngineAdapterRequestError::provider: alloc::string::String
+pub battersea_model::error::EngineAdapterRequestError::dispatch: battersea_model::DispatchState
+pub battersea_model::error::EngineAdapterRequestError::message: alloc::boxed::Box<str>
+pub battersea_model::error::EngineAdapterRequestError::provider: alloc::boxed::Box<str>
 pub battersea_model::error::EngineAdapterRequestError::request_id: core::option::Option<alloc::string::String>
+pub battersea_model::error::EngineAdapterRequestError::retry_after_ms: core::option::Option<u64>
 pub battersea_model::error::EngineAdapterRequestError::status_code: core::option::Option<u16>
-pub battersea_model::error::EngineAdapterRequestError::watchdog: core::option::Option<battersea_model::WatchdogFailure>
+pub battersea_model::error::EngineAdapterRequestError::watchdog: core::option::Option<alloc::boxed::Box<battersea_model::WatchdogFailure>>
 impl battersea_model::EngineAdapterRequestError
 pub fn battersea_model::EngineAdapterRequestError::invalid_response(provider: impl core::convert::Into<alloc::string::String>, message: impl core::convert::Into<alloc::string::String>) -> Self
 pub fn battersea_model::EngineAdapterRequestError::mock(message: impl core::convert::Into<alloc::string::String>) -> Self
 pub fn battersea_model::EngineAdapterRequestError::new(provider: impl core::convert::Into<alloc::string::String>, message: impl core::convert::Into<alloc::string::String>, classification: impl core::convert::Into<battersea_model::ErrorKind>) -> Self
 pub fn battersea_model::EngineAdapterRequestError::transport(provider: impl core::convert::Into<alloc::string::String>, message: impl core::convert::Into<alloc::string::String>) -> Self
+pub fn battersea_model::EngineAdapterRequestError::with_dispatch(self, dispatch: battersea_model::DispatchState) -> Self
 pub fn battersea_model::EngineAdapterRequestError::with_idle_watchdog(self, limit_ms: u64) -> Self
 pub fn battersea_model::EngineAdapterRequestError::with_request_id(self, request_id: core::option::Option<alloc::string::String>) -> Self
 pub fn battersea_model::EngineAdapterRequestError::with_status_code(self, status_code: u16) -> Self
@@ -3625,6 +4160,10 @@ pub enum battersea_model::messages::ContentBlock
 pub battersea_model::messages::ContentBlock::Audio
 pub battersea_model::messages::ContentBlock::Audio::mime_type: alloc::string::String
 pub battersea_model::messages::ContentBlock::Audio::url: alloc::string::String
+pub battersea_model::messages::ContentBlock::Document
+pub battersea_model::messages::ContentBlock::Document::filename: alloc::string::String
+pub battersea_model::messages::ContentBlock::Document::mime_type: alloc::string::String
+pub battersea_model::messages::ContentBlock::Document::url: alloc::string::String
 pub battersea_model::messages::ContentBlock::Image
 pub battersea_model::messages::ContentBlock::Image::mime_type: alloc::string::String
 pub battersea_model::messages::ContentBlock::Image::url: alloc::string::String
@@ -3649,11 +4188,17 @@ pub battersea_model::messages::ContentBlock::Video::mime_type: alloc::string::St
 pub battersea_model::messages::ContentBlock::Video::url: alloc::string::String
 impl core::clone::Clone for battersea_model::ContentBlock
 pub fn battersea_model::ContentBlock::clone(&self) -> battersea_model::ContentBlock
+impl core::cmp::Eq for battersea_model::ContentBlock
 impl core::cmp::PartialEq for battersea_model::ContentBlock
 pub fn battersea_model::ContentBlock::eq(&self, other: &battersea_model::ContentBlock) -> bool
 impl core::fmt::Debug for battersea_model::ContentBlock
 pub fn battersea_model::ContentBlock::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 impl core::marker::StructuralPartialEq for battersea_model::ContentBlock
+impl schemars::JsonSchema for battersea_model::ContentBlock
+pub fn battersea_model::ContentBlock::inline_schema() -> bool
+pub fn battersea_model::ContentBlock::json_schema(generator: &mut schemars::generate::SchemaGenerator) -> schemars::schema::Schema
+pub fn battersea_model::ContentBlock::schema_id() -> alloc::borrow::Cow<'static, str>
+pub fn battersea_model::ContentBlock::schema_name() -> alloc::borrow::Cow<'static, str>
 impl serde_core::ser::Serialize for battersea_model::ContentBlock
 pub fn battersea_model::ContentBlock::serialize<__S>(&self, __serializer: __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
 impl<'de> serde_core::de::Deserialize<'de> for battersea_model::ContentBlock
@@ -3706,6 +4251,11 @@ impl core::fmt::Debug for battersea_model::Role
 pub fn battersea_model::Role::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 impl core::marker::Copy for battersea_model::Role
 impl core::marker::StructuralPartialEq for battersea_model::Role
+impl schemars::JsonSchema for battersea_model::Role
+pub fn battersea_model::Role::inline_schema() -> bool
+pub fn battersea_model::Role::json_schema(generator: &mut schemars::generate::SchemaGenerator) -> schemars::schema::Schema
+pub fn battersea_model::Role::schema_id() -> alloc::borrow::Cow<'static, str>
+pub fn battersea_model::Role::schema_name() -> alloc::borrow::Cow<'static, str>
 impl serde_core::ser::Serialize for battersea_model::Role
 pub fn battersea_model::Role::serialize<__S>(&self, __serializer: __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
 impl<'de> serde_core::de::Deserialize<'de> for battersea_model::Role
@@ -3754,11 +4304,17 @@ pub fn battersea_model::Message::text(role: battersea_model::Role, text: alloc::
 pub fn battersea_model::Message::text_content(&self) -> alloc::string::String
 impl core::clone::Clone for battersea_model::Message
 pub fn battersea_model::Message::clone(&self) -> battersea_model::Message
+impl core::cmp::Eq for battersea_model::Message
 impl core::cmp::PartialEq for battersea_model::Message
 pub fn battersea_model::Message::eq(&self, other: &battersea_model::Message) -> bool
 impl core::fmt::Debug for battersea_model::Message
 pub fn battersea_model::Message::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 impl core::marker::StructuralPartialEq for battersea_model::Message
+impl schemars::JsonSchema for battersea_model::Message
+pub fn battersea_model::Message::inline_schema() -> bool
+pub fn battersea_model::Message::json_schema(generator: &mut schemars::generate::SchemaGenerator) -> schemars::schema::Schema
+pub fn battersea_model::Message::schema_id() -> alloc::borrow::Cow<'static, str>
+pub fn battersea_model::Message::schema_name() -> alloc::borrow::Cow<'static, str>
 impl serde_core::ser::Serialize for battersea_model::Message
 pub fn battersea_model::Message::serialize<__S>(&self, __serializer: __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
 impl<'de> serde_core::de::Deserialize<'de> for battersea_model::Message
@@ -3797,13 +4353,67 @@ impl<T> dyn_clone::DynClone for battersea_model::Message where T: core::clone::C
 pub fn battersea_model::Message::__clone_box(&self, _: dyn_clone::sealed::Private) -> *mut ()
 impl<T> serde_core::de::DeserializeOwned for battersea_model::Message where T: for<'de> serde_core::de::Deserialize<'de>
 impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_model::Message where T: ?core::marker::Sized
-pub fn battersea_model::messages::validate_text_messages(provider: &str, messages: &[battersea_model::Message]) -> core::result::Result<(), battersea_model::EngineAdapterRequestError>
+pub mod battersea_model::output
+pub enum battersea_model::output::StopReason
+pub battersea_model::output::StopReason::Complete
+pub battersea_model::output::StopReason::Length
+pub battersea_model::output::StopReason::Other(alloc::string::String)
+pub battersea_model::output::StopReason::Refusal
+pub battersea_model::output::StopReason::ToolUse
+impl core::clone::Clone for battersea_model::output::StopReason
+pub fn battersea_model::output::StopReason::clone(&self) -> battersea_model::output::StopReason
+impl core::cmp::Eq for battersea_model::output::StopReason
+impl core::cmp::PartialEq for battersea_model::output::StopReason
+pub fn battersea_model::output::StopReason::eq(&self, other: &battersea_model::output::StopReason) -> bool
+impl core::fmt::Debug for battersea_model::output::StopReason
+pub fn battersea_model::output::StopReason::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for battersea_model::output::StopReason
+impl serde_core::ser::Serialize for battersea_model::output::StopReason
+pub fn battersea_model::output::StopReason::serialize<__S>(&self, __serializer: __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for battersea_model::output::StopReason
+pub fn battersea_model::output::StopReason::deserialize<__D>(__deserializer: __D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for battersea_model::output::StopReason
+impl core::marker::Send for battersea_model::output::StopReason
+impl core::marker::Sync for battersea_model::output::StopReason
+impl core::marker::Unpin for battersea_model::output::StopReason
+impl core::panic::unwind_safe::RefUnwindSafe for battersea_model::output::StopReason
+impl core::panic::unwind_safe::UnwindSafe for battersea_model::output::StopReason
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_model::output::StopReason where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_model::output::StopReason where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<T, U> core::convert::Into<U> for battersea_model::output::StopReason where U: core::convert::From<T>
+pub fn battersea_model::output::StopReason::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_model::output::StopReason where U: core::convert::Into<T>
+pub type battersea_model::output::StopReason::Error = core::convert::Infallible
+pub fn battersea_model::output::StopReason::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for battersea_model::output::StopReason where U: core::convert::TryFrom<T>
+pub type battersea_model::output::StopReason::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_model::output::StopReason::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for battersea_model::output::StopReason where T: core::clone::Clone
+pub type battersea_model::output::StopReason::Owned = T
+pub fn battersea_model::output::StopReason::clone_into(&self, target: &mut T)
+pub fn battersea_model::output::StopReason::to_owned(&self) -> T
+impl<T> core::any::Any for battersea_model::output::StopReason where T: 'static + ?core::marker::Sized
+pub fn battersea_model::output::StopReason::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_model::output::StopReason where T: ?core::marker::Sized
+pub fn battersea_model::output::StopReason::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_model::output::StopReason where T: ?core::marker::Sized
+pub fn battersea_model::output::StopReason::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for battersea_model::output::StopReason where T: core::clone::Clone
+pub unsafe fn battersea_model::output::StopReason::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for battersea_model::output::StopReason
+pub fn battersea_model::output::StopReason::from(t: T) -> T
+impl<T> dyn_clone::DynClone for battersea_model::output::StopReason where T: core::clone::Clone
+pub fn battersea_model::output::StopReason::__clone_box(&self, _: dyn_clone::sealed::Private) -> *mut ()
+impl<T> serde_core::de::DeserializeOwned for battersea_model::output::StopReason where T: for<'de> serde_core::de::Deserialize<'de>
+impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_model::output::StopReason where T: ?core::marker::Sized
+pub fn battersea_model::output::validate_output(stream: battersea_model::EngineTextStream, provider: alloc::string::String, format: core::option::Option<battersea_model::ResponseFormat>, modalities: alloc::vec::Vec<battersea_model::Modality>) -> battersea_model::EngineTextStream
 pub mod battersea_model::payload
 pub const battersea_model::payload::PROVIDER_PAYLOAD_BYTES: usize
 pub fn battersea_model::payload::check_payload<T: serde_core::ser::Serialize + ?core::marker::Sized>(value: &T, provider: &str) -> core::result::Result<usize, battersea_model::EngineAdapterRequestError>
 pub mod battersea_model::registry
 pub struct battersea_model::registry::ChatProvider
 pub battersea_model::registry::ChatProvider::background_modes: alloc::vec::Vec<alloc::string::String>
+pub battersea_model::registry::ChatProvider::content: battersea_model::ContentCapabilities
 pub battersea_model::registry::ChatProvider::factory: alloc::sync::Arc<(dyn core::ops::function::Fn(battersea_model::EngineBackendConfig, core::option::Option<alloc::sync::Arc<dyn battersea_model::EngineAdapterLogger>>) -> core::result::Result<alloc::sync::Arc<dyn battersea_model::EngineAdapter>, battersea_model::EngineAdapterRequestError> + core::marker::Send + core::marker::Sync)>
 pub battersea_model::registry::ChatProvider::parameters: alloc::vec::Vec<alloc::string::String>
 impl core::marker::Freeze for battersea_model::ChatProvider
@@ -4021,6 +4631,10 @@ pub enum battersea_model::ContentBlock
 pub battersea_model::ContentBlock::Audio
 pub battersea_model::ContentBlock::Audio::mime_type: alloc::string::String
 pub battersea_model::ContentBlock::Audio::url: alloc::string::String
+pub battersea_model::ContentBlock::Document
+pub battersea_model::ContentBlock::Document::filename: alloc::string::String
+pub battersea_model::ContentBlock::Document::mime_type: alloc::string::String
+pub battersea_model::ContentBlock::Document::url: alloc::string::String
 pub battersea_model::ContentBlock::Image
 pub battersea_model::ContentBlock::Image::mime_type: alloc::string::String
 pub battersea_model::ContentBlock::Image::url: alloc::string::String
@@ -4045,11 +4659,17 @@ pub battersea_model::ContentBlock::Video::mime_type: alloc::string::String
 pub battersea_model::ContentBlock::Video::url: alloc::string::String
 impl core::clone::Clone for battersea_model::ContentBlock
 pub fn battersea_model::ContentBlock::clone(&self) -> battersea_model::ContentBlock
+impl core::cmp::Eq for battersea_model::ContentBlock
 impl core::cmp::PartialEq for battersea_model::ContentBlock
 pub fn battersea_model::ContentBlock::eq(&self, other: &battersea_model::ContentBlock) -> bool
 impl core::fmt::Debug for battersea_model::ContentBlock
 pub fn battersea_model::ContentBlock::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 impl core::marker::StructuralPartialEq for battersea_model::ContentBlock
+impl schemars::JsonSchema for battersea_model::ContentBlock
+pub fn battersea_model::ContentBlock::inline_schema() -> bool
+pub fn battersea_model::ContentBlock::json_schema(generator: &mut schemars::generate::SchemaGenerator) -> schemars::schema::Schema
+pub fn battersea_model::ContentBlock::schema_id() -> alloc::borrow::Cow<'static, str>
+pub fn battersea_model::ContentBlock::schema_name() -> alloc::borrow::Cow<'static, str>
 impl serde_core::ser::Serialize for battersea_model::ContentBlock
 pub fn battersea_model::ContentBlock::serialize<__S>(&self, __serializer: __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
 impl<'de> serde_core::de::Deserialize<'de> for battersea_model::ContentBlock
@@ -4088,6 +4708,62 @@ impl<T> dyn_clone::DynClone for battersea_model::ContentBlock where T: core::clo
 pub fn battersea_model::ContentBlock::__clone_box(&self, _: dyn_clone::sealed::Private) -> *mut ()
 impl<T> serde_core::de::DeserializeOwned for battersea_model::ContentBlock where T: for<'de> serde_core::de::Deserialize<'de>
 impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_model::ContentBlock where T: ?core::marker::Sized
+pub enum battersea_model::DispatchState
+pub battersea_model::DispatchState::Accepted
+pub battersea_model::DispatchState::NotSent
+pub battersea_model::DispatchState::Rejected
+pub battersea_model::DispatchState::Unknown
+impl core::clone::Clone for battersea_model::DispatchState
+pub fn battersea_model::DispatchState::clone(&self) -> battersea_model::DispatchState
+impl core::cmp::Eq for battersea_model::DispatchState
+impl core::cmp::PartialEq for battersea_model::DispatchState
+pub fn battersea_model::DispatchState::eq(&self, other: &battersea_model::DispatchState) -> bool
+impl core::default::Default for battersea_model::DispatchState
+pub fn battersea_model::DispatchState::default() -> battersea_model::DispatchState
+impl core::fmt::Debug for battersea_model::DispatchState
+pub fn battersea_model::DispatchState::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for battersea_model::DispatchState
+impl core::marker::StructuralPartialEq for battersea_model::DispatchState
+impl serde_core::ser::Serialize for battersea_model::DispatchState
+pub fn battersea_model::DispatchState::serialize<__S>(&self, __serializer: __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for battersea_model::DispatchState
+pub fn battersea_model::DispatchState::deserialize<__D>(__deserializer: __D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for battersea_model::DispatchState
+impl core::marker::Send for battersea_model::DispatchState
+impl core::marker::Sync for battersea_model::DispatchState
+impl core::marker::Unpin for battersea_model::DispatchState
+impl core::panic::unwind_safe::RefUnwindSafe for battersea_model::DispatchState
+impl core::panic::unwind_safe::UnwindSafe for battersea_model::DispatchState
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_model::DispatchState where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_model::DispatchState where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<T, U> core::convert::Into<U> for battersea_model::DispatchState where U: core::convert::From<T>
+pub fn battersea_model::DispatchState::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_model::DispatchState where U: core::convert::Into<T>
+pub type battersea_model::DispatchState::Error = core::convert::Infallible
+pub fn battersea_model::DispatchState::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for battersea_model::DispatchState where U: core::convert::TryFrom<T>
+pub type battersea_model::DispatchState::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_model::DispatchState::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for battersea_model::DispatchState where T: core::clone::Clone
+pub type battersea_model::DispatchState::Owned = T
+pub fn battersea_model::DispatchState::clone_into(&self, target: &mut T)
+pub fn battersea_model::DispatchState::to_owned(&self) -> T
+impl<T> core::any::Any for battersea_model::DispatchState where T: 'static + ?core::marker::Sized
+pub fn battersea_model::DispatchState::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_model::DispatchState where T: ?core::marker::Sized
+pub fn battersea_model::DispatchState::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_model::DispatchState where T: ?core::marker::Sized
+pub fn battersea_model::DispatchState::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for battersea_model::DispatchState where T: core::clone::Clone
+pub unsafe fn battersea_model::DispatchState::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for battersea_model::DispatchState
+pub fn battersea_model::DispatchState::from(t: T) -> T
+impl<T> dyn_clone::DynClone for battersea_model::DispatchState where T: core::clone::Clone
+pub fn battersea_model::DispatchState::__clone_box(&self, _: dyn_clone::sealed::Private) -> *mut ()
+impl<T> outref::AsOut<T> for battersea_model::DispatchState where T: core::marker::Copy
+pub fn battersea_model::DispatchState::as_out(&mut self) -> outref::Out<'_, T>
+impl<T> serde_core::de::DeserializeOwned for battersea_model::DispatchState where T: for<'de> serde_core::de::Deserialize<'de>
+impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_model::DispatchState where T: ?core::marker::Sized
 pub enum battersea_model::EngineOperation
 pub battersea_model::EngineOperation::FlowTextStream
 impl battersea_model::EngineOperation
@@ -4142,8 +4818,16 @@ pub fn battersea_model::EngineOperation::as_out(&mut self) -> outref::Out<'_, T>
 impl<T> serde_core::de::DeserializeOwned for battersea_model::EngineOperation where T: for<'de> serde_core::de::Deserialize<'de>
 impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_model::EngineOperation where T: ?core::marker::Sized
 pub enum battersea_model::EngineTextStreamEvent
+pub battersea_model::EngineTextStreamEvent::ContentBlock
+pub battersea_model::EngineTextStreamEvent::ContentBlock::block: battersea_model::ContentBlock
+pub battersea_model::EngineTextStreamEvent::MessageStart
+pub battersea_model::EngineTextStreamEvent::MessageStart::turn_index: u32
+pub battersea_model::EngineTextStreamEvent::MessageStop
+pub battersea_model::EngineTextStreamEvent::MessageStop::reason: battersea_model::output::StopReason
 pub battersea_model::EngineTextStreamEvent::ReasoningDelta
 pub battersea_model::EngineTextStreamEvent::ReasoningDelta::text: alloc::string::String
+pub battersea_model::EngineTextStreamEvent::StructuredOutput
+pub battersea_model::EngineTextStreamEvent::StructuredOutput::value: serde_json::value::Value
 pub battersea_model::EngineTextStreamEvent::TextDelta
 pub battersea_model::EngineTextStreamEvent::TextDelta::text: alloc::string::String
 pub battersea_model::EngineTextStreamEvent::TokenUsage
@@ -4271,7 +4955,7 @@ pub battersea_model::ErrorKind::Cancelled
 pub battersea_model::ErrorKind::InvalidRequest
 pub battersea_model::ErrorKind::InvalidResponse
 pub battersea_model::ErrorKind::Mock
-pub battersea_model::ErrorKind::Other(alloc::string::String)
+pub battersea_model::ErrorKind::Other(alloc::boxed::Box<str>)
 pub battersea_model::ErrorKind::Permission
 pub battersea_model::ErrorKind::Provider
 pub battersea_model::ErrorKind::RateLimit
@@ -4335,6 +5019,126 @@ impl<T> dyn_clone::DynClone for battersea_model::ErrorKind where T: core::clone:
 pub fn battersea_model::ErrorKind::__clone_box(&self, _: dyn_clone::sealed::Private) -> *mut ()
 impl<T> serde_core::de::DeserializeOwned for battersea_model::ErrorKind where T: for<'de> serde_core::de::Deserialize<'de>
 impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_model::ErrorKind where T: ?core::marker::Sized
+pub enum battersea_model::Modality
+pub battersea_model::Modality::Audio
+pub battersea_model::Modality::Document
+pub battersea_model::Modality::Image
+pub battersea_model::Modality::Text
+pub battersea_model::Modality::Video
+impl core::clone::Clone for battersea_model::Modality
+pub fn battersea_model::Modality::clone(&self) -> battersea_model::Modality
+impl core::cmp::Eq for battersea_model::Modality
+impl core::cmp::PartialEq for battersea_model::Modality
+pub fn battersea_model::Modality::eq(&self, other: &battersea_model::Modality) -> bool
+impl core::fmt::Debug for battersea_model::Modality
+pub fn battersea_model::Modality::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for battersea_model::Modality
+impl core::marker::StructuralPartialEq for battersea_model::Modality
+impl schemars::JsonSchema for battersea_model::Modality
+pub fn battersea_model::Modality::inline_schema() -> bool
+pub fn battersea_model::Modality::json_schema(generator: &mut schemars::generate::SchemaGenerator) -> schemars::schema::Schema
+pub fn battersea_model::Modality::schema_id() -> alloc::borrow::Cow<'static, str>
+pub fn battersea_model::Modality::schema_name() -> alloc::borrow::Cow<'static, str>
+impl serde_core::ser::Serialize for battersea_model::Modality
+pub fn battersea_model::Modality::serialize<__S>(&self, __serializer: __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for battersea_model::Modality
+pub fn battersea_model::Modality::deserialize<__D>(__deserializer: __D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for battersea_model::Modality
+impl core::marker::Send for battersea_model::Modality
+impl core::marker::Sync for battersea_model::Modality
+impl core::marker::Unpin for battersea_model::Modality
+impl core::panic::unwind_safe::RefUnwindSafe for battersea_model::Modality
+impl core::panic::unwind_safe::UnwindSafe for battersea_model::Modality
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_model::Modality where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_model::Modality where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<T, U> core::convert::Into<U> for battersea_model::Modality where U: core::convert::From<T>
+pub fn battersea_model::Modality::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_model::Modality where U: core::convert::Into<T>
+pub type battersea_model::Modality::Error = core::convert::Infallible
+pub fn battersea_model::Modality::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for battersea_model::Modality where U: core::convert::TryFrom<T>
+pub type battersea_model::Modality::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_model::Modality::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for battersea_model::Modality where T: core::clone::Clone
+pub type battersea_model::Modality::Owned = T
+pub fn battersea_model::Modality::clone_into(&self, target: &mut T)
+pub fn battersea_model::Modality::to_owned(&self) -> T
+impl<T> core::any::Any for battersea_model::Modality where T: 'static + ?core::marker::Sized
+pub fn battersea_model::Modality::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_model::Modality where T: ?core::marker::Sized
+pub fn battersea_model::Modality::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_model::Modality where T: ?core::marker::Sized
+pub fn battersea_model::Modality::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for battersea_model::Modality where T: core::clone::Clone
+pub unsafe fn battersea_model::Modality::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for battersea_model::Modality
+pub fn battersea_model::Modality::from(t: T) -> T
+impl<T> dyn_clone::DynClone for battersea_model::Modality where T: core::clone::Clone
+pub fn battersea_model::Modality::__clone_box(&self, _: dyn_clone::sealed::Private) -> *mut ()
+impl<T> outref::AsOut<T> for battersea_model::Modality where T: core::marker::Copy
+pub fn battersea_model::Modality::as_out(&mut self) -> outref::Out<'_, T>
+impl<T> serde_core::de::DeserializeOwned for battersea_model::Modality where T: for<'de> serde_core::de::Deserialize<'de>
+impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_model::Modality where T: ?core::marker::Sized
+pub enum battersea_model::ResponseFormat
+pub battersea_model::ResponseFormat::JsonObject
+pub battersea_model::ResponseFormat::JsonSchema
+pub battersea_model::ResponseFormat::JsonSchema::name: alloc::string::String
+pub battersea_model::ResponseFormat::JsonSchema::schema: serde_json::value::Value
+impl battersea_model::ResponseFormat
+pub fn battersea_model::ResponseFormat::mode(&self) -> battersea_model::StructuredOutputMode
+pub fn battersea_model::ResponseFormat::parse(&self, provider: &str, text: &str) -> core::result::Result<serde_json::value::Value, battersea_model::EngineAdapterRequestError>
+pub fn battersea_model::ResponseFormat::validate(&self) -> core::result::Result<(), alloc::string::String>
+impl core::clone::Clone for battersea_model::ResponseFormat
+pub fn battersea_model::ResponseFormat::clone(&self) -> battersea_model::ResponseFormat
+impl core::cmp::Eq for battersea_model::ResponseFormat
+impl core::cmp::PartialEq for battersea_model::ResponseFormat
+pub fn battersea_model::ResponseFormat::eq(&self, other: &battersea_model::ResponseFormat) -> bool
+impl core::fmt::Debug for battersea_model::ResponseFormat
+pub fn battersea_model::ResponseFormat::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for battersea_model::ResponseFormat
+impl schemars::JsonSchema for battersea_model::ResponseFormat
+pub fn battersea_model::ResponseFormat::inline_schema() -> bool
+pub fn battersea_model::ResponseFormat::json_schema(generator: &mut schemars::generate::SchemaGenerator) -> schemars::schema::Schema
+pub fn battersea_model::ResponseFormat::schema_id() -> alloc::borrow::Cow<'static, str>
+pub fn battersea_model::ResponseFormat::schema_name() -> alloc::borrow::Cow<'static, str>
+impl serde_core::ser::Serialize for battersea_model::ResponseFormat
+pub fn battersea_model::ResponseFormat::serialize<__S>(&self, __serializer: __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for battersea_model::ResponseFormat
+pub fn battersea_model::ResponseFormat::deserialize<__D>(__deserializer: __D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for battersea_model::ResponseFormat
+impl core::marker::Send for battersea_model::ResponseFormat
+impl core::marker::Sync for battersea_model::ResponseFormat
+impl core::marker::Unpin for battersea_model::ResponseFormat
+impl core::panic::unwind_safe::RefUnwindSafe for battersea_model::ResponseFormat
+impl core::panic::unwind_safe::UnwindSafe for battersea_model::ResponseFormat
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_model::ResponseFormat where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_model::ResponseFormat where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<T, U> core::convert::Into<U> for battersea_model::ResponseFormat where U: core::convert::From<T>
+pub fn battersea_model::ResponseFormat::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_model::ResponseFormat where U: core::convert::Into<T>
+pub type battersea_model::ResponseFormat::Error = core::convert::Infallible
+pub fn battersea_model::ResponseFormat::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for battersea_model::ResponseFormat where U: core::convert::TryFrom<T>
+pub type battersea_model::ResponseFormat::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_model::ResponseFormat::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for battersea_model::ResponseFormat where T: core::clone::Clone
+pub type battersea_model::ResponseFormat::Owned = T
+pub fn battersea_model::ResponseFormat::clone_into(&self, target: &mut T)
+pub fn battersea_model::ResponseFormat::to_owned(&self) -> T
+impl<T> core::any::Any for battersea_model::ResponseFormat where T: 'static + ?core::marker::Sized
+pub fn battersea_model::ResponseFormat::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_model::ResponseFormat where T: ?core::marker::Sized
+pub fn battersea_model::ResponseFormat::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_model::ResponseFormat where T: ?core::marker::Sized
+pub fn battersea_model::ResponseFormat::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for battersea_model::ResponseFormat where T: core::clone::Clone
+pub unsafe fn battersea_model::ResponseFormat::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for battersea_model::ResponseFormat
+pub fn battersea_model::ResponseFormat::from(t: T) -> T
+impl<T> dyn_clone::DynClone for battersea_model::ResponseFormat where T: core::clone::Clone
+pub fn battersea_model::ResponseFormat::__clone_box(&self, _: dyn_clone::sealed::Private) -> *mut ()
+impl<T> serde_core::de::DeserializeOwned for battersea_model::ResponseFormat where T: for<'de> serde_core::de::Deserialize<'de>
+impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_model::ResponseFormat where T: ?core::marker::Sized
 pub enum battersea_model::Role
 pub battersea_model::Role::Assistant
 pub battersea_model::Role::System
@@ -4349,6 +5153,11 @@ impl core::fmt::Debug for battersea_model::Role
 pub fn battersea_model::Role::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 impl core::marker::Copy for battersea_model::Role
 impl core::marker::StructuralPartialEq for battersea_model::Role
+impl schemars::JsonSchema for battersea_model::Role
+pub fn battersea_model::Role::inline_schema() -> bool
+pub fn battersea_model::Role::json_schema(generator: &mut schemars::generate::SchemaGenerator) -> schemars::schema::Schema
+pub fn battersea_model::Role::schema_id() -> alloc::borrow::Cow<'static, str>
+pub fn battersea_model::Role::schema_name() -> alloc::borrow::Cow<'static, str>
 impl serde_core::ser::Serialize for battersea_model::Role
 pub fn battersea_model::Role::serialize<__S>(&self, __serializer: __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
 impl<'de> serde_core::de::Deserialize<'de> for battersea_model::Role
@@ -4389,8 +5198,118 @@ impl<T> outref::AsOut<T> for battersea_model::Role where T: core::marker::Copy
 pub fn battersea_model::Role::as_out(&mut self) -> outref::Out<'_, T>
 impl<T> serde_core::de::DeserializeOwned for battersea_model::Role where T: for<'de> serde_core::de::Deserialize<'de>
 impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_model::Role where T: ?core::marker::Sized
+pub enum battersea_model::StopReason
+pub battersea_model::StopReason::Complete
+pub battersea_model::StopReason::Length
+pub battersea_model::StopReason::Other(alloc::string::String)
+pub battersea_model::StopReason::Refusal
+pub battersea_model::StopReason::ToolUse
+impl core::clone::Clone for battersea_model::output::StopReason
+pub fn battersea_model::output::StopReason::clone(&self) -> battersea_model::output::StopReason
+impl core::cmp::Eq for battersea_model::output::StopReason
+impl core::cmp::PartialEq for battersea_model::output::StopReason
+pub fn battersea_model::output::StopReason::eq(&self, other: &battersea_model::output::StopReason) -> bool
+impl core::fmt::Debug for battersea_model::output::StopReason
+pub fn battersea_model::output::StopReason::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for battersea_model::output::StopReason
+impl serde_core::ser::Serialize for battersea_model::output::StopReason
+pub fn battersea_model::output::StopReason::serialize<__S>(&self, __serializer: __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for battersea_model::output::StopReason
+pub fn battersea_model::output::StopReason::deserialize<__D>(__deserializer: __D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for battersea_model::output::StopReason
+impl core::marker::Send for battersea_model::output::StopReason
+impl core::marker::Sync for battersea_model::output::StopReason
+impl core::marker::Unpin for battersea_model::output::StopReason
+impl core::panic::unwind_safe::RefUnwindSafe for battersea_model::output::StopReason
+impl core::panic::unwind_safe::UnwindSafe for battersea_model::output::StopReason
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_model::output::StopReason where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_model::output::StopReason where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<T, U> core::convert::Into<U> for battersea_model::output::StopReason where U: core::convert::From<T>
+pub fn battersea_model::output::StopReason::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_model::output::StopReason where U: core::convert::Into<T>
+pub type battersea_model::output::StopReason::Error = core::convert::Infallible
+pub fn battersea_model::output::StopReason::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for battersea_model::output::StopReason where U: core::convert::TryFrom<T>
+pub type battersea_model::output::StopReason::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_model::output::StopReason::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for battersea_model::output::StopReason where T: core::clone::Clone
+pub type battersea_model::output::StopReason::Owned = T
+pub fn battersea_model::output::StopReason::clone_into(&self, target: &mut T)
+pub fn battersea_model::output::StopReason::to_owned(&self) -> T
+impl<T> core::any::Any for battersea_model::output::StopReason where T: 'static + ?core::marker::Sized
+pub fn battersea_model::output::StopReason::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_model::output::StopReason where T: ?core::marker::Sized
+pub fn battersea_model::output::StopReason::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_model::output::StopReason where T: ?core::marker::Sized
+pub fn battersea_model::output::StopReason::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for battersea_model::output::StopReason where T: core::clone::Clone
+pub unsafe fn battersea_model::output::StopReason::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for battersea_model::output::StopReason
+pub fn battersea_model::output::StopReason::from(t: T) -> T
+impl<T> dyn_clone::DynClone for battersea_model::output::StopReason where T: core::clone::Clone
+pub fn battersea_model::output::StopReason::__clone_box(&self, _: dyn_clone::sealed::Private) -> *mut ()
+impl<T> serde_core::de::DeserializeOwned for battersea_model::output::StopReason where T: for<'de> serde_core::de::Deserialize<'de>
+impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_model::output::StopReason where T: ?core::marker::Sized
+pub enum battersea_model::StructuredOutputMode
+pub battersea_model::StructuredOutputMode::JsonObject
+pub battersea_model::StructuredOutputMode::JsonSchema
+impl core::clone::Clone for battersea_model::StructuredOutputMode
+pub fn battersea_model::StructuredOutputMode::clone(&self) -> battersea_model::StructuredOutputMode
+impl core::cmp::Eq for battersea_model::StructuredOutputMode
+impl core::cmp::PartialEq for battersea_model::StructuredOutputMode
+pub fn battersea_model::StructuredOutputMode::eq(&self, other: &battersea_model::StructuredOutputMode) -> bool
+impl core::fmt::Debug for battersea_model::StructuredOutputMode
+pub fn battersea_model::StructuredOutputMode::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for battersea_model::StructuredOutputMode
+impl core::marker::StructuralPartialEq for battersea_model::StructuredOutputMode
+impl schemars::JsonSchema for battersea_model::StructuredOutputMode
+pub fn battersea_model::StructuredOutputMode::inline_schema() -> bool
+pub fn battersea_model::StructuredOutputMode::json_schema(generator: &mut schemars::generate::SchemaGenerator) -> schemars::schema::Schema
+pub fn battersea_model::StructuredOutputMode::schema_id() -> alloc::borrow::Cow<'static, str>
+pub fn battersea_model::StructuredOutputMode::schema_name() -> alloc::borrow::Cow<'static, str>
+impl serde_core::ser::Serialize for battersea_model::StructuredOutputMode
+pub fn battersea_model::StructuredOutputMode::serialize<__S>(&self, __serializer: __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for battersea_model::StructuredOutputMode
+pub fn battersea_model::StructuredOutputMode::deserialize<__D>(__deserializer: __D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for battersea_model::StructuredOutputMode
+impl core::marker::Send for battersea_model::StructuredOutputMode
+impl core::marker::Sync for battersea_model::StructuredOutputMode
+impl core::marker::Unpin for battersea_model::StructuredOutputMode
+impl core::panic::unwind_safe::RefUnwindSafe for battersea_model::StructuredOutputMode
+impl core::panic::unwind_safe::UnwindSafe for battersea_model::StructuredOutputMode
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_model::StructuredOutputMode where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_model::StructuredOutputMode where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<T, U> core::convert::Into<U> for battersea_model::StructuredOutputMode where U: core::convert::From<T>
+pub fn battersea_model::StructuredOutputMode::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_model::StructuredOutputMode where U: core::convert::Into<T>
+pub type battersea_model::StructuredOutputMode::Error = core::convert::Infallible
+pub fn battersea_model::StructuredOutputMode::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for battersea_model::StructuredOutputMode where U: core::convert::TryFrom<T>
+pub type battersea_model::StructuredOutputMode::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_model::StructuredOutputMode::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for battersea_model::StructuredOutputMode where T: core::clone::Clone
+pub type battersea_model::StructuredOutputMode::Owned = T
+pub fn battersea_model::StructuredOutputMode::clone_into(&self, target: &mut T)
+pub fn battersea_model::StructuredOutputMode::to_owned(&self) -> T
+impl<T> core::any::Any for battersea_model::StructuredOutputMode where T: 'static + ?core::marker::Sized
+pub fn battersea_model::StructuredOutputMode::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_model::StructuredOutputMode where T: ?core::marker::Sized
+pub fn battersea_model::StructuredOutputMode::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_model::StructuredOutputMode where T: ?core::marker::Sized
+pub fn battersea_model::StructuredOutputMode::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for battersea_model::StructuredOutputMode where T: core::clone::Clone
+pub unsafe fn battersea_model::StructuredOutputMode::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for battersea_model::StructuredOutputMode
+pub fn battersea_model::StructuredOutputMode::from(t: T) -> T
+impl<T> dyn_clone::DynClone for battersea_model::StructuredOutputMode where T: core::clone::Clone
+pub fn battersea_model::StructuredOutputMode::__clone_box(&self, _: dyn_clone::sealed::Private) -> *mut ()
+impl<T> outref::AsOut<T> for battersea_model::StructuredOutputMode where T: core::marker::Copy
+pub fn battersea_model::StructuredOutputMode::as_out(&mut self) -> outref::Out<'_, T>
+impl<T> serde_core::de::DeserializeOwned for battersea_model::StructuredOutputMode where T: for<'de> serde_core::de::Deserialize<'de>
+impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_model::StructuredOutputMode where T: ?core::marker::Sized
 pub struct battersea_model::ChatProvider
 pub battersea_model::ChatProvider::background_modes: alloc::vec::Vec<alloc::string::String>
+pub battersea_model::ChatProvider::content: battersea_model::ContentCapabilities
 pub battersea_model::ChatProvider::factory: alloc::sync::Arc<(dyn core::ops::function::Fn(battersea_model::EngineBackendConfig, core::option::Option<alloc::sync::Arc<dyn battersea_model::EngineAdapterLogger>>) -> core::result::Result<alloc::sync::Arc<dyn battersea_model::EngineAdapter>, battersea_model::EngineAdapterRequestError> + core::marker::Send + core::marker::Sync)>
 pub battersea_model::ChatProvider::parameters: alloc::vec::Vec<alloc::string::String>
 impl core::marker::Freeze for battersea_model::ChatProvider
@@ -4418,6 +5337,66 @@ pub fn battersea_model::ChatProvider::borrow_mut(&mut self) -> &mut T
 impl<T> core::convert::From<T> for battersea_model::ChatProvider
 pub fn battersea_model::ChatProvider::from(t: T) -> T
 impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_model::ChatProvider where T: ?core::marker::Sized
+pub struct battersea_model::ContentCapabilities
+pub battersea_model::ContentCapabilities::input_modalities: alloc::vec::Vec<battersea_model::Modality>
+pub battersea_model::ContentCapabilities::native_continuation: bool
+pub battersea_model::ContentCapabilities::output_modalities: alloc::vec::Vec<battersea_model::Modality>
+pub battersea_model::ContentCapabilities::prompt_caching: bool
+pub battersea_model::ContentCapabilities::structured_output: alloc::vec::Vec<battersea_model::StructuredOutputMode>
+impl battersea_model::ContentCapabilities
+pub fn battersea_model::ContentCapabilities::text() -> Self
+pub fn battersea_model::ContentCapabilities::validate_subset(&self, transport: &Self) -> core::result::Result<(), alloc::string::String>
+impl core::clone::Clone for battersea_model::ContentCapabilities
+pub fn battersea_model::ContentCapabilities::clone(&self) -> battersea_model::ContentCapabilities
+impl core::cmp::Eq for battersea_model::ContentCapabilities
+impl core::cmp::PartialEq for battersea_model::ContentCapabilities
+pub fn battersea_model::ContentCapabilities::eq(&self, other: &battersea_model::ContentCapabilities) -> bool
+impl core::fmt::Debug for battersea_model::ContentCapabilities
+pub fn battersea_model::ContentCapabilities::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for battersea_model::ContentCapabilities
+impl schemars::JsonSchema for battersea_model::ContentCapabilities
+pub fn battersea_model::ContentCapabilities::inline_schema() -> bool
+pub fn battersea_model::ContentCapabilities::json_schema(generator: &mut schemars::generate::SchemaGenerator) -> schemars::schema::Schema
+pub fn battersea_model::ContentCapabilities::schema_id() -> alloc::borrow::Cow<'static, str>
+pub fn battersea_model::ContentCapabilities::schema_name() -> alloc::borrow::Cow<'static, str>
+impl serde_core::ser::Serialize for battersea_model::ContentCapabilities
+pub fn battersea_model::ContentCapabilities::serialize<__S>(&self, __serializer: __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for battersea_model::ContentCapabilities
+pub fn battersea_model::ContentCapabilities::deserialize<__D>(__deserializer: __D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for battersea_model::ContentCapabilities
+impl core::marker::Send for battersea_model::ContentCapabilities
+impl core::marker::Sync for battersea_model::ContentCapabilities
+impl core::marker::Unpin for battersea_model::ContentCapabilities
+impl core::panic::unwind_safe::RefUnwindSafe for battersea_model::ContentCapabilities
+impl core::panic::unwind_safe::UnwindSafe for battersea_model::ContentCapabilities
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_model::ContentCapabilities where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_model::ContentCapabilities where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<T, U> core::convert::Into<U> for battersea_model::ContentCapabilities where U: core::convert::From<T>
+pub fn battersea_model::ContentCapabilities::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_model::ContentCapabilities where U: core::convert::Into<T>
+pub type battersea_model::ContentCapabilities::Error = core::convert::Infallible
+pub fn battersea_model::ContentCapabilities::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for battersea_model::ContentCapabilities where U: core::convert::TryFrom<T>
+pub type battersea_model::ContentCapabilities::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_model::ContentCapabilities::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for battersea_model::ContentCapabilities where T: core::clone::Clone
+pub type battersea_model::ContentCapabilities::Owned = T
+pub fn battersea_model::ContentCapabilities::clone_into(&self, target: &mut T)
+pub fn battersea_model::ContentCapabilities::to_owned(&self) -> T
+impl<T> core::any::Any for battersea_model::ContentCapabilities where T: 'static + ?core::marker::Sized
+pub fn battersea_model::ContentCapabilities::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_model::ContentCapabilities where T: ?core::marker::Sized
+pub fn battersea_model::ContentCapabilities::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_model::ContentCapabilities where T: ?core::marker::Sized
+pub fn battersea_model::ContentCapabilities::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for battersea_model::ContentCapabilities where T: core::clone::Clone
+pub unsafe fn battersea_model::ContentCapabilities::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for battersea_model::ContentCapabilities
+pub fn battersea_model::ContentCapabilities::from(t: T) -> T
+impl<T> dyn_clone::DynClone for battersea_model::ContentCapabilities where T: core::clone::Clone
+pub fn battersea_model::ContentCapabilities::__clone_box(&self, _: dyn_clone::sealed::Private) -> *mut ()
+impl<T> serde_core::de::DeserializeOwned for battersea_model::ContentCapabilities where T: for<'de> serde_core::de::Deserialize<'de>
+impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_model::ContentCapabilities where T: ?core::marker::Sized
 pub struct battersea_model::EngineAdapterDebugContext
 pub battersea_model::EngineAdapterDebugContext::backend: alloc::string::String
 pub battersea_model::EngineAdapterDebugContext::base_url: core::option::Option<alloc::string::String>
@@ -4669,17 +5648,21 @@ pub fn battersea_model::EngineAdapterRequestDetail::__clone_box(&self, _: dyn_cl
 impl<T> serde_core::de::DeserializeOwned for battersea_model::EngineAdapterRequestDetail where T: for<'de> serde_core::de::Deserialize<'de>
 impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_model::EngineAdapterRequestDetail where T: ?core::marker::Sized
 pub struct battersea_model::EngineAdapterRequestError
+pub battersea_model::EngineAdapterRequestError::attempts: u32
 pub battersea_model::EngineAdapterRequestError::classification: battersea_model::ErrorKind
-pub battersea_model::EngineAdapterRequestError::message: alloc::string::String
-pub battersea_model::EngineAdapterRequestError::provider: alloc::string::String
+pub battersea_model::EngineAdapterRequestError::dispatch: battersea_model::DispatchState
+pub battersea_model::EngineAdapterRequestError::message: alloc::boxed::Box<str>
+pub battersea_model::EngineAdapterRequestError::provider: alloc::boxed::Box<str>
 pub battersea_model::EngineAdapterRequestError::request_id: core::option::Option<alloc::string::String>
+pub battersea_model::EngineAdapterRequestError::retry_after_ms: core::option::Option<u64>
 pub battersea_model::EngineAdapterRequestError::status_code: core::option::Option<u16>
-pub battersea_model::EngineAdapterRequestError::watchdog: core::option::Option<battersea_model::WatchdogFailure>
+pub battersea_model::EngineAdapterRequestError::watchdog: core::option::Option<alloc::boxed::Box<battersea_model::WatchdogFailure>>
 impl battersea_model::EngineAdapterRequestError
 pub fn battersea_model::EngineAdapterRequestError::invalid_response(provider: impl core::convert::Into<alloc::string::String>, message: impl core::convert::Into<alloc::string::String>) -> Self
 pub fn battersea_model::EngineAdapterRequestError::mock(message: impl core::convert::Into<alloc::string::String>) -> Self
 pub fn battersea_model::EngineAdapterRequestError::new(provider: impl core::convert::Into<alloc::string::String>, message: impl core::convert::Into<alloc::string::String>, classification: impl core::convert::Into<battersea_model::ErrorKind>) -> Self
 pub fn battersea_model::EngineAdapterRequestError::transport(provider: impl core::convert::Into<alloc::string::String>, message: impl core::convert::Into<alloc::string::String>) -> Self
+pub fn battersea_model::EngineAdapterRequestError::with_dispatch(self, dispatch: battersea_model::DispatchState) -> Self
 pub fn battersea_model::EngineAdapterRequestError::with_idle_watchdog(self, limit_ms: u64) -> Self
 pub fn battersea_model::EngineAdapterRequestError::with_request_id(self, request_id: core::option::Option<alloc::string::String>) -> Self
 pub fn battersea_model::EngineAdapterRequestError::with_status_code(self, status_code: u16) -> Self
@@ -4882,6 +5865,61 @@ impl<T> dyn_clone::DynClone for battersea_model::EngineAdapterResponseLog where 
 pub fn battersea_model::EngineAdapterResponseLog::__clone_box(&self, _: dyn_clone::sealed::Private) -> *mut ()
 impl<T> serde_core::de::DeserializeOwned for battersea_model::EngineAdapterResponseLog where T: for<'de> serde_core::de::Deserialize<'de>
 impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_model::EngineAdapterResponseLog where T: ?core::marker::Sized
+pub struct battersea_model::EngineAdapterRetryLog
+pub battersea_model::EngineAdapterRetryLog::attempt: u32
+pub battersea_model::EngineAdapterRetryLog::backend: alloc::string::String
+pub battersea_model::EngineAdapterRetryLog::delay_ms: u64
+pub battersea_model::EngineAdapterRetryLog::dispatch: battersea_model::DispatchState
+pub battersea_model::EngineAdapterRetryLog::provider: alloc::string::String
+pub battersea_model::EngineAdapterRetryLog::request_id: core::option::Option<alloc::string::String>
+pub battersea_model::EngineAdapterRetryLog::resume: bool
+pub battersea_model::EngineAdapterRetryLog::status_code: core::option::Option<u16>
+impl core::clone::Clone for battersea_model::EngineAdapterRetryLog
+pub fn battersea_model::EngineAdapterRetryLog::clone(&self) -> battersea_model::EngineAdapterRetryLog
+impl core::cmp::Eq for battersea_model::EngineAdapterRetryLog
+impl core::cmp::PartialEq for battersea_model::EngineAdapterRetryLog
+pub fn battersea_model::EngineAdapterRetryLog::eq(&self, other: &battersea_model::EngineAdapterRetryLog) -> bool
+impl core::fmt::Debug for battersea_model::EngineAdapterRetryLog
+pub fn battersea_model::EngineAdapterRetryLog::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for battersea_model::EngineAdapterRetryLog
+impl serde_core::ser::Serialize for battersea_model::EngineAdapterRetryLog
+pub fn battersea_model::EngineAdapterRetryLog::serialize<__S>(&self, __serializer: __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for battersea_model::EngineAdapterRetryLog
+pub fn battersea_model::EngineAdapterRetryLog::deserialize<__D>(__deserializer: __D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for battersea_model::EngineAdapterRetryLog
+impl core::marker::Send for battersea_model::EngineAdapterRetryLog
+impl core::marker::Sync for battersea_model::EngineAdapterRetryLog
+impl core::marker::Unpin for battersea_model::EngineAdapterRetryLog
+impl core::panic::unwind_safe::RefUnwindSafe for battersea_model::EngineAdapterRetryLog
+impl core::panic::unwind_safe::UnwindSafe for battersea_model::EngineAdapterRetryLog
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_model::EngineAdapterRetryLog where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_model::EngineAdapterRetryLog where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<T, U> core::convert::Into<U> for battersea_model::EngineAdapterRetryLog where U: core::convert::From<T>
+pub fn battersea_model::EngineAdapterRetryLog::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_model::EngineAdapterRetryLog where U: core::convert::Into<T>
+pub type battersea_model::EngineAdapterRetryLog::Error = core::convert::Infallible
+pub fn battersea_model::EngineAdapterRetryLog::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for battersea_model::EngineAdapterRetryLog where U: core::convert::TryFrom<T>
+pub type battersea_model::EngineAdapterRetryLog::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_model::EngineAdapterRetryLog::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for battersea_model::EngineAdapterRetryLog where T: core::clone::Clone
+pub type battersea_model::EngineAdapterRetryLog::Owned = T
+pub fn battersea_model::EngineAdapterRetryLog::clone_into(&self, target: &mut T)
+pub fn battersea_model::EngineAdapterRetryLog::to_owned(&self) -> T
+impl<T> core::any::Any for battersea_model::EngineAdapterRetryLog where T: 'static + ?core::marker::Sized
+pub fn battersea_model::EngineAdapterRetryLog::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_model::EngineAdapterRetryLog where T: ?core::marker::Sized
+pub fn battersea_model::EngineAdapterRetryLog::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_model::EngineAdapterRetryLog where T: ?core::marker::Sized
+pub fn battersea_model::EngineAdapterRetryLog::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for battersea_model::EngineAdapterRetryLog where T: core::clone::Clone
+pub unsafe fn battersea_model::EngineAdapterRetryLog::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for battersea_model::EngineAdapterRetryLog
+pub fn battersea_model::EngineAdapterRetryLog::from(t: T) -> T
+impl<T> dyn_clone::DynClone for battersea_model::EngineAdapterRetryLog where T: core::clone::Clone
+pub fn battersea_model::EngineAdapterRetryLog::__clone_box(&self, _: dyn_clone::sealed::Private) -> *mut ()
+impl<T> serde_core::de::DeserializeOwned for battersea_model::EngineAdapterRetryLog where T: for<'de> serde_core::de::Deserialize<'de>
+impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_model::EngineAdapterRetryLog where T: ?core::marker::Sized
 pub struct battersea_model::EngineAdapterStreamLog
 pub battersea_model::EngineAdapterStreamLog::context: battersea_model::EngineAdapterDebugContext
 pub battersea_model::EngineAdapterStreamLog::detail: serde_json::value::Value
@@ -5060,6 +6098,8 @@ pub battersea_model::EngineBackendOptions::mock_response_target_chars: core::opt
 pub battersea_model::EngineBackendOptions::mock_stream_delay_multiplier: core::option::Option<f64>
 pub battersea_model::EngineBackendOptions::mock_streaming_reasoning_chunks: core::option::Option<alloc::vec::Vec<alloc::string::String>>
 pub battersea_model::EngineBackendOptions::mock_tool_calls: core::option::Option<alloc::vec::Vec<battersea_model::MockToolCallSpec>>
+pub battersea_model::EngineBackendOptions::retry_initial_delay_ms: core::option::Option<u64>
+pub battersea_model::EngineBackendOptions::retry_max_delay_ms: core::option::Option<u64>
 pub battersea_model::EngineBackendOptions::stream_idle_timeout_ms: core::option::Option<u64>
 pub battersea_model::EngineBackendOptions::timeout_ms: core::option::Option<u64>
 pub battersea_model::EngineBackendOptions::transport: core::option::Option<alloc::string::String>
@@ -5450,11 +6490,17 @@ pub fn battersea_model::Message::text(role: battersea_model::Role, text: alloc::
 pub fn battersea_model::Message::text_content(&self) -> alloc::string::String
 impl core::clone::Clone for battersea_model::Message
 pub fn battersea_model::Message::clone(&self) -> battersea_model::Message
+impl core::cmp::Eq for battersea_model::Message
 impl core::cmp::PartialEq for battersea_model::Message
 pub fn battersea_model::Message::eq(&self, other: &battersea_model::Message) -> bool
 impl core::fmt::Debug for battersea_model::Message
 pub fn battersea_model::Message::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 impl core::marker::StructuralPartialEq for battersea_model::Message
+impl schemars::JsonSchema for battersea_model::Message
+pub fn battersea_model::Message::inline_schema() -> bool
+pub fn battersea_model::Message::json_schema(generator: &mut schemars::generate::SchemaGenerator) -> schemars::schema::Schema
+pub fn battersea_model::Message::schema_id() -> alloc::borrow::Cow<'static, str>
+pub fn battersea_model::Message::schema_name() -> alloc::borrow::Cow<'static, str>
 impl serde_core::ser::Serialize for battersea_model::Message
 pub fn battersea_model::Message::serialize<__S>(&self, __serializer: __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
 impl<'de> serde_core::de::Deserialize<'de> for battersea_model::Message
@@ -5715,6 +6761,7 @@ pub trait battersea_model::EngineAdapterLogger: core::marker::Send + core::marke
 pub fn battersea_model::EngineAdapterLogger::on_error<'life0, 'async_trait>(&'life0 self, _entry: battersea_model::EngineAdapterErrorLog) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = ()> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait
 pub fn battersea_model::EngineAdapterLogger::on_request<'life0, 'async_trait>(&'life0 self, _entry: battersea_model::EngineAdapterRequestLog) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = ()> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait
 pub fn battersea_model::EngineAdapterLogger::on_response<'life0, 'async_trait>(&'life0 self, _entry: battersea_model::EngineAdapterResponseLog) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = ()> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait
+pub fn battersea_model::EngineAdapterLogger::on_retry<'life0, 'async_trait>(&'life0 self, _entry: battersea_model::EngineAdapterRetryLog) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = ()> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait
 pub fn battersea_model::EngineAdapterLogger::on_stream_event<'life0, 'async_trait>(&'life0 self, _entry: battersea_model::EngineAdapterStreamLog) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = ()> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait
 pub trait battersea_model::EngineLocalToolExecutor: core::marker::Send + core::marker::Sync
 pub fn battersea_model::EngineLocalToolExecutor::call<'life0, 'async_trait>(&'life0 self, call: battersea_model::EngineLocalToolCall) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<battersea_model::EngineLocalToolResult, battersea_model::EngineAdapterRequestError>> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait
@@ -5727,7 +6774,7 @@ pub async fn battersea_model::emit_stream_event(logger: core::option::Option<&al
 pub fn battersea_model::local_tool_name(name: &str) -> alloc::string::String
 pub fn battersea_model::missing_backend_option(provider: &str, field: &str) -> battersea_model::EngineAdapterRequestError
 pub fn battersea_model::validate_chat_request(backend: &battersea_model::EngineBackendConfig, request: &battersea_model::EngineTextStreamRequest) -> core::result::Result<(), battersea_model::EngineAdapterRequestError>
-pub fn battersea_model::validate_text_messages(provider: &str, messages: &[battersea_model::Message]) -> core::result::Result<(), battersea_model::EngineAdapterRequestError>
+pub fn battersea_model::validate_messages(provider: &str, capabilities: &battersea_model::ContentCapabilities, messages: &[battersea_model::Message]) -> core::result::Result<(), battersea_model::EngineAdapterRequestError>
 pub fn battersea_model::with_stream_idle_watchdog(stream: battersea_model::EngineTextStream, idle: core::time::Duration, provider: impl core::convert::Into<alloc::string::String>) -> battersea_model::EngineTextStream
 pub type battersea_model::EngineTextStream = futures_core::stream::BoxStream<'static, core::result::Result<battersea_model::EngineTextStreamEvent, battersea_model::EngineAdapterRequestError>>
 pub type battersea_model::MockResponseRenderer = (dyn core::ops::function::Fn(&str) -> alloc::string::String + core::marker::Send + core::marker::Sync)

@@ -1,3 +1,11 @@
+# v0.8.0
+
+- Preserve ordered multimodal conversations, native continuation signatures and provider capability declarations.
+- Request native JSON output and validate completed results before delivery.
+- Retry immutable HTTP requests only after known pre-dispatch failure or rate-limit rejection; keep ambiguous generation outcomes terminal.
+- Preserve tool effects across continuation retries, bound backoff by the operation deadline, and report retry observations.
+- Decode Gemini image and audio output and retain OpenAI and Anthropic continuation blocks.
+
 # Changelog
 
 ## 0.7.1 — 2026-10-10

@@ -118,6 +118,10 @@ pub enum EnginePromptCacheRetention {
 #[derive(Debug, Clone, Serialize, Deserialize, schemars::JsonSchema, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct EngineChatParameters {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub response_format: Option<crate::ResponseFormat>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub output_modalities: Option<Vec<crate::Modality>>,
     pub stream: bool,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub max_output_tokens: Option<u32>,
@@ -206,6 +210,7 @@ pub struct EngineGoogleThinkingCapabilities {
 #[derive(Debug, Clone, Serialize, Deserialize, schemars::JsonSchema, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct EngineBackendCapabilities {
+    pub content: crate::ContentCapabilities,
     #[serde(default)]
     pub supported_chat_parameters: Vec<String>,
     #[serde(default)]
@@ -230,6 +235,7 @@ pub struct EngineBackendCapabilities {
 #[derive(Debug, Clone, Serialize, Deserialize, schemars::JsonSchema, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct EngineBackendSummaryCapabilities {
+    pub content: crate::ContentCapabilities,
     #[serde(default)]
     pub supported_chat_parameters: Vec<String>,
     #[serde(default)]
@@ -247,6 +253,7 @@ impl EngineBackendCapabilities {
     /// provider-specific field.
     pub fn to_summary(&self) -> EngineBackendSummaryCapabilities {
         EngineBackendSummaryCapabilities {
+            content: self.content.clone(),
             supported_chat_parameters: self.supported_chat_parameters.clone(),
             supported_tool_execution_modes: self.supported_tool_execution_modes.clone(),
             supported_tool_choices: self.supported_tool_choices.clone(),
@@ -310,6 +317,42 @@ impl EngineBackendCapabilities {
     }
 
     pub fn validate_chat_parameters(&self, chat: &EngineChatParameters) -> Result<(), String> {
+        if chat.response_format.is_some()
+            && !self
+                .supported_chat_parameters
+                .iter()
+                .any(|name| name == "responseFormat")
+        {
+            return Err("Backend does not advertise responseFormat.".into());
+        }
+        if chat.output_modalities.is_some()
+            && !self
+                .supported_chat_parameters
+                .iter()
+                .any(|name| name == "outputModalities")
+        {
+            return Err("Backend does not advertise outputModalities.".into());
+        }
+        if let Some(format) = &chat.response_format {
+            if !self.content.structured_output.contains(&format.mode()) {
+                return Err(
+                    "Backend does not support the requested structured output mode.".into(),
+                );
+            }
+            format.validate()?;
+        }
+        if let Some(modalities) = &chat.output_modalities {
+            if modalities.is_empty()
+                || modalities
+                    .iter()
+                    .any(|m| !self.content.output_modalities.contains(m))
+            {
+                return Err("Backend does not support the requested output modalities.".into());
+            }
+            if chat.response_format.is_some() && modalities != &[crate::Modality::Text] {
+                return Err("Structured output requires text output.".into());
+            }
+        }
         self.validate_tool_choice(&chat.tool_choice)?;
         self.validate_reasoning_effort(chat.reasoning_effort)
     }
@@ -334,7 +377,10 @@ impl EngineBackendCapabilities {
 
     pub fn mock() -> Self {
         Self {
+            content: crate::ContentCapabilities::text(),
             supported_chat_parameters: vec![
+                "responseFormat".to_string(),
+                "outputModalities".to_string(),
                 "stream".to_string(),
                 "maxOutputTokens".to_string(),
                 "temperature".to_string(),
@@ -397,6 +443,8 @@ impl EngineChatParameters {
     /// no longer selects any provider- or model-specific value.
     pub fn default_for_provider(_provider: &str) -> Self {
         Self {
+            response_format: None,
+            output_modalities: None,
             stream: true,
             max_output_tokens: None,
             temperature: 1.0,

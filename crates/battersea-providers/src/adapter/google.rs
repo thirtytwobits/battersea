@@ -57,6 +57,7 @@ pub(crate) fn create_google_adapter(
     logger: Option<Arc<dyn EngineAdapterLogger>>,
 ) -> Result<Arc<dyn EngineAdapter>, EngineAdapterRequestError> {
     let provider = "google";
+    crate::retry::validate(&backend)?;
     let timeout_ms = backend
         .options
         .timeout_ms
@@ -77,6 +78,8 @@ pub(crate) fn create_google_adapter(
     let model = backend.model.clone();
     let backend_id = backend.id.clone();
     let client = reqwest::Client::builder()
+        .retry(reqwest::retry::never())
+        .redirect(reqwest::redirect::Policy::none())
         .timeout(std::time::Duration::from_millis(timeout_ms))
         .build()
         .map_err(|error| EngineAdapterRequestError::transport("google", error.to_string()))?;
@@ -120,15 +123,27 @@ impl EngineAdapter for GoogleEngineAdapter {
         request: EngineTextStreamRequest,
     ) -> Result<u64, EngineAdapterRequestError> {
         super::validate_chat_request(&self.backend, &request)?;
-        let body = build_count_tokens_body(&request);
+        if request
+            .shared
+            .chat
+            .output_modalities
+            .as_ref()
+            .is_some_and(|m| m.contains(&battersea_model::Modality::Audio) && m.len() != 1)
+        {
+            return Err(EngineAdapterRequestError::new(
+                "google",
+                "GenerateContent audio output must be requested alone.",
+                "invalid_request",
+            ));
+        }
+        let body = build_count_tokens_body(&self.backend, &request)?;
         let url = self.build_request_url("countTokens", false);
-        let response = self
-            .client
-            .post(url)
-            .json(&body)
-            .send()
-            .await
-            .map_err(|error| EngineAdapterRequestError::transport("google", error.to_string()))?;
+        let response = crate::retry::send(
+            self.client.post(url).json(&body),
+            &self.backend,
+            self.logger.as_ref(),
+        )
+        .await?;
         let status = response.status().as_u16();
         if !response.status().is_success() {
             return Err(normalize_google_http_error(
@@ -155,6 +170,19 @@ impl EngineAdapter for GoogleEngineAdapter {
         request: EngineTextStreamRequest,
     ) -> Result<EngineTextStream, EngineAdapterRequestError> {
         super::validate_chat_request(&self.backend, &request)?;
+        if request
+            .shared
+            .chat
+            .output_modalities
+            .as_ref()
+            .is_some_and(|m| m.contains(&battersea_model::Modality::Audio) && m.len() != 1)
+        {
+            return Err(EngineAdapterRequestError::new(
+                "google",
+                "GenerateContent audio output must be requested alone.",
+                "invalid_request",
+            ));
+        }
         if !request.local_tools.is_empty() {
             return self.stream_text_with_local_tools(request).await;
         }
@@ -171,13 +199,12 @@ impl EngineAdapter for GoogleEngineAdapter {
         .await;
 
         let url = self.build_request_url("streamGenerateContent", true);
-        let response = self
-            .client
-            .post(url)
-            .json(&body)
-            .send()
-            .await
-            .map_err(|error| EngineAdapterRequestError::transport("google", error.to_string()))?;
+        let response = crate::retry::send(
+            self.client.post(url).json(&body),
+            &self.backend,
+            self.logger.as_ref(),
+        )
+        .await?;
         let status = response.status().as_u16();
         if !response.status().is_success() {
             return Err(normalize_google_http_error(
@@ -235,7 +262,7 @@ impl EngineAdapter for GoogleEngineAdapter {
                                 serde_json::to_value(&parsed).unwrap_or_else(|_| json!({})),
                             )
                             .await;
-                            Ok(parsed.into_text_stream_events())
+                            parsed.into_text_stream_events()
                         }
                         Err(error) => Err(EngineAdapterRequestError::transport(
                             "google",
@@ -296,6 +323,7 @@ impl GoogleEngineAdapter {
         let context = self.context.clone();
         let url = self.build_request_url("generateContent", false);
 
+        let contents = crate::content::messages("google", &request.shared.messages)?;
         tokio::spawn(async move {
             let conversation = GoogleToolConversation {
                 client,
@@ -303,7 +331,7 @@ impl GoogleEngineAdapter {
                 url,
                 logger: logger.clone(),
                 context: context.clone(),
-                contents: super::google_messages(&request.shared),
+                contents,
             };
             run_tool_loop(conversation, request, executor, logger, context, tx).await;
         });
@@ -381,13 +409,12 @@ impl ToolConversation for GoogleToolConversation {
             Some(body.clone()),
         )
         .await;
-        let response = self
-            .client
-            .post(&self.url)
-            .json(&body)
-            .send()
-            .await
-            .map_err(|error| EngineAdapterRequestError::transport("google", error.to_string()))?;
+        let response = crate::retry::send(
+            self.client.post(&self.url).json(&body),
+            &self.backend,
+            self.logger.as_ref(),
+        )
+        .await?;
         let status = response.status().as_u16();
         if !response.status().is_success() {
             return Err(normalize_google_http_error(
@@ -432,7 +459,7 @@ impl ToolConversation for GoogleToolConversation {
         if let Some(content) = raw.pointer("/candidates/0/content") {
             self.contents.push(content.clone());
         }
-        for event in payload.into_text_stream_events() {
+        for event in payload.into_text_stream_events()? {
             send_event(events, event).await?;
         }
         Ok(calls)
@@ -498,7 +525,7 @@ fn build_stream_body(
     request: &EngineTextStreamRequest,
 ) -> Result<Value, EngineAdapterRequestError> {
     let mut body = json!({
-        "contents": super::google_messages(&request.shared)
+        "contents": crate::content::messages("google", &request.shared.messages)?
     });
     if !request
         .shared
@@ -511,6 +538,7 @@ fn build_stream_body(
         });
     }
     body["generationConfig"] = build_generation_config(backend, &request.shared.chat);
+    crate::content::output_format("google", &mut body, &request.shared.chat);
     apply_tool_choice(&mut body, &request.shared.chat);
     Ok(body)
 }
@@ -543,6 +571,7 @@ fn build_local_tool_body(
         });
     }
     body["generationConfig"] = build_generation_config(backend, &request.shared.chat);
+    crate::content::output_format("google", &mut body, &request.shared.chat);
 
     // Wrap every local-tool definition in a Gemini functionDeclaration.
     // Gemini doesn't have a "strict" toggle the way OpenAI does — the
@@ -658,21 +687,21 @@ fn collect_google_function_calls(
 /// We send the same `contents` and `systemInstruction` shape as the
 /// generation request so the count reflects exactly what would be
 /// billed if we called `:streamGenerateContent` next.
-fn build_count_tokens_body(request: &EngineTextStreamRequest) -> Value {
-    let mut body = json!({
-        "contents": super::google_messages(&request.shared)
-    });
-    if !request
-        .shared
-        .text_for_role(battersea_model::Role::System)
-        .trim()
-        .is_empty()
-    {
-        body["systemInstruction"] = json!({
-            "parts": [{ "text": request.shared.text_for_role(battersea_model::Role::System) }]
-        });
-    }
-    body
+fn build_count_tokens_body(
+    backend: &EngineBackendConfig,
+    request: &EngineTextStreamRequest,
+) -> Result<Value, EngineAdapterRequestError> {
+    let mut generation = if request.local_tools.is_empty() {
+        build_stream_body(backend, request)?
+    } else {
+        build_local_tool_body(
+            backend,
+            request,
+            crate::content::messages("google", &request.shared.messages)?,
+        )
+    };
+    generation["model"] = json!(format!("models/{}", backend.model));
+    Ok(json!({"generateContentRequest": generation}))
 }
 
 /// Builds the `generationConfig` object common to every Gemini
@@ -906,13 +935,63 @@ impl GeminiGenerateContentResponse {
     /// emit one `TextDelta` per text part and one `ReasoningDelta` per
     /// part flagged as `thought: true`. Token usage rides on the
     /// final chunk and is forwarded as a single `TokenUsage` event.
-    fn into_text_stream_events(self) -> Vec<EngineTextStreamEvent> {
+    fn into_text_stream_events(
+        self,
+    ) -> Result<Vec<EngineTextStreamEvent>, EngineAdapterRequestError> {
         let mut events = Vec::new();
         for candidate in &self.candidates {
             let Some(content) = &candidate.content else {
                 continue;
             };
             for part in &content.parts {
+                if part.extra.contains_key("thoughtSignature") {
+                    events.push(EngineTextStreamEvent::ContentBlock {
+                        block: battersea_model::ContentBlock::Native {
+                            provider: "google".into(),
+                            payload: serde_json::to_value(part).expect("part serializes"),
+                        },
+                    });
+                }
+
+                for field in ["inlineData", "fileData"] {
+                    if let Some(data) = part.extra.get(field) {
+                        let mime = data["mimeType"].as_str().unwrap_or_default().to_string();
+                        let url = if field == "inlineData" {
+                            format!(
+                                "data:{mime};base64,{}",
+                                data["data"].as_str().unwrap_or_default()
+                            )
+                        } else {
+                            data["fileUri"].as_str().unwrap_or_default().to_string()
+                        };
+                        crate::content::media_source("google", &url, &mime).map_err(|error| {
+                            EngineAdapterRequestError::invalid_response("google", error.message)
+                        })?;
+                        if !mime.starts_with("image/") && !mime.starts_with("audio/") {
+                            return Err(EngineAdapterRequestError::invalid_response(
+                                "google",
+                                "Unsupported output MIME type.",
+                            ));
+                        }
+                        let block = if mime.starts_with("image/") {
+                            battersea_model::ContentBlock::Image {
+                                url,
+                                mime_type: mime,
+                            }
+                        } else if mime.starts_with("audio/") {
+                            battersea_model::ContentBlock::Audio {
+                                url,
+                                mime_type: mime,
+                            }
+                        } else {
+                            battersea_model::ContentBlock::Native {
+                                provider: "google".into(),
+                                payload: serde_json::to_value(part).expect("part serializes"),
+                            }
+                        };
+                        events.push(EngineTextStreamEvent::ContentBlock { block });
+                    }
+                }
                 if let Some(text) = part.text.as_deref() {
                     if text.is_empty() {
                         continue;
@@ -932,7 +1011,19 @@ impl GeminiGenerateContentResponse {
         if let Some(usage) = self.token_usage() {
             events.push(EngineTextStreamEvent::TokenUsage { usage });
         }
-        events
+        if let Some(reason) = self.first_finish_reason() {
+            events.push(EngineTextStreamEvent::MessageStop {
+                reason: match reason.as_str() {
+                    "STOP" => super::StopReason::Complete,
+                    "MAX_TOKENS" => super::StopReason::Length,
+                    "SAFETY" | "RECITATION" | "BLOCKLIST" | "PROHIBITED_CONTENT" => {
+                        super::StopReason::Refusal
+                    }
+                    _ => super::StopReason::Other(reason),
+                },
+            });
+        }
+        Ok(events)
     }
 }
 
@@ -949,6 +1040,8 @@ mod tests {
 
     fn empty_chat_params() -> EngineChatParameters {
         EngineChatParameters {
+            response_format: None,
+            output_modalities: None,
             stream: true,
             max_output_tokens: None,
             temperature: 1.0,
@@ -983,6 +1076,7 @@ mod tests {
         effort_values: HashMap<String, Value>,
     ) -> EngineBackendCapabilities {
         EngineBackendCapabilities {
+            content: battersea_model::ContentCapabilities::text(),
             supported_chat_parameters: vec![
                 "stream".to_string(),
                 "maxOutputTokens".to_string(),
@@ -1330,7 +1424,7 @@ mod tests {
             response_id: None,
         };
 
-        let events = chunk.into_text_stream_events();
+        let events = chunk.into_text_stream_events().unwrap();
         assert_eq!(events.len(), 4);
         assert!(matches!(
             &events[0],
@@ -1380,7 +1474,7 @@ mod tests {
             usage_metadata: None,
             response_id: None,
         };
-        let events = chunk.into_text_stream_events();
+        let events = chunk.into_text_stream_events().unwrap();
         assert!(events.is_empty());
     }
 
@@ -1705,7 +1799,9 @@ mod tests {
         let mut request = stream_request("System.", "tokens please");
         request.shared.messages[0] =
             battersea_model::Message::text(battersea_model::Role::System, "System.".to_string());
-        let body = build_count_tokens_body(&request);
+        let body = build_count_tokens_body(&backend_stub(), &request).unwrap()
+            ["generateContentRequest"]
+            .clone();
         assert_eq!(
             body["contents"][0]["parts"][0]["text"],
             json!("tokens please")

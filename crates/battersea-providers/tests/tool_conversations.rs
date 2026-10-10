@@ -87,6 +87,8 @@ fn backend(provider: &str, url: &str, mode: &str) -> EngineBackendConfig {
         model: "fixture-model".into(),
         display_order: None,
         chat: EngineChatParameters {
+            response_format: None,
+            output_modalities: None,
             max_output_tokens: Some(1024),
             ..EngineChatParameters::default_for_provider(provider)
         },
@@ -245,7 +247,7 @@ async fn round_trip(provider: &str, mode: &str) {
         "openai" => (
             openai_response(json!([
                 {"type":"reasoning", "id":"reasoning-fixture", "summary":[], "encrypted_content":"opaque-signature"},
-                {"type":"function_call", "id":"function-fixture", "call_id":"call-a", "name":"session_get", "arguments":arguments.to_string()}
+                {"type":"function_call", "id":"function-fixture", "call_id":"call-a", "name":"session_get", "arguments":arguments.to_string(), "opaque_signature":{"future":"retained"}}
             ])),
             openai_response(
                 json!([{"type":"message", "id":"message-fixture", "status":"completed", "role":"assistant",
@@ -335,7 +337,7 @@ async fn round_trip(provider: &str, mode: &str) {
             if provider == "google" {
                 &actual["parts"][0]["text"]
             } else {
-                &actual["content"]
+                &actual["content"][0]["text"]
             },
             &json!(text)
         );
@@ -492,7 +494,11 @@ async fn truncation_and_malformed_calls_never_reach_the_executor() {
         assert!(
             matches!(events.last(), Some(Err(error)) if error.classification.as_str() == "invalid_response")
         );
-        assert!(events[..events.len()-1].iter().all(|event|matches!(event,Ok(EngineTextStreamEvent::TokenUsage { usage }) if usage.input_tokens.is_none() && usage.output_tokens.is_none())));
+        assert!(!events.iter().any(|event| matches!(
+            event,
+            Ok(EngineTextStreamEvent::ToolCallStarted { .. }
+                | EngineTextStreamEvent::ToolCallCompleted { .. })
+        )));
         assert!(executor.0.lock().unwrap().is_empty());
         assert_eq!(state.requests.lock().unwrap().len(), 1);
         server.abort();
@@ -569,4 +575,556 @@ async fn unsupported_effort_fails_before_counting_or_generation_for_every_provid
             Ok(_) => panic!("unsupported effort accepted by {provider}"),
         }
     }
+}
+
+// M6.3 acceptance fixtures: expected wire shapes and effect counts are protocol contracts.
+type PolicyReply = (u16, &'static str, String, Option<&'static str>);
+#[derive(Clone, Default)]
+struct PolicyServer {
+    requests: Arc<Mutex<Vec<Value>>>,
+    replies: Arc<Mutex<VecDeque<PolicyReply>>>,
+}
+async fn policy_reply(
+    State(state): State<PolicyServer>,
+    Json(body): Json<Value>,
+) -> axum::response::Response {
+    state.requests.lock().unwrap().push(body);
+    let (status, kind, body, after) = state
+        .replies
+        .lock()
+        .unwrap()
+        .pop_front()
+        .expect("unexpected attempt");
+    let mut response = (
+        axum::http::StatusCode::from_u16(status).unwrap(),
+        [("content-type", kind)],
+        body,
+    )
+        .into_response();
+    if let Some(after) = after {
+        response
+            .headers_mut()
+            .insert("retry-after", after.parse().unwrap());
+    }
+    response
+}
+async fn policy_server(
+    replies: Vec<PolicyReply>,
+) -> (String, PolicyServer, tokio::task::JoinHandle<()>) {
+    let state = PolicyServer {
+        replies: Arc::new(Mutex::new(replies.into())),
+        ..Default::default()
+    };
+    let listener = tokio::net::TcpListener::bind(test_endpoints::TEST_BIND_ADDRESS)
+        .await
+        .unwrap();
+    let url = format!("http://{}", listener.local_addr().unwrap());
+    let app = Router::new()
+        .fallback(post(policy_reply))
+        .with_state(state.clone());
+    let task = tokio::spawn(async move {
+        axum::serve(listener, app).await.unwrap();
+    });
+    (url, state, task)
+}
+fn content_backend(provider: &str, url: &str) -> EngineBackendConfig {
+    let mut backend = backend(provider, url, "stream");
+    backend.capabilities.content = battersea_providers::builtin_registry()
+        .chat_provider(provider)
+        .unwrap()
+        .content
+        .clone();
+    backend.options.max_retries = Some(2);
+    backend.options.retry_initial_delay_ms = Some(1);
+    backend.options.retry_max_delay_ms = Some(20);
+    backend
+}
+fn completion(provider: &str, text: &str) -> String {
+    match provider {
+        "openai" => format!(
+            "data: {}\n\ndata: {}\n\n",
+            json!({"type":"response.output_text.delta", "sequence_number":1, "item_id":"message-fixture", "output_index":0, "content_index":0, "delta":text, "logprobs":[]}),
+            json!({"type":"response.completed", "sequence_number":2, "response":openai_response(json!([{"type":"message", "id":"message-fixture", "status":"completed", "role":"assistant", "content":[{"type":"output_text", "text":text, "annotations":[]}]}]))})
+        ),
+        "anthropic" => format!(
+            "data: {}\n\ndata: {}\n\ndata: {}\n\n",
+            json!({"type":"content_block_delta", "index":0, "delta":{"type":"text_delta", "text":text}}),
+            json!({"type":"message_delta", "delta":{"stop_reason":"end_turn"}, "usage":{"output_tokens":12}}),
+            json!({"type":"message_stop"})
+        ),
+        "google" => format!(
+            "data: {}\n\n",
+            json!({"candidates":[{"content":{"role":"model", "parts":[{"text":text}]}, "finishReason":"STOP"}]})
+        ),
+        _ => unreachable!(),
+    }
+}
+
+#[tokio::test]
+async fn multimodal_counting_and_generation_share_ordered_content_and_validate_structured_results()
+{
+    use battersea_model::{ContentBlock, Message, ResponseFormat, Role};
+    let expected = json!({"answer": ["first", "second"]});
+    let schema = json!({"type":"object", "properties":{"answer":{"type":"array", "items":{"type":"string"}}}, "required":["answer"], "additionalProperties":false});
+    for provider in ["openai", "anthropic", "google"] {
+        let count = if provider == "google" {
+            json!({"totalTokens":17})
+        } else {
+            json!({"input_tokens":17})
+        };
+        let (url, state, server) = policy_server(vec![
+            (200, "application/json", count.to_string(), None),
+            (
+                200,
+                "text/event-stream",
+                completion(provider, &expected.to_string()),
+                None,
+            ),
+        ])
+        .await;
+        let backend = content_backend(provider, &url);
+        let mut request = request(&backend, Arc::new(RecordingExecutor::default()));
+        request.local_tools.clear();
+        request.shared.chat.response_format = Some(ResponseFormat::JsonSchema {
+            name: "contract_result".into(),
+            schema: schema.clone(),
+        });
+        let mut content = vec![
+            ContentBlock::Text {
+                text: "before".into(),
+            },
+            ContentBlock::Image {
+                url: "data:image/png;base64,AQID".into(),
+                mime_type: "image/png".into(),
+            },
+            ContentBlock::Document {
+                url: "data:application/pdf;base64,BAUG".into(),
+                mime_type: "application/pdf".into(),
+                filename: "evidence.pdf".into(),
+            },
+            ContentBlock::Text {
+                text: "after".into(),
+            },
+        ];
+        if provider == "google" {
+            content.push(ContentBlock::Audio {
+                url: "data:audio/wav;base64,BwgJ".into(),
+                mime_type: "audio/wav".into(),
+            });
+            content.push(ContentBlock::Video {
+                url: "https://example.test/clip.mp4".into(),
+                mime_type: "video/mp4".into(),
+            });
+        }
+        request.shared.messages = vec![Message {
+            role: Role::User,
+            content,
+        }];
+        let adapter = adapter(backend);
+        assert!(
+            adapter
+                .count_text_stream_input_tokens(request.clone())
+                .await
+                .unwrap()
+                > 0
+        );
+        let events = adapter
+            .stream_text(request)
+            .await
+            .unwrap()
+            .collect::<Vec<_>>()
+            .await;
+        let events = events.into_iter().collect::<Result<Vec<_>, _>>().unwrap();
+        assert!(
+            matches!(events.iter().rev().nth(1), Some(EngineTextStreamEvent::StructuredOutput {value}) if value == &expected)
+        );
+        let calls = state.requests.lock().unwrap();
+        let key = match provider {
+            "openai" => "input",
+            "anthropic" => "messages",
+            _ => "contents",
+        };
+        let counted = if provider == "google" {
+            &calls[0]["generateContentRequest"]
+        } else {
+            &calls[0]
+        };
+        assert_eq!(
+            counted[key], calls[1][key],
+            "counting must include the exact generation content"
+        );
+        let blocks = &calls[1][key][0][if provider == "google" {
+            "parts"
+        } else {
+            "content"
+        }];
+        assert_eq!(blocks[0]["text"], "before");
+        assert_eq!(blocks[3]["text"], "after");
+        match provider {
+            "openai" => {
+                assert_eq!(blocks[1]["image_url"], "data:image/png;base64,AQID");
+                assert_eq!(blocks[2]["file_data"], "data:application/pdf;base64,BAUG");
+                assert_eq!(calls[1]["text"]["format"]["schema"], schema);
+            }
+            "anthropic" => {
+                assert_eq!(blocks[1]["source"]["data"], "AQID");
+                assert_eq!(blocks[2]["source"]["media_type"], "application/pdf");
+                assert_eq!(calls[1]["output_config"]["format"]["schema"], schema);
+            }
+            _ => {
+                assert_eq!(blocks[1]["inlineData"]["data"], "AQID");
+                assert_eq!(blocks[4]["inlineData"]["mimeType"], "audio/wav");
+                assert_eq!(
+                    blocks[5]["fileData"]["fileUri"],
+                    "https://example.test/clip.mp4"
+                );
+                assert_eq!(calls[1]["generationConfig"]["responseJsonSchema"], schema);
+            }
+        }
+        server.abort();
+    }
+}
+
+#[tokio::test]
+async fn rejected_tool_continuation_retries_its_body_without_reexecuting_the_tool() {
+    for provider in ["openai", "anthropic", "google"] {
+        let arguments = json!({"key":"durable-effect"});
+        let (kind, first, last) = match provider {
+            "openai" => ("text/event-stream", sse(&openai_response(json!([{"type":"function_call", "id":"item", "call_id":"once", "name":"session_get", "arguments":arguments.to_string(), "opaque_signature":{"future":"retained"}}])), false), completion(provider, "done")),
+            "anthropic" => ("application/json", json!({"stop_reason":"tool_use", "content":[{"type":"tool_use", "id":"once", "name":"session_get", "input":arguments}]}).to_string(), json!({"stop_reason":"end_turn", "content":[{"type":"text", "text":"done"}]}).to_string()),
+            _ => ("application/json", json!({"candidates":[{"finishReason":"STOP", "content":{"role":"model", "parts":[{"functionCall":{"id":"once", "name":"session_get", "args":arguments}}]}}]}).to_string(), json!({"candidates":[{"finishReason":"STOP", "content":{"role":"model", "parts":[{"text":"done"}]}}]}).to_string()),
+        };
+        let (url, state, server) = policy_server(vec![
+            (200, kind, first, None),
+            (429, "application/json", "{}".into(), Some("0")),
+            (200, kind, last, None),
+        ])
+        .await;
+        let backend = content_backend(provider, &url);
+        let executor = Arc::new(RecordingExecutor::default());
+        let events = adapter(backend.clone())
+            .stream_text(request(&backend, executor.clone()))
+            .await
+            .unwrap()
+            .collect::<Vec<_>>()
+            .await;
+        assert!(events.iter().all(Result::is_ok), "{provider}: {events:?}");
+        assert_eq!(
+            executor.0.lock().unwrap().len(),
+            1,
+            "accepted tool effect must not repeat"
+        );
+        let calls = state.requests.lock().unwrap();
+        assert_eq!(calls.len(), 3);
+        assert_eq!(
+            calls[1], calls[2],
+            "retry must preserve the prepared continuation body"
+        );
+        if provider == "openai" {
+            assert!(
+                calls[1]["input"]
+                    .as_array()
+                    .unwrap()
+                    .iter()
+                    .any(|item| item["opaque_signature"] == json!({"future":"retained"})),
+                "native provider fields survive SDK decoding and continuation"
+            );
+        }
+        server.abort();
+    }
+}
+
+#[tokio::test]
+async fn ambiguous_server_failure_and_partial_stream_never_replay_generation() {
+    for provider in ["openai", "anthropic", "google"] {
+        for (status, body) in [
+            (500, "{}".to_string()),
+            (
+                200,
+                match provider {
+                    "openai" => format!(
+                        "data: {}\n\n",
+                        json!({"type":"response.output_text.delta", "sequence_number":1,"item_id":"message-fixture", "output_index":0,"content_index":0,"delta":"partial", "logprobs":[]})
+                    ),
+                    "anthropic" => format!(
+                        "data: {}\n\n",
+                        json!({"type":"content_block_delta", "delta":{"type":"text_delta","text":"partial"}})
+                    ),
+                    _ => format!(
+                        "data: {}\n\n",
+                        json!({"candidates":[{"content":{"parts":[{"text":"partial"}]}}]})
+                    ),
+                },
+            ),
+        ] {
+            let (url, state, server) =
+                policy_server(vec![(status, "text/event-stream", body, None)]).await;
+            let backend = content_backend(provider, &url);
+            let mut request = request(&backend, Arc::new(RecordingExecutor::default()));
+            request.local_tools.clear();
+            let result = adapter(backend).stream_text(request).await;
+            let error = match result {
+                Err(error) => error,
+                Ok(stream) => stream
+                    .collect::<Vec<_>>()
+                    .await
+                    .into_iter()
+                    .find_map(Result::err)
+                    .expect("truncation must fail"),
+            };
+            assert_eq!(error.dispatch, battersea_model::DispatchState::Unknown);
+            assert_eq!(state.requests.lock().unwrap().len(), 1);
+            server.abort();
+        }
+    }
+}
+
+#[tokio::test]
+async fn retry_after_beyond_the_configured_delay_bound_stops_without_retrying_early() {
+    let (url, state, server) =
+        policy_server(vec![(429, "application/json", "{}".into(), Some("3600"))]).await;
+    let backend = content_backend("openai", &url);
+    let mut request = request(&backend, Arc::new(RecordingExecutor::default()));
+    request.local_tools.clear();
+    let error = adapter(backend)
+        .stream_text(request)
+        .await
+        .err()
+        .expect("rate limit");
+    assert_eq!(error.dispatch, battersea_model::DispatchState::Rejected);
+    assert_eq!(error.retry_after_ms, Some(3_600_000));
+    assert_eq!(state.requests.lock().unwrap().len(), 1);
+    server.abort();
+}
+
+#[tokio::test]
+async fn the_operation_deadline_covers_backoff_and_retry_does_not_reset_it() {
+    let (url, state, server) =
+        policy_server(vec![(429, "application/json", "{}".into(), Some("1"))]).await;
+    let mut backend = content_backend("openai", &url);
+    backend.options.timeout_ms = Some(50);
+    backend.options.retry_initial_delay_ms = Some(1000);
+    backend.options.retry_max_delay_ms = Some(1000);
+    let mut request = request(&backend, Arc::new(RecordingExecutor::default()));
+    request.local_tools.clear();
+    let result = adapter(backend).stream_text(request).await;
+    assert!(
+        matches!(result,Err(error) if error.classification==battersea_model::ErrorKind::Timeout)
+    );
+    assert_eq!(state.requests.lock().unwrap().len(), 1);
+    server.abort();
+}
+
+#[tokio::test]
+async fn dropping_a_tool_consumer_interrupts_retry_backoff() {
+    let (url, state, server) =
+        policy_server(vec![(429, "application/json", "{}".into(), Some("1"))]).await;
+    let mut backend = content_backend("anthropic", &url);
+    backend.options.retry_initial_delay_ms = Some(1000);
+    backend.options.retry_max_delay_ms = Some(1000);
+    let executor = Arc::new(RecordingExecutor::default());
+    let stream = adapter(backend.clone())
+        .stream_text(request(&backend, executor.clone()))
+        .await
+        .unwrap();
+    tokio::time::timeout(std::time::Duration::from_secs(2), async {
+        while state.requests.lock().unwrap().is_empty() {
+            tokio::task::yield_now().await;
+        }
+    })
+    .await
+    .unwrap();
+    drop(stream);
+    tokio::time::sleep(std::time::Duration::from_millis(1100)).await;
+    assert_eq!(state.requests.lock().unwrap().len(), 1);
+    assert!(executor.0.lock().unwrap().is_empty());
+    server.abort();
+}
+
+#[tokio::test]
+async fn invalid_media_and_unsupported_native_output_are_rejected_before_io() {
+    use battersea_model::{ContentBlock, Message, ResponseFormat, Role};
+    let (url, state, server) = policy_server(vec![]).await;
+    for provider in ["openai", "anthropic", "google"] {
+        for block in [
+            ContentBlock::Image {
+                url: "https://example.test/picture".into(),
+                mime_type: "image/unsupported".into(),
+            },
+            ContentBlock::Document {
+                url: "https://example.test/archive".into(),
+                mime_type: "application/zip".into(),
+                filename: "archive.zip".into(),
+            },
+            ContentBlock::Image {
+                url: "file:///private/image.png".into(),
+                mime_type: "image/png".into(),
+            },
+            ContentBlock::Image {
+                url: "data:image/png;base64,not base64".into(),
+                mime_type: "image/png".into(),
+            },
+            ContentBlock::Native {
+                provider: "foreign-provider".into(),
+                payload: json!({"signature":"opaque"}),
+            },
+        ] {
+            let backend = content_backend(provider, &url);
+            let mut request = request(&backend, Arc::new(RecordingExecutor::default()));
+            request.local_tools.clear();
+            request.shared.messages = vec![Message {
+                role: Role::User,
+                content: vec![block],
+            }];
+            let adapter = adapter(backend);
+            assert!(adapter
+                .count_text_stream_input_tokens(request.clone())
+                .await
+                .is_err());
+            assert!(adapter.stream_text(request).await.is_err());
+        }
+    }
+    let backend = content_backend("anthropic", &url);
+    let mut request = request(&backend, Arc::new(RecordingExecutor::default()));
+    request.shared.chat.response_format = Some(ResponseFormat::JsonObject);
+    assert!(adapter(backend).stream_text(request).await.is_err());
+    assert!(state.requests.lock().unwrap().is_empty());
+    server.abort();
+}
+
+#[tokio::test]
+async fn gemini_media_outputs_retain_bytes_and_require_the_requested_modality() {
+    use battersea_model::{ContentBlock, Modality};
+    for (mime, mode) in [
+        ("image/png", Modality::Image),
+        ("audio/wav", Modality::Audio),
+    ] {
+        let bytes = "AQIDBA==";
+        let body = format!(
+            "data: {}\n\n",
+            json!({"candidates":[{"content":{"role":"model","parts":[{"inlineData":{"mimeType":mime,"data":bytes}}]},"finishReason":"STOP"}]})
+        );
+        let (url, state, server) = policy_server(vec![
+            (200, "text/event-stream", body.clone(), None),
+            (200, "text/event-stream", body, None),
+        ])
+        .await;
+        let backend = content_backend("google", &url);
+        let mut request = request(&backend, Arc::new(RecordingExecutor::default()));
+        request.local_tools.clear();
+        request.shared.chat.output_modalities = Some(vec![mode]);
+        let adapter = adapter(backend);
+        let events = adapter
+            .stream_text(request.clone())
+            .await
+            .unwrap()
+            .collect::<Vec<_>>()
+            .await
+            .into_iter()
+            .collect::<Result<Vec<_>, _>>()
+            .unwrap();
+        let expected_url = format!("data:{mime};base64,{bytes}");
+        assert!(events.iter().any(|event|matches!(event,EngineTextStreamEvent::ContentBlock {block:ContentBlock::Image {url,mime_type}|ContentBlock::Audio {url,mime_type}} if url==&expected_url && mime_type==mime)));
+        assert_eq!(
+            state.requests.lock().unwrap()[0]["generationConfig"]["responseModalities"],
+            json!([if mode == Modality::Image {
+                "IMAGE"
+            } else {
+                "AUDIO"
+            }])
+        );
+        request.shared.chat.output_modalities = None;
+        let events = adapter
+            .stream_text(request)
+            .await
+            .unwrap()
+            .collect::<Vec<_>>()
+            .await;
+        assert!(
+            events.last().unwrap().is_err(),
+            "unsolicited media cannot bypass output admission"
+        );
+        server.abort();
+    }
+}
+
+#[tokio::test]
+async fn connection_refusal_retries_only_within_the_explicit_attempt_bound() {
+    let listener = tokio::net::TcpListener::bind(test_endpoints::TEST_BIND_ADDRESS)
+        .await
+        .unwrap();
+    let url = format!("http://{}", listener.local_addr().unwrap());
+    drop(listener);
+    for provider in ["openai", "anthropic", "google"] {
+        let backend = content_backend(provider, &url);
+        let attempts = backend.options.max_retries.unwrap() + 1;
+        let mut request = request(&backend, Arc::new(RecordingExecutor::default()));
+        request.local_tools.clear();
+        let error = adapter(backend)
+            .stream_text(request)
+            .await
+            .err()
+            .expect("connection refused");
+        assert_eq!(error.dispatch, battersea_model::DispatchState::NotSent);
+        assert_eq!(error.attempts, attempts);
+    }
+}
+
+#[tokio::test]
+async fn accepted_connection_loss_does_not_recreate_generation() {
+    use tokio::io::AsyncReadExt;
+    for provider in ["openai", "anthropic", "google"] {
+        let listener = tokio::net::TcpListener::bind(test_endpoints::TEST_BIND_ADDRESS)
+            .await
+            .unwrap();
+        let url = format!("http://{}", listener.local_addr().unwrap());
+        let server = tokio::spawn(async move {
+            let (mut stream, _) = listener.accept().await.unwrap();
+            let mut buffer = [0; 8192];
+            assert!(stream.read(&mut buffer).await.unwrap() > 0);
+            drop(stream);
+            assert!(
+                tokio::time::timeout(std::time::Duration::from_millis(100), listener.accept())
+                    .await
+                    .is_err()
+            );
+        });
+        let backend = content_backend(provider, &url);
+        let mut request = request(&backend, Arc::new(RecordingExecutor::default()));
+        request.local_tools.clear();
+        let error = adapter(backend)
+            .stream_text(request)
+            .await
+            .err()
+            .expect("connection lost");
+        assert_eq!(error.dispatch, battersea_model::DispatchState::Unknown);
+        assert_eq!(error.attempts, 1);
+        server.await.unwrap();
+    }
+}
+
+#[tokio::test]
+async fn audio_only_output_rejects_unrequested_text() {
+    let (url, _, server) = policy_server(vec![(
+        200,
+        "text/event-stream",
+        completion("google", "unexpected text"),
+        None,
+    )])
+    .await;
+    let mut backend = content_backend("google", &url);
+    backend.chat.output_modalities = Some(vec![battersea_model::Modality::Audio]);
+    let mut request = request(&backend, Arc::new(RecordingExecutor::default()));
+    request.local_tools.clear();
+    let events = adapter(backend)
+        .stream_text(request)
+        .await
+        .unwrap()
+        .collect::<Vec<_>>()
+        .await;
+    assert!(events.iter().any(Result::is_err));
+    assert!(!events
+        .iter()
+        .any(|event| matches!(event, Ok(EngineTextStreamEvent::TextDelta { .. }))));
+    server.abort();
 }

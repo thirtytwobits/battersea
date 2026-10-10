@@ -20,6 +20,7 @@ type MediaPrepare = dyn Fn(
     + Sync;
 
 pub struct ChatProvider {
+    pub content: crate::ContentCapabilities,
     pub factory: Arc<ChatFactory>,
     pub parameters: Vec<String>,
     pub background_modes: Vec<String>,
@@ -93,6 +94,11 @@ impl ProviderRegistry {
         backend: &EngineBackendConfig,
     ) -> Result<(), EngineAdapterRequestError> {
         let provider = self.chat_provider(&backend.provider)?;
+        backend
+            .capabilities
+            .content
+            .validate_subset(&provider.content)
+            .map_err(|message| invalid(&backend.provider, message))?;
         if backend.options.background == Some(true)
             && !backend
                 .options
@@ -368,6 +374,13 @@ impl EngineAdapter for AdmittedAdapter {
             .options
             .timeout_ms
             .map(|ms| tokio::time::Instant::now() + std::time::Duration::from_millis(ms));
+        let response_format = request.shared.chat.response_format.clone();
+        let output_modalities = request
+            .shared
+            .chat
+            .output_modalities
+            .clone()
+            .unwrap_or_else(|| vec![crate::Modality::Text]);
         let call = self.inner.stream_text(request);
         let stream = match deadline {
             Some(deadline) => tokio::time::timeout_at(deadline, call)
@@ -390,6 +403,13 @@ impl EngineAdapter for AdmittedAdapter {
             ),
             None => stream,
         };
+        let validated = super::adapter::output::validate_output(
+            stream,
+            provider.clone(),
+            response_format,
+            output_modalities,
+        );
+        let stream = validated;
         Ok(Box::pin(futures_util::stream::unfold(
             Some((stream, deadline, provider)),
             |state| async move {

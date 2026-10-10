@@ -108,12 +108,14 @@ pub battersea_config::EngineChatConfigFile::logprobs: core::option::Option<bool>
 pub battersea_config::EngineChatConfigFile::max_output_tokens: core::option::Option<u32>
 pub battersea_config::EngineChatConfigFile::max_provider_tool_calls: core::option::Option<u32>
 pub battersea_config::EngineChatConfigFile::max_tool_rounds: core::option::Option<u32>
+pub battersea_config::EngineChatConfigFile::output_modalities: core::option::Option<alloc::vec::Vec<battersea_model::content::Modality>>
 pub battersea_config::EngineChatConfigFile::parallel_tool_calls: core::option::Option<bool>
 pub battersea_config::EngineChatConfigFile::prompt_cache_key: core::option::Option<alloc::string::String>
 pub battersea_config::EngineChatConfigFile::prompt_cache_retention: core::option::Option<battersea_model::engine::EnginePromptCacheRetention>
 pub battersea_config::EngineChatConfigFile::reasoning_effort: core::option::Option<battersea_model::engine::EngineReasoningEffort>
 pub battersea_config::EngineChatConfigFile::reasoning_summary: core::option::Option<battersea_model::engine::EngineReasoningSummary>
 pub battersea_config::EngineChatConfigFile::request_metadata: core::option::Option<serde_json::value::Value>
+pub battersea_config::EngineChatConfigFile::response_format: core::option::Option<battersea_model::content::ResponseFormat>
 pub battersea_config::EngineChatConfigFile::response_verbosity: core::option::Option<battersea_model::engine::EngineResponseVerbosity>
 pub battersea_config::EngineChatConfigFile::safety_identifier: core::option::Option<alloc::string::String>
 pub battersea_config::EngineChatConfigFile::service_tier: core::option::Option<alloc::string::String>

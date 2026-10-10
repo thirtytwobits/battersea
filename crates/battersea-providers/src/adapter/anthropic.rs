@@ -31,6 +31,7 @@ pub(crate) fn create_anthropic_adapter(
     logger: Option<Arc<dyn EngineAdapterLogger>>,
 ) -> Result<Arc<dyn EngineAdapter>, EngineAdapterRequestError> {
     let provider = "anthropic";
+    crate::retry::validate(&backend)?;
     let timeout_ms = backend
         .options
         .timeout_ms
@@ -47,6 +48,8 @@ pub(crate) fn create_anthropic_adapter(
     let model = backend.model.clone();
     let backend_id = backend.id.clone();
     let client = reqwest::Client::builder()
+        .retry(reqwest::retry::never())
+        .redirect(reqwest::redirect::Policy::none())
         .timeout(std::time::Duration::from_millis(timeout_ms))
         .default_headers(build_headers(&backend)?)
         .build()
@@ -102,15 +105,12 @@ impl EngineAdapter for AnthropicEngineAdapter {
         )
         .await;
 
-        let response = self
-            .client
-            .post(self.backend.endpoint.clone())
-            .json(&body)
-            .send()
-            .await
-            .map_err(|error| {
-                EngineAdapterRequestError::transport("anthropic", error.to_string())
-            })?;
+        let response = crate::retry::send(
+            self.client.post(self.backend.endpoint.clone()).json(&body),
+            &self.backend,
+            self.logger.as_ref(),
+        )
+        .await?;
         let status = response.status().as_u16();
         let request_id = response
             .headers()
@@ -144,9 +144,11 @@ impl EngineAdapter for AnthropicEngineAdapter {
         let logger = self.logger.clone();
         let context = self.context.clone();
         let operation = request.shared.operation;
+        let decoder = Arc::new(std::sync::Mutex::new(AnthropicStreamDecoder::default()));
         let stream = crate::http_payload::bounded_stream(response)
             .eventsource()
             .map(move |event| {
+                let decoder = decoder.clone();
                 let logger = logger.clone();
                 let context = context.clone();
                 async move {
@@ -171,53 +173,15 @@ impl EngineAdapter for AnthropicEngineAdapter {
                                 serde_json::to_value(&parsed).unwrap_or_else(|_| json!({})),
                             )
                             .await;
-                            let usage = parsed.token_usage();
-                            match parsed {
-                                AnthropicStreamEvent::ContentBlockDelta { delta, .. } => {
-                                    let mut events = Vec::new();
-                                    match delta.r#type.as_deref() {
-                                        Some("text_delta") => {
-                                            let text = delta.text.unwrap_or_default();
-                                            if !text.is_empty() {
-                                                events.push(EngineTextStreamEvent::TextDelta {
-                                                    text,
-                                                });
-                                            }
-                                        }
-                                        Some("thinking_delta") => {
-                                            // Extended-thinking content blocks carry the
-                                            // delta in `thinking` rather than `text`.
-                                            // Forward as the neutral ReasoningDelta event;
-                                            // ChatAPI accumulates and routes to the
-                                            // reasoning_stream port + controller output.
-                                            let text = delta.thinking.unwrap_or_default();
-                                            if !text.is_empty() {
-                                                events.push(
-                                                    EngineTextStreamEvent::ReasoningDelta { text },
-                                                );
-                                            }
-                                        }
-                                        // signature_delta and any other future delta types
-                                        // are control frames we don't surface yet.
-                                        _ => {}
-                                    }
-                                    if let Some(usage) = usage {
-                                        events.push(EngineTextStreamEvent::TokenUsage { usage });
-                                    }
-                                    Ok(events)
-                                }
-                                AnthropicStreamEvent::Error { error } => {
-                                    Err(EngineAdapterRequestError::transport(
+                            decoder
+                                .lock()
+                                .map_err(|_| {
+                                    EngineAdapterRequestError::invalid_response(
                                         "anthropic",
-                                        error.message.unwrap_or_else(|| {
-                                            "Anthropic streaming transport failed.".to_string()
-                                        }),
-                                    ))
-                                }
-                                _ => Ok(usage
-                                    .map(|usage| vec![EngineTextStreamEvent::TokenUsage { usage }])
-                                    .unwrap_or_default()),
-                            }
+                                        "Stream decoder lock poisoned.",
+                                    )
+                                })?
+                                .decode(parsed)
                         }
                         Err(error) => Err(EngineAdapterRequestError::transport(
                             "anthropic",
@@ -248,19 +212,18 @@ impl EngineAdapter for AnthropicEngineAdapter {
         request: EngineTextStreamRequest,
     ) -> Result<u64, EngineAdapterRequestError> {
         super::validate_chat_request(&self.backend, &request)?;
-        let body = build_input_token_count_body(&self.backend, &request);
-        let response = self
-            .client
-            .post(format!(
-                "{}/v1/messages/count_tokens",
-                resolve_anthropic_base_url(&self.backend.endpoint)
-            ))
-            .json(&body)
-            .send()
-            .await
-            .map_err(|error| {
-                EngineAdapterRequestError::transport("anthropic", error.to_string())
-            })?;
+        let body = build_input_token_count_body(&self.backend, &request)?;
+        let response = crate::retry::send(
+            self.client
+                .post(format!(
+                    "{}/v1/messages/count_tokens",
+                    resolve_anthropic_base_url(&self.backend.endpoint)
+                ))
+                .json(&body),
+            &self.backend,
+            self.logger.as_ref(),
+        )
+        .await?;
         let status = response.status().as_u16();
         let request_id = response
             .headers()
@@ -309,13 +272,14 @@ impl AnthropicEngineAdapter {
         let logger = self.logger.clone();
         let context = self.context.clone();
 
+        let messages = crate::content::messages("anthropic", &request.shared.messages)?;
         tokio::spawn(async move {
             let conversation = AnthropicToolConversation {
                 client,
                 backend,
                 logger: logger.clone(),
                 context: context.clone(),
-                messages: super::text_messages(&request.shared),
+                messages,
             };
             run_tool_loop(conversation, request, executor, logger, context, tx).await;
         });
@@ -355,15 +319,12 @@ impl ToolConversation for AnthropicToolConversation {
             Some(body.clone()),
         )
         .await;
-        let response = self
-            .client
-            .post(&self.backend.endpoint)
-            .json(&body)
-            .send()
-            .await
-            .map_err(|error| {
-                EngineAdapterRequestError::transport("anthropic", error.to_string())
-            })?;
+        let response = crate::retry::send(
+            self.client.post(&self.backend.endpoint).json(&body),
+            &self.backend,
+            self.logger.as_ref(),
+        )
+        .await?;
         let status = response.status().as_u16();
         let request_id = response
             .headers()
@@ -433,6 +394,18 @@ impl ToolConversation for AnthropicToolConversation {
         if let Some(usage) = payload.usage.as_ref().and_then(parse_anthropic_usage) {
             send_event(events, EngineTextStreamEvent::TokenUsage { usage }).await?;
         }
+        for payload in &payload.content {
+            send_event(
+                events,
+                EngineTextStreamEvent::ContentBlock {
+                    block: battersea_model::ContentBlock::Native {
+                        provider: "anthropic".into(),
+                        payload: payload.clone(),
+                    },
+                },
+            )
+            .await?;
+        }
         // Keep signed thinking and every provider content block intact.
         self.messages
             .push(json!({"role": "assistant", "content": payload.content}));
@@ -491,10 +464,11 @@ fn build_stream_body(
         "max_tokens": require_anthropic_max_tokens(&request.shared.chat)?,
         "stream": true,
         "system": request.shared.text_for_role(battersea_model::Role::System),
-        "messages": super::text_messages(&request.shared)
+        "messages": crate::content::messages("anthropic", &request.shared.messages)?
     });
     apply_anthropic_temperature(&mut body, backend, request.shared.chat.temperature);
     apply_anthropic_chat_parameters(&mut body, backend, &request.shared, true);
+    crate::content::output_format("anthropic", &mut body, &request.shared.chat);
     Ok(body)
 }
 
@@ -523,6 +497,7 @@ fn build_local_tool_body(
     });
     apply_anthropic_temperature(&mut body, backend, shared.chat.temperature);
     apply_anthropic_chat_parameters(&mut body, backend, &shared, true);
+    crate::content::output_format("anthropic", &mut body, &shared.chat);
     Ok(body)
 }
 
@@ -809,12 +784,31 @@ fn apply_anthropic_tool_choice(
 fn build_input_token_count_body(
     backend: &EngineBackendConfig,
     request: &EngineTextStreamRequest,
-) -> Value {
-    json!({
-        "model": backend.model,
-        "system": request.shared.text_for_role(battersea_model::Role::System),
-        "messages": super::text_messages(&request.shared)
-    })
+) -> Result<Value, EngineAdapterRequestError> {
+    let generation = if request.local_tools.is_empty() {
+        build_stream_body(backend, request)?
+    } else {
+        build_local_tool_body(
+            backend,
+            request,
+            crate::content::messages("anthropic", &request.shared.messages)?,
+        )?
+    };
+    let mut body = json!({});
+    for key in [
+        "model",
+        "system",
+        "messages",
+        "tools",
+        "tool_choice",
+        "thinking",
+        "output_config",
+    ] {
+        if let Some(value) = generation.get(key) {
+            body[key] = value.clone();
+        }
+    }
+    Ok(body)
 }
 
 /// Reduces an Anthropic endpoint URL to a reusable base URL by trimming provider-specific message
@@ -962,12 +956,16 @@ struct AnthropicErrorBody {
 enum AnthropicStreamEvent {
     ContentBlockDelta {
         #[serde(default)]
+        index: u32,
+        #[serde(default)]
         delta: AnthropicTextDelta,
     },
     Error {
         error: AnthropicStreamErrorBody,
     },
     MessageDelta {
+        #[serde(default)]
+        delta: Value,
         #[serde(default)]
         usage: Option<Value>,
     },
@@ -976,9 +974,119 @@ enum AnthropicStreamEvent {
         message: Option<AnthropicStreamMessage>,
     },
     MessageStop {},
-    ContentBlockStart {},
-    ContentBlockStop {},
+    ContentBlockStart {
+        index: u32,
+        content_block: Value,
+    },
+    ContentBlockStop {
+        index: u32,
+    },
     Ping {},
+}
+
+#[derive(Default)]
+struct AnthropicStreamDecoder {
+    blocks: std::collections::BTreeMap<u32, Value>,
+    arguments: std::collections::BTreeMap<u32, String>,
+    stop: Option<super::StopReason>,
+}
+impl AnthropicStreamDecoder {
+    fn decode(
+        &mut self,
+        event: AnthropicStreamEvent,
+    ) -> Result<Vec<EngineTextStreamEvent>, EngineAdapterRequestError> {
+        let mut events = event
+            .token_usage()
+            .map(|usage| vec![EngineTextStreamEvent::TokenUsage { usage }])
+            .unwrap_or_default();
+        match event {
+            AnthropicStreamEvent::ContentBlockStart {
+                index,
+                content_block,
+            } => {
+                self.blocks.insert(index, content_block);
+            }
+            AnthropicStreamEvent::ContentBlockDelta { index, delta } => {
+                let (field, text, visible) = match delta.r#type.as_deref() {
+                    Some("text_delta") => ("text", delta.text, true),
+                    Some("thinking_delta") => ("thinking", delta.thinking, true),
+                    Some("signature_delta") => ("signature", delta.signature, false),
+                    Some("input_json_delta") => ("input", delta.partial_json, false),
+                    _ => return Ok(events),
+                };
+                if let Some(text) = text {
+                    if field == "input" {
+                        self.arguments.entry(index).or_default().push_str(&text);
+                    } else if let Some(block) = self.blocks.get_mut(&index) {
+                        let mut collected = block[field].as_str().unwrap_or_default().to_string();
+                        collected.push_str(&text);
+                        block[field] = json!(collected);
+                    }
+                    if visible && !text.is_empty() {
+                        events.push(if field == "thinking" {
+                            EngineTextStreamEvent::ReasoningDelta { text }
+                        } else {
+                            EngineTextStreamEvent::TextDelta { text }
+                        });
+                    }
+                }
+            }
+            AnthropicStreamEvent::ContentBlockStop { index } => {
+                if let Some(mut payload) = self.blocks.remove(&index) {
+                    if let Some(arguments) = self.arguments.remove(&index) {
+                        payload["input"] = serde_json::from_str(&arguments).map_err(|e| {
+                            EngineAdapterRequestError::invalid_response(
+                                "anthropic",
+                                format!("Malformed streamed tool arguments: {e}"),
+                            )
+                        })?;
+                    }
+                    events.push(EngineTextStreamEvent::ContentBlock {
+                        block: battersea_model::ContentBlock::Native {
+                            provider: "anthropic".into(),
+                            payload,
+                        },
+                    });
+                }
+            }
+            AnthropicStreamEvent::MessageDelta { delta, .. } => {
+                if let Some(reason) = delta["stop_reason"].as_str() {
+                    self.stop = Some(match reason {
+                        "end_turn" | "stop_sequence" => super::StopReason::Complete,
+                        "tool_use" => super::StopReason::ToolUse,
+                        "max_tokens" => super::StopReason::Length,
+                        "refusal" => super::StopReason::Refusal,
+                        other => super::StopReason::Other(other.into()),
+                    });
+                }
+            }
+            AnthropicStreamEvent::MessageStop {} => {
+                let reason = self.stop.take().ok_or_else(|| {
+                    EngineAdapterRequestError::invalid_response(
+                        "anthropic",
+                        "Message stopped without a reason.",
+                    )
+                })?;
+                if !self.blocks.is_empty() {
+                    return Err(EngineAdapterRequestError::invalid_response(
+                        "anthropic",
+                        "Message stopped with incomplete content blocks.",
+                    ));
+                }
+                events.push(EngineTextStreamEvent::MessageStop { reason });
+            }
+            AnthropicStreamEvent::Error { error } => {
+                return Err(EngineAdapterRequestError::invalid_response(
+                    "anthropic",
+                    error
+                        .message
+                        .unwrap_or_else(|| "Provider stream failed.".into()),
+                ))
+            }
+            _ => {}
+        }
+        Ok(events)
+    }
 }
 
 impl AnthropicStreamEvent {
@@ -999,7 +1107,7 @@ impl AnthropicStreamEvent {
     fn token_usage(&self) -> Option<EngineTokenUsage> {
         let value = match self {
             Self::MessageStart { message } => message.as_ref()?.usage.as_ref()?,
-            Self::MessageDelta { usage } => usage.as_ref()?,
+            Self::MessageDelta { usage, .. } => usage.as_ref()?,
             _ => return None,
         };
         parse_anthropic_usage(value)
@@ -1050,6 +1158,10 @@ struct AnthropicTextDelta {
     /// both and pick by `r#type`.
     #[serde(default)]
     thinking: Option<String>,
+    #[serde(default)]
+    signature: Option<String>,
+    #[serde(default)]
+    partial_json: Option<String>,
 }
 
 #[derive(Debug, Default, Deserialize, serde::Serialize)]
@@ -1090,6 +1202,7 @@ mod tests {
 
     fn budget_capabilities() -> EngineBackendCapabilities {
         EngineBackendCapabilities {
+            content: battersea_model::ContentCapabilities::text(),
             supported_chat_parameters: supported_parameters(&[
                 "stream",
                 "maxOutputTokens",
@@ -1156,6 +1269,7 @@ mod tests {
             supported.push("serviceTier".to_string());
         }
         EngineBackendCapabilities {
+            content: battersea_model::ContentCapabilities::text(),
             supported_chat_parameters: supported,
             supported_tool_execution_modes: vec!["engine-orchestrated".to_string()],
             supported_tool_choices: battersea_model::engine::EngineBackendCapabilities::mock()
@@ -1191,6 +1305,8 @@ mod tests {
             model: SAMPLE_MODEL.to_string(),
             display_order: None,
             chat: EngineChatParameters {
+                response_format: None,
+                output_modalities: None,
                 temperature: 0.2,
                 max_output_tokens: Some(512),
                 ..EngineChatParameters::default_for_provider("anthropic")
@@ -1200,6 +1316,8 @@ mod tests {
             options: EngineBackendOptions {
                 timeout_ms: Some(600_000),
                 max_retries: Some(2),
+                retry_initial_delay_ms: Some(1),
+                retry_max_delay_ms: Some(20),
                 stream_idle_timeout_ms: Some(180_000),
                 ..EngineBackendOptions::default()
             },
@@ -1233,6 +1351,8 @@ mod tests {
                     ),
                 ],
                 chat: EngineChatParameters {
+                    response_format: None,
+                    output_modalities: None,
                     temperature: 0.65,
                     max_output_tokens: Some(1400),
                     ..EngineChatParameters::default_for_provider("anthropic")
@@ -1515,7 +1635,7 @@ mod tests {
             Ok(_) => panic!("invalid header should fail"),
             Err(error) => error,
         };
-        assert_eq!(error.provider, "anthropic");
+        assert_eq!(&*error.provider, "anthropic");
         assert_eq!(error.classification.as_str(), "transport");
     }
 
@@ -1580,7 +1700,10 @@ mod tests {
         assert_eq!(body["temperature"], json!(0.65));
         assert_eq!(body["stream"], json!(true));
         assert_eq!(body["system"], json!("Stream a reply."));
-        assert_eq!(body["messages"][0]["content"], json!("Hello there"));
+        assert_eq!(
+            body["messages"][0]["content"][0]["text"],
+            json!("Hello there")
+        );
     }
 
     #[test]
@@ -1749,12 +1872,16 @@ mod tests {
 
     #[test]
     fn build_input_token_count_body_uses_messages_shape_without_streaming() {
-        let body = build_input_token_count_body(&sample_backend(), &sample_stream_request());
+        let body =
+            build_input_token_count_body(&sample_backend(), &sample_stream_request()).unwrap();
 
         assert_eq!(body["model"], json!(SAMPLE_MODEL));
         assert_eq!(body["system"], json!("Stream a reply."));
         assert_eq!(body["messages"][0]["role"], json!("user"));
-        assert_eq!(body["messages"][0]["content"], json!("Hello there"));
+        assert_eq!(
+            body["messages"][0]["content"][0]["text"],
+            json!("Hello there")
+        );
         assert!(body.get("stream").is_none());
         assert!(body.get("max_tokens").is_none());
     }
@@ -1800,7 +1927,7 @@ mod tests {
         assert_eq!(auth.classification.as_str(), "auth");
         assert_eq!(auth.status_code, Some(401));
         assert_eq!(auth.request_id.as_deref(), Some("req-auth"));
-        assert_eq!(auth.message, "bad key");
+        assert_eq!(&*auth.message, "bad key");
 
         assert_eq!(
             normalize_anthropic_http_error(429, None, Some("{}".to_string()))
@@ -1828,8 +1955,8 @@ mod tests {
         let malformed =
             normalize_anthropic_http_error(500, None, Some("not-json-at-all".to_string()));
 
-        assert_eq!(blank.message, "Anthropic request failed.");
-        assert_eq!(malformed.message, "Anthropic request failed.");
+        assert_eq!(&*blank.message, "Anthropic request failed.");
+        assert_eq!(&*malformed.message, "Anthropic request failed.");
     }
 
     #[test]
