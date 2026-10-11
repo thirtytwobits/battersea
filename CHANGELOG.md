@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.11.2 — 2026-10-11
+
+- Deliver provider events larger than the transport mailbox through bounded frames.
+  Tool results arrive intact and in order; partial assembly and complete borrowed
+  payloads remain charged to the node retention budget. Cancellation releases both.
+- Apply backpressure until the handler releases each complete provider event.
+
 ## 0.11.1 — 2026-10-10
 
 - Settle branches whose final-value input closes without a value, preserving independent completed outputs.

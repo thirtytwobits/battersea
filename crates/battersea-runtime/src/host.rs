@@ -1172,10 +1172,18 @@ pub trait ExecutionHost: Sized + Send + Sync {
             q.max_event_bytes as usize,
         )
         .map_err(|e| Self::Error::invalid_request(e.to_string()))?;
+        let pump = crate::payload_pump::PayloadPump::spawn(
+            source,
+            limits,
+            runtime.retention.clone(),
+            node_id.into(),
+            token,
+        )
+        .map_err(|error| Self::Error::invalid_request(error.to_string()))?;
         runtime.producers.insert(
             node_id.into(),
             crate::delivery::Producer {
-                pump: crate::pump::EventPump::spawn(source, limits, token),
+                pump,
                 phase,
                 _capacity: capacity,
             },

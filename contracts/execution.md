@@ -69,13 +69,18 @@ Every streaming mailbox declares positive item and byte capacities, a maximum it
 size, and a full-queue policy. Byte accounting covers the declared encoded payload
 size, including envelopes; it is not a process-RSS or allocator-overhead guarantee.
 Queued and delivered-but-still-borrowed payloads remain charged. Producers reserve
-capacity before polling another provider event. A receiver releases capacity only
-after handling or discarding that event.
+capacity before polling another transport frame. A receiver releases capacity after
+handling or discarding that frame. Provider payloads are fragmented and reassembled
+losslessly; frame capacity does not restrict the size of a tool result. Encoded
+payloads, partial assembly and borrowed complete events use the node retention budget.
+Only complete events reach handlers. The next logical event is polled after the
+previous delivery is released. Cancelling a receive future preserves partial assembly;
+cancelling the activation or dropping the pump releases it.
 
 `backpressure` suspends the producer, while the driver continues runnable consumers and
 cancellation. `drop_oldest` is allowed only on explicitly lossy streaming edges; every
 discard records its edge, sequence and byte count. Final-value, automation and signal
-delivery are lossless. An oversize event fails explicitly. M6.1 supplies finite limits;
+delivery are lossless. A payload that exceeds its retention budget fails explicitly. M6.1 supplies finite limits;
 an unbounded policy cannot satisfy its acceptance gate.
 
 Each activation also bounds pending deliveries and aggregate retained payload bytes.

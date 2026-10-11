@@ -26,6 +26,9 @@ before polling and retains reservations through handling. The driver applies tok
 custom data and failure events. Custom data reaches `receive_provider_event`;
 `provider_complete` can register a tool continuation. The pump cannot borrow graph state.
 Ready providers are selected fairly, and the event log records their selected order.
+Complete payloads travel through bounded frames and are reassembled before delivery.
+A tool result may exceed the mailbox capacity; its payload and assembly use the node
+retention budget. The next logical event waits until the previous delivery is released.
 
 A provider reserves its configured mailbox item and byte capacities from the activation
 budget for its lifetime. Edge deliveries, control events and retained application values

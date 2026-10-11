@@ -22,6 +22,10 @@ pub struct PumpLimits {
 }
 
 impl PumpLimits {
+    pub(crate) fn max_event_bytes(&self) -> usize {
+        self.max_event_bytes as usize
+    }
+
     pub fn new(items: usize, bytes: usize, max_event_bytes: usize) -> Result<Self, PumpError> {
         if items == 0
             || items > Semaphore::MAX_PERMITS
@@ -46,6 +50,7 @@ pub enum PumpError {
     InvalidLimits,
     PayloadTooLarge { limit: usize },
     Serialization(String),
+    Capacity(String),
     Cancelled,
     ProducerPanicked,
     ProducerStopped,
@@ -63,6 +68,9 @@ impl fmt::Display for PumpError {
             }
             Self::Serialization(message) => {
                 write!(formatter, "Cannot measure provider event: {message}")
+            }
+            Self::Capacity(message) => {
+                write!(formatter, "Provider payload retention failed: {message}")
             }
             Self::Cancelled => formatter.write_str("Event pump cancelled."),
             Self::ProducerPanicked => formatter.write_str("Provider event pump panicked."),
@@ -168,6 +176,10 @@ impl<T: Serialize + Send + 'static> EventPump<T> {
 }
 
 impl<T> EventPump<T> {
+    pub(crate) fn cancel(&self) {
+        self.cancellation.cancel();
+    }
+
     /// Receive the next charged delivery. Completion or failure follows all
     /// admitted events; cancellation instead discards queued events immediately.
     /// A terminal error is returned once, then subsequent calls return `None`.

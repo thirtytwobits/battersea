@@ -1,4 +1,4 @@
-use crate::{pump::EventPump, retention::Reservation, Retained, Token};
+use crate::{payload_pump::PayloadPump, retention::Reservation, Retained, Token};
 use battersea_flow::{FlowEdge, FlowPortPhase};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -36,7 +36,7 @@ pub(crate) struct ControlDelivery {
     pub _charge: Reservation,
 }
 pub(crate) struct Producer {
-    pub pump: EventPump<ProviderEvent>,
+    pub pump: PayloadPump<ProviderEvent>,
     pub phase: FlowPortPhase,
     // Reserve the mailbox's full capacity, including its borrowed delivery. This
     // keeps all provider mailboxes inside the activation's aggregate bound.

@@ -211,9 +211,73 @@ pub type battersea_runtime::durable::ExecutionCheckpoint::Output = T
 impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_runtime::durable::ExecutionCheckpoint where T: ?core::marker::Sized
 pub const battersea_runtime::durable::EXECUTION_CHECKPOINT_VERSION: u32
 pub fn battersea_runtime::durable::identity(state: &battersea_runtime::SchedulerState, configuration_revision: alloc::string::String) -> core::result::Result<battersea_runtime::RunIdentity, battersea_runtime::recovery::RecoveryError>
+pub mod battersea_runtime::payload_pump
+pub struct battersea_runtime::payload_pump::PayloadDelivery<T>
+impl<T> battersea_runtime::payload_pump::PayloadDelivery<T>
+pub fn battersea_runtime::payload_pump::PayloadDelivery<T>::encoded_bytes(&self) -> usize
+pub fn battersea_runtime::payload_pump::PayloadDelivery<T>::value(&self) -> &T
+impl<T> core::marker::Freeze for battersea_runtime::payload_pump::PayloadDelivery<T> where T: core::marker::Freeze
+impl<T> core::marker::Send for battersea_runtime::payload_pump::PayloadDelivery<T> where T: core::marker::Send
+impl<T> core::marker::Sync for battersea_runtime::payload_pump::PayloadDelivery<T> where T: core::marker::Sync
+impl<T> core::marker::Unpin for battersea_runtime::payload_pump::PayloadDelivery<T> where T: core::marker::Unpin
+impl<T> core::panic::unwind_safe::RefUnwindSafe for battersea_runtime::payload_pump::PayloadDelivery<T> where T: core::panic::unwind_safe::RefUnwindSafe
+impl<T> core::panic::unwind_safe::UnwindSafe for battersea_runtime::payload_pump::PayloadDelivery<T> where T: core::panic::unwind_safe::UnwindSafe
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_runtime::payload_pump::PayloadDelivery<T> where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_runtime::payload_pump::PayloadDelivery<T> where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<T, U> core::convert::Into<U> for battersea_runtime::payload_pump::PayloadDelivery<T> where U: core::convert::From<T>
+pub fn battersea_runtime::payload_pump::PayloadDelivery<T>::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_runtime::payload_pump::PayloadDelivery<T> where U: core::convert::Into<T>
+pub type battersea_runtime::payload_pump::PayloadDelivery<T>::Error = core::convert::Infallible
+pub fn battersea_runtime::payload_pump::PayloadDelivery<T>::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for battersea_runtime::payload_pump::PayloadDelivery<T> where U: core::convert::TryFrom<T>
+pub type battersea_runtime::payload_pump::PayloadDelivery<T>::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_runtime::payload_pump::PayloadDelivery<T>::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> core::any::Any for battersea_runtime::payload_pump::PayloadDelivery<T> where T: 'static + ?core::marker::Sized
+pub fn battersea_runtime::payload_pump::PayloadDelivery<T>::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_runtime::payload_pump::PayloadDelivery<T> where T: ?core::marker::Sized
+pub fn battersea_runtime::payload_pump::PayloadDelivery<T>::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_runtime::payload_pump::PayloadDelivery<T> where T: ?core::marker::Sized
+pub fn battersea_runtime::payload_pump::PayloadDelivery<T>::borrow_mut(&mut self) -> &mut T
+impl<T> core::convert::From<T> for battersea_runtime::payload_pump::PayloadDelivery<T>
+pub fn battersea_runtime::payload_pump::PayloadDelivery<T>::from(t: T) -> T
+impl<T> typenum::type_operators::Same for battersea_runtime::payload_pump::PayloadDelivery<T>
+pub type battersea_runtime::payload_pump::PayloadDelivery<T>::Output = T
+impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_runtime::payload_pump::PayloadDelivery<T> where T: ?core::marker::Sized
+pub struct battersea_runtime::payload_pump::PayloadPump<T>
+impl<T: serde_core::ser::Serialize + serde_core::de::DeserializeOwned + core::marker::Send + 'static> battersea_runtime::payload_pump::PayloadPump<T>
+pub async fn battersea_runtime::payload_pump::PayloadPump<T>::next(&mut self) -> core::result::Result<core::option::Option<battersea_runtime::payload_pump::PayloadDelivery<T>>, battersea_runtime::pump::PumpError>
+pub fn battersea_runtime::payload_pump::PayloadPump<T>::spawn(source: impl futures_core::stream::Stream<Item = T> + core::marker::Send + 'static, limits: battersea_runtime::pump::PumpLimits, budget: battersea_runtime::retention::RetentionBudget, node: alloc::string::String, cancellation: tokio_util::sync::cancellation_token::CancellationToken) -> core::result::Result<Self, battersea_runtime::pump::PumpError>
+impl<T> core::marker::Freeze for battersea_runtime::payload_pump::PayloadPump<T>
+impl<T> core::marker::Send for battersea_runtime::payload_pump::PayloadPump<T> where T: core::marker::Send
+impl<T> core::marker::Sync for battersea_runtime::payload_pump::PayloadPump<T> where T: core::marker::Sync
+impl<T> core::marker::Unpin for battersea_runtime::payload_pump::PayloadPump<T> where T: core::marker::Unpin
+impl<T> core::panic::unwind_safe::RefUnwindSafe for battersea_runtime::payload_pump::PayloadPump<T> where T: core::panic::unwind_safe::RefUnwindSafe
+impl<T> core::panic::unwind_safe::UnwindSafe for battersea_runtime::payload_pump::PayloadPump<T> where T: core::panic::unwind_safe::UnwindSafe
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_runtime::payload_pump::PayloadPump<T> where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_runtime::payload_pump::PayloadPump<T> where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<T, U> core::convert::Into<U> for battersea_runtime::payload_pump::PayloadPump<T> where U: core::convert::From<T>
+pub fn battersea_runtime::payload_pump::PayloadPump<T>::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_runtime::payload_pump::PayloadPump<T> where U: core::convert::Into<T>
+pub type battersea_runtime::payload_pump::PayloadPump<T>::Error = core::convert::Infallible
+pub fn battersea_runtime::payload_pump::PayloadPump<T>::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for battersea_runtime::payload_pump::PayloadPump<T> where U: core::convert::TryFrom<T>
+pub type battersea_runtime::payload_pump::PayloadPump<T>::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_runtime::payload_pump::PayloadPump<T>::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> core::any::Any for battersea_runtime::payload_pump::PayloadPump<T> where T: 'static + ?core::marker::Sized
+pub fn battersea_runtime::payload_pump::PayloadPump<T>::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_runtime::payload_pump::PayloadPump<T> where T: ?core::marker::Sized
+pub fn battersea_runtime::payload_pump::PayloadPump<T>::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_runtime::payload_pump::PayloadPump<T> where T: ?core::marker::Sized
+pub fn battersea_runtime::payload_pump::PayloadPump<T>::borrow_mut(&mut self) -> &mut T
+impl<T> core::convert::From<T> for battersea_runtime::payload_pump::PayloadPump<T>
+pub fn battersea_runtime::payload_pump::PayloadPump<T>::from(t: T) -> T
+impl<T> typenum::type_operators::Same for battersea_runtime::payload_pump::PayloadPump<T>
+pub type battersea_runtime::payload_pump::PayloadPump<T>::Output = T
+impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_runtime::payload_pump::PayloadPump<T> where T: ?core::marker::Sized
 pub mod battersea_runtime::pump
 pub enum battersea_runtime::pump::PumpError
 pub battersea_runtime::pump::PumpError::Cancelled
+pub battersea_runtime::pump::PumpError::Capacity(alloc::string::String)
 pub battersea_runtime::pump::PumpError::InvalidLimits
 pub battersea_runtime::pump::PumpError::PayloadTooLarge
 pub battersea_runtime::pump::PumpError::PayloadTooLarge::limit: usize
