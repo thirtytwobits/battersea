@@ -3,7 +3,7 @@ members = ["crates/battersea-derive", "crates/battersea-telemetry", "crates/batt
 resolver = "2"
 
 [workspace.package]
-version = "0.11.0"
+version = "0.11.1"
 edition = "2021"
 rust-version = "1.85"
 license = "MIT"

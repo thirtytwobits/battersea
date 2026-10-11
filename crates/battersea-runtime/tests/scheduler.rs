@@ -461,7 +461,7 @@ fn fixture(nodes: Vec<Value>, edges: Vec<Value>, mode: &str) -> (Host, Run) {
     let definitions=[
         json!({"class_name":"Source","kind":"source","short_description":"source","long_description":"source","handler_id":"test.node","interfaces":["IFlowNodeActivate"],"output_ports":[{"name":"out","kind":"output","token_type":"text","mode":mode,"phase":"execution"}],"signal_ports":[{"name":"done"}],"action_ports":[{"name":"disable"}]}),
         json!({"class_name":"Sink","kind":"sink","short_description":"sink","long_description":"sink","handler_id":"test.node","input_ports":[{"name":"in","kind":"input","token_type":"text","mode":mode,"phase":"execution"}],"action_ports":[{"name":"go"},{"name":"back"}],"signal_ports":[{"name":"done"}]}),
-        json!({"class_name":"Join","kind":"inline","short_description":"join","long_description":"join","handler_id":"test.node","input_ports":[{"name":"in","kind":"input","token_type":"text","mode":mode,"phase":"execution"},{"name":"unused","kind":"input","token_type":"text","mode":"final_value","phase":"execution"}]}),
+        json!({"class_name":"Join","kind":"inline","short_description":"join","long_description":"join","handler_id":"test.node","output_ports":[{"name":"out","kind":"output","token_type":"text","mode":mode,"phase":"execution"}],"signal_ports":[{"name":"done"},{"name":"post_activate"}],"input_ports":[{"name":"in","kind":"input","token_type":"text","mode":mode,"phase":"execution"},{"name":"unused","kind":"input","token_type":"text","mode":"final_value","phase":"execution"}]}),
         json!({"class_name":"Action","kind":"control","short_description":"action","long_description":"action","handler_id":"test.node","action_ports":[{"name":"go"},{"name":"back"}],"signal_ports":[{"name":"done"}]}),
     ].into_iter().map(|v| {let d:FlowNodeDefinition=serde_json::from_value(v).unwrap();(d.class_name.clone(),d)}).collect();
     let sources = nodes
@@ -1309,10 +1309,33 @@ async fn every_driver_publication_boundary_stops_or_resumes_without_repeating_ef
     let make = || {
         fixture(
             vec![
-                node("source", "Source", json!({"values":["retained"]})),
+                node(
+                    "source",
+                    "Source",
+                    json!({"values":["retained"], "start_peer":"optional-source"}),
+                ),
+                node("optional-source", "Source", json!({})),
+                node("optional-join", "Join", json!({})),
+                node("optional-sink", "Sink", json!({})),
                 node("sink", "Sink", json!({})),
             ],
-            vec![edge("output", "source", "sink", 0, "final_value")],
+            vec![
+                edge("output", "source", "sink", 0, "final_value"),
+                edge(
+                    "optional-input",
+                    "optional-source",
+                    "optional-join",
+                    0,
+                    "final_value",
+                ),
+                edge(
+                    "optional-output",
+                    "optional-join",
+                    "optional-sink",
+                    0,
+                    "final_value",
+                ),
+            ],
             "final_value",
         )
     };
@@ -1405,4 +1428,97 @@ async fn incompatible_handler_state_is_rejected_without_dispatch_or_publication(
         before
     );
     assert!(original.calls.is_empty());
+}
+
+#[tokio::test]
+async fn absent_final_values_settle_branches_without_discarding_independent_results() {
+    for pumped in [false, true] {
+        let response = json!("retained response");
+        let mut other_input = edge("other", "response", "join", 1, "final_value");
+        other_input["target_port"] = json!("unused");
+        let (host, mut state) = fixture(
+            vec![
+                node(
+                    "source",
+                    "Source",
+                    json!({"values": [], "pump": pumped, "start_peer": "response"}),
+                ),
+                node("response", "Source", json!({"values": [response]})),
+                node("optional", "Join", json!({})),
+                node("join", "Join", json!({})),
+                node("empty-sink", "Sink", json!({})),
+                node("response-sink", "Sink", json!({})),
+            ],
+            vec![
+                edge("absent", "source", "optional", 0, "final_value"),
+                edge("propagated", "optional", "join", 0, "final_value"),
+                other_input,
+                edge("empty", "join", "empty-sink", 0, "final_value"),
+                edge("result", "response", "response-sink", 0, "final_value"),
+            ],
+            "final_value",
+        );
+        run(&host, &mut state)
+            .await
+            .expect("absence is successful closure, not a stuck flow");
+        assert_eq!(state.seen, vec![("response-sink".into(), response)]);
+        for id in ["optional", "join", "empty-sink"] {
+            assert!(
+                !state.calls.iter().any(|called| called == id),
+                "no handler may receive an invented value"
+            );
+            assert!(
+                state.executed_nodes.contains(id),
+                "absence must settle downstream branches"
+            );
+        }
+        for id in ["optional", "join"] {
+            assert!(state
+                .signal_sources_settled
+                .contains(&(id.into(), "done".into())));
+            assert!(state
+                .signal_sources_settled
+                .contains(&(id.into(), "post_activate".into())));
+        }
+        assert!(state.input_tokens.is_empty());
+        assert_eq!(state.retention.usage(), retention::Usage::default());
+        let events = host.events.lock().unwrap();
+        let skipped = events
+            .iter()
+            .filter(|event| event.kind == EventKind::NodeSkipped)
+            .map(|event| event.node_id.as_str())
+            .collect::<HashSet<_>>();
+        assert_eq!(skipped, HashSet::from(["optional", "join"]));
+        assert!(!events
+            .iter()
+            .any(|event| event.kind == EventKind::SignalEmit
+                && skipped.contains(event.node_id.as_str())));
+    }
+}
+
+#[tokio::test]
+async fn an_unresolved_dependency_cycle_still_fails_instead_of_becoming_an_absent_branch() {
+    let (host, mut state) = fixture(
+        vec![
+            node("source", "Source", json!({})),
+            node("left", "Join", json!({})),
+            node("right", "Join", json!({})),
+        ],
+        vec![
+            edge("left-right", "left", "right", 0, "final_value"),
+            edge("right-left", "right", "left", 0, "final_value"),
+        ],
+        "final_value",
+    );
+    let error = run(&host, &mut state)
+        .await
+        .expect_err("an open dependency is not an absent final value");
+    assert_eq!(error.code(), "invalid_request");
+    assert!(error.message().contains("unsatisfied inputs"));
+    assert!(!host
+        .events
+        .lock()
+        .unwrap()
+        .iter()
+        .any(|event| event.kind == EventKind::NodeSkipped));
 }

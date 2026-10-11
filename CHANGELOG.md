@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.11.1 — 2026-10-10
+
+- Settle branches whose final-value input closes without a value, preserving independent completed outputs.
+- Propagate successful absence through joins and sinks without invoking handlers or emitting activation signals.
+- Preserve unresolved-dependency errors and checkpoint recovery across absence propagation.
+
 ## 0.11.0 — 2026-10-10
 
 - Parse and export versioned flow source with lossless graph, execution policy and editor layout round trips.

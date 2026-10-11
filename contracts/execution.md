@@ -43,6 +43,11 @@ Port mode is separate from nominal token type:
 
 - A final-value output publishes at most one value per activation. A final-value input
   retains that value until its node fires. Multiple values fail the activation.
+  Successful closure without a value settles that input as absent. A node requiring
+  that value does not execute: its execution outputs close without values and its signals
+  settle false. Absence propagates through dependent branches; independent branches
+  still complete. A sink's final-value dependency settles on delivery or successful closure.
+  An input whose producer has not closed remains unresolved and cannot be treated as absent.
 - A streaming output publishes zero or more deltas followed by successful closure or
   failure. A streaming input processes each delta once through its receive hook and
   releases the delivery afterwards. It does not also retain a copy for final execution.

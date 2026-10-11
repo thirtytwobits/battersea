@@ -775,6 +775,66 @@ pub trait ExecutionHost: Sized + Send + Sync {
                 self.next_provider_event(runtime, token).await?;
                 continue;
             }
+            // A final-value output may close without publishing. Its consumers
+            // cannot fire, but this is settled absence rather than deadlock.
+            // Settle one branch at a time, then drain its closures and signals.
+            let mut absent = Vec::new();
+            for node in &runtime.flow.nodes {
+                let Some(definition) = node_definition(&runtime.definitions, node) else {
+                    continue;
+                };
+                if !matches!(
+                    definition.kind,
+                    FlowNodeClass::Inline | FlowNodeClass::Hybrid | FlowNodeClass::Instrument
+                ) || runtime.started_nodes.contains(&node.id)
+                    || runtime.executed_nodes.contains(&node.id)
+                {
+                    continue;
+                }
+                let ports = expanded_input_ports_for_node(&runtime.definitions, node)
+                    .map_err(Self::Error::internal)?;
+                let missing = self
+                    .connected_input_ports(runtime, &node.id)
+                    .into_iter()
+                    .filter(|name| {
+                        let key = (node.id.clone(), name.clone());
+                        ports.iter().any(|port| {
+                            port.name == *name
+                                && port.mode == FlowPortMode::FinalValue
+                                && port.phase == FlowPortPhase::Execution
+                        }) && runtime.closed_inputs.contains(&key)
+                            && !runtime.received_final_inputs.contains(&key)
+                    })
+                    .collect::<Vec<_>>();
+                if !missing.is_empty() {
+                    absent.push((node.clone(), missing));
+                }
+            }
+            absent.sort_by(|(left, _), (right, _)| left.id.cmp(&right.id));
+            if let Some((node, missing)) = absent.into_iter().next() {
+                crate::durable::begin::<Self>(runtime, &node.id, "settle_absent_inputs")?;
+                runtime.executed_nodes.insert(node.id.clone());
+                self.discard_queued_input_tokens_for_node(runtime, &node.id);
+                for port in expanded_output_ports_for_node(&runtime.definitions, &node)
+                    .map_err(Self::Error::internal)?
+                {
+                    if port.phase == FlowPortPhase::Execution {
+                        self.close_flow_output(runtime, &node.id, &port.name)
+                            .await?;
+                    }
+                }
+                self.mark_node_signal_ports_settled_except(runtime, &node, &[])?;
+                self.publish_execution_record(
+                    runtime,
+                    &node.id,
+                    EventKind::NodeSkipped,
+                    "Input closed without a final value.".into(),
+                    Some(json!({"reason":"absent_final_value", "ports":missing})),
+                )
+                .await;
+                crate::durable::finish(self, runtime)?;
+                continue;
+            }
             let blocked = runtime
                 .flow
                 .nodes
@@ -1323,6 +1383,7 @@ pub trait ExecutionHost: Sized + Send + Sync {
                     runtime.closed_inputs.contains(&key)
                 } else {
                     runtime.received_final_inputs.contains(&key)
+                        || runtime.closed_inputs.contains(&key)
                 }
             });
         if ready {
