@@ -251,6 +251,7 @@ export type FlowSignalPortDefinition = {
     "short_description"?: string;
 };
 export type FlowValidationIssue = {
+    "code": string;
     "edge_id"?: string;
     "message": string;
     "node_id"?: string;

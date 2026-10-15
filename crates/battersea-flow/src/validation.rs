@@ -1,5 +1,6 @@
 //! Copyright (c) Scott A Dixon
 
+use crate::issue_codes as codes;
 use crate::registry::Registry;
 use crate::{
     FlowDocument, FlowEdgeKind, FlowNode, FlowParameterDefinition, FlowParameterEditorKind,
@@ -19,6 +20,8 @@ use super::ports::{
 };
 
 /// Validate generic graph invariants and then the host's registered graph rules.
+///
+/// Generic issues carry codes from [`crate::issue_codes`]; host issues carry the host's codes.
 pub fn validate_document(
     flow: &FlowDocument,
     definitions: &HashMap<String, crate::FlowNodeDefinition>,
@@ -27,20 +30,18 @@ pub fn validate_document(
     if flow.version != crate::document::FLOW_DOCUMENT_VERSION {
         return FlowValidationResult {
             valid: false,
-            issues: vec![FlowValidationIssue {
-                message: format!("Unsupported flow document version {}", flow.version),
-                node_id: None,
-                edge_id: None,
-            }],
+            issues: vec![FlowValidationIssue::new(
+                codes::UNSUPPORTED_DOCUMENT_VERSION,
+                format!("Unsupported flow document version {}", flow.version),
+            )],
         };
     }
     let mut issues = Vec::new();
     if let Err(message) = crate::execution::validate_execution_contract(flow, definitions) {
-        issues.push(FlowValidationIssue {
+        issues.push(FlowValidationIssue::new(
+            codes::INVALID_EXECUTION_CONTRACT,
             message,
-            node_id: None,
-            edge_id: None,
-        });
+        ));
     }
     let mut node_ids = HashSet::new();
     let mut edge_ids = HashSet::new();
@@ -100,11 +101,10 @@ pub fn validate_document(
     }
 
     if visited != flow.nodes.len() {
-        issues.push(FlowValidationIssue {
-            message: "Flow graph must be acyclic.".to_string(),
-            node_id: None,
-            edge_id: None,
-        });
+        issues.push(FlowValidationIssue::new(
+            codes::GRAPH_CYCLE,
+            "Flow graph must be acyclic.",
+        ));
     }
 
     issues.extend(registry.validate_graph(flow, definitions));
@@ -128,45 +128,43 @@ fn validate_node(
     node_ids: &mut HashSet<String>,
     issues: &mut Vec<FlowValidationIssue>,
 ) {
+    let issue = |code: &str, message: String| {
+        FlowValidationIssue::new(code, message).with_node_id(&node.id)
+    };
     if node.id.trim().is_empty() {
-        issues.push(FlowValidationIssue {
-            message: "Flow nodes must have a non-empty id.".to_string(),
-            node_id: Some(node.id.clone()),
-            edge_id: None,
-        });
+        issues.push(issue(
+            codes::BLANK_NODE_ID,
+            "Flow nodes must have a non-empty id.".to_string(),
+        ));
     }
     if !node_ids.insert(node.id.clone()) {
-        issues.push(FlowValidationIssue {
-            message: format!("Duplicate node id \"{}\".", node.id),
-            node_id: Some(node.id.clone()),
-            edge_id: None,
-        });
+        issues.push(issue(
+            codes::DUPLICATE_NODE_ID,
+            format!("Duplicate node id \"{}\".", node.id),
+        ));
     }
     if node.definition_name.trim().is_empty() {
-        issues.push(FlowValidationIssue {
-            message: "Flow nodes must have a non-empty definition_name.".to_string(),
-            node_id: Some(node.id.clone()),
-            edge_id: None,
-        });
+        issues.push(issue(
+            codes::BLANK_DEFINITION_NAME,
+            "Flow nodes must have a non-empty definition_name.".to_string(),
+        ));
         return;
     }
     if node.instance_name.trim().is_empty() {
-        issues.push(FlowValidationIssue {
-            message: "Flow nodes must have a non-empty instance_name.".to_string(),
-            node_id: Some(node.id.clone()),
-            edge_id: None,
-        });
+        issues.push(issue(
+            codes::BLANK_INSTANCE_NAME,
+            "Flow nodes must have a non-empty instance_name.".to_string(),
+        ));
     }
 
     let Some(definition) = node_definition(definitions, node) else {
-        issues.push(FlowValidationIssue {
-            message: format!(
+        issues.push(issue(
+            codes::UNKNOWN_DEFINITION,
+            format!(
                 "Flow node \"{}\" references unknown definition \"{}\".",
                 node.id, node.definition_name
             ),
-            node_id: Some(node.id.clone()),
-            edge_id: None,
-        });
+        ));
         return;
     };
 
@@ -177,42 +175,31 @@ fn validate_node(
         .collect::<HashMap<_, _>>();
     for (parameter_name, value) in &node.parameter_values {
         let Some(parameter) = known_parameters.get(parameter_name.as_str()) else {
-            issues.push(FlowValidationIssue {
-                message: format!(
+            issues.push(issue(
+                codes::UNKNOWN_PARAMETER,
+                format!(
                     "Flow node \"{}\" references unknown parameter \"{}\".",
                     node.id, parameter_name
                 ),
-                node_id: Some(node.id.clone()),
-                edge_id: None,
-            });
+            ));
             continue;
         };
         if let Some(message) = validate_parameter_value(parameter, value, registry) {
-            issues.push(FlowValidationIssue {
-                message: format!(
+            issues.push(issue(
+                codes::INVALID_PARAMETER_VALUE,
+                format!(
                     "Flow node \"{}\" parameter \"{}\" is invalid: {}",
                     node.id, parameter_name, message
                 ),
-                node_id: Some(node.id.clone()),
-                edge_id: None,
-            });
+            ));
         }
     }
     validate_port_parameter_values(node, definition, definitions, registry, issues);
 
-    if let Err(message) = expand_ports(node, definition, true) {
-        issues.push(FlowValidationIssue {
-            message,
-            node_id: Some(node.id.clone()),
-            edge_id: None,
-        });
-    }
-    if let Err(message) = expand_ports(node, definition, false) {
-        issues.push(FlowValidationIssue {
-            message,
-            node_id: Some(node.id.clone()),
-            edge_id: None,
-        });
+    for input in [true, false] {
+        if let Err(message) = expand_ports(node, definition, input) {
+            issues.push(issue(codes::INVALID_DYNAMIC_PORTS, message));
+        }
     }
 
     validate_addressable_port_ids(node, definitions, issues);
@@ -253,14 +240,16 @@ fn validate_port_parameter_values(
 
         for (port_name, parameter_values) in values_by_port {
             let Some(port) = ports_by_name.get(port_name.as_str()) else {
-                issues.push(FlowValidationIssue {
-                    message: format!(
-                        "Flow node \"{}\" references unknown {} port \"{}\" in port_parameter_values.",
-                        node.id, side_label, port_name
-                    ),
-                    node_id: Some(node.id.clone()),
-                    edge_id: None,
-                });
+                issues.push(
+                    FlowValidationIssue::new(
+                        codes::PORT_PARAMETERS_FOR_UNKNOWN_PORT,
+                        format!(
+                            "Flow node \"{}\" references unknown {} port \"{}\" in port_parameter_values.",
+                            node.id, side_label, port_name
+                        ),
+                    )
+                    .with_node_id(&node.id),
+                );
                 continue;
             };
 
@@ -271,25 +260,29 @@ fn validate_port_parameter_values(
                 .collect::<HashMap<_, _>>();
             for (parameter_name, value) in parameter_values {
                 let Some(parameter) = parameters_by_name.get(parameter_name.as_str()) else {
-                    issues.push(FlowValidationIssue {
-                        message: format!(
-                            "Flow node \"{}\" {} port \"{}\" references unknown parameter \"{}\".",
-                            node.id, side_label, port_name, parameter_name
-                        ),
-                        node_id: Some(node.id.clone()),
-                        edge_id: None,
-                    });
+                    issues.push(
+                        FlowValidationIssue::new(
+                            codes::UNKNOWN_PORT_PARAMETER,
+                            format!(
+                                "Flow node \"{}\" {} port \"{}\" references unknown parameter \"{}\".",
+                                node.id, side_label, port_name, parameter_name
+                            ),
+                        )
+                        .with_node_id(&node.id),
+                    );
                     continue;
                 };
                 if let Some(message) = validate_parameter_value(parameter, value, registry) {
-                    issues.push(FlowValidationIssue {
-                        message: format!(
-                            "Flow node \"{}\" {} port \"{}\" parameter \"{}\" is invalid: {}",
-                            node.id, side_label, port_name, parameter_name, message
-                        ),
-                        node_id: Some(node.id.clone()),
-                        edge_id: None,
-                    });
+                    issues.push(
+                        FlowValidationIssue::new(
+                            codes::INVALID_PORT_PARAMETER_VALUE,
+                            format!(
+                                "Flow node \"{}\" {} port \"{}\" parameter \"{}\" is invalid: {}",
+                                node.id, side_label, port_name, parameter_name, message
+                            ),
+                        )
+                        .with_node_id(&node.id),
+                    );
                 }
             }
         }
@@ -324,14 +317,16 @@ fn validate_addressable_port_ids(
     for (side_label, ports) in side_sets {
         for port in ports.into_iter().flatten() {
             if let Some(existing_side) = seen_sides.insert(port.id.clone(), side_label) {
-                issues.push(FlowValidationIssue {
-                    message: format!(
-                        "Flow node \"{}\" reuses canonical port id \"{}\" across the {} and {} sides.",
-                        node.id, port.id, existing_side, side_label
-                    ),
-                    node_id: Some(node.id.clone()),
-                    edge_id: None,
-                });
+                issues.push(
+                    FlowValidationIssue::new(
+                        codes::DUPLICATE_PORT_ID,
+                        format!(
+                            "Flow node \"{}\" reuses canonical port id \"{}\" across the {} and {} sides.",
+                            node.id, port.id, existing_side, side_label
+                        ),
+                    )
+                    .with_node_id(&node.id),
+                );
             }
         }
     }
@@ -393,11 +388,10 @@ fn validate_port_aliases(
         let ports = match ports_result {
             Ok(ports) => ports,
             Err(message) => {
-                issues.push(FlowValidationIssue {
-                    message,
-                    node_id: Some(node.id.clone()),
-                    edge_id: None,
-                });
+                issues.push(
+                    FlowValidationIssue::new(codes::INVALID_DYNAMIC_PORTS, message)
+                        .with_node_id(&node.id),
+                );
                 continue;
             }
         };
@@ -429,41 +423,41 @@ fn validate_port_alias_side(
         .collect::<HashSet<_>>();
     let mut seen_aliases = HashSet::<String>::new();
 
+    let issue = |code: &str, message: String| {
+        FlowValidationIssue::new(code, message).with_node_id(&node.id)
+    };
     for (port_id, alias) in aliases {
         if !known_port_ids.contains(port_id.as_str()) {
-            issues.push(FlowValidationIssue {
-                message: format!(
+            issues.push(issue(
+                codes::ALIAS_FOR_UNKNOWN_PORT,
+                format!(
                     "Flow node \"{}\" aliases unknown {} port \"{}\".",
                     node.id, side_label, port_id
                 ),
-                node_id: Some(node.id.clone()),
-                edge_id: None,
-            });
+            ));
             continue;
         }
 
         let trimmed = alias.trim();
         if trimmed.is_empty() {
-            issues.push(FlowValidationIssue {
-                message: format!(
+            issues.push(issue(
+                codes::BLANK_PORT_ALIAS,
+                format!(
                     "Flow node \"{}\" alias for {} port \"{}\" must not be blank.",
                     node.id, side_label, port_id
                 ),
-                node_id: Some(node.id.clone()),
-                edge_id: None,
-            });
+            ));
             continue;
         }
 
         if !seen_aliases.insert(trimmed.to_string()) {
-            issues.push(FlowValidationIssue {
-                message: format!(
+            issues.push(issue(
+                codes::DUPLICATE_PORT_ALIAS,
+                format!(
                     "Flow node \"{}\" declares duplicate {} port alias \"{}\".",
                     node.id, side_label, trimmed
                 ),
-                node_id: Some(node.id.clone()),
-                edge_id: None,
-            });
+            ));
         }
     }
 }
@@ -489,89 +483,79 @@ fn validate_edge(
     signal_sources: &mut HashSet<(String, String)>,
     action_targets: &mut HashSet<(String, String)>,
 ) {
+    let issue = |code: &str, message: String| {
+        FlowValidationIssue::new(code, message).with_edge_id(&edge.id)
+    };
     if edge.id.trim().is_empty() {
-        issues.push(FlowValidationIssue {
-            message: "Flow edges must have a non-empty id.".to_string(),
-            node_id: None,
-            edge_id: Some(edge.id.clone()),
-        });
+        issues.push(issue(
+            codes::BLANK_EDGE_ID,
+            "Flow edges must have a non-empty id.".to_string(),
+        ));
     }
     if !edge_ids.insert(edge.id.clone()) {
-        issues.push(FlowValidationIssue {
-            message: format!("Duplicate edge id \"{}\".", edge.id),
-            node_id: None,
-            edge_id: Some(edge.id.clone()),
-        });
+        issues.push(issue(
+            codes::DUPLICATE_EDGE_ID,
+            format!("Duplicate edge id \"{}\".", edge.id),
+        ));
     }
 
     let source_node = nodes_by_id.get(edge.source_node_id.as_str()).copied();
     let target_node = nodes_by_id.get(edge.target_node_id.as_str()).copied();
     let Some(source_node) = source_node else {
-        issues.push(FlowValidationIssue {
-            message: format!(
+        issues.push(issue(
+            codes::UNKNOWN_SOURCE_NODE,
+            format!(
                 "Flow edge \"{}\" references unknown source node \"{}\".",
                 edge.id, edge.source_node_id
             ),
-            node_id: None,
-            edge_id: Some(edge.id.clone()),
-        });
+        ));
         return;
     };
     let Some(target_node) = target_node else {
-        issues.push(FlowValidationIssue {
-            message: format!(
+        issues.push(issue(
+            codes::UNKNOWN_TARGET_NODE,
+            format!(
                 "Flow edge \"{}\" references unknown target node \"{}\".",
                 edge.id, edge.target_node_id
             ),
-            node_id: None,
-            edge_id: Some(edge.id.clone()),
-        });
+        ));
         return;
+    };
+    let unknown_definition = |node: &FlowNode| {
+        issue(
+            codes::UNKNOWN_DEFINITION,
+            format!(
+                "Flow node \"{}\" references unknown definition \"{}\".",
+                node.id, node.definition_name
+            ),
+        )
+        .with_node_id(&node.id)
+    };
+    let invalid_dynamic_ports = |node: &FlowNode, message: String| {
+        issue(codes::INVALID_DYNAMIC_PORTS, message).with_node_id(&node.id)
     };
 
     match edge.kind {
         FlowEdgeKind::Token => {
             let Some(source_definition) = node_definition(definitions, source_node) else {
-                issues.push(FlowValidationIssue {
-                    message: format!(
-                        "Flow node \"{}\" references unknown definition \"{}\".",
-                        source_node.id, source_node.definition_name
-                    ),
-                    node_id: Some(source_node.id.clone()),
-                    edge_id: Some(edge.id.clone()),
-                });
+                issues.push(unknown_definition(source_node));
                 return;
             };
             let Some(target_definition) = node_definition(definitions, target_node) else {
-                issues.push(FlowValidationIssue {
-                    message: format!(
-                        "Flow node \"{}\" references unknown definition \"{}\".",
-                        target_node.id, target_node.definition_name
-                    ),
-                    node_id: Some(target_node.id.clone()),
-                    edge_id: Some(edge.id.clone()),
-                });
+                issues.push(unknown_definition(target_node));
                 return;
             };
             let source_ports = match expanded_output_ports_for_node(definitions, source_node) {
                 Ok(ports) => ports,
                 Err(message) => {
-                    issues.push(FlowValidationIssue {
-                        message,
-                        node_id: Some(source_node.id.clone()),
-                        edge_id: Some(edge.id.clone()),
-                    });
+                    issues.push(invalid_dynamic_ports(source_node, message));
                     return;
                 }
             };
             let target_input_ports = match expanded_input_ports_for_node(definitions, target_node) {
                 Ok(ports) => ports,
                 Err(message) => {
-                    issues.push(FlowValidationIssue {
-                        message,
-                        node_id: Some(target_node.id.clone()),
-                        edge_id: Some(edge.id.clone()),
-                    });
+                    issues.push(invalid_dynamic_ports(target_node, message));
                     return;
                 }
             };
@@ -579,11 +563,7 @@ fn validate_edge(
                 match expanded_automation_ports_for_node(definitions, target_node) {
                     Ok(ports) => ports,
                     Err(message) => {
-                        issues.push(FlowValidationIssue {
-                            message,
-                            node_id: Some(target_node.id.clone()),
-                            edge_id: Some(edge.id.clone()),
-                        });
+                        issues.push(invalid_dynamic_ports(target_node, message));
                         return;
                     }
                 };
@@ -592,14 +572,16 @@ fn validate_edge(
                 .iter()
                 .find(|port| port.name == edge.source_port)
             else {
-                issues.push(FlowValidationIssue {
-                    message: format!(
-                        "Flow edge \"{}\" references unknown source port \"{}\" on node \"{}\".",
-                        edge.id, edge.source_port, edge.source_node_id
-                    ),
-                    node_id: Some(edge.source_node_id.clone()),
-                    edge_id: Some(edge.id.clone()),
-                });
+                issues.push(
+                    issue(
+                        codes::UNKNOWN_SOURCE_PORT,
+                        format!(
+                            "Flow edge \"{}\" references unknown source port \"{}\" on node \"{}\".",
+                            edge.id, edge.source_port, edge.source_node_id
+                        ),
+                    )
+                    .with_node_id(&edge.source_node_id),
+                );
                 return;
             };
             // Token edges may target either a regular input port or an
@@ -613,36 +595,42 @@ fn validate_edge(
                 .iter()
                 .find(|port| port.name == edge.target_port);
             if target_input_port.is_none() && target_automation_port.is_none() {
-                issues.push(FlowValidationIssue {
-                    message: format!(
-                        "Flow edge \"{}\" references unknown target port \"{}\" on node \"{}\".",
-                        edge.id, edge.target_port, edge.target_node_id
-                    ),
-                    node_id: Some(edge.target_node_id.clone()),
-                    edge_id: Some(edge.id.clone()),
-                });
+                issues.push(
+                    issue(
+                        codes::UNKNOWN_TARGET_PORT,
+                        format!(
+                            "Flow edge \"{}\" references unknown target port \"{}\" on node \"{}\".",
+                            edge.id, edge.target_port, edge.target_node_id
+                        ),
+                    )
+                    .with_node_id(&edge.target_node_id),
+                );
                 return;
             }
 
-            if source_port.kind != FlowPortKind::Output {
-                issues.push(FlowValidationIssue {
-                    message: format!(
+            let misdirected = || {
+                issue(
+                    codes::MISDIRECTED_TOKEN_EDGE,
+                    format!(
                         "Flow edge \"{}\" must connect an output port to an input or automation port.",
                         edge.id
                     ),
-                    node_id: None,
-                    edge_id: Some(edge.id.clone()),
-                });
+                )
+            };
+            if source_port.kind != FlowPortKind::Output {
+                issues.push(misdirected());
             }
             if !token_targets.insert((edge.target_node_id.clone(), edge.target_port.clone())) {
-                issues.push(FlowValidationIssue {
-                    message: format!(
-                        "Input port \"{}\" on node \"{}\" already has an incoming edge.",
-                        edge.target_port, edge.target_node_id
-                    ),
-                    node_id: Some(edge.target_node_id.clone()),
-                    edge_id: Some(edge.id.clone()),
-                });
+                issues.push(
+                    issue(
+                        codes::DUPLICATE_INPUT_EDGE,
+                        format!(
+                            "Input port \"{}\" on node \"{}\" already has an incoming edge.",
+                            edge.target_port, edge.target_node_id
+                        ),
+                    )
+                    .with_node_id(&edge.target_node_id),
+                );
             }
             // Token-type compatibility is decided by the single shared
             // rule `token_connection_compatible` (see
@@ -673,30 +661,25 @@ fn validate_edge(
             } else {
                 source_port.token_type.clone()
             };
+            let incompatible = |target_token_type: &str| {
+                issue(
+                    codes::INCOMPATIBLE_TOKEN_TYPES,
+                    format!(
+                        "Flow edge \"{}\" connects incompatible token types \"{}\" and \"{}\".",
+                        edge.id, source_descriptor, target_token_type
+                    ),
+                )
+            };
             if let Some(target_port) = target_input_port {
                 if target_port.kind != FlowPortKind::Input {
-                    issues.push(FlowValidationIssue {
-                        message: format!(
-                            "Flow edge \"{}\" must connect an output port to an input or automation port.",
-                            edge.id
-                        ),
-                        node_id: None,
-                        edge_id: Some(edge.id.clone()),
-                    });
+                    issues.push(misdirected());
                 }
                 if !token_connection_compatible(
                     &source_port.token_type,
                     &source_node_input_accepted,
                     &effective_accepted_token_types(target_port),
                 ) {
-                    issues.push(FlowValidationIssue {
-                        message: format!(
-                            "Flow edge \"{}\" connects incompatible token types \"{}\" and \"{}\".",
-                            edge.id, source_descriptor, target_port.token_type
-                        ),
-                        node_id: None,
-                        edge_id: Some(edge.id.clone()),
-                    });
+                    issues.push(incompatible(&target_port.token_type));
                 }
             } else if let Some(target_port) = target_automation_port {
                 if !token_connection_compatible(
@@ -704,14 +687,7 @@ fn validate_edge(
                     &source_node_input_accepted,
                     &effective_automation_accepted_token_types(target_port),
                 ) {
-                    issues.push(FlowValidationIssue {
-                        message: format!(
-                            "Flow edge \"{}\" connects incompatible token types \"{}\" and \"{}\".",
-                            edge.id, source_descriptor, target_port.token_type
-                        ),
-                        node_id: None,
-                        edge_id: Some(edge.id.clone()),
-                    });
+                    issues.push(incompatible(&target_port.token_type));
                 }
             }
 
@@ -727,25 +703,11 @@ fn validate_edge(
         }
         FlowEdgeKind::Signal => {
             if node_definition(definitions, source_node).is_none() {
-                issues.push(FlowValidationIssue {
-                    message: format!(
-                        "Flow node \"{}\" references unknown definition \"{}\".",
-                        source_node.id, source_node.definition_name
-                    ),
-                    node_id: Some(source_node.id.clone()),
-                    edge_id: Some(edge.id.clone()),
-                });
+                issues.push(unknown_definition(source_node));
                 return;
             }
             if node_definition(definitions, target_node).is_none() {
-                issues.push(FlowValidationIssue {
-                    message: format!(
-                        "Flow node \"{}\" references unknown definition \"{}\".",
-                        target_node.id, target_node.definition_name
-                    ),
-                    node_id: Some(target_node.id.clone()),
-                    edge_id: Some(edge.id.clone()),
-                });
+                issues.push(unknown_definition(target_node));
                 return;
             }
 
@@ -753,11 +715,7 @@ fn validate_edge(
             {
                 Ok(ports) => ports,
                 Err(message) => {
-                    issues.push(FlowValidationIssue {
-                        message,
-                        node_id: Some(source_node.id.clone()),
-                        edge_id: Some(edge.id.clone()),
-                    });
+                    issues.push(invalid_dynamic_ports(source_node, message));
                     return;
                 }
             };
@@ -765,14 +723,16 @@ fn validate_edge(
                 .iter()
                 .any(|port| port.name == edge.source_port);
             if !source_port_exists {
-                issues.push(FlowValidationIssue {
-                    message: format!(
-                        "Flow edge \"{}\" references unknown signal port \"{}\" on node \"{}\".",
-                        edge.id, edge.source_port, edge.source_node_id
-                    ),
-                    node_id: Some(edge.source_node_id.clone()),
-                    edge_id: Some(edge.id.clone()),
-                });
+                issues.push(
+                    issue(
+                        codes::UNKNOWN_SIGNAL_PORT,
+                        format!(
+                            "Flow edge \"{}\" references unknown signal port \"{}\" on node \"{}\".",
+                            edge.id, edge.source_port, edge.source_node_id
+                        ),
+                    )
+                    .with_node_id(&edge.source_node_id),
+                );
                 return;
             }
 
@@ -780,11 +740,7 @@ fn validate_edge(
             {
                 Ok(ports) => ports,
                 Err(message) => {
-                    issues.push(FlowValidationIssue {
-                        message,
-                        node_id: Some(target_node.id.clone()),
-                        edge_id: Some(edge.id.clone()),
-                    });
+                    issues.push(invalid_dynamic_ports(target_node, message));
                     return;
                 }
             };
@@ -792,36 +748,42 @@ fn validate_edge(
                 .iter()
                 .any(|port| port.name == edge.target_port);
             if !target_port_exists {
-                issues.push(FlowValidationIssue {
-                    message: format!(
-                        "Flow edge \"{}\" references unknown action port \"{}\" on node \"{}\".",
-                        edge.id, edge.target_port, edge.target_node_id
-                    ),
-                    node_id: Some(edge.target_node_id.clone()),
-                    edge_id: Some(edge.id.clone()),
-                });
+                issues.push(
+                    issue(
+                        codes::UNKNOWN_ACTION_PORT,
+                        format!(
+                            "Flow edge \"{}\" references unknown action port \"{}\" on node \"{}\".",
+                            edge.id, edge.target_port, edge.target_node_id
+                        ),
+                    )
+                    .with_node_id(&edge.target_node_id),
+                );
                 return;
             }
 
             if !signal_sources.insert((edge.source_node_id.clone(), edge.source_port.clone())) {
-                issues.push(FlowValidationIssue {
-                    message: format!(
-                        "Signal port \"{}\" on node \"{}\" already has an outgoing edge.",
-                        edge.source_port, edge.source_node_id
-                    ),
-                    node_id: Some(edge.source_node_id.clone()),
-                    edge_id: Some(edge.id.clone()),
-                });
+                issues.push(
+                    issue(
+                        codes::DUPLICATE_SIGNAL_EDGE,
+                        format!(
+                            "Signal port \"{}\" on node \"{}\" already has an outgoing edge.",
+                            edge.source_port, edge.source_node_id
+                        ),
+                    )
+                    .with_node_id(&edge.source_node_id),
+                );
             }
             if !action_targets.insert((edge.target_node_id.clone(), edge.target_port.clone())) {
-                issues.push(FlowValidationIssue {
-                    message: format!(
-                        "Action port \"{}\" on node \"{}\" already has an incoming edge.",
-                        edge.target_port, edge.target_node_id
-                    ),
-                    node_id: Some(edge.target_node_id.clone()),
-                    edge_id: Some(edge.id.clone()),
-                });
+                issues.push(
+                    issue(
+                        codes::DUPLICATE_ACTION_EDGE,
+                        format!(
+                            "Action port \"{}\" on node \"{}\" already has an incoming edge.",
+                            edge.target_port, edge.target_node_id
+                        ),
+                    )
+                    .with_node_id(&edge.target_node_id),
+                );
             }
         }
     }

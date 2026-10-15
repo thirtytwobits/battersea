@@ -99,6 +99,10 @@ impl Registry {
     ) {
         self.definition_checks.push(Arc::new(check));
     }
+    /// Registers a host graph rule, run after the generic rules on supported documents.
+    ///
+    /// Each issue the rule returns carries a code naming the host's failure. Choose codes
+    /// outside [`crate::issue_codes::ALL`] so consumers can tell host rules from generic ones.
     pub fn register_graph_validator(
         &mut self,
         check: impl Fn(&FlowDocument, &HashMap<String, FlowNodeDefinition>) -> Vec<FlowValidationIssue>

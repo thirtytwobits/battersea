@@ -36,5 +36,5 @@ export type FlowPromptTextTemplateNode = { "text": string };
 export type FlowQueueLimits = { "bytes": number; "items": number; "max_event_bytes": number; "policy": FlowQueuePolicy };
 export type FlowQueuePolicy = "backpressure" | "drop_oldest";
 export type FlowSignalPortDefinition = { "display_class"?: FlowPortDisplayClass; "long_description"?: string; "name": string; "short_description"?: string };
-export type FlowValidationIssue = { "edge_id"?: string; "message": string; "node_id"?: string };
+export type FlowValidationIssue = { "code": string; "edge_id"?: string; "message": string; "node_id"?: string };
 export type FlowValidationResult = { "issues": Array<FlowValidationIssue>; "valid": boolean };

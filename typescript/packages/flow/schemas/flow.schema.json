@@ -1073,7 +1073,12 @@
     },
     "FlowValidationIssue": {
       "additionalProperties": false,
+      "description": "One validation failure. Consumers branch on `code`; `message` is for people.",
       "properties": {
+        "code": {
+          "description": "A stable snake_case name for the failure. `battersea_flow::issue_codes` declares\nBattersea's; host graph rules supply their own.",
+          "type": "string"
+        },
         "edge_id": {
           "type": "string"
         },
@@ -1085,6 +1090,7 @@
         }
       },
       "required": [
+        "code",
         "message"
       ],
       "type": "object"

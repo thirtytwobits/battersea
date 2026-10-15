@@ -5,7 +5,9 @@ Battersea is an embeddable dataflow framework.
 `battersea-flow` provides flow documents, ports, templates, extensible catalogues and pure
 graph validation. Its versioned [text source](contracts/text-source.md) round-trips graph data
 and editor layout through `dsl::parse_flow_dsl` and `dsl::export_flow_dsl`. Applications register
-their handlers, nominal token schemas, parameter schemas and product validators. `examples/catalogue` is an independent host application.
+their handlers, nominal token schemas, parameter schemas and product validators. Each validation
+issue carries a stable code: `issue_codes` names Battersea's, and product validators supply their own.
+`examples/catalogue` is an independent host application.
 
 `battersea-runtime` supplies node handlers, token and signal scheduling, typed execution events
 and the activation lifecycle. Applications supply their state, effects and durable acceptance

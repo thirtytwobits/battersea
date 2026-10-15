@@ -246,5 +246,10 @@ fn catalogue_accepts_token_fanout_but_requires_one_producer_per_input() {
     })).unwrap();
     assert!(catalogue.validate(&flow).valid);
     flow.edges[1].target_node_id = flow.edges[0].target_node_id.clone();
-    assert!(!catalogue.validate(&flow).valid);
+    let result = catalogue.validate(&flow);
+    assert!(!result.valid);
+    assert!(result.issues.iter().any(|issue| issue.code
+        == battersea_flow::issue_codes::DUPLICATE_INPUT_EDGE
+        && issue.node_id.as_deref() == Some("a")
+        && issue.edge_id.as_deref() == Some("b")));
 }

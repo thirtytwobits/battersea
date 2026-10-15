@@ -566,6 +566,39 @@ impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusi
 pub fn battersea_flow::execution::ordered_sources(flow: &battersea_flow::FlowDocument, definitions: &std::collections::hash::map::HashMap<alloc::string::String, battersea_flow::FlowNodeDefinition>) -> core::result::Result<alloc::vec::Vec<alloc::string::String>, alloc::string::String>
 pub fn battersea_flow::execution::upgrade_v1_document(source: &str, definitions: &std::collections::hash::map::HashMap<alloc::string::String, battersea_flow::FlowNodeDefinition>, limits: battersea_flow::execution::FlowExecutionLimits) -> core::result::Result<battersea_flow::FlowDocument, alloc::string::String>
 pub fn battersea_flow::execution::validate_execution_contract(flow: &battersea_flow::FlowDocument, definitions: &std::collections::hash::map::HashMap<alloc::string::String, battersea_flow::FlowNodeDefinition>) -> core::result::Result<(), alloc::string::String>
+pub mod battersea_flow::issue_codes
+pub const battersea_flow::issue_codes::ALIAS_FOR_UNKNOWN_PORT: &str
+pub const battersea_flow::issue_codes::ALL: &[&str]
+pub const battersea_flow::issue_codes::BLANK_DEFINITION_NAME: &str
+pub const battersea_flow::issue_codes::BLANK_EDGE_ID: &str
+pub const battersea_flow::issue_codes::BLANK_INSTANCE_NAME: &str
+pub const battersea_flow::issue_codes::BLANK_NODE_ID: &str
+pub const battersea_flow::issue_codes::BLANK_PORT_ALIAS: &str
+pub const battersea_flow::issue_codes::DUPLICATE_ACTION_EDGE: &str
+pub const battersea_flow::issue_codes::DUPLICATE_EDGE_ID: &str
+pub const battersea_flow::issue_codes::DUPLICATE_INPUT_EDGE: &str
+pub const battersea_flow::issue_codes::DUPLICATE_NODE_ID: &str
+pub const battersea_flow::issue_codes::DUPLICATE_PORT_ALIAS: &str
+pub const battersea_flow::issue_codes::DUPLICATE_PORT_ID: &str
+pub const battersea_flow::issue_codes::DUPLICATE_SIGNAL_EDGE: &str
+pub const battersea_flow::issue_codes::GRAPH_CYCLE: &str
+pub const battersea_flow::issue_codes::INCOMPATIBLE_TOKEN_TYPES: &str
+pub const battersea_flow::issue_codes::INVALID_DYNAMIC_PORTS: &str
+pub const battersea_flow::issue_codes::INVALID_EXECUTION_CONTRACT: &str
+pub const battersea_flow::issue_codes::INVALID_PARAMETER_VALUE: &str
+pub const battersea_flow::issue_codes::INVALID_PORT_PARAMETER_VALUE: &str
+pub const battersea_flow::issue_codes::MISDIRECTED_TOKEN_EDGE: &str
+pub const battersea_flow::issue_codes::PORT_PARAMETERS_FOR_UNKNOWN_PORT: &str
+pub const battersea_flow::issue_codes::UNKNOWN_ACTION_PORT: &str
+pub const battersea_flow::issue_codes::UNKNOWN_DEFINITION: &str
+pub const battersea_flow::issue_codes::UNKNOWN_PARAMETER: &str
+pub const battersea_flow::issue_codes::UNKNOWN_PORT_PARAMETER: &str
+pub const battersea_flow::issue_codes::UNKNOWN_SIGNAL_PORT: &str
+pub const battersea_flow::issue_codes::UNKNOWN_SOURCE_NODE: &str
+pub const battersea_flow::issue_codes::UNKNOWN_SOURCE_PORT: &str
+pub const battersea_flow::issue_codes::UNKNOWN_TARGET_NODE: &str
+pub const battersea_flow::issue_codes::UNKNOWN_TARGET_PORT: &str
+pub const battersea_flow::issue_codes::UNSUPPORTED_DOCUMENT_VERSION: &str
 pub mod battersea_flow::output_encoding
 pub enum battersea_flow::output_encoding::OutputEncoding
 pub battersea_flow::output_encoding::OutputEncoding::Markdown
@@ -3259,9 +3292,14 @@ pub fn battersea_flow::FlowSignalPortDefinition::__clone_box(&self, _: dyn_clone
 impl<T> serde_core::de::DeserializeOwned for battersea_flow::FlowSignalPortDefinition where T: for<'de> serde_core::de::Deserialize<'de>
 impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_flow::FlowSignalPortDefinition where T: ?core::marker::Sized
 pub struct battersea_flow::FlowValidationIssue
+pub battersea_flow::FlowValidationIssue::code: alloc::string::String
 pub battersea_flow::FlowValidationIssue::edge_id: core::option::Option<alloc::string::String>
 pub battersea_flow::FlowValidationIssue::message: alloc::string::String
 pub battersea_flow::FlowValidationIssue::node_id: core::option::Option<alloc::string::String>
+impl battersea_flow::FlowValidationIssue
+pub fn battersea_flow::FlowValidationIssue::new(code: impl core::convert::Into<alloc::string::String>, message: impl core::convert::Into<alloc::string::String>) -> Self
+pub fn battersea_flow::FlowValidationIssue::with_edge_id(self, edge_id: impl core::convert::Into<alloc::string::String>) -> Self
+pub fn battersea_flow::FlowValidationIssue::with_node_id(self, node_id: impl core::convert::Into<alloc::string::String>) -> Self
 impl core::clone::Clone for battersea_flow::FlowValidationIssue
 pub fn battersea_flow::FlowValidationIssue::clone(&self) -> battersea_flow::FlowValidationIssue
 impl core::cmp::Eq for battersea_flow::FlowValidationIssue

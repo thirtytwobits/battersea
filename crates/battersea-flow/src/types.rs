@@ -537,9 +537,13 @@ pub fn default_flow_whitespace_mode() -> String {
     "trim".to_string()
 }
 
+/// One validation failure. Consumers branch on `code`; `message` is for people.
 #[derive(Debug, Clone, Serialize, Deserialize, schemars::JsonSchema, PartialEq, Eq)]
 #[serde(deny_unknown_fields)]
 pub struct FlowValidationIssue {
+    /// A stable snake_case name for the failure. `battersea_flow::issue_codes` declares
+    /// Battersea's; host graph rules supply their own.
+    pub code: String,
     pub message: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     #[schemars(with = "String")]
@@ -547,6 +551,30 @@ pub struct FlowValidationIssue {
     #[serde(skip_serializing_if = "Option::is_none")]
     #[schemars(with = "String")]
     pub edge_id: Option<String>,
+}
+
+impl FlowValidationIssue {
+    /// An issue that names no node or edge.
+    pub fn new(code: impl Into<String>, message: impl Into<String>) -> Self {
+        Self {
+            code: code.into(),
+            message: message.into(),
+            node_id: None,
+            edge_id: None,
+        }
+    }
+
+    /// Names the node the issue concerns.
+    pub fn with_node_id(mut self, node_id: impl Into<String>) -> Self {
+        self.node_id = Some(node_id.into());
+        self
+    }
+
+    /// Names the edge the issue concerns.
+    pub fn with_edge_id(mut self, edge_id: impl Into<String>) -> Self {
+        self.edge_id = Some(edge_id.into());
+        self
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, schemars::JsonSchema, PartialEq, Eq)]

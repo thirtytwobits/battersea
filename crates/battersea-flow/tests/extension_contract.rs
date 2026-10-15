@@ -1,7 +1,8 @@
 use battersea_flow::{
     catalog::Catalog,
+    issue_codes,
     registry::{ParameterType, Registry},
-    FlowDocument, FlowParameterEditorKind,
+    FlowDocument, FlowParameterEditorKind, FlowValidationResult,
 };
 use serde_json::{json, Value};
 
@@ -57,7 +58,13 @@ fn a_host_registered_type_validates_values_without_product_dependencies() {
     flow.nodes[0]
         .parameter_values
         .insert("label".into(), Value::Bool(false));
-    assert!(!catalog.validate(&flow).valid);
+    let result = catalog.validate(&flow);
+    assert!(!result.valid);
+    assert!(result
+        .issues
+        .iter()
+        .any(|issue| issue.code == issue_codes::INVALID_PARAMETER_VALUE
+            && issue.node_id.as_deref() == Some("source")));
 }
 
 #[test]
@@ -151,12 +158,41 @@ fn an_external_graph_enforces_ports_cardinality_nominal_types_and_acyclicity() {
     ], "edges": [{"id": "forward", "source_node_id": "left", "source_port": "out", "target_node_id": "right", "target_port": "in"}]});
     let flow: FlowDocument = serde_json::from_value(base.clone()).unwrap();
     assert!(catalog.validate(&flow).valid);
-    for invalid in [
-        "cycle",
-        "duplicate_output",
-        "missing_node",
-        "missing_port",
-        "unknown_definition",
+    let reports =
+        |result: FlowValidationResult, code: &str, node_id: Option<&str>, edge_id: Option<&str>| {
+            !result.valid
+                && result.issues.iter().any(|issue| {
+                    issue.code == code
+                        && issue.node_id.as_deref() == node_id
+                        && issue.edge_id.as_deref() == edge_id
+                })
+        };
+    for (invalid, code, node_id, edge_id) in [
+        ("cycle", issue_codes::GRAPH_CYCLE, None, None),
+        (
+            "duplicate_output",
+            issue_codes::DUPLICATE_INPUT_EDGE,
+            Some("right"),
+            Some("duplicate"),
+        ),
+        (
+            "missing_node",
+            issue_codes::UNKNOWN_TARGET_NODE,
+            None,
+            Some("forward"),
+        ),
+        (
+            "missing_port",
+            issue_codes::UNKNOWN_TARGET_PORT,
+            Some("right"),
+            Some("forward"),
+        ),
+        (
+            "unknown_definition",
+            issue_codes::UNKNOWN_DEFINITION,
+            Some("left"),
+            None,
+        ),
     ] {
         let mut document = base.clone();
         match invalid {
@@ -171,11 +207,11 @@ fn an_external_graph_enforces_ports_cardinality_nominal_types_and_acyclicity() {
             "unknown_definition" => document["nodes"][0]["definition_name"] = json!("missing"),
             _ => unreachable!(),
         }
+        let result = catalog.validate(&serde_json::from_value(document).unwrap());
         assert!(
-            !catalog
-                .validate(&serde_json::from_value(document).unwrap())
-                .valid,
-            "{invalid}"
+            reports(result.clone(), code, node_id, edge_id),
+            "{invalid}: {:?}",
+            result.issues
         );
     }
     let mut registry = registry();
@@ -184,7 +220,12 @@ fn an_external_graph_enforces_ports_cardinality_nominal_types_and_acyclicity() {
         .unwrap();
     source["node_definitions"][0]["input_ports"][0]["token_type"] = json!("example.other");
     let catalog = Catalog::from_manifest(&source.to_string(), registry).unwrap();
-    assert!(!catalog.validate(&flow).valid);
+    assert!(reports(
+        catalog.validate(&flow),
+        issue_codes::INCOMPATIBLE_TOKEN_TYPES,
+        None,
+        Some("forward"),
+    ));
     assert!(catalog
         .registry()
         .validate_token("example.other", &json!("invalid payload"))

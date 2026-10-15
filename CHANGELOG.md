@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.12.0 — 2026-10-15
+
+- Breaking contract change: `FlowValidationIssue` requires a `code` naming the failure.
+  Consumers branch on the code; the message is for people.
+- Declare Battersea's codes in `battersea_flow::issue_codes`, listed by `issue_codes::ALL`.
+  Parameter-value and dynamic-port failures keep their detail in the message.
+- Graph rules registered with `Registry::register_graph_validator` supply the host's own codes.
+- Add `FlowValidationIssue::new`, `with_node_id` and `with_edge_id`.
+
 ## 0.11.3 — 2026-10-15
 
 - Carry the provider's own message into the failure of a refused HTTP request, for example
