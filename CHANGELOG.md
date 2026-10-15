@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.11.3 — 2026-10-15
+
+- Carry the provider's own message into the failure of a refused HTTP request, for example
+  `Provider HTTP request failed with status 401: invalid x-api-key`. Only the `error.message`
+  field of the JSON error body is read.
+
 ## 0.11.2 — 2026-10-11
 
 - Deliver provider events larger than the transport mailbox through bounded frames.

@@ -389,18 +389,6 @@ impl EngineAdapter for OpenAiEngineAdapter {
             self.logger.as_ref(),
         )
         .await?;
-        let status = response.status().as_u16();
-        if !response.status().is_success() {
-            let body = response.bounded_text().await.ok();
-            return Err(EngineAdapterRequestError::new(
-                "openai",
-                body.unwrap_or_else(|| {
-                    format!("OpenAI input token count request failed with status {status}.")
-                }),
-                "request",
-            )
-            .with_status_code(status));
-        }
         let payload: Value = response.bounded_json().await.map_err(|error| {
             EngineAdapterRequestError::invalid_response("openai", error.to_string())
         })?;
@@ -664,14 +652,6 @@ fn finalize_background_response(
     }
 }
 
-fn openai_http_error(status: u16, body: Option<String>) -> EngineAdapterRequestError {
-    EngineAdapterRequestError::new(
-        "openai",
-        body.unwrap_or_else(|| format!("OpenAI request failed with status {status}.")),
-        "request",
-    )
-}
-
 /// Best-effort cancel of a background response (to stop server-side spend
 /// when the consumer went away or we hit the max-wait ceiling). Ignores
 /// the outcome — a "cannot cancel a completed response" error is fine.
@@ -931,12 +911,6 @@ async fn open_response_stream(
         logger.as_ref(),
     )
     .await?;
-    if !response.status().is_success() {
-        return Err(openai_http_error(
-            response.status().as_u16(),
-            response.bounded_text().await.ok(),
-        ));
-    }
     Ok(crate::http_payload::bounded_stream(response)
         .eventsource()
         .filter_map(|event| async move {
@@ -1034,10 +1008,6 @@ async fn create_and_poll_background(
         logger.as_ref(),
     )
     .await?;
-    if !created.status().is_success() {
-        let status = created.status().as_u16();
-        return Err(openai_http_error(status, created.bounded_text().await.ok()));
-    }
     let response: Value = created.bounded_json().await.map_err(|error| {
         EngineAdapterRequestError::invalid_response("openai", error.to_string())
     })?;
@@ -1094,10 +1064,6 @@ async fn create_and_poll_background(
             logger.as_ref(),
         )
         .await?;
-        if !polled.status().is_success() {
-            let status = polled.status().as_u16();
-            return Err(openai_http_error(status, polled.bounded_text().await.ok()));
-        }
         let response: Value = polled.bounded_json().await.map_err(|error| {
             EngineAdapterRequestError::invalid_response("openai", error.to_string())
         })?;
@@ -1250,10 +1216,6 @@ async fn drive_background_stream(
         logger.as_ref(),
     )
     .await?;
-    if !created.status().is_success() {
-        let status = created.status().as_u16();
-        return Err(openai_http_error(status, created.bounded_text().await.ok()));
-    }
     let mut sse = Box::pin(crate::http_payload::bounded_stream(created).eventsource());
 
     loop {
@@ -1455,10 +1417,6 @@ async fn drive_background_stream(
             logger.as_ref(),
         )
         .await?;
-        if !resumed.status().is_success() {
-            let status = resumed.status().as_u16();
-            return Err(openai_http_error(status, resumed.bounded_text().await.ok()));
-        }
         sse = Box::pin(crate::http_payload::bounded_stream(resumed).eventsource());
     }
 }

@@ -1,4 +1,5 @@
 //! Retries of immutable HTTP requests, below the conversation/tool-effect boundary.
+use crate::http_payload::BoundedResponse as _;
 use crate::{
     EngineAdapterLogger, EngineAdapterRequestError, EngineAdapterRetryLog, EngineBackendConfig,
 };
@@ -45,6 +46,15 @@ fn retry_after(headers: &reqwest::header::HeaderMap) -> Option<u64> {
         })
 }
 
+/// The provider's own message for a refused request: the `error.message` field of its JSON
+/// error body. A rejection's body may contain credentials or prompt material, so nothing else
+/// from it reaches the failure.
+fn provider_reason(body: &str) -> Option<String> {
+    let value: serde_json::Value = serde_json::from_str(body).ok()?;
+    let message = value.get("error")?.get("message")?.as_str()?.trim();
+    (!message.is_empty()).then(|| message.to_owned())
+}
+
 pub(crate) async fn send(
     request: RequestBuilder,
     backend: &EngineBackendConfig,
@@ -81,9 +91,31 @@ pub(crate) async fn send(
                     500..=599 => ErrorKind::Server,
                     _ => ErrorKind::Request,
                 };
+                let request_id = ["request-id", "x-request-id"].iter().find_map(|name| {
+                    response
+                        .headers()
+                        .get(*name)
+                        .and_then(|v| v.to_str().ok())
+                        .map(str::to_owned)
+                });
+                let delay_named = response
+                    .headers()
+                    .contains_key(reqwest::header::RETRY_AFTER);
+                let retry_after_ms = retry_after(response.headers());
+                let reason = response
+                    .bounded_text()
+                    .await
+                    .ok()
+                    .as_deref()
+                    .and_then(provider_reason);
                 let mut error = EngineAdapterRequestError::new(
                     &backend.provider,
-                    format!("Provider HTTP request failed with status {status}."),
+                    match reason {
+                        Some(reason) => {
+                            format!("Provider HTTP request failed with status {status}: {reason}")
+                        }
+                        None => format!("Provider HTTP request failed with status {status}."),
+                    },
                     classification,
                 )
                 .with_status_code(status)
@@ -92,24 +124,12 @@ pub(crate) async fn send(
                 } else {
                     DispatchState::Unknown
                 });
-                error.request_id = ["request-id", "x-request-id"].iter().find_map(|name| {
-                    response
-                        .headers()
-                        .get(*name)
-                        .and_then(|v| v.to_str().ok())
-                        .map(str::to_owned)
-                });
-                error.retry_after_ms = retry_after(response.headers());
-                if response
-                    .headers()
-                    .contains_key(reqwest::header::RETRY_AFTER)
-                    && error.retry_after_ms.is_none()
-                {
+                error.request_id = request_id;
+                error.retry_after_ms = retry_after_ms;
+                if delay_named && error.retry_after_ms.is_none() {
                     // An unreadable provider delay cannot authorise an earlier retry.
                     error.retry_after_ms = Some(u64::MAX);
                 }
-                // A rejection's body may contain credentials or prompt material. Status and identity
-                // are sufficient for policy; bounded provider-specific diagnostics remain separate.
                 error
             }
             Err(error) => {
@@ -170,6 +190,36 @@ pub(crate) async fn send(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn provider_reason_reads_only_the_error_message() {
+        for (body, reason) in [
+            (
+                r#"{"type":"error","error":{"type":"authentication_error","message":"invalid x-api-key"}}"#,
+                "invalid x-api-key",
+            ),
+            (
+                r#"{"error":{"message":"Incorrect API key provided.","type":"invalid_request_error","code":"invalid_api_key"}}"#,
+                "Incorrect API key provided.",
+            ),
+            (
+                r#"{"error":{"code":403,"message":" API key not valid. ","status":"PERMISSION_DENIED"}}"#,
+                "API key not valid.",
+            ),
+        ] {
+            assert_eq!(provider_reason(body).as_deref(), Some(reason), "{body}");
+        }
+        for body in [
+            "",
+            "not json",
+            "{}",
+            r#"{"error":"bare"}"#,
+            r#"{"error":{"message":"  "}}"#,
+            r#"{"message":"top level"}"#,
+        ] {
+            assert_eq!(provider_reason(body), None, "{body:?}");
+        }
+    }
     #[test]
     fn retry_after_is_a_lower_bound_including_http_dates() {
         let mut headers = reqwest::header::HeaderMap::new();

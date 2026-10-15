@@ -144,13 +144,6 @@ impl EngineAdapter for GoogleEngineAdapter {
             self.logger.as_ref(),
         )
         .await?;
-        let status = response.status().as_u16();
-        if !response.status().is_success() {
-            return Err(normalize_google_http_error(
-                status,
-                response.bounded_text().await.ok(),
-            ));
-        }
         let payload: Value = response.bounded_json().await.map_err(|error| {
             EngineAdapterRequestError::invalid_response("google", error.to_string())
         })?;
@@ -206,12 +199,6 @@ impl EngineAdapter for GoogleEngineAdapter {
         )
         .await?;
         let status = response.status().as_u16();
-        if !response.status().is_success() {
-            return Err(normalize_google_http_error(
-                status,
-                response.bounded_text().await.ok(),
-            ));
-        }
         emit_response(
             self.logger.as_ref(),
             &self.context,
@@ -416,12 +403,6 @@ impl ToolConversation for GoogleToolConversation {
         )
         .await?;
         let status = response.status().as_u16();
-        if !response.status().is_success() {
-            return Err(normalize_google_http_error(
-                status,
-                response.bounded_text().await.ok(),
-            ));
-        }
         let raw: Value = response.bounded_json().await.map_err(|error| {
             EngineAdapterRequestError::invalid_response("google", error.to_string())
         })?;
@@ -772,41 +753,6 @@ fn apply_tool_choice(body: &mut Value, chat: &battersea_model::engine::EngineCha
         }
     }
     body["toolConfig"] = json!({"functionCallingConfig": config});
-}
-
-/// Maps a Gemini HTTP error response to the engine's neutral error
-/// type. Gemini returns errors in `{ error: { code, message, status } }`
-/// shape; we extract the message when present and fall back to the
-/// raw body otherwise.
-fn normalize_google_http_error(status: u16, body: Option<String>) -> EngineAdapterRequestError {
-    let provider = "google";
-    let message = body
-        .as_deref()
-        .and_then(|raw| serde_json::from_str::<Value>(raw).ok())
-        .and_then(|value| {
-            value
-                .get("error")
-                .and_then(|err| err.get("message"))
-                .and_then(Value::as_str)
-                .map(ToOwned::to_owned)
-        })
-        .or_else(|| body.clone())
-        .unwrap_or_else(|| format!("Gemini request failed with HTTP {status}."));
-    EngineAdapterRequestError::new(provider, message, classify_status(status))
-        .with_status_code(status)
-}
-
-/// Classifies Gemini HTTP status codes into the shared adapter error categories.
-fn classify_status(status: u16) -> &'static str {
-    if matches!(status, 401 | 403) {
-        "auth"
-    } else if status == 429 {
-        "rate_limit"
-    } else if status >= 500 {
-        "server"
-    } else {
-        "request"
-    }
 }
 
 // ---------------------------------------------------------------------------
@@ -1512,37 +1458,6 @@ mod tests {
         };
         assert_eq!(response.first_text(), Some("part one part two".to_string()));
         assert_eq!(response.first_finish_reason(), Some("STOP".to_string()));
-    }
-
-    #[test]
-    fn normalize_http_error_extracts_message_from_gemini_error_envelope() {
-        let body = serde_json::json!({
-            "error": {
-                "code": 429,
-                "message": "Resource exhausted: quota exceeded.",
-                "status": "RESOURCE_EXHAUSTED"
-            }
-        })
-        .to_string();
-        let err = normalize_google_http_error(429, Some(body));
-        assert_eq!(err.status_code, Some(429));
-        assert_eq!(err.classification.as_str(), "rate_limit");
-        assert!(
-            err.message.contains("quota exceeded"),
-            "expected quota message, got {:?}",
-            err.message
-        );
-    }
-
-    #[test]
-    fn classify_status_covers_provider_error_buckets() {
-        assert_eq!(classify_status(401), "auth");
-        assert_eq!(classify_status(403), "auth");
-        assert_eq!(classify_status(429), "rate_limit");
-        assert_eq!(classify_status(500), "server");
-        assert_eq!(classify_status(503), "server");
-        assert_eq!(classify_status(400), "request");
-        assert_eq!(classify_status(404), "request");
     }
 
     #[test]

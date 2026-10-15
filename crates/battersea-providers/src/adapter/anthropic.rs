@@ -117,13 +117,6 @@ impl EngineAdapter for AnthropicEngineAdapter {
             .get("request-id")
             .and_then(|value| value.to_str().ok())
             .map(ToOwned::to_owned);
-        if !response.status().is_success() {
-            return Err(normalize_anthropic_http_error(
-                status,
-                request_id,
-                response.bounded_text().await.ok(),
-            ));
-        }
         emit_response(
             self.logger.as_ref(),
             &self.context,
@@ -224,19 +217,11 @@ impl EngineAdapter for AnthropicEngineAdapter {
             self.logger.as_ref(),
         )
         .await?;
-        let status = response.status().as_u16();
         let request_id = response
             .headers()
             .get("request-id")
             .and_then(|value| value.to_str().ok())
             .map(ToOwned::to_owned);
-        if !response.status().is_success() {
-            return Err(normalize_anthropic_http_error(
-                status,
-                request_id,
-                response.bounded_text().await.ok(),
-            ));
-        }
         let payload: Value =
             read_anthropic_json(response, request_id.clone(), &self.context).await?;
         payload
@@ -331,13 +316,6 @@ impl ToolConversation for AnthropicToolConversation {
             .get("request-id")
             .and_then(|value| value.to_str().ok())
             .map(ToOwned::to_owned);
-        if !response.status().is_success() {
-            return Err(normalize_anthropic_http_error(
-                status,
-                request_id,
-                response.bounded_text().await.ok(),
-            ));
-        }
         let payload: AnthropicMessagesResponse =
             read_anthropic_json(response, request_id.clone(), &self.context).await?;
         if !matches!(
@@ -836,44 +814,6 @@ fn resolve_anthropic_base_url(endpoint: &str) -> String {
         .to_string()
 }
 
-/// Normalises an Anthropic HTTP failure into the shared provider-neutral error shape.
-///
-/// Blank or malformed error bodies fall back to a generic provider message while preserving the
-/// originating HTTP status and request id.
-fn normalize_anthropic_http_error(
-    status: u16,
-    request_id: Option<String>,
-    body: Option<String>,
-) -> EngineAdapterRequestError {
-    let message = body
-        .and_then(|payload| {
-            let trimmed = payload.trim();
-            if trimmed.is_empty() {
-                return None;
-            }
-            serde_json::from_str::<AnthropicErrorEnvelope>(&payload)
-                .ok()
-                .and_then(|value| value.error.message)
-        })
-        .unwrap_or_else(|| "Anthropic request failed.".to_string());
-    EngineAdapterRequestError::new("anthropic", message, classify_status(status))
-        .with_status_code(status)
-        .with_request_id(request_id)
-}
-
-/// Classifies Anthropic HTTP status codes into the shared adapter error categories.
-fn classify_status(status: u16) -> &'static str {
-    if matches!(status, 401 | 403) {
-        "auth"
-    } else if status == 429 {
-        "rate_limit"
-    } else if status >= 500 {
-        "server"
-    } else {
-        "request"
-    }
-}
-
 #[derive(Debug, Deserialize)]
 struct AnthropicMessagesResponse {
     #[serde(default)]
@@ -937,18 +877,6 @@ fn collect_anthropic_tool_calls(
             )
         })
         .collect()
-}
-
-#[derive(Debug, Deserialize)]
-struct AnthropicErrorEnvelope {
-    #[serde(default)]
-    error: AnthropicErrorBody,
-}
-
-#[derive(Debug, Default, Deserialize)]
-struct AnthropicErrorBody {
-    #[serde(default)]
-    message: Option<String>,
 }
 
 #[derive(Debug, Deserialize, serde::Serialize)]
@@ -1175,14 +1103,14 @@ mod tests {
     use super::{
         anthropic_content_block_reasoning, anthropic_content_block_text, anthropic_decode_error,
         build_headers, build_input_token_count_body, build_local_tool_body, build_stream_body,
-        classify_status, collect_anthropic_tool_calls, create_anthropic_adapter,
-        normalize_anthropic_http_error, parse_anthropic_usage, resolve_anthropic_base_url,
-        AnthropicMessagesResponse, AnthropicStreamEvent,
+        collect_anthropic_tool_calls, create_anthropic_adapter, parse_anthropic_usage,
+        resolve_anthropic_base_url, AnthropicMessagesResponse, AnthropicStreamEvent,
     };
     use crate::adapter::{
         EngineAdapterDebugContext, EngineAdapterRequest, EngineAuthConfig, EngineBackendConfig,
         EngineBackendOptions, EngineLocalToolDefinition, EngineOperation, EngineTextStreamRequest,
     };
+    use battersea_model::adapter::error::ErrorKind;
     use battersea_model::engine::{
         EngineAnthropicThinkingCapabilities, EngineBackendCapabilities, EngineChatParameters,
         EngineChatToolChoiceMode, EngineReasoningEffort, EngineTemperatureDispatch,
@@ -1917,55 +1845,54 @@ mod tests {
         handle.join().expect("join server");
     }
 
-    #[test]
-    fn normalize_anthropic_http_error_classifies_statuses_and_preserves_metadata() {
-        let auth = normalize_anthropic_http_error(
-            401,
-            Some("req-auth".to_string()),
-            Some(r#"{"error":{"message":"bad key"}}"#.to_string()),
-        );
-        assert_eq!(auth.classification.as_str(), "auth");
-        assert_eq!(auth.status_code, Some(401));
-        assert_eq!(auth.request_id.as_deref(), Some("req-auth"));
-        assert_eq!(&*auth.message, "bad key");
-
-        assert_eq!(
-            normalize_anthropic_http_error(429, None, Some("{}".to_string()))
-                .classification
-                .as_str(),
-            "rate_limit"
-        );
-        assert_eq!(
-            normalize_anthropic_http_error(503, None, Some("{}".to_string()))
-                .classification
-                .as_str(),
-            "server"
-        );
-        assert_eq!(
-            normalize_anthropic_http_error(400, None, Some("{}".to_string()))
-                .classification
-                .as_str(),
-            "request"
-        );
+    fn spawn_refusing_server(
+        status: &'static str,
+        body: &'static str,
+    ) -> (String, thread::JoinHandle<()>) {
+        let listener =
+            TcpListener::bind(crate::test_endpoints::TEST_BIND_ADDRESS).expect("bind loopback");
+        let address = listener.local_addr().expect("local addr");
+        let handle = thread::spawn(move || {
+            let (mut stream, _) = listener.accept().expect("accept request");
+            let mut request = [0_u8; 4096];
+            let size = stream.read(&mut request).expect("read request");
+            assert!(String::from_utf8_lossy(&request[..size]).starts_with("POST "));
+            let response = format!(
+                "HTTP/1.1 {status}\r\nContent-Type: application/json\r\nrequest-id: req-refused\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}",
+                body.len()
+            );
+            stream
+                .write_all(response.as_bytes())
+                .expect("write response");
+            stream.flush().expect("flush response");
+        });
+        (format!("http://{address}/v1/messages"), handle)
     }
 
-    #[test]
-    fn normalize_anthropic_http_error_falls_back_to_generic_message_for_blank_or_malformed_body() {
-        let blank = normalize_anthropic_http_error(500, None, Some("   ".to_string()));
-        let malformed =
-            normalize_anthropic_http_error(500, None, Some("not-json-at-all".to_string()));
+    #[tokio::test(flavor = "current_thread")]
+    async fn a_refused_request_carries_anthropics_reason() {
+        let (url, handle) = spawn_refusing_server(
+            "401 Unauthorized",
+            r#"{"type":"error","error":{"type":"authentication_error","message":"invalid x-api-key"}}"#,
+        );
+        let mut backend = sample_backend();
+        backend.endpoint = url;
+        let adapter = create_anthropic_adapter(backend, None).expect("adapter");
 
-        assert_eq!(&*blank.message, "Anthropic request failed.");
-        assert_eq!(&*malformed.message, "Anthropic request failed.");
-    }
+        let error = adapter
+            .count_text_stream_input_tokens(sample_stream_request())
+            .await
+            .expect_err("a refused key fails the request");
 
-    #[test]
-    fn classify_status_covers_provider_error_buckets() {
-        assert_eq!(classify_status(401), "auth");
-        assert_eq!(classify_status(403), "auth");
-        assert_eq!(classify_status(429), "rate_limit");
-        assert_eq!(classify_status(502), "server");
-        assert_eq!(classify_status(400), "request");
+        assert_eq!(error.classification, ErrorKind::Authentication);
+        assert_eq!(error.status_code, Some(401));
+        assert_eq!(error.request_id.as_deref(), Some("req-refused"));
+        assert!(
+            error.message.contains("invalid x-api-key"),
+            "{}",
+            error.message
+        );
+        handle.join().expect("join server");
     }
 
     #[test]
