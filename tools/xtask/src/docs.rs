@@ -8,6 +8,7 @@ use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
 use std::{
     collections::{BTreeMap, HashSet},
+    fmt::Write,
     fs,
     io::Cursor,
     path::{Component, Path, PathBuf},
@@ -206,16 +207,15 @@ pub fn build(root: &Path) -> Result<()> {
     clean(&destination.join("rust"))?;
     copy_tree(&cargo_target.join("doc"), &destination.join("rust"))?;
     normalize_rustdoc(root, &destination.join("rust"))?;
-    let links = crates
-        .keys()
-        .map(|name| {
-            format!(
-                "<li><a href=\"{}/index.html\">{}</a></li>",
-                name.replace('-', "_"),
-                escape(name)
-            )
-        })
-        .collect::<String>();
+    let mut links = String::new();
+    for name in crates.keys() {
+        write!(
+            links,
+            "<li><a href=\"{}/index.html\">{}</a></li>",
+            name.replace('-', "_"),
+            escape(name)
+        )?;
+    }
     fs::write(destination.join("rust/index.html"), page(&format!("Battersea {tag} Rust API"),
         &format!("<h1>Battersea {tag} Rust API</h1><p><a href=\"../guide/index.html\">Handbook</a> · <a href=\"../typescript/index.html\">TypeScript API</a> · <a href=\"../../versions/index.html\">Versions</a></p><ul>{links}</ul>")))?;
     let schemas = destination.join("schemas");
@@ -268,15 +268,14 @@ fn write_index(site: &Path, versions: &BTreeMap<String, bool>, latest: Option<&s
     fs::create_dir_all(site.join("versions"))?;
     let mut sorted = versions.iter().collect::<Vec<_>>();
     sorted.sort_by_key(|a| std::cmp::Reverse(tag_version(a.0).unwrap()));
-    let links = sorted
-        .iter()
-        .map(|(tag, prerelease)| {
-            format!(
-                "<li><a href=\"../{tag}/index.html\">{tag}</a>{}</li>",
-                if **prerelease { " (prerelease)" } else { "" }
-            )
-        })
-        .collect::<String>();
+    let mut links = String::new();
+    for (tag, prerelease) in &sorted {
+        write!(
+            links,
+            "<li><a href=\"../{tag}/index.html\">{tag}</a>{}</li>",
+            if **prerelease { " (prerelease)" } else { "" }
+        )?;
+    }
     fs::write(
         site.join("versions/index.html"),
         page(
