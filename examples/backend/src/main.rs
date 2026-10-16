@@ -31,6 +31,7 @@ fn auth() -> EngineAuthConfig {
 }
 fn chat_backend() -> EngineBackendConfig {
     EngineBackendConfig {
+        binding: None,
         id: "example-chat".into(),
         provider: "mock".into(),
         label: "Example chat".into(),
@@ -96,6 +97,7 @@ async fn demonstrate() -> Result<(), Box<dyn std::error::Error>> {
     }
     assert!(completed_tool && output.contains(input) && output.contains("tool result"));
     let media_backend = MediaBackendConfig {
+        binding: None,
         id: "example-image".into(),
         provider: "mock".into(),
         capability: MediaCapability::ImageGeneration,

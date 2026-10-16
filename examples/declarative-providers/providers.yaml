@@ -1,0 +1,65 @@
+version: 1
+providers:
+  office:
+    chat:
+      adapter: mock
+      baseUrl: ""
+      auth: {type: none}
+  research:
+    chat:
+      adapter: mock
+      baseUrl: ""
+      auth: {type: none}
+backends:
+  office-chat:
+    provider: office
+    model: example
+    contextWindowTokens: 8192
+    capabilities:
+      content:
+        inputModalities: [text]
+        outputModalities: [text]
+        structuredOutput: []
+        nativeContinuation: false
+        promptCaching: false
+      supportedChatParameters: [stream, maxOutputTokens, temperature, toolExecution, maxToolRounds, toolChoice, contextOverflow]
+      supportedToolExecutionModes: [engine-orchestrated]
+      supportedToolChoices: [auto, none]
+      supportedReasoningEfforts: []
+      temperatureDispatch: always
+    properties:
+      stream: true
+      maxOutputTokens: 1024
+      temperature: 0.7
+      stopSequences: []
+      toolExecution: engine-orchestrated
+      maxToolRounds: 2
+      toolChoice: {mode: auto}
+      contextOverflow: error
+    options: {timeoutMs: 5000, mockStreamDelayMultiplier: 0}
+  research-chat:
+    provider: research
+    model: example
+    contextWindowTokens: 8192
+    capabilities:
+      content:
+        inputModalities: [text]
+        outputModalities: [text]
+        structuredOutput: []
+        nativeContinuation: false
+        promptCaching: false
+      supportedChatParameters: [stream, maxOutputTokens, temperature, toolExecution, maxToolRounds, toolChoice, contextOverflow]
+      supportedToolExecutionModes: [engine-orchestrated]
+      supportedToolChoices: [auto, none]
+      supportedReasoningEfforts: []
+      temperatureDispatch: always
+    properties:
+      stream: true
+      maxOutputTokens: 1024
+      temperature: 0.7
+      stopSequences: []
+      toolExecution: engine-orchestrated
+      maxToolRounds: 2
+      toolChoice: {mode: auto}
+      contextOverflow: error
+    options: {timeoutMs: 5000, mockStreamDelayMultiplier: 0}

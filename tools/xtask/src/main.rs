@@ -340,7 +340,13 @@ fn package(root: &Path) -> Result<()> {
             return Err(format!("{name} package licence differs from release.json").into());
         }
     }
-    for example in ["catalogue", "custom-node", "backend", "editor-server"] {
+    for example in [
+        "catalogue",
+        "custom-node",
+        "backend",
+        "declarative-providers",
+        "editor-server",
+    ] {
         let consumer = unpack_root.path().join(example);
         fs::create_dir_all(consumer.join("src"))?;
         let mut manifest = format!("[package]\nname = \"package-{example}\"\nversion = \"0.0.0\"\nedition = \"2021\"\n[dependencies]\nserde_json = \"1\"\nfutures-util = \"0.3\"\nasync-trait = \"0.1\"\ntokio = {{ version = \"1\", features = [\"macros\", \"rt-multi-thread\", \"net\", \"time\"] }}\ntokio-util = \"0.7\"\n");
@@ -365,6 +371,12 @@ fn package(root: &Path) -> Result<()> {
             consumer.join("src/main.rs"),
             fs::read_to_string(root.join(format!("examples/{example}/src/main.rs")))?,
         )?;
+        if example == "declarative-providers" {
+            fs::copy(
+                root.join("examples/declarative-providers/providers.yaml"),
+                consumer.join("providers.yaml"),
+            )?;
+        }
         if example == "editor-server" {
             for module in ["runtime.rs", "upgrade.rs"] {
                 fs::copy(

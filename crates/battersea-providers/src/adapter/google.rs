@@ -74,7 +74,12 @@ pub(crate) fn create_google_adapter(
         return Err(missing_backend_option(provider, "endpoint"));
     }
     let base_url = resolve_google_base_url(&backend.endpoint);
-    let api_key = resolve_google_api_key(&backend)?;
+    let api_key = if backend.binding.is_some() {
+        String::new()
+    } else {
+        resolve_google_api_key(&backend)?
+    };
+    let provider_id = backend.provider.clone();
     let model = backend.model.clone();
     let backend_id = backend.id.clone();
     let client = reqwest::Client::builder()
@@ -91,7 +96,7 @@ pub(crate) fn create_google_adapter(
         base_url: base_url.clone(),
         stream_idle_timeout_ms,
         context: EngineAdapterDebugContext {
-            provider: "google".to_string(),
+            provider: provider_id,
             backend: backend_id,
             model,
             sdk: "reqwest".to_string(),
@@ -281,6 +286,19 @@ impl GoogleEngineAdapter {
     /// Splitting this out keeps the four call sites consistent and
     /// makes it easy to swap in a different API version later.
     fn build_request_url(&self, action: &str, sse: bool) -> String {
+        if let Some(binding) = &self.backend.binding {
+            let mut url = binding
+                .connection
+                .route(&format!(
+                    "models/{}:{action}",
+                    crate::connection::segment(&self.backend.model)
+                ))
+                .expect("validated protocol route");
+            if sse {
+                url.query_pairs_mut().append_pair("alt", "sse");
+            }
+            return url.to_string();
+        }
         let suffix = if sse { "&alt=sse" } else { "" };
         format!(
             "{}/v1beta/models/{}:{}?key={}{}",
@@ -310,7 +328,8 @@ impl GoogleEngineAdapter {
         let context = self.context.clone();
         let url = self.build_request_url("generateContent", false);
 
-        let contents = crate::content::messages("google", &request.shared.messages)?;
+        let contents =
+            crate::content::messages("google", &backend.provider, &request.shared.messages)?;
         tokio::spawn(async move {
             let conversation = GoogleToolConversation {
                 client,
@@ -506,7 +525,7 @@ fn build_stream_body(
     request: &EngineTextStreamRequest,
 ) -> Result<Value, EngineAdapterRequestError> {
     let mut body = json!({
-        "contents": crate::content::messages("google", &request.shared.messages)?
+        "contents": crate::content::messages("google", &backend.provider, &request.shared.messages)?
     });
     if !request
         .shared
@@ -678,7 +697,7 @@ fn build_count_tokens_body(
         build_local_tool_body(
             backend,
             request,
-            crate::content::messages("google", &request.shared.messages)?,
+            crate::content::messages("google", &backend.provider, &request.shared.messages)?,
         )
     };
     generation["model"] = json!(format!("models/{}", backend.model));
@@ -910,9 +929,11 @@ impl GeminiGenerateContentResponse {
                         } else {
                             data["fileUri"].as_str().unwrap_or_default().to_string()
                         };
-                        crate::content::media_source("google", &url, &mime).map_err(|error| {
-                            EngineAdapterRequestError::invalid_response("google", error.message)
-                        })?;
+                        crate::content::media_source("google", "google", &url, &mime).map_err(
+                            |error| {
+                                EngineAdapterRequestError::invalid_response("google", error.message)
+                            },
+                        )?;
                         if !mime.starts_with("image/") && !mime.starts_with("audio/") {
                             return Err(EngineAdapterRequestError::invalid_response(
                                 "google",
@@ -1083,6 +1104,7 @@ mod tests {
 
     fn backend_stub() -> EngineBackendConfig {
         EngineBackendConfig {
+            binding: None,
             id: "test".to_string(),
             provider: "google".to_string(),
             label: "Test".to_string(),

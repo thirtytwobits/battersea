@@ -37,6 +37,7 @@ fn invalid(provider: &str, message: &str) -> EngineAdapterRequestError {
     EngineAdapterRequestError::new(provider, message, "invalid_request")
 }
 pub(crate) fn media_source<'a>(
+    protocol: &str,
     provider: &str,
     url: &'a str,
     mime: &str,
@@ -56,7 +57,7 @@ pub(crate) fn media_source<'a>(
             ));
         }
         Ok(Some(data))
-    } else if url.starts_with("https://") || (provider == "google" && url.starts_with("gs://")) {
+    } else if url.starts_with("https://") || (protocol == "google" && url.starts_with("gs://")) {
         let parsed = reqwest::Url::parse(url)
             .map_err(|_| invalid(provider, "Invalid remote media reference."))?;
         if parsed.host_str().is_none()
@@ -96,6 +97,7 @@ fn document_mime(mime: &str) -> bool {
 }
 
 pub(crate) fn messages(
+    protocol: &str,
     provider: &str,
     messages: &[Message],
 ) -> Result<Vec<Value>, EngineAdapterRequestError> {
@@ -105,7 +107,7 @@ pub(crate) fn messages(
         let mut blocks = Vec::new();
         let role = match message.role {
             Role::Assistant => {
-                if provider == "google" {
+                if protocol == "google" {
                     "model"
                 } else {
                     "assistant"
@@ -115,7 +117,7 @@ pub(crate) fn messages(
         };
         for block in &message.content {
             let native = match block {
-                ContentBlock::Text { text } => match provider {
+                ContentBlock::Text { text } => match protocol {
                     "openai" => json!({"type": "input_text", "text": text}),
                     "anthropic" => json!({"type": "text", "text": text}),
                     _ => json!({"text": text}),
@@ -124,8 +126,8 @@ pub(crate) fn messages(
                 | ContentBlock::Audio { url, mime_type }
                 | ContentBlock::Video { url, mime_type }
                 | ContentBlock::Document { url, mime_type, .. } => {
-                    let data = media_source(provider, url, mime_type)?;
-                    match provider {
+                    let data = media_source(protocol, provider, url, mime_type)?;
+                    match protocol {
                         "openai" => match block {
                             ContentBlock::Image { .. }
                                 if ["image/png", "image/jpeg", "image/webp", "image/gif"]
@@ -229,6 +231,12 @@ pub(crate) fn messages(
                         _ => return Err(invalid(provider, "Unknown content encoder.")),
                     }
                 }
+                ContentBlock::NativeV2 { .. } | ContentBlock::ReasoningV2 { .. } => {
+                    return Err(invalid(
+                        provider,
+                        "Continuation was not admitted through its binding.",
+                    ))
+                }
                 ContentBlock::Native {
                     provider: owner,
                     payload,
@@ -246,7 +254,7 @@ pub(crate) fn messages(
                     if owner != provider {
                         return Err(invalid(provider, "Cross-provider reasoning continuation."));
                     }
-                    match provider {
+                    match protocol {
                         "anthropic" => {
                             json!({"type": "thinking", "thinking": text, "signature": signature})
                         }
@@ -267,7 +275,7 @@ pub(crate) fn messages(
                     arguments,
                 } => {
                     tool_names.insert(id.as_str(), name.as_str());
-                    match provider {
+                    match protocol {
                         "openai" => {
                             json!({"type": "function_call", "call_id": id, "name": name, "arguments": arguments.to_string()})
                         }
@@ -277,7 +285,7 @@ pub(crate) fn messages(
                         _ => json!({"functionCall": {"id": id, "name": name, "args": arguments}}),
                     }
                 }
-                ContentBlock::ToolResult { id, content } => match provider {
+                ContentBlock::ToolResult { id, content } => match protocol {
                     "openai" => {
                         json!({"type": "function_call_output", "call_id": id, "output": content.to_string()})
                     }
@@ -289,7 +297,7 @@ pub(crate) fn messages(
                     }
                 },
             };
-            if provider == "openai"
+            if protocol == "openai"
                 && matches!(
                     block,
                     ContentBlock::Native { .. }
@@ -306,7 +314,7 @@ pub(crate) fn messages(
             }
         }
         if !blocks.is_empty() {
-            result.push(if provider == "google" {
+            result.push(if protocol == "google" {
                 json!({"role": role, "parts": blocks})
             } else {
                 json!({"role": role, "content": blocks})

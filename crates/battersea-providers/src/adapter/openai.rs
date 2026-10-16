@@ -103,8 +103,11 @@ pub(crate) fn create_openai_adapter(
         } else {
             (0, 0, 0)
         };
-    let base_url = resolve_openai_base_url(&backend.endpoint);
+    let base_url = crate::connection::base(backend.binding.as_ref(), || {
+        resolve_openai_base_url(&backend.endpoint)
+    });
     let backend_id = backend.id.clone();
+    let provider_id = backend.provider.clone();
     let model = backend.model.clone();
     build_openai_headers(&backend)?;
     let http_client = reqwest::Client::builder()
@@ -127,7 +130,7 @@ pub(crate) fn create_openai_adapter(
         background_max_reconnects,
         background_max_wait_ms,
         context: EngineAdapterDebugContext {
-            provider: "openai".to_string(),
+            provider: provider_id,
             backend: backend_id,
             model,
             sdk: "reqwest".to_string(),
@@ -423,7 +426,11 @@ impl OpenAiEngineAdapter {
             backend: self.backend.clone(),
             logger: self.logger.clone(),
             context: self.context.clone(),
-            input: crate::content::messages("openai", &request.shared.messages)?,
+            input: crate::content::messages(
+                "openai",
+                &self.backend.provider,
+                &request.shared.messages,
+            )?,
             transport: if !self.background {
                 OpenAiTurnTransport::Stream {
                     idle_ms: self.stream_idle_timeout_ms,
@@ -942,13 +949,21 @@ struct BackgroundResponseGuard {
     client: reqwest::Client,
     base_url: String,
     headers: reqwest::header::HeaderMap,
+    backend: EngineBackendConfig,
     id: Option<String>,
 }
 
 impl BackgroundResponseGuard {
     async fn cancel(&mut self) {
         if let Some(id) = self.id.take() {
-            cancel_background_response(&self.client, &self.base_url, &self.headers, &id).await;
+            cancel_background_response(
+                &self.client,
+                &self.base_url,
+                &self.headers,
+                &self.backend,
+                &id,
+            )
+            .await;
         }
     }
 }
@@ -959,8 +974,9 @@ impl Drop for BackgroundResponseGuard {
             let client = self.client.clone();
             let base_url = self.base_url.clone();
             let headers = self.headers.clone();
+            let backend = self.backend.clone();
             tokio::spawn(async move {
-                cancel_background_response(&client, &base_url, &headers, &id).await;
+                cancel_background_response(&client, &base_url, &headers, &backend, &id).await;
             });
         }
     }
@@ -970,13 +986,19 @@ async fn cancel_background_response(
     http_client: &reqwest::Client,
     base_url: &str,
     headers: &reqwest::header::HeaderMap,
+    backend: &EngineBackendConfig,
     id: &str,
 ) {
-    let _ = http_client
-        .post(format!("{base_url}/responses/{id}/cancel"))
-        .headers(headers.clone())
-        .send()
-        .await;
+    let id = crate::connection::segment(id);
+    if let Ok(request) = crate::connection::authenticate(
+        http_client
+            .post(format!("{base_url}/responses/{id}/cancel"))
+            .headers(headers.clone()),
+        backend.binding.as_ref(),
+        &backend.auth,
+    ) {
+        let _ = tokio::time::timeout(std::time::Duration::from_secs(5), request.send()).await;
+    }
 }
 
 /// Creates a background response and polls it to a terminal state.
@@ -1034,6 +1056,7 @@ async fn create_and_poll_background(
         client: http_client.clone(),
         base_url: base_url.to_string(),
         headers: headers.clone(),
+        backend: backend.clone(),
         id: Some(id.clone()),
     };
     let started = tokio::time::Instant::now();
@@ -1058,7 +1081,10 @@ async fn create_and_poll_background(
         tokio::time::sleep(std::time::Duration::from_millis(poll_interval_ms)).await;
         let polled = crate::retry::send(
             http_client
-                .get(format!("{base_url}/responses/{id}"))
+                .get(format!(
+                    "{base_url}/responses/{}",
+                    crate::connection::segment(&id)
+                ))
                 .headers(headers.clone()),
             backend,
             logger.as_ref(),
@@ -1169,6 +1195,7 @@ fn to_background_stream_body(mut body: Value) -> Value {
 /// Builds the resume URL for a background stream — continue the SSE feed
 /// after the last observed `sequence_number` cursor.
 fn background_resume_url(base_url: &str, id: &str, cursor: i64) -> String {
+    let id = crate::connection::segment(id);
     format!("{base_url}/responses/{id}?stream=true&starting_after={cursor}")
 }
 
@@ -1202,6 +1229,7 @@ async fn drive_background_stream(
         client: http_client.clone(),
         base_url: base_url.to_string(),
         headers: headers.clone(),
+        backend: backend.clone(),
         id: None,
     };
     let mut cursor: i64 = -1;
@@ -1439,7 +1467,7 @@ fn build_stream_body(
         "model": backend.model,
         "stream": true,
         "instructions": request.shared.text_for_role(battersea_model::Role::System),
-        "input": crate::content::messages("openai", &request.shared.messages)?,
+        "input": crate::content::messages("openai", &backend.provider, &request.shared.messages)?,
     });
     apply_openai_temperature(&mut body, backend, request.shared.chat.temperature);
     apply_openai_max_output_tokens(&mut body, request.shared.chat.max_output_tokens);
@@ -1640,6 +1668,7 @@ fn build_input_token_count_body(
             request,
             json!(crate::content::messages(
                 "openai",
+                &backend.provider,
                 &request.shared.messages
             )?),
         )
@@ -1664,6 +1693,9 @@ fn build_input_token_count_body(
 fn build_openai_headers(
     backend: &EngineBackendConfig,
 ) -> Result<HeaderMap, EngineAdapterRequestError> {
+    if let Some(binding) = &backend.binding {
+        return crate::connection::headers(binding, &backend.auth);
+    }
     let mut headers = HeaderMap::new();
     let header_name = backend
         .auth
@@ -1954,6 +1986,7 @@ mod tests {
 
     fn sample_backend() -> EngineBackendConfig {
         EngineBackendConfig {
+            binding: None,
             id: "openai-backend".to_string(),
             provider: "openai".to_string(),
             label: "OpenAI".to_string(),
@@ -1984,7 +2017,7 @@ mod tests {
                 version_header: None,
                 version: None,
                 has_api_key: true,
-                api_key: Some("secret".to_string()),
+                api_key: Some("secret".into()),
             },
             short_description: String::new(),
             long_description: String::new(),
@@ -2789,7 +2822,9 @@ mod tests {
         let (base, req_rx, handle) = spawn_background_reconnect_server();
         let mut backend = background_backend();
         backend.endpoint = format!("{base}/responses");
-        let base_url = resolve_openai_base_url(&backend.endpoint);
+        let base_url = crate::connection::base(backend.binding.as_ref(), || {
+            resolve_openai_base_url(&backend.endpoint)
+        });
         let http = reqwest::Client::new();
         let body =
             json!({ "model": backend.model, "stream": true, "background": true, "input": [] });

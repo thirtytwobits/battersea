@@ -18,6 +18,8 @@ it must not redispatch accepted provider work. Implement the ports in the
 The [runtime guide](runtime.md) explains delivery and ownership. For accounting, bounded
 observation, and application ledger responsibilities, read the [observation contract](contracts/observability.md).
 Provider retry and dispatch certainty follow the [provider contract](contracts/providers.md).
+Bind services through the [declarative provider configuration](providers.md) and retain its
+revision with accepted runs.
 
 The standalone editor server demonstrates filesystem documents, revision fencing, explicit
 upgrades, activation endpoints, and durable completion. See [examples](examples.md).

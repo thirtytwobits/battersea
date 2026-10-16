@@ -357,6 +357,27 @@ impl EngineBackendCapabilities {
         self.validate_reasoning_effort(chat.reasoning_effort)
     }
 
+    /// Refuse supplied parameters outside an explicitly declared backend contract.
+    pub fn validate_declared_chat_parameters(
+        &self,
+        chat: &EngineChatParameters,
+    ) -> Result<(), String> {
+        self.validate_chat_parameters(chat)?;
+        let properties = serde_json::to_value(chat).map_err(|_| "Invalid chat parameters.")?;
+        for (name, value) in properties.as_object().expect("chat properties") {
+            if (name == "stopSequences" && value.as_array().is_some_and(Vec::is_empty))
+                || (name == "temperature"
+                    && self.temperature_dispatch == EngineTemperatureDispatch::Never)
+            {
+                continue;
+            }
+            if !self.supported_chat_parameters.contains(name) {
+                return Err(format!("Backend does not advertise {name}."));
+            }
+        }
+        Ok(())
+    }
+
     pub fn validate_tool_choice(&self, choice: &EngineChatToolChoice) -> Result<(), String> {
         if !self.supported_tool_choices.contains(&choice.mode) {
             return Err(format!(

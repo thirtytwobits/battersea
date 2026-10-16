@@ -59,4 +59,5 @@ pub fn battersea_providers::registry::builtin_registry() -> &'static battersea_m
 pub fn battersea_providers::registry::register_builtin_providers(registry: &mut battersea_model::registry::ProviderRegistry) -> core::result::Result<(), battersea_model::adapter::error::EngineAdapterRequestError>
 pub fn battersea_providers::builtin_registry() -> &'static battersea_model::registry::ProviderRegistry
 pub fn battersea_providers::estimate_mock_token_count(text: &str) -> u64
+pub fn battersea_providers::register_builtin_adapters(registry: &mut battersea_model::protocol::ProtocolRegistry) -> core::result::Result<(), battersea_model::protocol::ProviderConfigurationError>
 pub fn battersea_providers::register_builtin_providers(registry: &mut battersea_model::registry::ProviderRegistry) -> core::result::Result<(), battersea_model::adapter::error::EngineAdapterRequestError>

@@ -204,6 +204,8 @@ pub enum ControllerActivityEvent {
 use crate::adapter::{EngineAuthConfig, EngineBackendOptions};
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct MediaBackendConfig {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub binding: Option<crate::ProviderBinding>,
     pub id: String,
     pub provider: String,
     pub capability: MediaCapability,
@@ -329,6 +331,7 @@ pub trait MediaGenerationBatchReporter: Send + Sync {
 /// Immutable inputs shared by capture and dispatch. Only preparation constructs this value.
 #[derive(Debug, Clone, PartialEq)]
 pub struct PreparedMediaRequest {
+    pub binding_revision: Option<String>,
     pub render_input: MediaRenderRequest,
     pub path: String,
     pub body: Value,
@@ -428,6 +431,9 @@ pub enum MediaSubmission {
 #[allow(clippy::double_must_use)]
 #[async_trait]
 pub trait MediaJob: Send + Sync {
+    fn provider(&self) -> &str {
+        "media"
+    }
     fn id(&self) -> &str;
     async fn wait(
         &mut self,
@@ -528,12 +534,12 @@ impl MediaSubmission {
             Self::Pending(mut job) => {
                 let result = tokio::select! {
                     biased;
-                    _ = cancellation.cancelled() => Err(EngineAdapterRequestError::new("media", "Media job cancelled.", crate::ErrorKind::Cancelled)),
+                    _ = cancellation.cancelled() => Err(EngineAdapterRequestError::new(job.provider(), "Media job cancelled.", crate::ErrorKind::Cancelled)),
                     result = async {
                         match deadline {
-                            Some(deadline) if deadline <= tokio::time::Instant::now() => Err(EngineAdapterRequestError::new("media", "Media job deadline exceeded.", crate::ErrorKind::Timeout)),
+                            Some(deadline) if deadline <= tokio::time::Instant::now() => Err(EngineAdapterRequestError::new(job.provider(), "Media job deadline exceeded.", crate::ErrorKind::Timeout)),
                             Some(deadline) => tokio::time::timeout_at(deadline, job.wait(cancellation.clone())).await
-                                .map_err(|_| EngineAdapterRequestError::new("media", "Media job deadline exceeded.", crate::ErrorKind::Timeout))?,
+                                .map_err(|_| EngineAdapterRequestError::new(job.provider(), "Media job deadline exceeded.", crate::ErrorKind::Timeout))?,
                             None => job.wait(cancellation.clone()).await,
                         }
                     } => result,

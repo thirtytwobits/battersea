@@ -32,13 +32,19 @@ pub(crate) fn create_google_media_generator(
         return Err(missing_google_media("endpoint"));
     }
     let client = reqwest::Client::builder()
+        .retry(reqwest::retry::never())
+        .redirect(reqwest::redirect::Policy::none())
         .timeout(std::time::Duration::from_millis(timeout_ms))
         .build()
         .map_err(|error| EngineAdapterRequestError::transport(PROVIDER, error.to_string()))?;
     Ok(Arc::new(GoogleMediaGenerator {
         client,
         base_url: resolve_google_base_url(&backend.endpoint),
-        api_key: resolve_google_api_key(&backend)?,
+        api_key: if backend.binding.is_some() {
+            String::new()
+        } else {
+            resolve_google_api_key(&backend)?
+        },
         backend,
     }))
 }
@@ -128,16 +134,19 @@ impl GoogleMediaGenerator {
             activity_reporter,
             cancellation.clone(),
             async {
-                let response = self
-                    .client
-                    .post(self.build_interaction_url())
-                    .header("x-goog-api-key", &self.api_key)
-                    .json(&body)
-                    .send()
-                    .await
-                    .map_err(|error| {
-                        EngineAdapterRequestError::transport(PROVIDER, error.to_string())
-                    })?;
+                let request = self.client.post(self.build_interaction_url()).json(&body);
+                let request = if self.backend.binding.is_some() {
+                    crate::connection::authenticate(
+                        request,
+                        self.backend.binding.as_ref(),
+                        &self.backend.auth,
+                    )?
+                } else {
+                    request.header("x-goog-api-key", &self.api_key)
+                };
+                let response = request.send().await.map_err(|error| {
+                    EngineAdapterRequestError::transport(PROVIDER, error.to_string())
+                })?;
                 if !response.status().is_success() {
                     return Err(normalize_google_http_error(
                         response.status().as_u16(),
@@ -170,7 +179,15 @@ impl GoogleMediaGenerator {
 
 impl GoogleMediaGenerator {
     fn build_interaction_url(&self) -> String {
-        format!("{}/v1beta/interactions", self.base_url)
+        if let Some(binding) = &self.backend.binding {
+            binding
+                .connection
+                .route("interactions")
+                .expect("validated route")
+                .to_string()
+        } else {
+            format!("{}/v1beta/interactions", self.base_url)
+        }
     }
 }
 
@@ -345,6 +362,7 @@ mod tests {
 
     fn backend() -> MediaBackendConfig {
         MediaBackendConfig {
+            binding: None,
             id: "google-image".to_string(),
             provider: PROVIDER.to_string(),
             capability: MediaCapability::ImageGeneration,
@@ -372,7 +390,7 @@ mod tests {
                 version_header: None,
                 version: None,
                 has_api_key: true,
-                api_key: Some("test-key".to_string()),
+                api_key: Some("test-key".into()),
             },
             short_description: String::new(),
             long_description: String::new(),

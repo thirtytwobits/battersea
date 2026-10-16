@@ -240,12 +240,14 @@ pub struct EngineAuthConfig {
     pub version: Option<String>,
     pub has_api_key: bool,
     #[serde(skip_serializing, default)]
-    pub api_key: Option<String>,
+    pub api_key: Option<crate::SecretString>,
 }
 
 /// Represents one configured text-generation backend from the runtime config.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct EngineBackendConfig {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub binding: Option<crate::ProviderBinding>,
     pub id: String,
     pub provider: String,
     pub label: String,
@@ -586,7 +588,35 @@ pub fn validate_chat_request(
         &backend.capabilities.content,
         &request.shared.messages,
     )?;
-    if !request.shared.chat.stream {
+    if let Some(binding) = &backend.binding {
+        if !binding.chat_streaming.contains(&request.shared.chat.stream)
+            || !binding
+                .context_overflow
+                .contains(&request.shared.chat.context_overflow)
+        {
+            return Err(EngineAdapterRequestError::new(
+                &backend.provider,
+                "Unsupported streaming or context overflow mode.",
+                error::ErrorKind::InvalidRequest,
+            ));
+        }
+        backend
+            .capabilities
+            .validate_declared_chat_parameters(&request.shared.chat)
+            .map_err(|message| {
+                EngineAdapterRequestError::new(
+                    &backend.provider,
+                    message,
+                    error::ErrorKind::InvalidRequest,
+                )
+            })?;
+    }
+    if !request.shared.chat.stream
+        && !backend
+            .binding
+            .as_ref()
+            .is_some_and(|b| b.chat_streaming.contains(&false))
+    {
         return Err(EngineAdapterRequestError::new(
             &backend.provider,
             "This request path requires streaming mode.",

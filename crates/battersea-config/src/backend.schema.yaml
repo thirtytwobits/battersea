@@ -451,3 +451,111 @@ $defs:
         type: string
       label:
         type: string
+
+  credentialReference:
+    oneOf:
+      - type: object
+        additionalProperties: false
+        required: [env]
+        properties:
+          env: {type: string, minLength: 1}
+      - type: object
+        additionalProperties: false
+        required: [host]
+        properties:
+          host: {type: string, minLength: 1}
+
+  providerAuthentication:
+    oneOf:
+      - type: object
+        additionalProperties: false
+        required: [type]
+        properties:
+          type: {const: none}
+      - type: object
+        additionalProperties: false
+        required: [type, credential]
+        properties:
+          type: {const: bearer}
+          credential: {$ref: '#/$defs/credentialReference'}
+      - type: object
+        additionalProperties: false
+        required: [type, header, credential]
+        properties:
+          type: {const: header}
+          header: {type: string, minLength: 1}
+          credential: {$ref: '#/$defs/credentialReference'}
+      - type: object
+        additionalProperties: false
+        required: [type, parameter, credential]
+        properties:
+          type: {const: query}
+          parameter: {type: string, pattern: '^[a-zA-Z0-9_-]+$'}
+          credential: {$ref: '#/$defs/credentialReference'}
+
+  protocolBinding:
+    type: object
+    additionalProperties: false
+    required: [adapter, baseUrl, auth]
+    properties:
+      adapter: {type: string, minLength: 1}
+      baseUrl: {type: string}
+      auth: {$ref: '#/$defs/providerAuthentication'}
+      headers:
+        type: object
+        additionalProperties: {type: string}
+      deliveryOrigins:
+        type: array
+        uniqueItems: true
+        items: {type: string}
+      content: {$ref: '#/$defs/contentCapabilities'}
+      parameters:
+        type: array
+        uniqueItems: true
+        items: {type: string}
+      counting: {enum: [native, estimate, unavailable]}
+
+  configuredProvider:
+    type: object
+    additionalProperties: false
+    anyOf:
+      - required: [chat]
+      - required: [media]
+    properties:
+      chat: {$ref: '#/$defs/protocolBinding'}
+      media: {$ref: '#/$defs/protocolBinding'}
+
+  configuredChatBackend:
+    allOf:
+      - $ref: '#/$defs/backend'
+      - not:
+          anyOf:
+            - required: [endpoint]
+            - required: [auth]
+
+  configuredMediaBackend:
+    allOf:
+      - $ref: '#/$defs/mediaBackend'
+      - not:
+          anyOf:
+            - required: [endpoint]
+            - required: [auth]
+
+  providerConfiguration:
+    type: object
+    additionalProperties: false
+    required: [version, providers]
+    properties:
+      version: {const: 1}
+      providers:
+        type: object
+        propertyNames: {pattern: '^\S(?:.*\S)?$'}
+        additionalProperties: {$ref: '#/$defs/configuredProvider'}
+      backends:
+        type: object
+        propertyNames: {pattern: '^\S(?:.*\S)?$'}
+        additionalProperties: {$ref: '#/$defs/configuredChatBackend'}
+      mediaBackends:
+        type: object
+        propertyNames: {pattern: '^\S(?:.*\S)?$'}
+        additionalProperties: {$ref: '#/$defs/configuredMediaBackend'}

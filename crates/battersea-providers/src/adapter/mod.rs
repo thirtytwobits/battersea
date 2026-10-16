@@ -14,3 +14,6 @@ pub(crate) use openai::create_openai_adapter;
 
 #[cfg(feature = "mock")]
 pub(crate) mod mock;
+
+#[cfg(feature = "openai")]
+pub(crate) mod completions;

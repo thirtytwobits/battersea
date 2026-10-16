@@ -238,6 +238,7 @@ fn prepared(
         })?
         .to_owned();
     Ok(PreparedMediaRequest {
+        binding_revision: None,
         render_input,
         path: path.into(),
         body,

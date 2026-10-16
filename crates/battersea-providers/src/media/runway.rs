@@ -33,6 +33,7 @@ pub(crate) fn create_runway_media_generator(
     }
     require_u64_option(&backend, "maxPollRetryCount")?;
     let client = reqwest::Client::builder()
+        .retry(reqwest::retry::never())
         .redirect(reqwest::redirect::Policy::none())
         .timeout(std::time::Duration::from_millis(timeout_ms))
         .default_headers(build_headers(&backend)?)
@@ -40,7 +41,9 @@ pub(crate) fn create_runway_media_generator(
         .map_err(|error| EngineAdapterRequestError::transport("runway", error.to_string()))?;
     Ok(Arc::new(RunwayMediaGenerator {
         client,
-        base_url: derive_base_url(&backend.endpoint),
+        base_url: crate::connection::base(backend.binding.as_ref(), || {
+            derive_base_url(&backend.endpoint)
+        }),
         backend,
     }))
 }
@@ -128,11 +131,14 @@ impl MediaGenerationAdapter for RunwayMediaGenerator {
         let mut timing = MediaTimingRecorder::start();
         let submit_started_at = chrono::Utc::now();
         let submit_started_instant = std::time::Instant::now();
-        let submit = self
-            .client
-            .post(format!("{}/{}", self.base_url, submit_path))
-            .json(&submit_body)
-            .send();
+        let submit = crate::connection::authenticate(
+            self.client
+                .post(format!("{}/{}", self.base_url, submit_path)),
+            self.backend.binding.as_ref(),
+            &self.backend.auth,
+        )?
+        .json(&submit_body)
+        .send();
         let submit_response = tokio::select! {
             _ = cancellation.cancelled() => {
                 return Err(EngineAdapterRequestError::new("runway", "Media generation cancelled.", "cancelled"));
@@ -182,12 +188,15 @@ impl MediaGenerationAdapter for RunwayMediaGenerator {
 
     async fn cancel(&self, provider_job_id: &str) -> Result<(), crate::EngineAdapterRequestError> {
         super::jobs::validate_id("runway", provider_job_id)?;
-        let response = self
-            .client
-            .delete(format!("{}/tasks/{}", self.base_url, provider_job_id))
-            .send()
-            .await
-            .map_err(|error| EngineAdapterRequestError::transport("runway", error.to_string()))?;
+        let response = crate::connection::authenticate(
+            self.client
+                .delete(format!("{}/tasks/{}", self.base_url, provider_job_id)),
+            self.backend.binding.as_ref(),
+            &self.backend.auth,
+        )?
+        .send()
+        .await
+        .map_err(|error| EngineAdapterRequestError::transport("runway", error.to_string()))?;
         if !response.status().is_success() {
             return Err(EngineAdapterRequestError::new(
                 "runway",
@@ -514,8 +523,11 @@ fn derive_base_url(endpoint: &str) -> String {
 /// Builds the default Runway request headers, applying provider defaults for the version header and
 /// optional trace diagnostics.
 fn build_headers(backend: &MediaBackendConfig) -> Result<HeaderMap, EngineAdapterRequestError> {
+    if let Some(binding) = &backend.binding {
+        return crate::connection::headers(binding, &backend.auth);
+    }
     let mut headers = HeaderMap::new();
-    let api_key = backend.auth.api_key.clone().unwrap_or_default();
+    let api_key = backend.auth.api_key.as_deref().unwrap_or("");
     headers.insert(
         AUTHORIZATION,
         HeaderValue::from_str(&format!("Bearer {api_key}"))
@@ -570,7 +582,7 @@ struct RunwayTransport {
 #[async_trait]
 impl super::jobs::JobTransport for RunwayTransport {
     fn provider(&self) -> &str {
-        "runway"
+        &self.adapter.backend.provider
     }
     fn backend(&self) -> &MediaBackendConfig {
         &self.adapter.backend
@@ -583,13 +595,16 @@ impl super::jobs::JobTransport for RunwayTransport {
         decode_task(raw, self.kind.clone(), submission)
     }
     async fn poll(&self, id: &str) -> Result<super::jobs::RemoteUpdate, EngineAdapterRequestError> {
-        let response = self
-            .adapter
-            .client
-            .get(format!("{}/tasks/{}", self.adapter.base_url, id))
-            .send()
-            .await
-            .map_err(|e| EngineAdapterRequestError::transport("runway", e.to_string()))?;
+        let response = crate::connection::authenticate(
+            self.adapter
+                .client
+                .get(format!("{}/tasks/{}", self.adapter.base_url, id)),
+            self.adapter.backend.binding.as_ref(),
+            &self.adapter.backend.auth,
+        )?
+        .send()
+        .await
+        .map_err(|e| EngineAdapterRequestError::transport("runway", e.to_string()))?;
         decode_task(
             super::jobs::json_response("runway", response).await?,
             self.kind.clone(),
@@ -684,6 +699,7 @@ mod tests {
 
     fn sample_backend() -> MediaBackendConfig {
         MediaBackendConfig {
+            binding: None,
             id: "runway-1".to_string(),
             provider: "runway".to_string(),
             capability: MediaCapability::ImageGeneration,
@@ -734,7 +750,7 @@ mod tests {
                 version_header: Some("X-Runway-Version".to_string()),
                 version: Some("2024-11-06".to_string()),
                 has_api_key: true,
-                api_key: Some("secret".to_string()),
+                api_key: Some("secret".into()),
             },
             short_description: String::new(),
             long_description: String::new(),

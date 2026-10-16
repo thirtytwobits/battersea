@@ -1,6 +1,309 @@
 pub mod battersea_config
+pub mod battersea_config::providers
+pub struct battersea_config::providers::ConfiguredProviders
+impl battersea_config::ConfiguredProviders
+pub fn battersea_config::ConfiguredProviders::chat(&self, backend: &str) -> core::option::Option<&alloc::sync::Arc<dyn battersea_model::adapter::EngineAdapter>>
+pub fn battersea_config::ConfiguredProviders::media(&self, backend: &str) -> core::option::Option<&alloc::sync::Arc<dyn battersea_model::media::MediaGenerationAdapter>>
+pub fn battersea_config::ConfiguredProviders::revision(&self) -> &str
+pub fn battersea_config::ConfiguredProviders::snapshot(&self) -> &serde_json::value::Value
+pub fn battersea_config::ConfiguredProviders::verify_revision(&self, revision: &str) -> core::result::Result<(), battersea_model::protocol::ProviderConfigurationError>
+impl core::marker::Freeze for battersea_config::ConfiguredProviders
+impl core::marker::Send for battersea_config::ConfiguredProviders
+impl core::marker::Sync for battersea_config::ConfiguredProviders
+impl core::marker::Unpin for battersea_config::ConfiguredProviders
+impl !core::panic::unwind_safe::RefUnwindSafe for battersea_config::ConfiguredProviders
+impl !core::panic::unwind_safe::UnwindSafe for battersea_config::ConfiguredProviders
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_config::ConfiguredProviders where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_config::ConfiguredProviders where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<T, U> core::convert::Into<U> for battersea_config::ConfiguredProviders where U: core::convert::From<T>
+pub fn battersea_config::ConfiguredProviders::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_config::ConfiguredProviders where U: core::convert::Into<T>
+pub type battersea_config::ConfiguredProviders::Error = core::convert::Infallible
+pub fn battersea_config::ConfiguredProviders::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for battersea_config::ConfiguredProviders where U: core::convert::TryFrom<T>
+pub type battersea_config::ConfiguredProviders::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_config::ConfiguredProviders::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> core::any::Any for battersea_config::ConfiguredProviders where T: 'static + ?core::marker::Sized
+pub fn battersea_config::ConfiguredProviders::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_config::ConfiguredProviders where T: ?core::marker::Sized
+pub fn battersea_config::ConfiguredProviders::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_config::ConfiguredProviders where T: ?core::marker::Sized
+pub fn battersea_config::ConfiguredProviders::borrow_mut(&mut self) -> &mut T
+impl<T> core::convert::From<T> for battersea_config::ConfiguredProviders
+pub fn battersea_config::ConfiguredProviders::from(t: T) -> T
+impl<T> typenum::type_operators::Same for battersea_config::ConfiguredProviders
+pub type battersea_config::ConfiguredProviders::Output = T
+impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_config::ConfiguredProviders where T: ?core::marker::Sized
+pub struct battersea_config::providers::LegacyProviderAssignment
+pub battersea_config::providers::LegacyProviderAssignment::binding: battersea_config::ProtocolBindingFile
+pub battersea_config::providers::LegacyProviderAssignment::provider: alloc::string::String
+impl core::clone::Clone for battersea_config::LegacyProviderAssignment
+pub fn battersea_config::LegacyProviderAssignment::clone(&self) -> battersea_config::LegacyProviderAssignment
+impl core::fmt::Debug for battersea_config::LegacyProviderAssignment
+pub fn battersea_config::LegacyProviderAssignment::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl serde_core::ser::Serialize for battersea_config::LegacyProviderAssignment
+pub fn battersea_config::LegacyProviderAssignment::serialize<__S>(&self, __serializer: __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for battersea_config::LegacyProviderAssignment
+pub fn battersea_config::LegacyProviderAssignment::deserialize<__D>(__deserializer: __D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for battersea_config::LegacyProviderAssignment
+impl core::marker::Send for battersea_config::LegacyProviderAssignment
+impl core::marker::Sync for battersea_config::LegacyProviderAssignment
+impl core::marker::Unpin for battersea_config::LegacyProviderAssignment
+impl core::panic::unwind_safe::RefUnwindSafe for battersea_config::LegacyProviderAssignment
+impl core::panic::unwind_safe::UnwindSafe for battersea_config::LegacyProviderAssignment
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_config::LegacyProviderAssignment where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_config::LegacyProviderAssignment where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<T, U> core::convert::Into<U> for battersea_config::LegacyProviderAssignment where U: core::convert::From<T>
+pub fn battersea_config::LegacyProviderAssignment::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_config::LegacyProviderAssignment where U: core::convert::Into<T>
+pub type battersea_config::LegacyProviderAssignment::Error = core::convert::Infallible
+pub fn battersea_config::LegacyProviderAssignment::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for battersea_config::LegacyProviderAssignment where U: core::convert::TryFrom<T>
+pub type battersea_config::LegacyProviderAssignment::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_config::LegacyProviderAssignment::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for battersea_config::LegacyProviderAssignment where T: core::clone::Clone
+pub type battersea_config::LegacyProviderAssignment::Owned = T
+pub fn battersea_config::LegacyProviderAssignment::clone_into(&self, target: &mut T)
+pub fn battersea_config::LegacyProviderAssignment::to_owned(&self) -> T
+impl<T> core::any::Any for battersea_config::LegacyProviderAssignment where T: 'static + ?core::marker::Sized
+pub fn battersea_config::LegacyProviderAssignment::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_config::LegacyProviderAssignment where T: ?core::marker::Sized
+pub fn battersea_config::LegacyProviderAssignment::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_config::LegacyProviderAssignment where T: ?core::marker::Sized
+pub fn battersea_config::LegacyProviderAssignment::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for battersea_config::LegacyProviderAssignment where T: core::clone::Clone
+pub unsafe fn battersea_config::LegacyProviderAssignment::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for battersea_config::LegacyProviderAssignment
+pub fn battersea_config::LegacyProviderAssignment::from(t: T) -> T
+impl<T> dyn_clone::DynClone for battersea_config::LegacyProviderAssignment where T: core::clone::Clone
+pub fn battersea_config::LegacyProviderAssignment::__clone_box(&self, _: dyn_clone::sealed::Private) -> *mut ()
+impl<T> serde_core::de::DeserializeOwned for battersea_config::LegacyProviderAssignment where T: for<'de> serde_core::de::Deserialize<'de>
+impl<T> typenum::type_operators::Same for battersea_config::LegacyProviderAssignment
+pub type battersea_config::LegacyProviderAssignment::Output = T
+impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_config::LegacyProviderAssignment where T: ?core::marker::Sized
+pub struct battersea_config::providers::ProtocolBindingFile
+pub battersea_config::providers::ProtocolBindingFile::adapter: alloc::string::String
+pub battersea_config::providers::ProtocolBindingFile::auth: battersea_model::protocol::Authentication
+pub battersea_config::providers::ProtocolBindingFile::base_url: alloc::string::String
+pub battersea_config::providers::ProtocolBindingFile::content: core::option::Option<battersea_model::content::ContentCapabilities>
+pub battersea_config::providers::ProtocolBindingFile::counting: core::option::Option<battersea_model::protocol::TokenCounting>
+pub battersea_config::providers::ProtocolBindingFile::delivery_origins: alloc::vec::Vec<alloc::string::String>
+pub battersea_config::providers::ProtocolBindingFile::headers: alloc::collections::btree::map::BTreeMap<alloc::string::String, alloc::string::String>
+pub battersea_config::providers::ProtocolBindingFile::parameters: core::option::Option<alloc::vec::Vec<alloc::string::String>>
+impl core::clone::Clone for battersea_config::ProtocolBindingFile
+pub fn battersea_config::ProtocolBindingFile::clone(&self) -> battersea_config::ProtocolBindingFile
+impl core::fmt::Debug for battersea_config::ProtocolBindingFile
+pub fn battersea_config::ProtocolBindingFile::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl serde_core::ser::Serialize for battersea_config::ProtocolBindingFile
+pub fn battersea_config::ProtocolBindingFile::serialize<__S>(&self, __serializer: __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for battersea_config::ProtocolBindingFile
+pub fn battersea_config::ProtocolBindingFile::deserialize<__D>(__deserializer: __D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for battersea_config::ProtocolBindingFile
+impl core::marker::Send for battersea_config::ProtocolBindingFile
+impl core::marker::Sync for battersea_config::ProtocolBindingFile
+impl core::marker::Unpin for battersea_config::ProtocolBindingFile
+impl core::panic::unwind_safe::RefUnwindSafe for battersea_config::ProtocolBindingFile
+impl core::panic::unwind_safe::UnwindSafe for battersea_config::ProtocolBindingFile
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_config::ProtocolBindingFile where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_config::ProtocolBindingFile where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<T, U> core::convert::Into<U> for battersea_config::ProtocolBindingFile where U: core::convert::From<T>
+pub fn battersea_config::ProtocolBindingFile::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_config::ProtocolBindingFile where U: core::convert::Into<T>
+pub type battersea_config::ProtocolBindingFile::Error = core::convert::Infallible
+pub fn battersea_config::ProtocolBindingFile::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for battersea_config::ProtocolBindingFile where U: core::convert::TryFrom<T>
+pub type battersea_config::ProtocolBindingFile::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_config::ProtocolBindingFile::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for battersea_config::ProtocolBindingFile where T: core::clone::Clone
+pub type battersea_config::ProtocolBindingFile::Owned = T
+pub fn battersea_config::ProtocolBindingFile::clone_into(&self, target: &mut T)
+pub fn battersea_config::ProtocolBindingFile::to_owned(&self) -> T
+impl<T> core::any::Any for battersea_config::ProtocolBindingFile where T: 'static + ?core::marker::Sized
+pub fn battersea_config::ProtocolBindingFile::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_config::ProtocolBindingFile where T: ?core::marker::Sized
+pub fn battersea_config::ProtocolBindingFile::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_config::ProtocolBindingFile where T: ?core::marker::Sized
+pub fn battersea_config::ProtocolBindingFile::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for battersea_config::ProtocolBindingFile where T: core::clone::Clone
+pub unsafe fn battersea_config::ProtocolBindingFile::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for battersea_config::ProtocolBindingFile
+pub fn battersea_config::ProtocolBindingFile::from(t: T) -> T
+impl<T> dyn_clone::DynClone for battersea_config::ProtocolBindingFile where T: core::clone::Clone
+pub fn battersea_config::ProtocolBindingFile::__clone_box(&self, _: dyn_clone::sealed::Private) -> *mut ()
+impl<T> serde_core::de::DeserializeOwned for battersea_config::ProtocolBindingFile where T: for<'de> serde_core::de::Deserialize<'de>
+impl<T> typenum::type_operators::Same for battersea_config::ProtocolBindingFile
+pub type battersea_config::ProtocolBindingFile::Output = T
+impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_config::ProtocolBindingFile where T: ?core::marker::Sized
+pub struct battersea_config::providers::ProviderConfiguration
+pub battersea_config::providers::ProviderConfiguration::backends: alloc::collections::btree::map::BTreeMap<alloc::string::String, battersea_config::EngineBackendConfigFile>
+pub battersea_config::providers::ProviderConfiguration::media_backends: alloc::collections::btree::map::BTreeMap<alloc::string::String, battersea_config::MediaBackendConfigFile>
+pub battersea_config::providers::ProviderConfiguration::providers: alloc::collections::btree::map::BTreeMap<alloc::string::String, battersea_config::ProviderFile>
+pub battersea_config::providers::ProviderConfiguration::version: u32
+impl battersea_config::ProviderConfiguration
+pub fn battersea_config::ProviderConfiguration::validate(&self, protocols: &battersea_model::protocol::ProtocolRegistry) -> core::result::Result<battersea_config::ValidatedProviderConfiguration, battersea_model::protocol::ProviderConfigurationError>
+impl core::clone::Clone for battersea_config::ProviderConfiguration
+pub fn battersea_config::ProviderConfiguration::clone(&self) -> battersea_config::ProviderConfiguration
+impl core::fmt::Debug for battersea_config::ProviderConfiguration
+pub fn battersea_config::ProviderConfiguration::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl serde_core::ser::Serialize for battersea_config::ProviderConfiguration
+pub fn battersea_config::ProviderConfiguration::serialize<__S>(&self, __serializer: __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for battersea_config::ProviderConfiguration
+pub fn battersea_config::ProviderConfiguration::deserialize<__D>(__deserializer: __D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for battersea_config::ProviderConfiguration
+impl core::marker::Send for battersea_config::ProviderConfiguration
+impl core::marker::Sync for battersea_config::ProviderConfiguration
+impl core::marker::Unpin for battersea_config::ProviderConfiguration
+impl core::panic::unwind_safe::RefUnwindSafe for battersea_config::ProviderConfiguration
+impl core::panic::unwind_safe::UnwindSafe for battersea_config::ProviderConfiguration
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_config::ProviderConfiguration where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_config::ProviderConfiguration where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<T, U> core::convert::Into<U> for battersea_config::ProviderConfiguration where U: core::convert::From<T>
+pub fn battersea_config::ProviderConfiguration::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_config::ProviderConfiguration where U: core::convert::Into<T>
+pub type battersea_config::ProviderConfiguration::Error = core::convert::Infallible
+pub fn battersea_config::ProviderConfiguration::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for battersea_config::ProviderConfiguration where U: core::convert::TryFrom<T>
+pub type battersea_config::ProviderConfiguration::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_config::ProviderConfiguration::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for battersea_config::ProviderConfiguration where T: core::clone::Clone
+pub type battersea_config::ProviderConfiguration::Owned = T
+pub fn battersea_config::ProviderConfiguration::clone_into(&self, target: &mut T)
+pub fn battersea_config::ProviderConfiguration::to_owned(&self) -> T
+impl<T> core::any::Any for battersea_config::ProviderConfiguration where T: 'static + ?core::marker::Sized
+pub fn battersea_config::ProviderConfiguration::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_config::ProviderConfiguration where T: ?core::marker::Sized
+pub fn battersea_config::ProviderConfiguration::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_config::ProviderConfiguration where T: ?core::marker::Sized
+pub fn battersea_config::ProviderConfiguration::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for battersea_config::ProviderConfiguration where T: core::clone::Clone
+pub unsafe fn battersea_config::ProviderConfiguration::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for battersea_config::ProviderConfiguration
+pub fn battersea_config::ProviderConfiguration::from(t: T) -> T
+impl<T> dyn_clone::DynClone for battersea_config::ProviderConfiguration where T: core::clone::Clone
+pub fn battersea_config::ProviderConfiguration::__clone_box(&self, _: dyn_clone::sealed::Private) -> *mut ()
+impl<T> serde_core::de::DeserializeOwned for battersea_config::ProviderConfiguration where T: for<'de> serde_core::de::Deserialize<'de>
+impl<T> typenum::type_operators::Same for battersea_config::ProviderConfiguration
+pub type battersea_config::ProviderConfiguration::Output = T
+impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_config::ProviderConfiguration where T: ?core::marker::Sized
+pub struct battersea_config::providers::ProviderFile
+pub battersea_config::providers::ProviderFile::chat: core::option::Option<battersea_config::ProtocolBindingFile>
+pub battersea_config::providers::ProviderFile::media: core::option::Option<battersea_config::ProtocolBindingFile>
+impl core::clone::Clone for battersea_config::ProviderFile
+pub fn battersea_config::ProviderFile::clone(&self) -> battersea_config::ProviderFile
+impl core::default::Default for battersea_config::ProviderFile
+pub fn battersea_config::ProviderFile::default() -> battersea_config::ProviderFile
+impl core::fmt::Debug for battersea_config::ProviderFile
+pub fn battersea_config::ProviderFile::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl serde_core::ser::Serialize for battersea_config::ProviderFile
+pub fn battersea_config::ProviderFile::serialize<__S>(&self, __serializer: __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for battersea_config::ProviderFile
+pub fn battersea_config::ProviderFile::deserialize<__D>(__deserializer: __D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for battersea_config::ProviderFile
+impl core::marker::Send for battersea_config::ProviderFile
+impl core::marker::Sync for battersea_config::ProviderFile
+impl core::marker::Unpin for battersea_config::ProviderFile
+impl core::panic::unwind_safe::RefUnwindSafe for battersea_config::ProviderFile
+impl core::panic::unwind_safe::UnwindSafe for battersea_config::ProviderFile
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_config::ProviderFile where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_config::ProviderFile where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<T, U> core::convert::Into<U> for battersea_config::ProviderFile where U: core::convert::From<T>
+pub fn battersea_config::ProviderFile::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_config::ProviderFile where U: core::convert::Into<T>
+pub type battersea_config::ProviderFile::Error = core::convert::Infallible
+pub fn battersea_config::ProviderFile::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for battersea_config::ProviderFile where U: core::convert::TryFrom<T>
+pub type battersea_config::ProviderFile::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_config::ProviderFile::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for battersea_config::ProviderFile where T: core::clone::Clone
+pub type battersea_config::ProviderFile::Owned = T
+pub fn battersea_config::ProviderFile::clone_into(&self, target: &mut T)
+pub fn battersea_config::ProviderFile::to_owned(&self) -> T
+impl<T> core::any::Any for battersea_config::ProviderFile where T: 'static + ?core::marker::Sized
+pub fn battersea_config::ProviderFile::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_config::ProviderFile where T: ?core::marker::Sized
+pub fn battersea_config::ProviderFile::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_config::ProviderFile where T: ?core::marker::Sized
+pub fn battersea_config::ProviderFile::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for battersea_config::ProviderFile where T: core::clone::Clone
+pub unsafe fn battersea_config::ProviderFile::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for battersea_config::ProviderFile
+pub fn battersea_config::ProviderFile::from(t: T) -> T
+impl<T> dyn_clone::DynClone for battersea_config::ProviderFile where T: core::clone::Clone
+pub fn battersea_config::ProviderFile::__clone_box(&self, _: dyn_clone::sealed::Private) -> *mut ()
+impl<T> serde_core::de::DeserializeOwned for battersea_config::ProviderFile where T: for<'de> serde_core::de::Deserialize<'de>
+impl<T> typenum::type_operators::Same for battersea_config::ProviderFile
+pub type battersea_config::ProviderFile::Output = T
+impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_config::ProviderFile where T: ?core::marker::Sized
+pub struct battersea_config::providers::ValidatedProviderConfiguration
+impl battersea_config::ValidatedProviderConfiguration
+pub fn battersea_config::ValidatedProviderConfiguration::bind(&self, credentials: &dyn battersea_model::protocol::CredentialResolver, logger: core::option::Option<alloc::sync::Arc<dyn battersea_model::adapter::EngineAdapterLogger>>) -> core::result::Result<battersea_config::ConfiguredProviders, battersea_model::protocol::ProviderConfigurationError>
+pub fn battersea_config::ValidatedProviderConfiguration::configuration(&self) -> &battersea_config::ProviderConfiguration
+impl core::marker::Freeze for battersea_config::ValidatedProviderConfiguration
+impl core::marker::Send for battersea_config::ValidatedProviderConfiguration
+impl core::marker::Sync for battersea_config::ValidatedProviderConfiguration
+impl core::marker::Unpin for battersea_config::ValidatedProviderConfiguration
+impl !core::panic::unwind_safe::RefUnwindSafe for battersea_config::ValidatedProviderConfiguration
+impl !core::panic::unwind_safe::UnwindSafe for battersea_config::ValidatedProviderConfiguration
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_config::ValidatedProviderConfiguration where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_config::ValidatedProviderConfiguration where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<T, U> core::convert::Into<U> for battersea_config::ValidatedProviderConfiguration where U: core::convert::From<T>
+pub fn battersea_config::ValidatedProviderConfiguration::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_config::ValidatedProviderConfiguration where U: core::convert::Into<T>
+pub type battersea_config::ValidatedProviderConfiguration::Error = core::convert::Infallible
+pub fn battersea_config::ValidatedProviderConfiguration::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for battersea_config::ValidatedProviderConfiguration where U: core::convert::TryFrom<T>
+pub type battersea_config::ValidatedProviderConfiguration::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_config::ValidatedProviderConfiguration::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> core::any::Any for battersea_config::ValidatedProviderConfiguration where T: 'static + ?core::marker::Sized
+pub fn battersea_config::ValidatedProviderConfiguration::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_config::ValidatedProviderConfiguration where T: ?core::marker::Sized
+pub fn battersea_config::ValidatedProviderConfiguration::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_config::ValidatedProviderConfiguration where T: ?core::marker::Sized
+pub fn battersea_config::ValidatedProviderConfiguration::borrow_mut(&mut self) -> &mut T
+impl<T> core::convert::From<T> for battersea_config::ValidatedProviderConfiguration
+pub fn battersea_config::ValidatedProviderConfiguration::from(t: T) -> T
+impl<T> typenum::type_operators::Same for battersea_config::ValidatedProviderConfiguration
+pub type battersea_config::ValidatedProviderConfiguration::Output = T
+impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_config::ValidatedProviderConfiguration where T: ?core::marker::Sized
+pub const battersea_config::providers::PROVIDER_CONFIGURATION_VERSION: u32
+pub fn battersea_config::providers::parse_provider_configuration(source: &str) -> core::result::Result<battersea_config::ProviderConfiguration, battersea_model::protocol::ProviderConfigurationError>
+pub fn battersea_config::providers::upgrade_legacy_providers(backends: &alloc::collections::btree::map::BTreeMap<alloc::string::String, battersea_config::EngineBackendConfigFile>, media_backends: &alloc::collections::btree::map::BTreeMap<alloc::string::String, battersea_config::MediaBackendConfigFile>, assignments: &alloc::collections::btree::map::BTreeMap<alloc::string::String, battersea_config::LegacyProviderAssignment>) -> core::result::Result<battersea_config::ProviderConfiguration, battersea_model::protocol::ProviderConfigurationError>
+pub struct battersea_config::ConfiguredProviders
+impl battersea_config::ConfiguredProviders
+pub fn battersea_config::ConfiguredProviders::chat(&self, backend: &str) -> core::option::Option<&alloc::sync::Arc<dyn battersea_model::adapter::EngineAdapter>>
+pub fn battersea_config::ConfiguredProviders::media(&self, backend: &str) -> core::option::Option<&alloc::sync::Arc<dyn battersea_model::media::MediaGenerationAdapter>>
+pub fn battersea_config::ConfiguredProviders::revision(&self) -> &str
+pub fn battersea_config::ConfiguredProviders::snapshot(&self) -> &serde_json::value::Value
+pub fn battersea_config::ConfiguredProviders::verify_revision(&self, revision: &str) -> core::result::Result<(), battersea_model::protocol::ProviderConfigurationError>
+impl core::marker::Freeze for battersea_config::ConfiguredProviders
+impl core::marker::Send for battersea_config::ConfiguredProviders
+impl core::marker::Sync for battersea_config::ConfiguredProviders
+impl core::marker::Unpin for battersea_config::ConfiguredProviders
+impl !core::panic::unwind_safe::RefUnwindSafe for battersea_config::ConfiguredProviders
+impl !core::panic::unwind_safe::UnwindSafe for battersea_config::ConfiguredProviders
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_config::ConfiguredProviders where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_config::ConfiguredProviders where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<T, U> core::convert::Into<U> for battersea_config::ConfiguredProviders where U: core::convert::From<T>
+pub fn battersea_config::ConfiguredProviders::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_config::ConfiguredProviders where U: core::convert::Into<T>
+pub type battersea_config::ConfiguredProviders::Error = core::convert::Infallible
+pub fn battersea_config::ConfiguredProviders::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for battersea_config::ConfiguredProviders where U: core::convert::TryFrom<T>
+pub type battersea_config::ConfiguredProviders::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_config::ConfiguredProviders::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> core::any::Any for battersea_config::ConfiguredProviders where T: 'static + ?core::marker::Sized
+pub fn battersea_config::ConfiguredProviders::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_config::ConfiguredProviders where T: ?core::marker::Sized
+pub fn battersea_config::ConfiguredProviders::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_config::ConfiguredProviders where T: ?core::marker::Sized
+pub fn battersea_config::ConfiguredProviders::borrow_mut(&mut self) -> &mut T
+impl<T> core::convert::From<T> for battersea_config::ConfiguredProviders
+pub fn battersea_config::ConfiguredProviders::from(t: T) -> T
+impl<T> typenum::type_operators::Same for battersea_config::ConfiguredProviders
+pub type battersea_config::ConfiguredProviders::Output = T
+impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_config::ConfiguredProviders where T: ?core::marker::Sized
 pub struct battersea_config::EngineAuthConfigFile
-pub battersea_config::EngineAuthConfigFile::api_key: core::option::Option<alloc::string::String>
+pub battersea_config::EngineAuthConfigFile::api_key: core::option::Option<battersea_model::protocol::SecretString>
 pub battersea_config::EngineAuthConfigFile::api_key_env: core::option::Option<alloc::string::String>
 pub battersea_config::EngineAuthConfigFile::header: core::option::Option<alloc::string::String>
 pub battersea_config::EngineAuthConfigFile::type: core::option::Option<alloc::string::String>
@@ -12,6 +315,8 @@ impl core::default::Default for battersea_config::EngineAuthConfigFile
 pub fn battersea_config::EngineAuthConfigFile::default() -> battersea_config::EngineAuthConfigFile
 impl core::fmt::Debug for battersea_config::EngineAuthConfigFile
 pub fn battersea_config::EngineAuthConfigFile::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl serde_core::ser::Serialize for battersea_config::EngineAuthConfigFile
+pub fn battersea_config::EngineAuthConfigFile::serialize<__S>(&self, __serializer: __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
 impl<'de> serde_core::de::Deserialize<'de> for battersea_config::EngineAuthConfigFile
 pub fn battersea_config::EngineAuthConfigFile::deserialize<__D>(__deserializer: __D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
 impl core::marker::Freeze for battersea_config::EngineAuthConfigFile
@@ -47,6 +352,8 @@ pub fn battersea_config::EngineAuthConfigFile::from(t: T) -> T
 impl<T> dyn_clone::DynClone for battersea_config::EngineAuthConfigFile where T: core::clone::Clone
 pub fn battersea_config::EngineAuthConfigFile::__clone_box(&self, _: dyn_clone::sealed::Private) -> *mut ()
 impl<T> serde_core::de::DeserializeOwned for battersea_config::EngineAuthConfigFile where T: for<'de> serde_core::de::Deserialize<'de>
+impl<T> typenum::type_operators::Same for battersea_config::EngineAuthConfigFile
+pub type battersea_config::EngineAuthConfigFile::Output = T
 impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_config::EngineAuthConfigFile where T: ?core::marker::Sized
 pub struct battersea_config::EngineBackendConfigFile
 pub battersea_config::EngineBackendConfigFile::auth: core::option::Option<battersea_config::EngineAuthConfigFile>
@@ -66,6 +373,8 @@ impl core::clone::Clone for battersea_config::EngineBackendConfigFile
 pub fn battersea_config::EngineBackendConfigFile::clone(&self) -> battersea_config::EngineBackendConfigFile
 impl core::fmt::Debug for battersea_config::EngineBackendConfigFile
 pub fn battersea_config::EngineBackendConfigFile::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl serde_core::ser::Serialize for battersea_config::EngineBackendConfigFile
+pub fn battersea_config::EngineBackendConfigFile::serialize<__S>(&self, __serializer: __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
 impl<'de> serde_core::de::Deserialize<'de> for battersea_config::EngineBackendConfigFile
 pub fn battersea_config::EngineBackendConfigFile::deserialize<__D>(__deserializer: __D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
 impl core::marker::Freeze for battersea_config::EngineBackendConfigFile
@@ -101,6 +410,8 @@ pub fn battersea_config::EngineBackendConfigFile::from(t: T) -> T
 impl<T> dyn_clone::DynClone for battersea_config::EngineBackendConfigFile where T: core::clone::Clone
 pub fn battersea_config::EngineBackendConfigFile::__clone_box(&self, _: dyn_clone::sealed::Private) -> *mut ()
 impl<T> serde_core::de::DeserializeOwned for battersea_config::EngineBackendConfigFile where T: for<'de> serde_core::de::Deserialize<'de>
+impl<T> typenum::type_operators::Same for battersea_config::EngineBackendConfigFile
+pub type battersea_config::EngineBackendConfigFile::Output = T
 impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_config::EngineBackendConfigFile where T: ?core::marker::Sized
 pub struct battersea_config::EngineChatConfigFile
 pub battersea_config::EngineChatConfigFile::context_overflow: core::option::Option<battersea_model::engine::EngineContextOverflow>
@@ -137,6 +448,8 @@ impl core::default::Default for battersea_config::EngineChatConfigFile
 pub fn battersea_config::EngineChatConfigFile::default() -> battersea_config::EngineChatConfigFile
 impl core::fmt::Debug for battersea_config::EngineChatConfigFile
 pub fn battersea_config::EngineChatConfigFile::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl serde_core::ser::Serialize for battersea_config::EngineChatConfigFile
+pub fn battersea_config::EngineChatConfigFile::serialize<__S>(&self, __serializer: __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
 impl<'de> serde_core::de::Deserialize<'de> for battersea_config::EngineChatConfigFile
 pub fn battersea_config::EngineChatConfigFile::deserialize<__D>(__deserializer: __D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
 impl core::marker::Freeze for battersea_config::EngineChatConfigFile
@@ -172,7 +485,56 @@ pub fn battersea_config::EngineChatConfigFile::from(t: T) -> T
 impl<T> dyn_clone::DynClone for battersea_config::EngineChatConfigFile where T: core::clone::Clone
 pub fn battersea_config::EngineChatConfigFile::__clone_box(&self, _: dyn_clone::sealed::Private) -> *mut ()
 impl<T> serde_core::de::DeserializeOwned for battersea_config::EngineChatConfigFile where T: for<'de> serde_core::de::Deserialize<'de>
+impl<T> typenum::type_operators::Same for battersea_config::EngineChatConfigFile
+pub type battersea_config::EngineChatConfigFile::Output = T
 impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_config::EngineChatConfigFile where T: ?core::marker::Sized
+pub struct battersea_config::LegacyProviderAssignment
+pub battersea_config::LegacyProviderAssignment::binding: battersea_config::ProtocolBindingFile
+pub battersea_config::LegacyProviderAssignment::provider: alloc::string::String
+impl core::clone::Clone for battersea_config::LegacyProviderAssignment
+pub fn battersea_config::LegacyProviderAssignment::clone(&self) -> battersea_config::LegacyProviderAssignment
+impl core::fmt::Debug for battersea_config::LegacyProviderAssignment
+pub fn battersea_config::LegacyProviderAssignment::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl serde_core::ser::Serialize for battersea_config::LegacyProviderAssignment
+pub fn battersea_config::LegacyProviderAssignment::serialize<__S>(&self, __serializer: __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for battersea_config::LegacyProviderAssignment
+pub fn battersea_config::LegacyProviderAssignment::deserialize<__D>(__deserializer: __D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for battersea_config::LegacyProviderAssignment
+impl core::marker::Send for battersea_config::LegacyProviderAssignment
+impl core::marker::Sync for battersea_config::LegacyProviderAssignment
+impl core::marker::Unpin for battersea_config::LegacyProviderAssignment
+impl core::panic::unwind_safe::RefUnwindSafe for battersea_config::LegacyProviderAssignment
+impl core::panic::unwind_safe::UnwindSafe for battersea_config::LegacyProviderAssignment
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_config::LegacyProviderAssignment where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_config::LegacyProviderAssignment where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<T, U> core::convert::Into<U> for battersea_config::LegacyProviderAssignment where U: core::convert::From<T>
+pub fn battersea_config::LegacyProviderAssignment::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_config::LegacyProviderAssignment where U: core::convert::Into<T>
+pub type battersea_config::LegacyProviderAssignment::Error = core::convert::Infallible
+pub fn battersea_config::LegacyProviderAssignment::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for battersea_config::LegacyProviderAssignment where U: core::convert::TryFrom<T>
+pub type battersea_config::LegacyProviderAssignment::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_config::LegacyProviderAssignment::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for battersea_config::LegacyProviderAssignment where T: core::clone::Clone
+pub type battersea_config::LegacyProviderAssignment::Owned = T
+pub fn battersea_config::LegacyProviderAssignment::clone_into(&self, target: &mut T)
+pub fn battersea_config::LegacyProviderAssignment::to_owned(&self) -> T
+impl<T> core::any::Any for battersea_config::LegacyProviderAssignment where T: 'static + ?core::marker::Sized
+pub fn battersea_config::LegacyProviderAssignment::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_config::LegacyProviderAssignment where T: ?core::marker::Sized
+pub fn battersea_config::LegacyProviderAssignment::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_config::LegacyProviderAssignment where T: ?core::marker::Sized
+pub fn battersea_config::LegacyProviderAssignment::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for battersea_config::LegacyProviderAssignment where T: core::clone::Clone
+pub unsafe fn battersea_config::LegacyProviderAssignment::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for battersea_config::LegacyProviderAssignment
+pub fn battersea_config::LegacyProviderAssignment::from(t: T) -> T
+impl<T> dyn_clone::DynClone for battersea_config::LegacyProviderAssignment where T: core::clone::Clone
+pub fn battersea_config::LegacyProviderAssignment::__clone_box(&self, _: dyn_clone::sealed::Private) -> *mut ()
+impl<T> serde_core::de::DeserializeOwned for battersea_config::LegacyProviderAssignment where T: for<'de> serde_core::de::Deserialize<'de>
+impl<T> typenum::type_operators::Same for battersea_config::LegacyProviderAssignment
+pub type battersea_config::LegacyProviderAssignment::Output = T
+impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_config::LegacyProviderAssignment where T: ?core::marker::Sized
 pub struct battersea_config::MediaBackendConfigFile
 pub battersea_config::MediaBackendConfigFile::auth: core::option::Option<battersea_config::EngineAuthConfigFile>
 pub battersea_config::MediaBackendConfigFile::capabilities: battersea_model::media::MediaBackendCapabilities
@@ -189,6 +551,8 @@ impl core::clone::Clone for battersea_config::MediaBackendConfigFile
 pub fn battersea_config::MediaBackendConfigFile::clone(&self) -> battersea_config::MediaBackendConfigFile
 impl core::fmt::Debug for battersea_config::MediaBackendConfigFile
 pub fn battersea_config::MediaBackendConfigFile::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl serde_core::ser::Serialize for battersea_config::MediaBackendConfigFile
+pub fn battersea_config::MediaBackendConfigFile::serialize<__S>(&self, __serializer: __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
 impl<'de> serde_core::de::Deserialize<'de> for battersea_config::MediaBackendConfigFile
 pub fn battersea_config::MediaBackendConfigFile::deserialize<__D>(__deserializer: __D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
 impl core::marker::Freeze for battersea_config::MediaBackendConfigFile
@@ -224,7 +588,194 @@ pub fn battersea_config::MediaBackendConfigFile::from(t: T) -> T
 impl<T> dyn_clone::DynClone for battersea_config::MediaBackendConfigFile where T: core::clone::Clone
 pub fn battersea_config::MediaBackendConfigFile::__clone_box(&self, _: dyn_clone::sealed::Private) -> *mut ()
 impl<T> serde_core::de::DeserializeOwned for battersea_config::MediaBackendConfigFile where T: for<'de> serde_core::de::Deserialize<'de>
+impl<T> typenum::type_operators::Same for battersea_config::MediaBackendConfigFile
+pub type battersea_config::MediaBackendConfigFile::Output = T
 impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_config::MediaBackendConfigFile where T: ?core::marker::Sized
+pub struct battersea_config::ProtocolBindingFile
+pub battersea_config::ProtocolBindingFile::adapter: alloc::string::String
+pub battersea_config::ProtocolBindingFile::auth: battersea_model::protocol::Authentication
+pub battersea_config::ProtocolBindingFile::base_url: alloc::string::String
+pub battersea_config::ProtocolBindingFile::content: core::option::Option<battersea_model::content::ContentCapabilities>
+pub battersea_config::ProtocolBindingFile::counting: core::option::Option<battersea_model::protocol::TokenCounting>
+pub battersea_config::ProtocolBindingFile::delivery_origins: alloc::vec::Vec<alloc::string::String>
+pub battersea_config::ProtocolBindingFile::headers: alloc::collections::btree::map::BTreeMap<alloc::string::String, alloc::string::String>
+pub battersea_config::ProtocolBindingFile::parameters: core::option::Option<alloc::vec::Vec<alloc::string::String>>
+impl core::clone::Clone for battersea_config::ProtocolBindingFile
+pub fn battersea_config::ProtocolBindingFile::clone(&self) -> battersea_config::ProtocolBindingFile
+impl core::fmt::Debug for battersea_config::ProtocolBindingFile
+pub fn battersea_config::ProtocolBindingFile::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl serde_core::ser::Serialize for battersea_config::ProtocolBindingFile
+pub fn battersea_config::ProtocolBindingFile::serialize<__S>(&self, __serializer: __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for battersea_config::ProtocolBindingFile
+pub fn battersea_config::ProtocolBindingFile::deserialize<__D>(__deserializer: __D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for battersea_config::ProtocolBindingFile
+impl core::marker::Send for battersea_config::ProtocolBindingFile
+impl core::marker::Sync for battersea_config::ProtocolBindingFile
+impl core::marker::Unpin for battersea_config::ProtocolBindingFile
+impl core::panic::unwind_safe::RefUnwindSafe for battersea_config::ProtocolBindingFile
+impl core::panic::unwind_safe::UnwindSafe for battersea_config::ProtocolBindingFile
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_config::ProtocolBindingFile where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_config::ProtocolBindingFile where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<T, U> core::convert::Into<U> for battersea_config::ProtocolBindingFile where U: core::convert::From<T>
+pub fn battersea_config::ProtocolBindingFile::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_config::ProtocolBindingFile where U: core::convert::Into<T>
+pub type battersea_config::ProtocolBindingFile::Error = core::convert::Infallible
+pub fn battersea_config::ProtocolBindingFile::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for battersea_config::ProtocolBindingFile where U: core::convert::TryFrom<T>
+pub type battersea_config::ProtocolBindingFile::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_config::ProtocolBindingFile::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for battersea_config::ProtocolBindingFile where T: core::clone::Clone
+pub type battersea_config::ProtocolBindingFile::Owned = T
+pub fn battersea_config::ProtocolBindingFile::clone_into(&self, target: &mut T)
+pub fn battersea_config::ProtocolBindingFile::to_owned(&self) -> T
+impl<T> core::any::Any for battersea_config::ProtocolBindingFile where T: 'static + ?core::marker::Sized
+pub fn battersea_config::ProtocolBindingFile::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_config::ProtocolBindingFile where T: ?core::marker::Sized
+pub fn battersea_config::ProtocolBindingFile::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_config::ProtocolBindingFile where T: ?core::marker::Sized
+pub fn battersea_config::ProtocolBindingFile::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for battersea_config::ProtocolBindingFile where T: core::clone::Clone
+pub unsafe fn battersea_config::ProtocolBindingFile::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for battersea_config::ProtocolBindingFile
+pub fn battersea_config::ProtocolBindingFile::from(t: T) -> T
+impl<T> dyn_clone::DynClone for battersea_config::ProtocolBindingFile where T: core::clone::Clone
+pub fn battersea_config::ProtocolBindingFile::__clone_box(&self, _: dyn_clone::sealed::Private) -> *mut ()
+impl<T> serde_core::de::DeserializeOwned for battersea_config::ProtocolBindingFile where T: for<'de> serde_core::de::Deserialize<'de>
+impl<T> typenum::type_operators::Same for battersea_config::ProtocolBindingFile
+pub type battersea_config::ProtocolBindingFile::Output = T
+impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_config::ProtocolBindingFile where T: ?core::marker::Sized
+pub struct battersea_config::ProviderConfiguration
+pub battersea_config::ProviderConfiguration::backends: alloc::collections::btree::map::BTreeMap<alloc::string::String, battersea_config::EngineBackendConfigFile>
+pub battersea_config::ProviderConfiguration::media_backends: alloc::collections::btree::map::BTreeMap<alloc::string::String, battersea_config::MediaBackendConfigFile>
+pub battersea_config::ProviderConfiguration::providers: alloc::collections::btree::map::BTreeMap<alloc::string::String, battersea_config::ProviderFile>
+pub battersea_config::ProviderConfiguration::version: u32
+impl battersea_config::ProviderConfiguration
+pub fn battersea_config::ProviderConfiguration::validate(&self, protocols: &battersea_model::protocol::ProtocolRegistry) -> core::result::Result<battersea_config::ValidatedProviderConfiguration, battersea_model::protocol::ProviderConfigurationError>
+impl core::clone::Clone for battersea_config::ProviderConfiguration
+pub fn battersea_config::ProviderConfiguration::clone(&self) -> battersea_config::ProviderConfiguration
+impl core::fmt::Debug for battersea_config::ProviderConfiguration
+pub fn battersea_config::ProviderConfiguration::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl serde_core::ser::Serialize for battersea_config::ProviderConfiguration
+pub fn battersea_config::ProviderConfiguration::serialize<__S>(&self, __serializer: __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for battersea_config::ProviderConfiguration
+pub fn battersea_config::ProviderConfiguration::deserialize<__D>(__deserializer: __D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for battersea_config::ProviderConfiguration
+impl core::marker::Send for battersea_config::ProviderConfiguration
+impl core::marker::Sync for battersea_config::ProviderConfiguration
+impl core::marker::Unpin for battersea_config::ProviderConfiguration
+impl core::panic::unwind_safe::RefUnwindSafe for battersea_config::ProviderConfiguration
+impl core::panic::unwind_safe::UnwindSafe for battersea_config::ProviderConfiguration
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_config::ProviderConfiguration where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_config::ProviderConfiguration where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<T, U> core::convert::Into<U> for battersea_config::ProviderConfiguration where U: core::convert::From<T>
+pub fn battersea_config::ProviderConfiguration::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_config::ProviderConfiguration where U: core::convert::Into<T>
+pub type battersea_config::ProviderConfiguration::Error = core::convert::Infallible
+pub fn battersea_config::ProviderConfiguration::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for battersea_config::ProviderConfiguration where U: core::convert::TryFrom<T>
+pub type battersea_config::ProviderConfiguration::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_config::ProviderConfiguration::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for battersea_config::ProviderConfiguration where T: core::clone::Clone
+pub type battersea_config::ProviderConfiguration::Owned = T
+pub fn battersea_config::ProviderConfiguration::clone_into(&self, target: &mut T)
+pub fn battersea_config::ProviderConfiguration::to_owned(&self) -> T
+impl<T> core::any::Any for battersea_config::ProviderConfiguration where T: 'static + ?core::marker::Sized
+pub fn battersea_config::ProviderConfiguration::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_config::ProviderConfiguration where T: ?core::marker::Sized
+pub fn battersea_config::ProviderConfiguration::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_config::ProviderConfiguration where T: ?core::marker::Sized
+pub fn battersea_config::ProviderConfiguration::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for battersea_config::ProviderConfiguration where T: core::clone::Clone
+pub unsafe fn battersea_config::ProviderConfiguration::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for battersea_config::ProviderConfiguration
+pub fn battersea_config::ProviderConfiguration::from(t: T) -> T
+impl<T> dyn_clone::DynClone for battersea_config::ProviderConfiguration where T: core::clone::Clone
+pub fn battersea_config::ProviderConfiguration::__clone_box(&self, _: dyn_clone::sealed::Private) -> *mut ()
+impl<T> serde_core::de::DeserializeOwned for battersea_config::ProviderConfiguration where T: for<'de> serde_core::de::Deserialize<'de>
+impl<T> typenum::type_operators::Same for battersea_config::ProviderConfiguration
+pub type battersea_config::ProviderConfiguration::Output = T
+impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_config::ProviderConfiguration where T: ?core::marker::Sized
+pub struct battersea_config::ProviderFile
+pub battersea_config::ProviderFile::chat: core::option::Option<battersea_config::ProtocolBindingFile>
+pub battersea_config::ProviderFile::media: core::option::Option<battersea_config::ProtocolBindingFile>
+impl core::clone::Clone for battersea_config::ProviderFile
+pub fn battersea_config::ProviderFile::clone(&self) -> battersea_config::ProviderFile
+impl core::default::Default for battersea_config::ProviderFile
+pub fn battersea_config::ProviderFile::default() -> battersea_config::ProviderFile
+impl core::fmt::Debug for battersea_config::ProviderFile
+pub fn battersea_config::ProviderFile::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl serde_core::ser::Serialize for battersea_config::ProviderFile
+pub fn battersea_config::ProviderFile::serialize<__S>(&self, __serializer: __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for battersea_config::ProviderFile
+pub fn battersea_config::ProviderFile::deserialize<__D>(__deserializer: __D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for battersea_config::ProviderFile
+impl core::marker::Send for battersea_config::ProviderFile
+impl core::marker::Sync for battersea_config::ProviderFile
+impl core::marker::Unpin for battersea_config::ProviderFile
+impl core::panic::unwind_safe::RefUnwindSafe for battersea_config::ProviderFile
+impl core::panic::unwind_safe::UnwindSafe for battersea_config::ProviderFile
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_config::ProviderFile where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_config::ProviderFile where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<T, U> core::convert::Into<U> for battersea_config::ProviderFile where U: core::convert::From<T>
+pub fn battersea_config::ProviderFile::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_config::ProviderFile where U: core::convert::Into<T>
+pub type battersea_config::ProviderFile::Error = core::convert::Infallible
+pub fn battersea_config::ProviderFile::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for battersea_config::ProviderFile where U: core::convert::TryFrom<T>
+pub type battersea_config::ProviderFile::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_config::ProviderFile::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for battersea_config::ProviderFile where T: core::clone::Clone
+pub type battersea_config::ProviderFile::Owned = T
+pub fn battersea_config::ProviderFile::clone_into(&self, target: &mut T)
+pub fn battersea_config::ProviderFile::to_owned(&self) -> T
+impl<T> core::any::Any for battersea_config::ProviderFile where T: 'static + ?core::marker::Sized
+pub fn battersea_config::ProviderFile::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_config::ProviderFile where T: ?core::marker::Sized
+pub fn battersea_config::ProviderFile::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_config::ProviderFile where T: ?core::marker::Sized
+pub fn battersea_config::ProviderFile::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for battersea_config::ProviderFile where T: core::clone::Clone
+pub unsafe fn battersea_config::ProviderFile::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for battersea_config::ProviderFile
+pub fn battersea_config::ProviderFile::from(t: T) -> T
+impl<T> dyn_clone::DynClone for battersea_config::ProviderFile where T: core::clone::Clone
+pub fn battersea_config::ProviderFile::__clone_box(&self, _: dyn_clone::sealed::Private) -> *mut ()
+impl<T> serde_core::de::DeserializeOwned for battersea_config::ProviderFile where T: for<'de> serde_core::de::Deserialize<'de>
+impl<T> typenum::type_operators::Same for battersea_config::ProviderFile
+pub type battersea_config::ProviderFile::Output = T
+impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_config::ProviderFile where T: ?core::marker::Sized
+pub struct battersea_config::ValidatedProviderConfiguration
+impl battersea_config::ValidatedProviderConfiguration
+pub fn battersea_config::ValidatedProviderConfiguration::bind(&self, credentials: &dyn battersea_model::protocol::CredentialResolver, logger: core::option::Option<alloc::sync::Arc<dyn battersea_model::adapter::EngineAdapterLogger>>) -> core::result::Result<battersea_config::ConfiguredProviders, battersea_model::protocol::ProviderConfigurationError>
+pub fn battersea_config::ValidatedProviderConfiguration::configuration(&self) -> &battersea_config::ProviderConfiguration
+impl core::marker::Freeze for battersea_config::ValidatedProviderConfiguration
+impl core::marker::Send for battersea_config::ValidatedProviderConfiguration
+impl core::marker::Sync for battersea_config::ValidatedProviderConfiguration
+impl core::marker::Unpin for battersea_config::ValidatedProviderConfiguration
+impl !core::panic::unwind_safe::RefUnwindSafe for battersea_config::ValidatedProviderConfiguration
+impl !core::panic::unwind_safe::UnwindSafe for battersea_config::ValidatedProviderConfiguration
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_config::ValidatedProviderConfiguration where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_config::ValidatedProviderConfiguration where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<T, U> core::convert::Into<U> for battersea_config::ValidatedProviderConfiguration where U: core::convert::From<T>
+pub fn battersea_config::ValidatedProviderConfiguration::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_config::ValidatedProviderConfiguration where U: core::convert::Into<T>
+pub type battersea_config::ValidatedProviderConfiguration::Error = core::convert::Infallible
+pub fn battersea_config::ValidatedProviderConfiguration::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for battersea_config::ValidatedProviderConfiguration where U: core::convert::TryFrom<T>
+pub type battersea_config::ValidatedProviderConfiguration::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_config::ValidatedProviderConfiguration::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> core::any::Any for battersea_config::ValidatedProviderConfiguration where T: 'static + ?core::marker::Sized
+pub fn battersea_config::ValidatedProviderConfiguration::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_config::ValidatedProviderConfiguration where T: ?core::marker::Sized
+pub fn battersea_config::ValidatedProviderConfiguration::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_config::ValidatedProviderConfiguration where T: ?core::marker::Sized
+pub fn battersea_config::ValidatedProviderConfiguration::borrow_mut(&mut self) -> &mut T
+impl<T> core::convert::From<T> for battersea_config::ValidatedProviderConfiguration
+pub fn battersea_config::ValidatedProviderConfiguration::from(t: T) -> T
+impl<T> typenum::type_operators::Same for battersea_config::ValidatedProviderConfiguration
+pub type battersea_config::ValidatedProviderConfiguration::Output = T
+impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_config::ValidatedProviderConfiguration where T: ?core::marker::Sized
+pub const battersea_config::PROVIDER_CONFIGURATION_VERSION: u32
 pub fn battersea_config::compose_backend_schema(application: serde_json::value::Value) -> anyhow::Result<serde_json::value::Value>
 pub fn battersea_config::default_true() -> bool
 pub fn battersea_config::make_auth(auth_type: &str, api_key: core::option::Option<&str>, api_key_env: &str, header: core::option::Option<&str>, version_header: core::option::Option<&str>, version: core::option::Option<&str>) -> battersea_model::adapter::EngineAuthConfig
@@ -234,6 +785,8 @@ pub fn battersea_config::merge_media_backend(id: &str, configured: battersea_con
 pub fn battersea_config::non_empty_string(value: alloc::string::String) -> core::option::Option<alloc::string::String>
 pub fn battersea_config::normalize_backends(configured: &std::collections::hash::map::HashMap<alloc::string::String, battersea_config::EngineBackendConfigFile>) -> anyhow::Result<std::collections::hash::map::HashMap<alloc::string::String, battersea_model::adapter::EngineBackendConfig>>
 pub fn battersea_config::normalize_media_backends(configured: &std::collections::hash::map::HashMap<alloc::string::String, battersea_config::MediaBackendConfigFile>) -> std::collections::hash::map::HashMap<alloc::string::String, battersea_model::media::MediaBackendConfig>
+pub fn battersea_config::parse_provider_configuration(source: &str) -> core::result::Result<battersea_config::ProviderConfiguration, battersea_model::protocol::ProviderConfigurationError>
 pub fn battersea_config::resolve_chat_parameters(configured: battersea_config::EngineChatConfigFile) -> core::result::Result<battersea_model::engine::EngineChatParameters, alloc::string::String>
 pub fn battersea_config::resolve_yaml_merge_keys(value: serde_yaml::value::Value) -> serde_yaml::value::Value
+pub fn battersea_config::upgrade_legacy_providers(backends: &alloc::collections::btree::map::BTreeMap<alloc::string::String, battersea_config::EngineBackendConfigFile>, media_backends: &alloc::collections::btree::map::BTreeMap<alloc::string::String, battersea_config::MediaBackendConfigFile>, assignments: &alloc::collections::btree::map::BTreeMap<alloc::string::String, battersea_config::LegacyProviderAssignment>) -> core::result::Result<battersea_config::ProviderConfiguration, battersea_model::protocol::ProviderConfigurationError>
 pub fn battersea_config::validate_chat_parameters(chat: &battersea_model::engine::EngineChatParameters) -> core::result::Result<(), alloc::string::String>

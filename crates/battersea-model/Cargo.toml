@@ -22,3 +22,6 @@ tokio.workspace = true
 tokio-stream.workspace = true
 tokio-util.workspace = true
 jsonschema = { version = "0.30", default-features = false }
+url = "2.5"
+http = "1"
+sha2 = "0.10"

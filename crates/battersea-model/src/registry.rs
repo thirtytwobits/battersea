@@ -19,12 +19,14 @@ type MediaPrepare = dyn Fn(
     + Send
     + Sync;
 
+#[derive(Clone)]
 pub struct ChatProvider {
     pub content: crate::ContentCapabilities,
     pub factory: Arc<ChatFactory>,
     pub parameters: Vec<String>,
     pub background_modes: Vec<String>,
 }
+#[derive(Clone)]
 pub struct MediaProvider {
     pub factory: Arc<MediaFactory>,
     pub prepare: Arc<MediaPrepare>,

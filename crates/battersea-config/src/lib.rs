@@ -1,134 +1,185 @@
 //! Copyright (c) Scott A Dixon
 use anyhow::{anyhow, Result};
 use battersea_model::{adapter::*, engine::*, media::*};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct EngineBackendConfigFile {
     #[serde(default)]
     pub provider: String,
     #[serde(default)]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub label: Option<String>,
     #[serde(default = "default_true")]
     pub enabled: bool,
     #[serde(default)]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub endpoint: Option<String>,
     #[serde(default)]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub model: Option<String>,
     #[serde(rename = "displayOrder", default)]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub display_order: Option<u32>,
     #[serde(rename = "contextWindowTokens", default)]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub context_window_tokens: Option<u64>,
     pub capabilities: EngineBackendCapabilities,
     #[serde(default)]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub properties: Option<EngineChatConfigFile>,
     #[serde(default)]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub options: Option<EngineBackendOptions>,
     #[serde(default)]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub auth: Option<EngineAuthConfigFile>,
     #[serde(default)]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub short_description: Option<String>,
     #[serde(default)]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub long_description: Option<String>,
 }
 
-#[derive(Debug, Clone, Deserialize, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct EngineChatConfigFile {
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub response_format: Option<battersea_model::ResponseFormat>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub output_modalities: Option<Vec<battersea_model::Modality>>,
     #[serde(default)]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub stream: Option<bool>,
     #[serde(default)]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub max_output_tokens: Option<u32>,
     #[serde(default)]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub temperature: Option<f64>,
     #[serde(default)]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub top_p: Option<f64>,
     #[serde(default)]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub top_k: Option<u32>,
     #[serde(default)]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub stop_sequences: Option<Vec<String>>,
     #[serde(default)]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub tool_execution: Option<EngineToolExecutionMode>,
     #[serde(default)]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub max_tool_rounds: Option<u32>,
     #[serde(default)]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub tool_choice: Option<EngineChatToolChoice>,
     #[serde(default)]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub parallel_tool_calls: Option<bool>,
     #[serde(default)]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub strict_tool_inputs: Option<bool>,
     #[serde(default)]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub service_tier: Option<String>,
     #[serde(default)]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub safety_identifier: Option<String>,
     #[serde(default)]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub request_metadata: Option<serde_json::Value>,
     #[serde(default)]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub reasoning_effort: Option<EngineReasoningEffort>,
     #[serde(default)]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub reasoning_summary: Option<EngineReasoningSummary>,
     #[serde(default)]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub thinking_budget_tokens: Option<u32>,
     #[serde(default)]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub thinking_visibility: Option<EngineThinkingVisibility>,
     #[serde(default)]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub response_verbosity: Option<EngineResponseVerbosity>,
     #[serde(default)]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub context_overflow: Option<EngineContextOverflow>,
     #[serde(default)]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub prompt_cache_key: Option<String>,
     #[serde(default)]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub prompt_cache_retention: Option<EnginePromptCacheRetention>,
     #[serde(default)]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub store_response: Option<bool>,
     #[serde(default)]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub max_provider_tool_calls: Option<u32>,
     #[serde(default)]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub logprobs: Option<bool>,
     #[serde(default)]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub top_logprobs: Option<u32>,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct MediaBackendConfigFile {
     #[serde(default)]
     pub provider: String,
     pub capability: MediaCapability,
     #[serde(default)]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub label: Option<String>,
     #[serde(default = "default_true")]
     pub enabled: bool,
     #[serde(default)]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub endpoint: Option<String>,
     #[serde(default)]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub model: Option<String>,
     pub capabilities: MediaBackendCapabilities,
     #[serde(default)]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub options: Option<EngineBackendOptions>,
     #[serde(default)]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub auth: Option<EngineAuthConfigFile>,
     #[serde(default)]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub short_description: Option<String>,
     #[serde(default)]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub long_description: Option<String>,
 }
 
-#[derive(Debug, Clone, Deserialize, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct EngineAuthConfigFile {
     #[serde(default)]
     pub r#type: Option<String>,
-    #[serde(rename = "apiKey", default)]
-    pub api_key: Option<String>,
+    #[serde(rename = "apiKey", default, skip_serializing)]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub api_key: Option<battersea_model::SecretString>,
     #[serde(rename = "apiKeyEnv", default)]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub api_key_env: Option<String>,
     #[serde(default)]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub header: Option<String>,
     #[serde(rename = "versionHeader", default)]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub version_header: Option<String>,
     #[serde(default)]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub version: Option<String>,
 }
 
@@ -180,13 +231,14 @@ pub fn make_auth(
         version_header: version_header.map(ToOwned::to_owned),
         version: version.map(ToOwned::to_owned),
         has_api_key: api_key.is_some(),
-        api_key,
+        api_key: api_key.map(Into::into),
     }
 }
 pub fn merge_media_backend(id: &str, configured: MediaBackendConfigFile) -> MediaBackendConfig {
     let auth = configured.auth.unwrap_or_default();
 
     MediaBackendConfig {
+        binding: None,
         id: id.to_string(),
         provider: configured.provider,
         capability: configured.capability,
@@ -234,6 +286,7 @@ pub fn merge_backend(id: &str, configured: EngineBackendConfigFile) -> Result<En
         })?;
 
     Ok(EngineBackendConfig {
+        binding: None,
         id: id.to_string(),
         provider: provider.clone(),
         label: configured.label.unwrap_or_else(|| id.to_string()),
@@ -850,3 +903,6 @@ backends:
         assert!(compose_backend_schema(composed).is_err());
     }
 }
+
+pub mod providers;
+pub use providers::*;

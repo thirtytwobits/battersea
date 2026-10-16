@@ -75,6 +75,7 @@ async fn server(
 }
 fn backend(provider: &str, url: &str, mode: &str) -> EngineBackendConfig {
     EngineBackendConfig {
+        binding: None,
         id: "fixture".into(),
         label: "Fixture".into(),
         provider: provider.into(),

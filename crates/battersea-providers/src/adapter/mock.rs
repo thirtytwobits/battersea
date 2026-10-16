@@ -20,7 +20,7 @@ struct MockAdapter {
 impl EngineAdapter for MockAdapter {
     fn describe_debug_context(&self) -> EngineAdapterDebugContext {
         EngineAdapterDebugContext {
-            provider: "mock".into(),
+            provider: self.backend.provider.clone(),
             backend: self.backend.id.clone(),
             model: self.backend.model.clone(),
             sdk: "local-mock".into(),

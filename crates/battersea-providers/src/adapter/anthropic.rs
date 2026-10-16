@@ -27,7 +27,7 @@ use tokio_stream::wrappers::ReceiverStream;
 /// Builds an Anthropic text adapter from backend config, deriving stable debug context fields and
 /// validating any configured auth headers up front.
 pub(crate) fn create_anthropic_adapter(
-    backend: EngineBackendConfig,
+    mut backend: EngineBackendConfig,
     logger: Option<Arc<dyn EngineAdapterLogger>>,
 ) -> Result<Arc<dyn EngineAdapter>, EngineAdapterRequestError> {
     let provider = "anthropic";
@@ -44,7 +44,13 @@ pub(crate) fn create_anthropic_adapter(
         .options
         .stream_idle_timeout_ms
         .ok_or_else(|| missing_backend_option(provider, "options.streamIdleTimeoutMs"))?;
-    let base_url = resolve_anthropic_base_url(&backend.endpoint);
+    let base_url = crate::connection::base(backend.binding.as_ref(), || {
+        resolve_anthropic_base_url(&backend.endpoint)
+    });
+    if let Some(binding) = &backend.binding {
+        backend.endpoint = binding.connection.route("messages")?.to_string();
+    }
+    let provider_id = backend.provider.clone();
     let model = backend.model.clone();
     let backend_id = backend.id.clone();
     let client = reqwest::Client::builder()
@@ -60,7 +66,7 @@ pub(crate) fn create_anthropic_adapter(
         backend,
         stream_idle_timeout_ms,
         context: EngineAdapterDebugContext {
-            provider: "anthropic".to_string(),
+            provider: provider_id,
             backend: backend_id,
             model,
             sdk: "reqwest".to_string(),
@@ -208,10 +214,17 @@ impl EngineAdapter for AnthropicEngineAdapter {
         let body = build_input_token_count_body(&self.backend, &request)?;
         let response = crate::retry::send(
             self.client
-                .post(format!(
-                    "{}/v1/messages/count_tokens",
-                    resolve_anthropic_base_url(&self.backend.endpoint)
-                ))
+                .post(if let Some(binding) = &self.backend.binding {
+                    binding
+                        .connection
+                        .route("messages/count_tokens")?
+                        .to_string()
+                } else {
+                    format!(
+                        "{}/v1/messages/count_tokens",
+                        resolve_anthropic_base_url(&self.backend.endpoint)
+                    )
+                })
                 .json(&body),
             &self.backend,
             self.logger.as_ref(),
@@ -257,7 +270,8 @@ impl AnthropicEngineAdapter {
         let logger = self.logger.clone();
         let context = self.context.clone();
 
-        let messages = crate::content::messages("anthropic", &request.shared.messages)?;
+        let messages =
+            crate::content::messages("anthropic", &backend.provider, &request.shared.messages)?;
         tokio::spawn(async move {
             let conversation = AnthropicToolConversation {
                 client,
@@ -394,6 +408,9 @@ impl ToolConversation for AnthropicToolConversation {
 /// Builds the default Anthropic request headers, applying provider defaults when custom names or
 /// version values are not configured.
 fn build_headers(backend: &EngineBackendConfig) -> Result<HeaderMap, EngineAdapterRequestError> {
+    if let Some(binding) = &backend.binding {
+        return crate::connection::headers(binding, &backend.auth);
+    }
     let provider = "anthropic";
     let mut headers = HeaderMap::new();
     let header_name = backend
@@ -442,7 +459,7 @@ fn build_stream_body(
         "max_tokens": require_anthropic_max_tokens(&request.shared.chat)?,
         "stream": true,
         "system": request.shared.text_for_role(battersea_model::Role::System),
-        "messages": crate::content::messages("anthropic", &request.shared.messages)?
+        "messages": crate::content::messages("anthropic", &backend.provider, &request.shared.messages)?
     });
     apply_anthropic_temperature(&mut body, backend, request.shared.chat.temperature);
     apply_anthropic_chat_parameters(&mut body, backend, &request.shared, true);
@@ -769,7 +786,7 @@ fn build_input_token_count_body(
         build_local_tool_body(
             backend,
             request,
-            crate::content::messages("anthropic", &request.shared.messages)?,
+            crate::content::messages("anthropic", &backend.provider, &request.shared.messages)?,
         )?
     };
     let mut body = json!({});
@@ -1225,6 +1242,7 @@ mod tests {
 
     fn sample_backend() -> EngineBackendConfig {
         EngineBackendConfig {
+            binding: None,
             id: "anthropic-backend".to_string(),
             provider: "anthropic".to_string(),
             label: "Anthropic".to_string(),
@@ -1256,7 +1274,7 @@ mod tests {
                 version_header: Some("anthropic-version".to_string()),
                 version: Some("2023-06-01".to_string()),
                 has_api_key: true,
-                api_key: Some("secret".to_string()),
+                api_key: Some("secret".into()),
             },
             short_description: String::new(),
             long_description: String::new(),
@@ -1608,7 +1626,7 @@ mod tests {
         );
 
         let mut invalid_value = sample_backend();
-        invalid_value.auth.api_key = Some("bad\nvalue".to_string());
+        invalid_value.auth.api_key = Some("bad\nvalue".into());
         assert_eq!(
             build_headers(&invalid_value)
                 .expect_err("invalid header value")

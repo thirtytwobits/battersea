@@ -62,6 +62,8 @@ pub(crate) async fn send(
 ) -> Result<Response, EngineAdapterRequestError> {
     validate(backend)?;
     // Building before sending separates malformed requests from ambiguous transport failures.
+    let request =
+        crate::connection::authenticate(request, backend.binding.as_ref(), &backend.auth)?;
     let (client, prepared) = request.build_split();
     let prepared = prepared.map_err(|e| {
         EngineAdapterRequestError::new(
