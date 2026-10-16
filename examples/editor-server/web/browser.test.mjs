@@ -209,6 +209,13 @@ for (const [name, engine] of Object.entries({ chromium, webkit })) {
     await page.waitForFunction(({id, before}) => document.querySelector(`.react-flow__node[data-id="${id}"]`)?.getAttribute("style") !== before, {id: branchNode, before: branchStyle});
     await page.locator(".react-flow__controls-fitview").click();
     await page.waitForFunction(() => document.querySelector('.react-flow__node[data-id="text"]').getBoundingClientRect().width > 100);
+    // A connection snaps only to measured handles: the flow's edges are drawn and both nodes,
+    // which stay hidden until measured, are visible.
+    await page.waitForFunction(({ id, edges }) =>
+      document.querySelectorAll(".react-flow__edge").length === edges
+      && [...document.querySelectorAll(`.react-flow__node[data-id="text"], .react-flow__node[data-id="${id}"]`)]
+        .every(node => getComputedStyle(node).visibility === "visible"),
+      { id: branchNode, edges: branchBaseline.edges.length });
     await capture(page, name, "fanout-ready");
     const outputHandle = page.locator('.react-flow__node[data-id="text"] .react-flow__handle[data-handleid="output-0"]');
     const inputHandle = page.locator(`.react-flow__node[data-id="${branchNode}"] .react-flow__handle[data-handleid="input-0"]`);
@@ -220,7 +227,25 @@ for (const [name, engine] of Object.entries({ chromium, webkit })) {
     assert.ok(to);
     await page.mouse.down();
     await page.mouse.move(to.x + to.width / 2, to.y + to.height / 2, { steps: 12 });
-    await page.waitForFunction(id => document.querySelector(`.react-flow__node[data-id="${id}"] .react-flow__handle[data-handleid="input-0"]`)?.classList.contains("valid"), branchNode);
+    try {
+      await page.waitForFunction(id => document.querySelector(`.react-flow__node[data-id="${id}"] .react-flow__handle[data-handleid="input-0"]`)?.classList.contains("valid"), branchNode);
+    } catch (error) {
+      // Record what the connection saw, then fail.
+      const scene = await page.evaluate(() => ({
+        viewport: document.querySelector(".react-flow__viewport")?.getAttribute("style"),
+        connectionLine: document.querySelector(".react-flow__connectionline") !== null,
+        edges: document.querySelectorAll(".react-flow__edge").length,
+        handles: [...document.querySelectorAll(".react-flow__handle")].map(handle => ({
+          node: handle.closest(".react-flow__node")?.getAttribute("data-id"),
+          handle: handle.getAttribute("data-handleid"),
+          class: handle.getAttribute("class"),
+          box: handle.getBoundingClientRect().toJSON()
+        }))
+      }));
+      await fs.writeFile(`${out}/${name}-fanout-unconnected.json`, JSON.stringify({ pointer: to, ...scene }, null, 2));
+      await page.screenshot({ path: `${out}/${name}-fanout-unconnected.png` });
+      throw error;
+    }
     await capture(page, name, "fanout-connecting");
     await page.mouse.up();
     await capture(page, name, "fanout-connected");
