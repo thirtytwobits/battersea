@@ -2,6 +2,9 @@
 
 Battersea is an embeddable dataflow framework.
 
+[Documentation](https://thirtytwobits.github.io/battersea/) includes the handbook and versioned
+Rust and TypeScript API references. See [documentation delivery](docs/README.md) for local builds.
+
 `battersea-flow` provides flow documents, ports, templates, extensible catalogues and pure
 graph validation. Its versioned [text source](contracts/text-source.md) round-trips graph data
 and editor layout through `dsl::parse_flow_dsl` and `dsl::export_flow_dsl`. Applications register

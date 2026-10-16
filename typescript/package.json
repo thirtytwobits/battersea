@@ -17,17 +17,19 @@
     "api:update": "npm run build && node scripts/check.mjs --update-api",
     "package:check": "npm run check && node scripts/package-check.mjs",
     "test:editor": "tsx --test tests/editor/*.test.ts tests/editor/*.test.tsx",
-    "test:example": "node scripts/example-check.mjs"
+    "test:example": "node scripts/example-check.mjs",
+    "docs": "npm run build && node scripts/docs.mjs"
   },
   "devDependencies": {
-    "typescript": "5.9.3",
+    "@types/d3-force": "^3.0.10",
+    "@types/node": "^25.3.5",
     "@types/react": "^18.3.1",
     "@types/react-dom": "^18.3.1",
-    "@types/node": "^25.3.5",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "tsx": "^4.21.0",
-    "@types/d3-force": "^3.0.10"
+    "typedoc": "0.28.20",
+    "typescript": "5.9.3"
   },
   "license": "MIT",
   "repository": {

@@ -1,0 +1,16 @@
+{
+  "$schema": "https://typedoc.org/schema.json",
+  "name": "Battersea TypeScript API",
+  "entryPointStrategy": "packages",
+  "entryPoints": ["packages/flow", "packages/editor"],
+  "out": "../target/documentation/typescript",
+  "readme": "none",
+  "includeVersion": true,
+  "treatWarningsAsErrors": true,
+  "packageOptions": {
+    "excludeExternals": true,
+    "alwaysCreateEntryPointModule": true,
+    "readme": "none",
+    "validation": { "notExported": false, "invalidLink": true }
+  }
+}
