@@ -565,7 +565,7 @@ impl<T> serde_core::de::DeserializeOwned for battersea_flow::execution::FlowQueu
 impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_flow::execution::FlowQueueLimits where T: ?core::marker::Sized
 pub fn battersea_flow::execution::ordered_sources(flow: &battersea_flow::FlowDocument, definitions: &std::collections::hash::map::HashMap<alloc::string::String, battersea_flow::FlowNodeDefinition>) -> core::result::Result<alloc::vec::Vec<alloc::string::String>, alloc::string::String>
 pub fn battersea_flow::execution::upgrade_v1_document(source: &str, definitions: &std::collections::hash::map::HashMap<alloc::string::String, battersea_flow::FlowNodeDefinition>, limits: battersea_flow::execution::FlowExecutionLimits) -> core::result::Result<battersea_flow::FlowDocument, alloc::string::String>
-pub fn battersea_flow::execution::validate_execution_contract(flow: &battersea_flow::FlowDocument, definitions: &std::collections::hash::map::HashMap<alloc::string::String, battersea_flow::FlowNodeDefinition>) -> core::result::Result<(), alloc::string::String>
+pub fn battersea_flow::execution::validate_execution_contract(flow: &battersea_flow::FlowDocument, definitions: &std::collections::hash::map::HashMap<alloc::string::String, battersea_flow::FlowNodeDefinition>) -> core::result::Result<(), battersea_flow::FlowValidationIssue>
 pub mod battersea_flow::issue_codes
 pub const battersea_flow::issue_codes::ALIAS_FOR_UNKNOWN_PORT: &str
 pub const battersea_flow::issue_codes::ALL: &[&str]

@@ -11,10 +11,34 @@ use std::{
 };
 use tokio_util::sync::CancellationToken;
 
+/// The application's own refusal codes, beside the runtime's `error_codes`.
+pub mod codes {
+    pub const INVALID_FLOW: &str = "invalid_flow";
+    pub const INVALID_DOCUMENT: &str = "invalid_document";
+    pub const INVALID_KEY: &str = "invalid_key";
+    pub const UNKNOWN_ACTIVATION: &str = "unknown_activation";
+    pub const INVALID_RUNTIME_CURSOR: &str = "invalid_runtime_cursor";
+    pub const INVALID_PARAMETER_WRITE: &str = "invalid_parameter_write";
+    pub const INVALID_EXPORTER: &str = "invalid_exporter";
+    pub const CAPTURE_FAILED: &str = "capture_failed";
+    pub const UPGRADE_REFUSED: &str = "upgrade_refused";
+    pub const FLOW_KEY_MISMATCH: &str = "flow_key_mismatch";
+    pub const STALE_UPGRADE_REVISION: &str = "stale_upgrade_revision";
+}
 #[derive(Debug)]
 pub struct Error {
     pub code: String,
+    pub reason: Option<&'static str>,
     pub message: String,
+}
+impl Error {
+    fn new(code: &str, reason: Option<&'static str>, message: impl Into<String>) -> Self {
+        Self {
+            code: code.into(),
+            reason,
+            message: message.into(),
+        }
+    }
 }
 impl std::fmt::Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -23,32 +47,23 @@ impl std::fmt::Display for Error {
 }
 impl std::error::Error for Error {}
 impl ExecutionError for Error {
-    fn invalid_request(message: impl Into<String>) -> Self {
-        Self {
-            code: "invalid_request".into(),
-            message: message.into(),
-        }
+    fn invalid_request(reason: &'static str, message: impl Into<String>) -> Self {
+        Self::new("invalid_request", Some(reason), message)
     }
     fn internal(message: impl Into<String>) -> Self {
-        Self {
-            code: "internal".into(),
-            message: message.into(),
-        }
+        Self::new("internal", None, message)
     }
-    fn cancelled(message: impl Into<String>) -> Self {
-        Self {
-            code: "cancelled".into(),
-            message: message.into(),
-        }
+    fn cancelled(reason: &'static str, message: impl Into<String>) -> Self {
+        Self::new("cancelled", Some(reason), message)
     }
-    fn interrupted(message: impl Into<String>) -> Self {
-        Self {
-            code: "interrupted".into(),
-            message: message.into(),
-        }
+    fn interrupted(reason: &'static str, message: impl Into<String>) -> Self {
+        Self::new("interrupted", Some(reason), message)
     }
     fn code(&self) -> &str {
         &self.code
+    }
+    fn reason_code(&self) -> Option<&str> {
+        self.reason
     }
     fn message(&self) -> &str {
         &self.message
@@ -98,7 +113,9 @@ impl NodeHandler<Application> for TextSource {
         let text = values
             .and_then(|v| v.get("text"))
             .and_then(Value::as_str)
-            .ok_or_else(|| Error::invalid_request("text is required"))?;
+            .ok_or_else(|| {
+                Error::invalid_request(error_codes::INVALID_ACTIVATION_VALUE, "text is required")
+            })?;
         let delay = node
             .parameter_values
             .get("delay_ms")
@@ -138,7 +155,9 @@ impl NodeHandler<Application> for Output {
         run.output.push(
             run.retention
                 .retain("output", token.value.clone())
-                .map_err(Error::invalid_request)?,
+                .map_err(|message| {
+                    Error::invalid_request(error_codes::CAPACITY_EXHAUSTED, message)
+                })?,
         );
         Ok(())
     }
@@ -196,7 +215,7 @@ impl Application {
                         std::time::Duration::from_secs(5),
                         1024 * 1024,
                     )
-                    .map_err(|e| Error::invalid_request(e.to_string()))
+                    .map_err(|e| Error::invalid_request(codes::INVALID_EXPORTER, e.to_string()))
                 })
                 .transpose()?,
             acceptance: Mutex::default(),
@@ -291,8 +310,9 @@ impl Application {
     }
     pub fn run(&self, id: String, flow: &FlowDocument) -> Result<Run, Error> {
         Ok(Run {
-            scheduler: SchedulerState::new(id, flow, self.catalog.definitions().clone())
-                .map_err(Error::invalid_request)?,
+            scheduler: SchedulerState::new(id, flow, self.catalog.definitions().clone()).map_err(
+                |issues| Error::invalid_request(codes::INVALID_FLOW, format!("{issues:?}")),
+            )?,
             output: vec![],
             tap: Mutex::new(battersea_pianola::PianolaTap::new(
                 vec![battersea_pianola::PianolaTapTarget {
@@ -367,7 +387,7 @@ impl ExecutionHost for Application {
     ) -> Result<Value, Error> {
         Registry::default()
             .convert_automation_value(parameter, value)
-            .map_err(|e| Error::invalid_request(e.to_string()))
+            .map_err(|e| Error::invalid_request(codes::INVALID_PARAMETER_WRITE, e.to_string()))
     }
     async fn commit_parameter_write(
         &self,
@@ -390,7 +410,10 @@ impl ExecutionHost for Application {
         battersea_nodes::logic::prepare_logic_outputs(
             node, definition, actions, signals, fired, enabled,
         )
-        .map_err(|error| Error::invalid_request(error.to_string()))
+        .map_err(|error| match error.reason_code() {
+            Some(reason) => Error::invalid_request(reason, error.to_string()),
+            None => Error::internal(error.to_string()),
+        })
     }
     fn logic_gate_label(&self, _: &FlowNode, definition: &FlowNodeDefinition) -> String {
         definition.class_name.clone()
@@ -403,7 +426,10 @@ impl ActivationHost for Application {
         if result.valid {
             Ok(())
         } else {
-            Err(Error::invalid_request(format!("{:?}", result.issues)))
+            Err(Error::invalid_request(
+                codes::INVALID_FLOW,
+                format!("{:?}", result.issues),
+            ))
         }
     }
     async fn accept_activation(&self, run: &Run, _: &str) -> Result<(), Error> {
@@ -432,7 +458,7 @@ impl ActivationHost for Application {
         };
         let tap = run.tap.lock().unwrap();
         if let Some(error) = tap.error() {
-            return Err(Error::invalid_request(error));
+            return Err(Error::invalid_request(codes::CAPTURE_FAILED, error));
         }
         let capture: Vec<_> = tap
             .emissions_from(0)

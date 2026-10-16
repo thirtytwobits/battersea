@@ -1,7 +1,7 @@
 //! Checkpoint publication at resumable activation-driver boundaries.
 use crate::{
-    checkpoint::SchedulerCheckpoint, recovery::*, ExecutionError, ExecutionHost, RunIdentity,
-    SchedulerState,
+    checkpoint::SchedulerCheckpoint, error_codes, recovery::*, ExecutionError, ExecutionHost,
+    RunIdentity, SchedulerState,
 };
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
@@ -98,11 +98,13 @@ impl ExecutionCheckpoint {
             || scheduler.activated_node_id.as_deref() != Some(&self.entry_node)
         {
             return Err(H::Error::invalid_request(
+                error_codes::INCOMPATIBLE_CHECKPOINT,
                 "Checkpoint activation entry changed.",
             ));
         }
         if self.handler_versions != handler_versions(host, &scheduler)? {
             return Err(H::Error::invalid_request(
+                error_codes::INCOMPATIBLE_CHECKPOINT,
                 "Checkpoint handler-state versions are incompatible.",
             ));
         }
@@ -130,7 +132,7 @@ impl DurableExecution {
 }
 
 pub(crate) fn recovery_error<H: ExecutionHost>(error: RecoveryError) -> H::Error {
-    H::Error::recovery_required(error.to_string())
+    H::Error::recovery_required(error.code(), error.to_string())
 }
 
 pub(crate) fn handler_versions<H: ExecutionHost>(
@@ -142,14 +144,17 @@ pub(crate) fn handler_versions<H: ExecutionHost>(
         let definition = runtime
             .definitions
             .get(&node.definition_name)
-            .ok_or_else(|| H::Error::invalid_request("Missing checkpoint definition."))?;
-        let handler = host
-            .handlers()
-            .get(&definition.handler_id)
-            .map_err(H::Error::invalid_request)?;
+            .ok_or_else(|| {
+                H::Error::invalid_request(
+                    error_codes::UNKNOWN_DEFINITION,
+                    "Missing checkpoint definition.",
+                )
+            })?;
+        let handler = host.handlers().resolve(&definition.handler_id)?;
         let version = handler.checkpoint_version();
         if version == 0 {
             return Err(H::Error::invalid_request(
+                error_codes::INVALID_CHECKPOINT_VERSION,
                 "Handler checkpoint versions must be positive.",
             ));
         }
@@ -187,6 +192,7 @@ pub(crate) fn begin<H: ExecutionHost>(
     };
     if recovery.failed {
         return Err(H::Error::interrupted(
+            error_codes::EXECUTION_INTERRUPTED,
             "Execution requires recovery after a failed checkpoint operation.",
         ));
     }

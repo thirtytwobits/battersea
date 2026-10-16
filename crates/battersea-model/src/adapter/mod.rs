@@ -598,7 +598,8 @@ pub fn validate_chat_request(
             &backend.provider,
             "Tool rounds must be between 1 and 32.",
             error::ErrorKind::InvalidRequest,
-        ));
+        )
+        .with_tool_code(crate::ToolCode::InvalidToolRounds));
     }
     let mut names = std::collections::HashSet::new();
     for tool in &request.local_tools {
@@ -607,7 +608,8 @@ pub fn validate_chat_request(
                 &backend.provider,
                 "Duplicate tool names after provider normalization.",
                 error::ErrorKind::InvalidRequest,
-            ));
+            )
+            .with_tool_code(crate::ToolCode::DuplicateTool));
         }
         jsonschema::validator_for(&tool.input_schema).map_err(|error| {
             EngineAdapterRequestError::new(
@@ -615,6 +617,7 @@ pub fn validate_chat_request(
                 format!("Invalid tool schema: {error}"),
                 error::ErrorKind::InvalidRequest,
             )
+            .with_tool_code(crate::ToolCode::InvalidToolSchema)
         })?;
     }
     backend
@@ -634,7 +637,8 @@ pub fn validate_chat_request(
                 &backend.provider,
                 format!("Named tool is not offered: {name}."),
                 "invalid_request",
-            ));
+            )
+            .with_tool_code(crate::ToolCode::UnofferedToolChoice));
         }
     }
     Ok(())

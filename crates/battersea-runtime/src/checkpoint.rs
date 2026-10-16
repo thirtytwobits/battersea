@@ -204,7 +204,15 @@ impl SchedulerCheckpoint {
             &self.flow,
             self.definitions.clone().into_iter().collect(),
         )
-        .map_err(invalid)?;
+        .map_err(|issues| {
+            invalid(
+                issues
+                    .into_iter()
+                    .map(|issue| issue.message)
+                    .collect::<Vec<_>>()
+                    .join(" "),
+            )
+        })?;
         if state.nodes_by_id.len() != self.nodes_by_id.len() {
             return Err(invalid("Checkpoint node inventory changed."));
         }

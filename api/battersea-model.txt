@@ -129,6 +129,78 @@ impl<T> dyn_clone::DynClone for battersea_model::ErrorKind where T: core::clone:
 pub fn battersea_model::ErrorKind::__clone_box(&self, _: dyn_clone::sealed::Private) -> *mut ()
 impl<T> serde_core::de::DeserializeOwned for battersea_model::ErrorKind where T: for<'de> serde_core::de::Deserialize<'de>
 impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_model::ErrorKind where T: ?core::marker::Sized
+#[non_exhaustive] pub enum battersea_model::adapter::error::ToolCode
+pub battersea_model::adapter::error::ToolCode::DuplicateTool
+pub battersea_model::adapter::error::ToolCode::InvalidToolArguments
+pub battersea_model::adapter::error::ToolCode::InvalidToolCallId
+pub battersea_model::adapter::error::ToolCode::InvalidToolRounds
+pub battersea_model::adapter::error::ToolCode::InvalidToolSchema
+pub battersea_model::adapter::error::ToolCode::MalformedToolCall
+pub battersea_model::adapter::error::ToolCode::ToolOutsideChoice
+pub battersea_model::adapter::error::ToolCode::ToolRoundsExceeded
+pub battersea_model::adapter::error::ToolCode::ToolTranscriptTooLarge
+pub battersea_model::adapter::error::ToolCode::ToolUseDisabled
+pub battersea_model::adapter::error::ToolCode::UnofferedTool
+pub battersea_model::adapter::error::ToolCode::UnofferedToolChoice
+pub battersea_model::adapter::error::ToolCode::UnregisteredTool
+impl battersea_model::ToolCode
+pub const battersea_model::ToolCode::ALL: &[Self]
+pub fn battersea_model::ToolCode::as_str(self) -> &'static str
+impl core::clone::Clone for battersea_model::ToolCode
+pub fn battersea_model::ToolCode::clone(&self) -> battersea_model::ToolCode
+impl core::cmp::Eq for battersea_model::ToolCode
+impl core::cmp::PartialEq for battersea_model::ToolCode
+pub fn battersea_model::ToolCode::eq(&self, other: &battersea_model::ToolCode) -> bool
+impl core::fmt::Debug for battersea_model::ToolCode
+pub fn battersea_model::ToolCode::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for battersea_model::ToolCode
+pub fn battersea_model::ToolCode::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::hash::Hash for battersea_model::ToolCode
+pub fn battersea_model::ToolCode::hash<__H: core::hash::Hasher>(&self, state: &mut __H)
+impl core::marker::Copy for battersea_model::ToolCode
+impl core::marker::StructuralPartialEq for battersea_model::ToolCode
+impl serde_core::ser::Serialize for battersea_model::ToolCode
+pub fn battersea_model::ToolCode::serialize<__S>(&self, __serializer: __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for battersea_model::ToolCode
+pub fn battersea_model::ToolCode::deserialize<__D>(__deserializer: __D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for battersea_model::ToolCode
+impl core::marker::Send for battersea_model::ToolCode
+impl core::marker::Sync for battersea_model::ToolCode
+impl core::marker::Unpin for battersea_model::ToolCode
+impl core::panic::unwind_safe::RefUnwindSafe for battersea_model::ToolCode
+impl core::panic::unwind_safe::UnwindSafe for battersea_model::ToolCode
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_model::ToolCode where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_model::ToolCode where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<T, U> core::convert::Into<U> for battersea_model::ToolCode where U: core::convert::From<T>
+pub fn battersea_model::ToolCode::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_model::ToolCode where U: core::convert::Into<T>
+pub type battersea_model::ToolCode::Error = core::convert::Infallible
+pub fn battersea_model::ToolCode::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for battersea_model::ToolCode where U: core::convert::TryFrom<T>
+pub type battersea_model::ToolCode::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_model::ToolCode::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for battersea_model::ToolCode where T: core::clone::Clone
+pub type battersea_model::ToolCode::Owned = T
+pub fn battersea_model::ToolCode::clone_into(&self, target: &mut T)
+pub fn battersea_model::ToolCode::to_owned(&self) -> T
+impl<T> alloc::string::ToString for battersea_model::ToolCode where T: core::fmt::Display + ?core::marker::Sized
+pub fn battersea_model::ToolCode::to_string(&self) -> alloc::string::String
+impl<T> core::any::Any for battersea_model::ToolCode where T: 'static + ?core::marker::Sized
+pub fn battersea_model::ToolCode::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_model::ToolCode where T: ?core::marker::Sized
+pub fn battersea_model::ToolCode::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_model::ToolCode where T: ?core::marker::Sized
+pub fn battersea_model::ToolCode::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for battersea_model::ToolCode where T: core::clone::Clone
+pub unsafe fn battersea_model::ToolCode::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for battersea_model::ToolCode
+pub fn battersea_model::ToolCode::from(t: T) -> T
+impl<T> dyn_clone::DynClone for battersea_model::ToolCode where T: core::clone::Clone
+pub fn battersea_model::ToolCode::__clone_box(&self, _: dyn_clone::sealed::Private) -> *mut ()
+impl<T> outref::AsOut<T> for battersea_model::ToolCode where T: core::marker::Copy
+pub fn battersea_model::ToolCode::as_out(&mut self) -> outref::Out<'_, T>
+impl<T> serde_core::de::DeserializeOwned for battersea_model::ToolCode where T: for<'de> serde_core::de::Deserialize<'de>
+impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_model::ToolCode where T: ?core::marker::Sized
 pub struct battersea_model::adapter::error::EngineAdapterRequestError
 pub battersea_model::adapter::error::EngineAdapterRequestError::attempts: u32
 pub battersea_model::adapter::error::EngineAdapterRequestError::classification: battersea_model::ErrorKind
@@ -138,6 +210,7 @@ pub battersea_model::adapter::error::EngineAdapterRequestError::provider: alloc:
 pub battersea_model::adapter::error::EngineAdapterRequestError::request_id: core::option::Option<alloc::string::String>
 pub battersea_model::adapter::error::EngineAdapterRequestError::retry_after_ms: core::option::Option<u64>
 pub battersea_model::adapter::error::EngineAdapterRequestError::status_code: core::option::Option<u16>
+pub battersea_model::adapter::error::EngineAdapterRequestError::tool_code: core::option::Option<battersea_model::ToolCode>
 pub battersea_model::adapter::error::EngineAdapterRequestError::watchdog: core::option::Option<alloc::boxed::Box<battersea_model::WatchdogFailure>>
 impl battersea_model::EngineAdapterRequestError
 pub fn battersea_model::EngineAdapterRequestError::invalid_response(provider: impl core::convert::Into<alloc::string::String>, message: impl core::convert::Into<alloc::string::String>) -> Self
@@ -148,6 +221,7 @@ pub fn battersea_model::EngineAdapterRequestError::with_dispatch(self, dispatch:
 pub fn battersea_model::EngineAdapterRequestError::with_idle_watchdog(self, limit_ms: u64) -> Self
 pub fn battersea_model::EngineAdapterRequestError::with_request_id(self, request_id: core::option::Option<alloc::string::String>) -> Self
 pub fn battersea_model::EngineAdapterRequestError::with_status_code(self, status_code: u16) -> Self
+pub fn battersea_model::EngineAdapterRequestError::with_tool_code(self, code: battersea_model::ToolCode) -> Self
 impl core::clone::Clone for battersea_model::EngineAdapterRequestError
 pub fn battersea_model::EngineAdapterRequestError::clone(&self) -> battersea_model::EngineAdapterRequestError
 impl core::error::Error for battersea_model::EngineAdapterRequestError
@@ -2901,6 +2975,78 @@ impl<T> dyn_clone::DynClone for battersea_model::ErrorKind where T: core::clone:
 pub fn battersea_model::ErrorKind::__clone_box(&self, _: dyn_clone::sealed::Private) -> *mut ()
 impl<T> serde_core::de::DeserializeOwned for battersea_model::ErrorKind where T: for<'de> serde_core::de::Deserialize<'de>
 impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_model::ErrorKind where T: ?core::marker::Sized
+#[non_exhaustive] pub enum battersea_model::error::ToolCode
+pub battersea_model::error::ToolCode::DuplicateTool
+pub battersea_model::error::ToolCode::InvalidToolArguments
+pub battersea_model::error::ToolCode::InvalidToolCallId
+pub battersea_model::error::ToolCode::InvalidToolRounds
+pub battersea_model::error::ToolCode::InvalidToolSchema
+pub battersea_model::error::ToolCode::MalformedToolCall
+pub battersea_model::error::ToolCode::ToolOutsideChoice
+pub battersea_model::error::ToolCode::ToolRoundsExceeded
+pub battersea_model::error::ToolCode::ToolTranscriptTooLarge
+pub battersea_model::error::ToolCode::ToolUseDisabled
+pub battersea_model::error::ToolCode::UnofferedTool
+pub battersea_model::error::ToolCode::UnofferedToolChoice
+pub battersea_model::error::ToolCode::UnregisteredTool
+impl battersea_model::ToolCode
+pub const battersea_model::ToolCode::ALL: &[Self]
+pub fn battersea_model::ToolCode::as_str(self) -> &'static str
+impl core::clone::Clone for battersea_model::ToolCode
+pub fn battersea_model::ToolCode::clone(&self) -> battersea_model::ToolCode
+impl core::cmp::Eq for battersea_model::ToolCode
+impl core::cmp::PartialEq for battersea_model::ToolCode
+pub fn battersea_model::ToolCode::eq(&self, other: &battersea_model::ToolCode) -> bool
+impl core::fmt::Debug for battersea_model::ToolCode
+pub fn battersea_model::ToolCode::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for battersea_model::ToolCode
+pub fn battersea_model::ToolCode::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::hash::Hash for battersea_model::ToolCode
+pub fn battersea_model::ToolCode::hash<__H: core::hash::Hasher>(&self, state: &mut __H)
+impl core::marker::Copy for battersea_model::ToolCode
+impl core::marker::StructuralPartialEq for battersea_model::ToolCode
+impl serde_core::ser::Serialize for battersea_model::ToolCode
+pub fn battersea_model::ToolCode::serialize<__S>(&self, __serializer: __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for battersea_model::ToolCode
+pub fn battersea_model::ToolCode::deserialize<__D>(__deserializer: __D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for battersea_model::ToolCode
+impl core::marker::Send for battersea_model::ToolCode
+impl core::marker::Sync for battersea_model::ToolCode
+impl core::marker::Unpin for battersea_model::ToolCode
+impl core::panic::unwind_safe::RefUnwindSafe for battersea_model::ToolCode
+impl core::panic::unwind_safe::UnwindSafe for battersea_model::ToolCode
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_model::ToolCode where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_model::ToolCode where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<T, U> core::convert::Into<U> for battersea_model::ToolCode where U: core::convert::From<T>
+pub fn battersea_model::ToolCode::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_model::ToolCode where U: core::convert::Into<T>
+pub type battersea_model::ToolCode::Error = core::convert::Infallible
+pub fn battersea_model::ToolCode::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for battersea_model::ToolCode where U: core::convert::TryFrom<T>
+pub type battersea_model::ToolCode::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_model::ToolCode::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for battersea_model::ToolCode where T: core::clone::Clone
+pub type battersea_model::ToolCode::Owned = T
+pub fn battersea_model::ToolCode::clone_into(&self, target: &mut T)
+pub fn battersea_model::ToolCode::to_owned(&self) -> T
+impl<T> alloc::string::ToString for battersea_model::ToolCode where T: core::fmt::Display + ?core::marker::Sized
+pub fn battersea_model::ToolCode::to_string(&self) -> alloc::string::String
+impl<T> core::any::Any for battersea_model::ToolCode where T: 'static + ?core::marker::Sized
+pub fn battersea_model::ToolCode::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_model::ToolCode where T: ?core::marker::Sized
+pub fn battersea_model::ToolCode::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_model::ToolCode where T: ?core::marker::Sized
+pub fn battersea_model::ToolCode::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for battersea_model::ToolCode where T: core::clone::Clone
+pub unsafe fn battersea_model::ToolCode::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for battersea_model::ToolCode
+pub fn battersea_model::ToolCode::from(t: T) -> T
+impl<T> dyn_clone::DynClone for battersea_model::ToolCode where T: core::clone::Clone
+pub fn battersea_model::ToolCode::__clone_box(&self, _: dyn_clone::sealed::Private) -> *mut ()
+impl<T> outref::AsOut<T> for battersea_model::ToolCode where T: core::marker::Copy
+pub fn battersea_model::ToolCode::as_out(&mut self) -> outref::Out<'_, T>
+impl<T> serde_core::de::DeserializeOwned for battersea_model::ToolCode where T: for<'de> serde_core::de::Deserialize<'de>
+impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_model::ToolCode where T: ?core::marker::Sized
 pub struct battersea_model::error::EngineAdapterRequestError
 pub battersea_model::error::EngineAdapterRequestError::attempts: u32
 pub battersea_model::error::EngineAdapterRequestError::classification: battersea_model::ErrorKind
@@ -2910,6 +3056,7 @@ pub battersea_model::error::EngineAdapterRequestError::provider: alloc::boxed::B
 pub battersea_model::error::EngineAdapterRequestError::request_id: core::option::Option<alloc::string::String>
 pub battersea_model::error::EngineAdapterRequestError::retry_after_ms: core::option::Option<u64>
 pub battersea_model::error::EngineAdapterRequestError::status_code: core::option::Option<u16>
+pub battersea_model::error::EngineAdapterRequestError::tool_code: core::option::Option<battersea_model::ToolCode>
 pub battersea_model::error::EngineAdapterRequestError::watchdog: core::option::Option<alloc::boxed::Box<battersea_model::WatchdogFailure>>
 impl battersea_model::EngineAdapterRequestError
 pub fn battersea_model::EngineAdapterRequestError::invalid_response(provider: impl core::convert::Into<alloc::string::String>, message: impl core::convert::Into<alloc::string::String>) -> Self
@@ -2920,6 +3067,7 @@ pub fn battersea_model::EngineAdapterRequestError::with_dispatch(self, dispatch:
 pub fn battersea_model::EngineAdapterRequestError::with_idle_watchdog(self, limit_ms: u64) -> Self
 pub fn battersea_model::EngineAdapterRequestError::with_request_id(self, request_id: core::option::Option<alloc::string::String>) -> Self
 pub fn battersea_model::EngineAdapterRequestError::with_status_code(self, status_code: u16) -> Self
+pub fn battersea_model::EngineAdapterRequestError::with_tool_code(self, code: battersea_model::ToolCode) -> Self
 impl core::clone::Clone for battersea_model::EngineAdapterRequestError
 pub fn battersea_model::EngineAdapterRequestError::clone(&self) -> battersea_model::EngineAdapterRequestError
 impl core::error::Error for battersea_model::EngineAdapterRequestError
@@ -5509,6 +5657,78 @@ impl<T> outref::AsOut<T> for battersea_model::StructuredOutputMode where T: core
 pub fn battersea_model::StructuredOutputMode::as_out(&mut self) -> outref::Out<'_, T>
 impl<T> serde_core::de::DeserializeOwned for battersea_model::StructuredOutputMode where T: for<'de> serde_core::de::Deserialize<'de>
 impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_model::StructuredOutputMode where T: ?core::marker::Sized
+#[non_exhaustive] pub enum battersea_model::ToolCode
+pub battersea_model::ToolCode::DuplicateTool
+pub battersea_model::ToolCode::InvalidToolArguments
+pub battersea_model::ToolCode::InvalidToolCallId
+pub battersea_model::ToolCode::InvalidToolRounds
+pub battersea_model::ToolCode::InvalidToolSchema
+pub battersea_model::ToolCode::MalformedToolCall
+pub battersea_model::ToolCode::ToolOutsideChoice
+pub battersea_model::ToolCode::ToolRoundsExceeded
+pub battersea_model::ToolCode::ToolTranscriptTooLarge
+pub battersea_model::ToolCode::ToolUseDisabled
+pub battersea_model::ToolCode::UnofferedTool
+pub battersea_model::ToolCode::UnofferedToolChoice
+pub battersea_model::ToolCode::UnregisteredTool
+impl battersea_model::ToolCode
+pub const battersea_model::ToolCode::ALL: &[Self]
+pub fn battersea_model::ToolCode::as_str(self) -> &'static str
+impl core::clone::Clone for battersea_model::ToolCode
+pub fn battersea_model::ToolCode::clone(&self) -> battersea_model::ToolCode
+impl core::cmp::Eq for battersea_model::ToolCode
+impl core::cmp::PartialEq for battersea_model::ToolCode
+pub fn battersea_model::ToolCode::eq(&self, other: &battersea_model::ToolCode) -> bool
+impl core::fmt::Debug for battersea_model::ToolCode
+pub fn battersea_model::ToolCode::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for battersea_model::ToolCode
+pub fn battersea_model::ToolCode::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::hash::Hash for battersea_model::ToolCode
+pub fn battersea_model::ToolCode::hash<__H: core::hash::Hasher>(&self, state: &mut __H)
+impl core::marker::Copy for battersea_model::ToolCode
+impl core::marker::StructuralPartialEq for battersea_model::ToolCode
+impl serde_core::ser::Serialize for battersea_model::ToolCode
+pub fn battersea_model::ToolCode::serialize<__S>(&self, __serializer: __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for battersea_model::ToolCode
+pub fn battersea_model::ToolCode::deserialize<__D>(__deserializer: __D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for battersea_model::ToolCode
+impl core::marker::Send for battersea_model::ToolCode
+impl core::marker::Sync for battersea_model::ToolCode
+impl core::marker::Unpin for battersea_model::ToolCode
+impl core::panic::unwind_safe::RefUnwindSafe for battersea_model::ToolCode
+impl core::panic::unwind_safe::UnwindSafe for battersea_model::ToolCode
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_model::ToolCode where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_model::ToolCode where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<T, U> core::convert::Into<U> for battersea_model::ToolCode where U: core::convert::From<T>
+pub fn battersea_model::ToolCode::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_model::ToolCode where U: core::convert::Into<T>
+pub type battersea_model::ToolCode::Error = core::convert::Infallible
+pub fn battersea_model::ToolCode::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for battersea_model::ToolCode where U: core::convert::TryFrom<T>
+pub type battersea_model::ToolCode::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_model::ToolCode::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for battersea_model::ToolCode where T: core::clone::Clone
+pub type battersea_model::ToolCode::Owned = T
+pub fn battersea_model::ToolCode::clone_into(&self, target: &mut T)
+pub fn battersea_model::ToolCode::to_owned(&self) -> T
+impl<T> alloc::string::ToString for battersea_model::ToolCode where T: core::fmt::Display + ?core::marker::Sized
+pub fn battersea_model::ToolCode::to_string(&self) -> alloc::string::String
+impl<T> core::any::Any for battersea_model::ToolCode where T: 'static + ?core::marker::Sized
+pub fn battersea_model::ToolCode::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_model::ToolCode where T: ?core::marker::Sized
+pub fn battersea_model::ToolCode::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_model::ToolCode where T: ?core::marker::Sized
+pub fn battersea_model::ToolCode::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for battersea_model::ToolCode where T: core::clone::Clone
+pub unsafe fn battersea_model::ToolCode::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for battersea_model::ToolCode
+pub fn battersea_model::ToolCode::from(t: T) -> T
+impl<T> dyn_clone::DynClone for battersea_model::ToolCode where T: core::clone::Clone
+pub fn battersea_model::ToolCode::__clone_box(&self, _: dyn_clone::sealed::Private) -> *mut ()
+impl<T> outref::AsOut<T> for battersea_model::ToolCode where T: core::marker::Copy
+pub fn battersea_model::ToolCode::as_out(&mut self) -> outref::Out<'_, T>
+impl<T> serde_core::de::DeserializeOwned for battersea_model::ToolCode where T: for<'de> serde_core::de::Deserialize<'de>
+impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_model::ToolCode where T: ?core::marker::Sized
 pub struct battersea_model::ChatProvider
 pub battersea_model::ChatProvider::background_modes: alloc::vec::Vec<alloc::string::String>
 pub battersea_model::ChatProvider::content: battersea_model::ContentCapabilities
@@ -5858,6 +6078,7 @@ pub battersea_model::EngineAdapterRequestError::provider: alloc::boxed::Box<str>
 pub battersea_model::EngineAdapterRequestError::request_id: core::option::Option<alloc::string::String>
 pub battersea_model::EngineAdapterRequestError::retry_after_ms: core::option::Option<u64>
 pub battersea_model::EngineAdapterRequestError::status_code: core::option::Option<u16>
+pub battersea_model::EngineAdapterRequestError::tool_code: core::option::Option<battersea_model::ToolCode>
 pub battersea_model::EngineAdapterRequestError::watchdog: core::option::Option<alloc::boxed::Box<battersea_model::WatchdogFailure>>
 impl battersea_model::EngineAdapterRequestError
 pub fn battersea_model::EngineAdapterRequestError::invalid_response(provider: impl core::convert::Into<alloc::string::String>, message: impl core::convert::Into<alloc::string::String>) -> Self
@@ -5868,6 +6089,7 @@ pub fn battersea_model::EngineAdapterRequestError::with_dispatch(self, dispatch:
 pub fn battersea_model::EngineAdapterRequestError::with_idle_watchdog(self, limit_ms: u64) -> Self
 pub fn battersea_model::EngineAdapterRequestError::with_request_id(self, request_id: core::option::Option<alloc::string::String>) -> Self
 pub fn battersea_model::EngineAdapterRequestError::with_status_code(self, status_code: u16) -> Self
+pub fn battersea_model::EngineAdapterRequestError::with_tool_code(self, code: battersea_model::ToolCode) -> Self
 impl core::clone::Clone for battersea_model::EngineAdapterRequestError
 pub fn battersea_model::EngineAdapterRequestError::clone(&self) -> battersea_model::EngineAdapterRequestError
 impl core::error::Error for battersea_model::EngineAdapterRequestError

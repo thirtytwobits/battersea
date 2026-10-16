@@ -83,6 +83,34 @@ impl fmt::Display for PumpError {
 
 impl std::error::Error for PumpError {}
 
+impl PumpError {
+    /// The [`error_codes`](crate::error_codes) code naming this failure.
+    pub fn code(&self) -> &'static str {
+        use crate::error_codes::*;
+        match self {
+            Self::InvalidLimits => INVALID_PUMP_LIMITS,
+            Self::PayloadTooLarge { .. } => PAYLOAD_TOO_LARGE,
+            Self::Serialization(_) => UNSERIALISABLE_PAYLOAD,
+            Self::Capacity(_) => CAPACITY_EXHAUSTED,
+            Self::Cancelled => ACTIVATION_CANCELLED,
+            Self::ProducerPanicked | Self::ProducerStopped => PROVIDER_STOPPED,
+        }
+    }
+
+    /// This failure as a host error: cancellation, interruption for a stopped producer, or a
+    /// refused request.
+    pub(crate) fn into_error<E: crate::ExecutionError>(self) -> E {
+        let reason = self.code();
+        match self {
+            Self::Cancelled => E::cancelled(reason, self.to_string()),
+            Self::ProducerPanicked | Self::ProducerStopped => {
+                E::interrupted(reason, self.to_string())
+            }
+            _ => E::invalid_request(reason, self.to_string()),
+        }
+    }
+}
+
 /// An event and its capacity reservation. Dropping this value releases its item
 /// and byte permits. Retaining a clone of the payload requires application-owned
 /// accounting; there is deliberately no operation that removes the reservation.

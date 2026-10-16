@@ -14,10 +14,27 @@ use std::{
 };
 use tokio_util::sync::CancellationToken;
 
+/// The application's own refusal codes, beside the runtime's `error_codes`.
+mod codes {
+    pub const INVALID_PARAMETER_WRITE: &str = "invalid_parameter_write";
+    pub const NO_LOGIC_NODES: &str = "no_logic_nodes";
+    pub const INVALID_FLOW: &str = "invalid_flow";
+    pub const ALREADY_ACCEPTED: &str = "already_accepted";
+}
 #[derive(Debug)]
 struct Error {
     code: &'static str,
+    reason: Option<&'static str>,
     message: String,
+}
+impl Error {
+    fn new(code: &'static str, reason: Option<&'static str>, message: impl Into<String>) -> Self {
+        Self {
+            code,
+            reason,
+            message: message.into(),
+        }
+    }
 }
 impl std::fmt::Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -26,32 +43,23 @@ impl std::fmt::Display for Error {
 }
 impl std::error::Error for Error {}
 impl ExecutionError for Error {
-    fn invalid_request(message: impl Into<String>) -> Self {
-        Self {
-            code: "invalid_request",
-            message: message.into(),
-        }
+    fn invalid_request(reason: &'static str, message: impl Into<String>) -> Self {
+        Self::new("invalid_request", Some(reason), message)
     }
     fn internal(message: impl Into<String>) -> Self {
-        Self {
-            code: "internal",
-            message: message.into(),
-        }
+        Self::new("internal", None, message)
     }
-    fn cancelled(message: impl Into<String>) -> Self {
-        Self {
-            code: "cancelled",
-            message: message.into(),
-        }
+    fn cancelled(reason: &'static str, message: impl Into<String>) -> Self {
+        Self::new("cancelled", Some(reason), message)
     }
-    fn interrupted(message: impl Into<String>) -> Self {
-        Self {
-            code: "interrupted",
-            message: message.into(),
-        }
+    fn interrupted(reason: &'static str, message: impl Into<String>) -> Self {
+        Self::new("interrupted", Some(reason), message)
     }
     fn code(&self) -> &str {
         self.code
+    }
+    fn reason_code(&self) -> Option<&str> {
+        self.reason
     }
     fn message(&self) -> &str {
         &self.message
@@ -160,7 +168,9 @@ impl NodeHandler<Application> for Sink {
         run.output.push(
             run.retention
                 .retain("output", token.value.clone())
-                .map_err(Error::invalid_request)?,
+                .map_err(|message| {
+                    Error::invalid_request(error_codes::CAPACITY_EXHAUSTED, message)
+                })?,
         );
         Ok(())
     }
@@ -192,7 +202,7 @@ impl ExecutionHost for Application {
     ) -> Result<Value, Error> {
         Registry::default()
             .convert_automation_value(parameter, value)
-            .map_err(|e| Error::invalid_request(e.to_string()))
+            .map_err(|e| Error::invalid_request(codes::INVALID_PARAMETER_WRITE, e.to_string()))
     }
     async fn commit_parameter_write(
         &self,
@@ -212,7 +222,10 @@ impl ExecutionHost for Application {
         _fired: &HashSet<String>,
         _enabled: bool,
     ) -> Result<Vec<String>, Error> {
-        Err(Error::invalid_request("No logic nodes registered"))
+        Err(Error::invalid_request(
+            codes::NO_LOGIC_NODES,
+            "No logic nodes registered",
+        ))
     }
     fn logic_gate_label(&self, _node: &FlowNode, definition: &FlowNodeDefinition) -> String {
         definition.class_name.clone()
@@ -232,7 +245,10 @@ impl ActivationHost for Application {
         if validation.valid {
             Ok(())
         } else {
-            Err(Error::invalid_request(format!("{:?}", validation.issues)))
+            Err(Error::invalid_request(
+                codes::INVALID_FLOW,
+                format!("{:?}", validation.issues),
+            ))
         }
     }
 
@@ -242,7 +258,10 @@ impl ActivationHost for Application {
         }
         let mut phases = self.phases.lock().unwrap();
         if phases.contains_key(&run.run_id) {
-            return Err(Error::invalid_request("already accepted"));
+            return Err(Error::invalid_request(
+                codes::ALREADY_ACCEPTED,
+                "already accepted",
+            ));
         }
         phases.insert(run.run_id.clone(), RunPhase::Accepted);
         Ok(())
@@ -453,6 +472,29 @@ mod tests {
         ));
     }
     #[test]
+    fn a_host_without_durable_state_refuses_checkpoints() {
+        let app = application();
+        let state = run("no-checkpoints");
+        let Err(capture) = app.checkpoint_host_state(&state) else {
+            panic!("the host has no checkpoint format");
+        };
+        assert_eq!(
+            capture.reason_code(),
+            Some(error_codes::UNSUPPORTED_HOST_OPERATION)
+        );
+        let saved = recovery::VersionedState {
+            version: 1,
+            value: json!({}),
+        };
+        let Err(restore) = app.restore_host_state(state.scheduler, saved) else {
+            panic!("the host has no checkpoint format");
+        };
+        assert_eq!(
+            restore.reason_code(),
+            Some(error_codes::UNSUPPORTED_HOST_OPERATION)
+        );
+    }
+    #[test]
     fn duplicate_registration_cannot_replace_a_handler() {
         let mut builder = RegistryBuilder::<Application>::default();
         builder.register(Source).unwrap();
@@ -464,31 +506,37 @@ mod tests {
         let mut app = application();
         app.handlers = RegistryBuilder::default().build();
         let mut run = run("missing");
-        assert!(app
+        let error = app
             .run_activation(&mut run, "source", HashMap::new(), CancellationToken::new())
             .await
-            .is_err());
+            .unwrap_err();
+        assert_eq!(error.reason_code(), Some(error_codes::UNKNOWN_HANDLER));
         assert!(app.phases.lock().unwrap().is_empty());
         assert!(run.order.is_empty());
     }
     #[tokio::test]
     async fn failures_cancellation_and_panics_keep_the_accepted_identity() {
-        for input in ["wrong-type", "panic", "cancel"] {
+        for (input, reason) in [
+            ("wrong-type", error_codes::INCOMPATIBLE_TOKEN_TYPE),
+            ("panic", error_codes::ACTIVATION_PANICKED),
+            ("cancel", error_codes::ACTIVATION_CANCELLED),
+        ] {
             let app = application();
             let mut run = run(input);
             let token = CancellationToken::new();
             if input == "cancel" {
                 token.cancel();
             }
-            assert!(app
+            let error = app
                 .run_activation(
                     &mut run,
                     "source",
                     HashMap::from([("text".into(), json!(input))]),
-                    token
+                    token,
                 )
                 .await
-                .is_err());
+                .unwrap_err();
+            assert_eq!(error.reason_code(), Some(reason), "{input}");
             let phases = app.phases.lock().unwrap();
             let Some(RunPhase::Terminal { outcome }) = phases.get(&run.run_id) else {
                 panic!("terminal outcome required")

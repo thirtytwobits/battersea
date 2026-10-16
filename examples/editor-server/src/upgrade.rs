@@ -1,5 +1,5 @@
 //! The example host owns revision fencing and recoverable document replacement.
-use crate::{io, key, App, Error};
+use crate::{io, key, runtime::codes, App, Error};
 use axum::{
     extract::{Path, State},
     Json,
@@ -48,16 +48,20 @@ fn prepare(app: &App, name: &str) -> Result<(Plan, Vec<u8>), Error> {
         app.runtime.catalog.definitions(),
         limits.clone(),
     )
-    .map_err(Error::invalid_request)?;
+    .map_err(|message| Error::invalid_request(codes::UPGRADE_REFUSED, message))?;
     if document.flow_key != name {
         return Err(Error::invalid_request(
+            codes::FLOW_KEY_MISMATCH,
             "Flow key does not match its stored path.",
         ));
     }
     let document = battersea_flow::document::canonicalize_document(&document);
     let validation = app.runtime.catalog.validate(&document);
     if !validation.valid {
-        return Err(Error::invalid_request(format!("{:?}", validation.issues)));
+        return Err(Error::invalid_request(
+            codes::INVALID_FLOW,
+            format!("{:?}", validation.issues),
+        ));
     }
     // The fence pins the bytes, catalogue and selected policy, not just the format number.
     let definitions: BTreeMap<_, _> = app.runtime.catalog.definitions().iter().collect();
@@ -100,6 +104,7 @@ pub async fn apply(
     let (plan, original) = prepare(&app, &name)?;
     if plan.revision != request.expected_revision {
         return Err(Error::invalid_request(
+            codes::STALE_UPGRADE_REVISION,
             "The flow or catalogue changed; inspect the upgrade again.",
         ));
     }

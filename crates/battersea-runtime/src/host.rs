@@ -23,6 +23,7 @@ pub trait ExecutionHost: Sized + Send + Sync {
         _runtime: &Self::State,
     ) -> Result<crate::recovery::VersionedState, Self::Error> {
         Err(Self::Error::invalid_request(
+            error_codes::UNSUPPORTED_HOST_OPERATION,
             "Host does not implement durable state checkpoints.",
         ))
     }
@@ -264,8 +265,10 @@ pub trait ExecutionHost: Sized + Send + Sync {
             })
             .map(|node| node.id.clone())
             .collect::<Vec<_>>();
-        let source_ids = order_source_phase_materialization(runtime, source_ids)
-            .map_err(Self::Error::invalid_request)?;
+        let source_ids =
+            order_source_phase_materialization(runtime, source_ids).map_err(|message| {
+                Self::Error::invalid_request(error_codes::INVALID_EXECUTION_CONTRACT, message)
+            })?;
 
         for node_id in source_ids {
             let node = runtime
@@ -324,14 +327,17 @@ pub trait ExecutionHost: Sized + Send + Sync {
         crate::durable::begin::<Self>(runtime, node_id, "execute_node")?;
         let step: Result<(), Self::Error> = async {
             let node = runtime.nodes_by_id.get(node_id).cloned().ok_or_else(|| {
-                Self::Error::invalid_request(format!("Unknown flow node \"{node_id}\"."))
+                Self::Error::invalid_request(
+                    error_codes::UNKNOWN_NODE,
+                    format!("Unknown flow node \"{node_id}\"."),
+                )
             })?;
             let definition = node_definition(&runtime.definitions, &node)
                 .ok_or_else(|| {
-                    Self::Error::invalid_request(format!(
-                        "Unknown flow node definition \"{}\".",
-                        node.definition_name
-                    ))
+                    Self::Error::invalid_request(
+                        error_codes::UNKNOWN_DEFINITION,
+                        format!("Unknown flow node definition \"{}\".", node.definition_name),
+                    )
                 })?
                 .clone();
             if self.node_is_disabled_output_capable(runtime, &node, &definition) {
@@ -452,7 +458,10 @@ pub trait ExecutionHost: Sized + Send + Sync {
             .input_tokens
             .remove(&(node_id.into(), port_name.into()))
             .ok_or_else(|| {
-                Self::Error::invalid_request(format!("No final value on {node_id:?}.{port_name}."))
+                Self::Error::invalid_request(
+                    error_codes::MISSING_INPUT_VALUE,
+                    format!("No final value on {node_id:?}.{port_name}."),
+                )
             })?;
         runtime.consumed_tokens += 1;
         Ok(value)
@@ -509,27 +518,38 @@ pub trait ExecutionHost: Sized + Send + Sync {
             .map_err(Self::Error::internal)?
             .into_iter()
             .find(|p| p.name == source_port)
-            .ok_or_else(|| Self::Error::invalid_request("Unknown output port."))?;
+            .ok_or_else(|| {
+                Self::Error::invalid_request(
+                    error_codes::UNKNOWN_OUTPUT_PORT,
+                    "Unknown output port.",
+                )
+            })?;
         let key = (source_node_id.to_string(), source_port.to_string());
         if runtime.closed_outputs.contains(&key)
             || (port.mode == FlowPortMode::FinalValue && runtime.final_outputs.contains(&key))
         {
-            return Err(Self::Error::invalid_request(format!("Output {source_node_id:?}.{source_port} is closed or has already published its final value.")));
+            return Err(Self::Error::invalid_request(error_codes::CLOSED_OUTPUT, format!("Output {source_node_id:?}.{source_port} is closed or has already published its final value.")));
         }
         if runtime
             .node_phases
             .get(source_node_id)
             .is_some_and(|phase| *phase != port.phase)
         {
-            return Err(Self::Error::invalid_request(format!(
-                "Output {source_node_id:?}.{source_port} belongs to a different node phase."
-            )));
+            return Err(Self::Error::invalid_request(
+                error_codes::MISMATCHED_OUTPUT_PHASE,
+                format!(
+                    "Output {source_node_id:?}.{source_port} belongs to a different node phase."
+                ),
+            ));
         }
         if port.token_type != "auto" && !port_accepts_token_type(&port, &value.token_type) {
-            return Err(Self::Error::invalid_request(format!(
-                "Output {source_node_id:?}.{source_port} cannot emit token type {:?}.",
-                value.token_type
-            )));
+            return Err(Self::Error::invalid_request(
+                error_codes::INCOMPATIBLE_TOKEN_TYPE,
+                format!(
+                    "Output {source_node_id:?}.{source_port} cannot emit token type {:?}.",
+                    value.token_type
+                ),
+            ));
         }
         let edges = runtime
             .outgoing_edges
@@ -540,39 +560,53 @@ pub trait ExecutionHost: Sized + Send + Sync {
             &(&value, &runtime.signal_cause),
             runtime.flow.execution.limits.retained_bytes as usize,
         )
-        .map_err(|e| Self::Error::invalid_request(e.to_string()))?;
+        .map_err(crate::pump::PumpError::into_error::<Self::Error>)?;
         // Check the complete fan-out before reserving or exposing any destination.
         for edge in &edges {
             let target = runtime
                 .nodes_by_id
                 .get(&edge.target_node_id)
-                .ok_or_else(|| Self::Error::invalid_request("Unknown fan-out target."))?;
+                .ok_or_else(|| {
+                    Self::Error::invalid_request(
+                        error_codes::UNKNOWN_EDGE_TARGET,
+                        "Unknown fan-out target.",
+                    )
+                })?;
             let automation = expanded_automation_ports_for_node(&runtime.definitions, target)
-                .map_err(Self::Error::invalid_request)?
+                .map_err(|message| {
+                    Self::Error::invalid_request(error_codes::UNKNOWN_DEFINITION, message)
+                })?
                 .into_iter()
                 .find(|p| p.name == edge.target_port);
             if let Some(target_port) = automation {
                 if port.mode != FlowPortMode::FinalValue
                     || !automation_port_accepts_token_type(&target_port, &value.token_type)
                 {
-                    return Err(Self::Error::invalid_request(format!(
-                        "Incompatible automation destination on edge {:?}.",
-                        edge.id
-                    )));
+                    return Err(Self::Error::invalid_request(
+                        error_codes::INCOMPATIBLE_EDGE_TARGET,
+                        format!("Incompatible automation destination on edge {:?}.", edge.id),
+                    ));
                 }
             } else {
                 let target_port = expanded_input_ports_for_node(&runtime.definitions, target)
-                    .map_err(Self::Error::invalid_request)?
+                    .map_err(|message| {
+                        Self::Error::invalid_request(error_codes::INVALID_DYNAMIC_PORTS, message)
+                    })?
                     .into_iter()
                     .find(|p| p.name == edge.target_port)
-                    .ok_or_else(|| Self::Error::invalid_request("Unknown fan-out input."))?;
+                    .ok_or_else(|| {
+                        Self::Error::invalid_request(
+                            error_codes::UNKNOWN_EDGE_TARGET,
+                            "Unknown fan-out input.",
+                        )
+                    })?;
                 if port.mode != target_port.mode
                     || !port_accepts_token_type(&target_port, &value.token_type)
                 {
-                    return Err(Self::Error::invalid_request(format!(
-                        "Incompatible token destination on edge {:?}.",
-                        edge.id
-                    )));
+                    return Err(Self::Error::invalid_request(
+                        error_codes::INCOMPATIBLE_EDGE_TARGET,
+                        format!("Incompatible token destination on edge {:?}.", edge.id),
+                    ));
                 }
             }
             if edge
@@ -580,10 +614,10 @@ pub trait ExecutionHost: Sized + Send + Sync {
                 .as_ref()
                 .is_some_and(|q| bytes > q.max_event_bytes as usize)
             {
-                return Err(Self::Error::invalid_request(format!(
-                    "Oversize token on edge {:?}: {bytes} bytes.",
-                    edge.id
-                )));
+                return Err(Self::Error::invalid_request(
+                    error_codes::PAYLOAD_TOO_LARGE,
+                    format!("Oversize token on edge {:?}: {bytes} bytes.", edge.id),
+                ));
             }
         }
         let charges = loop {
@@ -657,9 +691,10 @@ pub trait ExecutionHost: Sized + Send + Sync {
                 if !self.progress_delivery(runtime, token).await?
                     && !self.execute_ready_inline(runtime, token).await?
                 {
-                    return Err(Self::Error::invalid_request(format!(
-                        "Capacity deadlock at {source_node_id:?}.{source_port}, {reason}"
-                    )));
+                    return Err(Self::Error::invalid_request(
+                        error_codes::CAPACITY_DEADLOCK,
+                        format!("Capacity deadlock at {source_node_id:?}.{source_port}, {reason}"),
+                    ));
                 }
             } else {
                 break charges;
@@ -732,10 +767,13 @@ pub trait ExecutionHost: Sized + Send + Sync {
 
         let result = if action_port == FLOW_ACTION_DISABLE {
             if !Self::definition_is_output_capable(&definition) {
-                Err(Self::Error::invalid_request(format!(
-                    "Flow node \"{}\" does not support action port \"{}\".",
-                    node.id, FLOW_ACTION_DISABLE
-                )))
+                Err(Self::Error::invalid_request(
+                    error_codes::UNSUPPORTED_ACTION_PORT,
+                    format!(
+                        "Flow node \"{}\" does not support action port \"{}\".",
+                        node.id, FLOW_ACTION_DISABLE
+                    ),
+                ))
             } else {
                 runtime.disabled_output_nodes.insert(node.id.clone());
                 runtime.producers.remove(&node.id);
@@ -852,9 +890,10 @@ pub trait ExecutionHost: Sized + Send + Sync {
                 .map(|node| node.id.clone())
                 .collect::<Vec<_>>();
             if !blocked.is_empty() {
-                return Err(Self::Error::invalid_request(format!(
-                    "Flow cannot complete: unsatisfied inputs on nodes {blocked:?}."
-                )));
+                return Err(Self::Error::invalid_request(
+                    error_codes::UNSATISFIED_INPUTS,
+                    format!("Flow cannot complete: unsatisfied inputs on nodes {blocked:?}."),
+                ));
             }
             break;
         }
@@ -1034,14 +1073,19 @@ pub trait ExecutionHost: Sized + Send + Sync {
         crate::durable::finish(self, runtime)
     }
 
+    /// Cancel the activation from a handler, refused as
+    /// [`ACTIVATION_CANCELLED`](crate::error_codes::ACTIVATION_CANCELLED) with `message`.
     fn request_activation_cancel(
         &self,
         runtime: &mut Self::State,
-        reason: &str,
+        message: &str,
     ) -> Result<(), Self::Error> {
         runtime.cancellation_requested = true;
         runtime.activation_token.cancel();
-        Err(Self::Error::cancelled(reason))
+        Err(Self::Error::cancelled(
+            error_codes::ACTIVATION_CANCELLED,
+            message,
+        ))
     }
 
     async fn emit_flow_signal(
@@ -1067,17 +1111,20 @@ pub trait ExecutionHost: Sized + Send + Sync {
                 &(edge, &runtime.signal_cause),
                 runtime.flow.execution.limits.retained_bytes as usize,
             )
-            .map_err(|e| Self::Error::invalid_request(e.to_string()))?;
+            .map_err(crate::pump::PumpError::into_error::<Self::Error>)?;
             let charge = loop {
                 self.check_cancelled(runtime, &token)?;
                 match runtime.retention.reserve(1, bytes, None) {
                     Ok(charge) => break charge,
                     Err(reason) => {
                         if !self.progress_delivery(runtime, &token).await? {
-                            return Err(Self::Error::invalid_request(format!(
-                                "Capacity deadlock on signal {}.{signal_port}: {reason}",
-                                node.id
-                            )));
+                            return Err(Self::Error::invalid_request(
+                                error_codes::CAPACITY_DEADLOCK,
+                                format!(
+                                    "Capacity deadlock on signal {}.{signal_port}: {reason}",
+                                    node.id
+                                ),
+                            ));
                         }
                     }
                 }
@@ -1123,7 +1170,10 @@ pub trait ExecutionHost: Sized + Send + Sync {
         token: &CancellationToken,
     ) -> Result<(), Self::Error> {
         if token.is_cancelled() || runtime.activation_token.is_cancelled() {
-            Err(Self::Error::cancelled("Flow activation cancelled."))
+            Err(Self::Error::cancelled(
+                error_codes::ACTIVATION_CANCELLED,
+                "Flow activation cancelled.",
+            ))
         } else {
             Ok(())
         }
@@ -1138,9 +1188,10 @@ pub trait ExecutionHost: Sized + Send + Sync {
         source: impl futures_util::Stream<Item = crate::ProviderEvent> + Send + 'static,
     ) -> Result<(), Self::Error> {
         if runtime.producers.contains_key(node_id) {
-            return Err(Self::Error::invalid_request(format!(
-                "Node {node_id:?} already has an active provider."
-            )));
+            return Err(Self::Error::invalid_request(
+                error_codes::DUPLICATE_PROVIDER,
+                format!("Node {node_id:?} already has an active provider."),
+            ));
         }
         let phase = *runtime
             .node_phases
@@ -1159,9 +1210,10 @@ pub trait ExecutionHost: Sized + Send + Sync {
                     if !self.progress_delivery(runtime, &token).await?
                         && !self.execute_ready_inline(runtime, &token).await?
                     {
-                        return Err(Self::Error::invalid_request(format!(
-                            "Capacity deadlock starting provider on {node_id:?}: {reason}"
-                        )));
+                        return Err(Self::Error::invalid_request(
+                            error_codes::CAPACITY_DEADLOCK,
+                            format!("Capacity deadlock starting provider on {node_id:?}: {reason}"),
+                        ));
                     }
                 }
             }
@@ -1171,7 +1223,7 @@ pub trait ExecutionHost: Sized + Send + Sync {
             q.bytes as usize,
             q.max_event_bytes as usize,
         )
-        .map_err(|e| Self::Error::invalid_request(e.to_string()))?;
+        .map_err(crate::pump::PumpError::into_error::<Self::Error>)?;
         let pump = crate::payload_pump::PayloadPump::spawn(
             source,
             limits,
@@ -1179,7 +1231,7 @@ pub trait ExecutionHost: Sized + Send + Sync {
             node_id.into(),
             token,
         )
-        .map_err(|error| Self::Error::invalid_request(error.to_string()))?;
+        .map_err(crate::pump::PumpError::into_error::<Self::Error>)?;
         runtime.producers.insert(
             node_id.into(),
             crate::delivery::Producer {
@@ -1205,7 +1257,7 @@ pub trait ExecutionHost: Sized + Send + Sync {
             &(node_id, port, &runtime.signal_cause),
             runtime.flow.execution.limits.retained_bytes as usize,
         )
-        .map_err(|e| Self::Error::invalid_request(e.to_string()))?;
+        .map_err(crate::pump::PumpError::into_error::<Self::Error>)?;
         let token = runtime.activation_token.clone();
         let charge = loop {
             self.check_cancelled(runtime, &token)?;
@@ -1213,9 +1265,10 @@ pub trait ExecutionHost: Sized + Send + Sync {
                 Ok(charge) => break charge,
                 Err(reason) => {
                     if !self.progress_delivery(runtime, &token).await? {
-                        return Err(Self::Error::invalid_request(format!(
-                            "Capacity deadlock closing {node_id:?}.{port}: {reason}"
-                        )));
+                        return Err(Self::Error::invalid_request(
+                            error_codes::CAPACITY_DEADLOCK,
+                            format!("Capacity deadlock closing {node_id:?}.{port}: {reason}"),
+                        ));
                     }
                 }
             }
@@ -1277,16 +1330,17 @@ pub trait ExecutionHost: Sized + Send + Sync {
                 &(&node.id, &runtime.signal_cause),
                 runtime.flow.execution.limits.retained_bytes as usize,
             )
-            .map_err(|e| Self::Error::invalid_request(e.to_string()))?;
+            .map_err(crate::pump::PumpError::into_error::<Self::Error>)?;
             let token = runtime.activation_token.clone();
             let charge = loop {
                 match runtime.retention.reserve(1, bytes, None) {
                     Ok(charge) => break charge,
                     Err(reason) => {
                         if !self.progress_delivery(runtime, &token).await? {
-                            return Err(Self::Error::invalid_request(format!(
-                                "Capacity deadlock applying controller effects: {reason}"
-                            )));
+                            return Err(Self::Error::invalid_request(
+                                error_codes::CAPACITY_DEADLOCK,
+                                format!("Capacity deadlock applying controller effects: {reason}"),
+                            ));
                         }
                     }
                 }
@@ -1468,7 +1522,7 @@ pub trait ExecutionHost: Sized + Send + Sync {
                         let target = runtime.nodes_by_id.get(&edge.target_node_id).cloned().ok_or_else(|| Self::Error::internal("Missing signal target."))?;
                         let key = (target.id.clone(), edge.target_port.clone());
                         if runtime.signal_cause.contains(&key) {
-                            return Err(Self::Error::invalid_request(format!("Signal cycle: {:?} -> {:?} (edge {:?}).", runtime.signal_cause, key, edge.id)));
+                            return Err(Self::Error::invalid_request(error_codes::SIGNAL_CYCLE, format!("Signal cycle: {:?} -> {:?} (edge {:?}).", runtime.signal_cause, key, edge.id)));
                         }
                         runtime.signal_cause.push(key.clone());
                         runtime.signal_action_latches.insert(key);
@@ -1546,10 +1600,13 @@ pub trait ExecutionHost: Sized + Send + Sync {
                 .received_final_inputs
                 .insert((target.id.clone(), port.name.clone()))
         {
-            return Err(Self::Error::invalid_request(format!(
-                "Final input {:?}.{} received more than one value.",
-                target.id, port.name
-            )));
+            return Err(Self::Error::invalid_request(
+                error_codes::DUPLICATE_FINAL_VALUE,
+                format!(
+                    "Final input {:?}.{} received more than one value.",
+                    target.id, port.name
+                ),
+            ));
         }
         if definition.kind == FlowNodeClass::Sink {
             runtime.consumed_tokens += 1;
@@ -1627,7 +1684,7 @@ pub trait ExecutionHost: Sized + Send + Sync {
             .collect::<Vec<_>>();
         let ((node_id, delivery), _, _) = tokio::select! {
             biased;
-            _ = token.cancelled() => return Err(Self::Error::cancelled("Flow activation cancelled.")),
+            _ = token.cancelled() => return Err(Self::Error::cancelled(error_codes::ACTIVATION_CANCELLED, "Flow activation cancelled.")),
             value = select_all(futures) => value,
         };
         self.check_cancelled(runtime, token)?;
@@ -1646,13 +1703,7 @@ pub trait ExecutionHost: Sized + Send + Sync {
         let definition = node_definition(&runtime.definitions, &node)
             .ok_or_else(|| Self::Error::internal("Missing provider definition."))?
             .clone();
-        match delivery.map_err(|error| match error {
-            crate::pump::PumpError::Cancelled => Self::Error::cancelled(error.to_string()),
-            crate::pump::PumpError::ProducerPanicked | crate::pump::PumpError::ProducerStopped => {
-                Self::Error::interrupted(error.to_string())
-            }
-            _ => Self::Error::invalid_request(error.to_string()),
-        })? {
+        match delivery.map_err(crate::pump::PumpError::into_error::<Self::Error>)? {
             Some(delivery) => {
                 self.publish_execution_record(
                     runtime,
@@ -1672,8 +1723,7 @@ pub trait ExecutionHost: Sized + Send + Sync {
                     }
                     crate::ProviderEvent::Data { value } => {
                         self.handlers()
-                            .get(&definition.handler_id)
-                            .map_err(Self::Error::invalid_request)?
+                            .resolve(&definition.handler_id)?
                             .receive_provider_event(self, runtime, &node, &definition, value, token)
                             .await?
                     }
@@ -1685,8 +1735,7 @@ pub trait ExecutionHost: Sized + Send + Sync {
             None => {
                 runtime.producers.remove(&node_id);
                 self.handlers()
-                    .get(&definition.handler_id)
-                    .map_err(Self::Error::invalid_request)?
+                    .resolve(&definition.handler_id)?
                     .provider_complete(self, runtime, &node, &definition, token)
                     .await?;
                 // Completion callbacks may start the next tool/provider turn.

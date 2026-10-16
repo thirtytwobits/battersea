@@ -1,7 +1,7 @@
 use battersea_flow::{
     document::{inspect_document, load_document, serialize_canonical_document, DocumentInspection},
     execution::{ordered_sources, upgrade_v1_document, validate_execution_contract},
-    FlowDocument, FlowExecutionLimits, FlowNodeDefinition,
+    issue_codes, FlowDocument, FlowExecutionLimits, FlowNodeDefinition,
 };
 use serde_json::{json, Value};
 use std::collections::HashMap;
@@ -202,8 +202,11 @@ fn invalid_capacities_and_stream_final_mismatch_fail_validation() {
             _ => unreachable!(),
         }
         let invalid: FlowDocument = serde_json::from_value(raw).unwrap();
-        assert!(
-            validate_execution_contract(&invalid, &definitions).is_err(),
+        assert_eq!(
+            validate_execution_contract(&invalid, &definitions)
+                .unwrap_err()
+                .code,
+            issue_codes::INVALID_EXECUTION_CONTRACT,
             "{change}"
         );
     }
@@ -218,6 +221,12 @@ fn typed_documents_cannot_bypass_version_inspection() {
     )
     .unwrap();
     flow.version = 1;
+    assert_eq!(
+        validate_execution_contract(&flow, &definitions())
+            .unwrap_err()
+            .code,
+        issue_codes::UNSUPPORTED_DOCUMENT_VERSION
+    );
     let inspected = DocumentInspection::from(flow.clone());
     assert!(matches!(inspected, DocumentInspection::Incompatible { .. }));
     assert!(inspected.supported().is_err());

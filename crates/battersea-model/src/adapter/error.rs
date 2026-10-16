@@ -17,6 +17,9 @@ pub struct EngineAdapterRequestError {
     pub retry_after_ms: Option<u64>,
     #[serde(default)]
     pub attempts: u32,
+    /// The tool runner's name for this refusal; `classification` is its class.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub tool_code: Option<ToolCode>,
 }
 
 impl EngineAdapterRequestError {
@@ -41,7 +44,14 @@ impl EngineAdapterRequestError {
             dispatch,
             retry_after_ms: None,
             attempts: 0,
+            tool_code: None,
         }
+    }
+
+    /// Names a refusal of the tool runner.
+    pub fn with_tool_code(mut self, code: ToolCode) -> Self {
+        self.tool_code = Some(code);
+        self
     }
 
     pub fn with_dispatch(mut self, dispatch: DispatchState) -> Self {
@@ -73,6 +83,81 @@ impl EngineAdapterRequestError {
 
     pub fn mock(message: impl Into<String>) -> Self {
         Self::new("mock", message, "mock")
+    }
+}
+
+/// The refusals with which tool admission, the tool registry and the shared tool loop refuse
+/// a request or a provider's tool call. Each serialises as its stable snake_case code.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+#[non_exhaustive]
+pub enum ToolCode {
+    /// A request's tool round limit is outside the supported range.
+    InvalidToolRounds,
+    /// Two tools share a name, or a tool's name is blank, once names are normalised.
+    DuplicateTool,
+    /// A tool's input schema is not a valid JSON Schema.
+    InvalidToolSchema,
+    /// The request's tool choice names a tool the request does not offer.
+    UnofferedToolChoice,
+    /// The provider returned a tool call without an id, name or object arguments.
+    MalformedToolCall,
+    /// The provider requested tools although tool use was disabled.
+    ToolUseDisabled,
+    /// The provider returned a missing or duplicate tool call id.
+    InvalidToolCallId,
+    /// The provider called a tool the model was not offered.
+    UnofferedTool,
+    /// The provider called a tool other than the one the tool choice names.
+    ToolOutsideChoice,
+    /// A tool call's arguments do not satisfy the tool's input schema.
+    InvalidToolArguments,
+    /// The registry holds no tool with the called name.
+    UnregisteredTool,
+    /// The tool calls and results of a run exceed their encoded-byte limit.
+    ToolTranscriptTooLarge,
+    /// The provider was still calling tools after the request's last tool round.
+    ToolRoundsExceeded,
+}
+impl ToolCode {
+    /// Every tool runner refusal.
+    pub const ALL: &[Self] = &[
+        Self::InvalidToolRounds,
+        Self::DuplicateTool,
+        Self::InvalidToolSchema,
+        Self::UnofferedToolChoice,
+        Self::MalformedToolCall,
+        Self::ToolUseDisabled,
+        Self::InvalidToolCallId,
+        Self::UnofferedTool,
+        Self::ToolOutsideChoice,
+        Self::InvalidToolArguments,
+        Self::UnregisteredTool,
+        Self::ToolTranscriptTooLarge,
+        Self::ToolRoundsExceeded,
+    ];
+    /// The stable snake_case code.
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::InvalidToolRounds => "invalid_tool_rounds",
+            Self::DuplicateTool => "duplicate_tool",
+            Self::InvalidToolSchema => "invalid_tool_schema",
+            Self::UnofferedToolChoice => "unoffered_tool_choice",
+            Self::MalformedToolCall => "malformed_tool_call",
+            Self::ToolUseDisabled => "tool_use_disabled",
+            Self::InvalidToolCallId => "invalid_tool_call_id",
+            Self::UnofferedTool => "unoffered_tool",
+            Self::ToolOutsideChoice => "tool_outside_choice",
+            Self::InvalidToolArguments => "invalid_tool_arguments",
+            Self::UnregisteredTool => "unregistered_tool",
+            Self::ToolTranscriptTooLarge => "tool_transcript_too_large",
+            Self::ToolRoundsExceeded => "tool_rounds_exceeded",
+        }
+    }
+}
+impl std::fmt::Display for ToolCode {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(self.as_str())
     }
 }
 
@@ -172,4 +257,29 @@ pub enum DispatchState {
     Accepted,
     #[default]
     Unknown,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::ToolCode;
+    use std::collections::HashSet;
+
+    #[test]
+    fn tool_codes_are_distinct_snake_case_names_that_serialise_as_themselves() {
+        let mut seen = HashSet::new();
+        for code in ToolCode::ALL {
+            let name = code.as_str();
+            assert!(seen.insert(name), "{name} is declared twice");
+            assert!(
+                name.split('_')
+                    .all(|word| !word.is_empty() && word.chars().all(|c| c.is_ascii_lowercase())),
+                "{name} is not snake_case"
+            );
+            assert_eq!(serde_json::to_value(code).unwrap(), name);
+            assert_eq!(
+                serde_json::from_value::<ToolCode>(name.into()).unwrap(),
+                *code
+            );
+        }
+    }
 }

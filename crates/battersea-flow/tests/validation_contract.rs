@@ -26,7 +26,8 @@ fn count_parameter(name: &str, editor: &str) -> Value {
 }
 
 /// Prompt, Join, Count and Meta are inline; Fanout passes its input type through `auto`
-/// outputs; Sink has no outputs; Relay is a logic node with dynamic signal ports.
+/// outputs; Sink has no outputs; Relay is a logic node with dynamic signal ports and Gate one
+/// with dynamic action ports.
 fn definitions() -> Vec<FlowNodeDefinition> {
     let definition = |class_name: &str, kind: &str, body: Value| {
         let mut value = json!({
@@ -99,6 +100,15 @@ fn definitions() -> Vec<FlowNodeDefinition> {
                 "parameters": [count_parameter("outputs", "output_port_count")],
                 "action_ports": [{"name": "input"}],
                 "dynamic_signal_ports": [{"count_parameter": "outputs", "name_template": "output-{index}"}]
+            }),
+        ),
+        definition(
+            "Gate",
+            "logic",
+            json!({
+                "parameters": [count_parameter("inputs", "input_port_count")],
+                "dynamic_action_ports": [{"count_parameter": "inputs", "name_template": "input-{index}"}],
+                "signal_ports": [{"name": "output"}]
             }),
         ),
     ]
@@ -691,12 +701,43 @@ fn dynamic_port_counts_must_be_present_integers_within_bounds() {
         json!([node("relay", "Relay"), node("prompt", "Prompt")]),
         json!([signal("edge", ("relay", "output-0"), ("prompt", "clear"))]),
     );
+    assert_reports(&result, codes::INVALID_DYNAMIC_PORTS, Some("relay"), None);
     assert_reports(
         &result,
         codes::INVALID_DYNAMIC_PORTS,
         Some("relay"),
         Some("edge"),
     );
+}
+
+#[test]
+fn every_node_expands_its_dynamic_action_and_signal_ports_without_an_edge() {
+    for (definition_name, count_parameter) in [("Relay", "outputs"), ("Gate", "inputs")] {
+        let id = definition_name.to_lowercase();
+        for count in [Value::Null, json!("two"), json!(-1), json!(4)] {
+            let unexpandable = if count.is_null() {
+                node(&id, definition_name)
+            } else {
+                node_with(
+                    &id,
+                    definition_name,
+                    json!({"parameter_values": {count_parameter: count}}),
+                )
+            };
+            let result = validate(json!([unexpandable]), json!([]));
+            assert_reports(&result, codes::INVALID_DYNAMIC_PORTS, Some(&id), None);
+        }
+        for count in [0, 3] {
+            assert_valid(&validate(
+                json!([node_with(
+                    &id,
+                    definition_name,
+                    json!({"parameter_values": {count_parameter: count}})
+                )]),
+                json!([]),
+            ));
+        }
+    }
 }
 
 #[test]

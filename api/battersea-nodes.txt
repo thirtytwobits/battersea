@@ -278,10 +278,13 @@ pub fn battersea_nodes::text::activation_text(values: core::option::Option<&std:
 pub fn battersea_nodes::text::prepare_static_prompt(node: &battersea_flow::types::FlowNode, definition: &battersea_flow::types::FlowNodeDefinition) -> battersea_runtime::Token
 pub enum battersea_nodes::NodeError
 pub battersea_nodes::NodeError::Internal(alloc::string::String)
-pub battersea_nodes::NodeError::InvalidRequest(alloc::string::String)
+pub battersea_nodes::NodeError::InvalidRequest
+pub battersea_nodes::NodeError::InvalidRequest::message: alloc::string::String
+pub battersea_nodes::NodeError::InvalidRequest::reason: &'static str
 impl battersea_nodes::NodeError
 pub fn battersea_nodes::NodeError::internal(message: impl core::convert::Into<alloc::string::String>) -> Self
-pub fn battersea_nodes::NodeError::invalid_request(message: impl core::convert::Into<alloc::string::String>) -> Self
+pub fn battersea_nodes::NodeError::invalid_request(reason: &'static str, message: impl core::convert::Into<alloc::string::String>) -> Self
+pub fn battersea_nodes::NodeError::reason_code(&self) -> core::option::Option<&'static str>
 impl core::error::Error for battersea_nodes::NodeError
 impl core::fmt::Debug for battersea_nodes::NodeError
 pub fn battersea_nodes::NodeError::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result

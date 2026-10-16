@@ -3,6 +3,7 @@ mod delivery;
 pub use delivery::ProviderEvent;
 pub mod checkpoint;
 pub mod durable;
+pub mod error_codes;
 pub mod recovery;
 pub mod retention;
 pub use retention::{Retained, RetentionBudget};
@@ -30,17 +31,30 @@ pub struct Token {
     pub value: Value,
 }
 
+/// A host's error, raised by the runtime through these constructors.
+///
+/// Each refusal names its failure with a `reason` from [`error_codes`], or a host's own code
+/// for a host refusal; the message is for people. [`internal`](Self::internal) reports a
+/// fault and carries no reason.
 pub trait ExecutionError: std::error::Error + Send + Sync + 'static {
-    fn invalid_request(message: impl Into<String>) -> Self;
+    /// The request cannot be carried out.
+    fn invalid_request(reason: &'static str, message: impl Into<String>) -> Self;
+    /// A fault in the runtime or host.
     fn internal(message: impl Into<String>) -> Self;
-    fn cancelled(message: impl Into<String>) -> Self;
-    fn interrupted(message: impl Into<String>) -> Self;
-    fn recovery_required(message: impl Into<String>) -> Self
+    /// The activation was cancelled.
+    fn cancelled(reason: &'static str, message: impl Into<String>) -> Self;
+    /// The activation stopped before an outcome was decided.
+    fn interrupted(reason: &'static str, message: impl Into<String>) -> Self;
+    /// The activation stopped where its journal must be recovered before it can continue.
+    fn recovery_required(reason: &'static str, message: impl Into<String>) -> Self
     where
         Self: Sized,
     {
-        Self::interrupted(message)
+        Self::interrupted(reason, message)
     }
+    /// The error's class, chosen by the host for each constructor.
     fn code(&self) -> &str;
+    /// The reason the error was raised with; `None` for an [`internal`](Self::internal) fault.
+    fn reason_code(&self) -> Option<&str>;
     fn message(&self) -> &str;
 }

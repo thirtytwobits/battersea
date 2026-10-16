@@ -127,9 +127,10 @@ pub fn activation_text(
         .and_then(serde_json::Value::as_str)
         .map(str::to_owned)
         .ok_or_else(|| {
-            crate::NodeError::invalid_request(format!(
-                "Flow activation requires a string {name} activation value."
-            ))
+            crate::NodeError::invalid_request(
+                battersea_runtime::error_codes::INVALID_ACTIVATION_VALUE,
+                format!("Flow activation requires a string {name} activation value."),
+            )
         })
 }
 

@@ -37,11 +37,8 @@ pub fn validate_document(
         };
     }
     let mut issues = Vec::new();
-    if let Err(message) = crate::execution::validate_execution_contract(flow, definitions) {
-        issues.push(FlowValidationIssue::new(
-            codes::INVALID_EXECUTION_CONTRACT,
-            message,
-        ));
+    if let Err(issue) = crate::execution::validate_execution_contract(flow, definitions) {
+        issues.push(issue);
     }
     let mut node_ids = HashSet::new();
     let mut edge_ids = HashSet::new();
@@ -119,8 +116,8 @@ pub fn validate_document(
 /// dynamic port expansion contract.
 ///
 /// Node validation rejects blank or duplicate ids, blank instance names, unknown
-/// definitions or parameters, invalid parameter values, any input/output dynamic port expansion failures surfaced by the
-/// manifest-backed port helpers.
+/// definitions or parameters, invalid parameter values, and any input, output, action or
+/// signal dynamic port group that cannot be expanded.
 fn validate_node(
     node: &FlowNode,
     definitions: &HashMap<String, crate::FlowNodeDefinition>,
@@ -196,8 +193,13 @@ fn validate_node(
     }
     validate_port_parameter_values(node, definition, definitions, registry, issues);
 
-    for input in [true, false] {
-        if let Err(message) = expand_ports(node, definition, input) {
+    for expansion in [
+        expand_ports(node, definition, true).map(drop),
+        expand_ports(node, definition, false).map(drop),
+        expanded_action_ports_for_node(definitions, node).map(drop),
+        expanded_signal_ports_for_node(definitions, node).map(drop),
+    ] {
+        if let Err(message) = expansion {
             issues.push(issue(codes::INVALID_DYNAMIC_PORTS, message));
         }
     }

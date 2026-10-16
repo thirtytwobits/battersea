@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.13.0 — 2026-10-16
+
+- Breaking contract change: `ExecutionError`'s `invalid_request`, `cancelled`, `interrupted` and
+  `recovery_required` take a reason code, which `reason_code` reads back. `internal` reports a
+  fault and carries none.
+- Declare the runtime's and generic nodes' codes in `battersea_runtime::error_codes`, listed by
+  `error_codes::ALL`. `RecoveryError::code` and `PumpError::code` name journal and pump failures.
+  A run that requires recovery keeps the Battersea code that named its cause.
+- Breaking: `NodeError::InvalidRequest` carries a reason, read by `NodeError::reason_code`.
+- Breaking: `SchedulerState::new` refuses a flow with the `FlowValidationIssue`s validation reports
+  for it, with the same codes and node and edge ids. `validate_execution_contract` returns a
+  `FlowValidationIssue`; another document version is `UNSUPPORTED_DOCUMENT_VERSION`.
+- Breaking validity change: validation expands every node's dynamic action and signal ports and
+  reports `INVALID_DYNAMIC_PORTS` for the node. A count parameter with no value or default now
+  fails although no edge or alias touches the node.
+- Tool admission, the tool registry and the tool loop name their refusals with a
+  `battersea_model::ToolCode` in the new `EngineAdapterRequestError::tool_code` field; for
+  example `ToolCode::UnofferedTool` for a call to a tool the model was not offered.
+
 ## 0.12.0 — 2026-10-15
 
 - Breaking contract change: `FlowValidationIssue` requires a `code` naming the failure.

@@ -31,17 +31,20 @@ pub trait NodeHandler<H: ExecutionHost>: Send + Sync {
         _definition: &FlowNodeDefinition,
         _token: &CancellationToken,
     ) -> Result<(), H::Error> {
-        Err(H::Error::invalid_request(format!(
-            "Flow handler \"{}\" does not support source materialisation.",
-            self.handler_id()
-        )))
+        Err(H::Error::invalid_request(
+            crate::error_codes::UNSUPPORTED_HANDLER_OPERATION,
+            format!(
+                "Flow handler \"{}\" does not support source materialisation.",
+                self.handler_id()
+            ),
+        ))
     }
 
     /// Executes a directly activatable node.
     ///
     /// The default implementation rejects direct activation with
-    /// `invalid_request` for handlers that only support sink or action entry
-    /// points.
+    /// [`UNSUPPORTED_HANDLER_OPERATION`](crate::error_codes::UNSUPPORTED_HANDLER_OPERATION)
+    /// for handlers that only support sink or action entry points.
     async fn execute_node(
         &self,
         _core: &H,
@@ -51,16 +54,20 @@ pub trait NodeHandler<H: ExecutionHost>: Send + Sync {
         _activation_values: Option<&HashMap<String, Value>>,
         _token: &CancellationToken,
     ) -> Result<(), H::Error> {
-        Err(H::Error::invalid_request(format!(
-            "Flow handler \"{}\" does not support direct node execution.",
-            self.handler_id()
-        )))
+        Err(H::Error::invalid_request(
+            crate::error_codes::UNSUPPORTED_HANDLER_OPERATION,
+            format!(
+                "Flow handler \"{}\" does not support direct node execution.",
+                self.handler_id()
+            ),
+        ))
     }
 
     /// Executes one sink input on a sink-capable node.
     ///
     /// The default implementation rejects sink execution with
-    /// `invalid_request` for handlers that do not expose sink ports.
+    /// [`UNSUPPORTED_HANDLER_OPERATION`](crate::error_codes::UNSUPPORTED_HANDLER_OPERATION)
+    /// for handlers that do not expose sink ports.
     async fn execute_sink(
         &self,
         _core: &H,
@@ -69,16 +76,20 @@ pub trait NodeHandler<H: ExecutionHost>: Send + Sync {
         _input_port: &str,
         _token_value: Retained<Token>,
     ) -> Result<(), H::Error> {
-        Err(H::Error::invalid_request(format!(
-            "Flow handler \"{}\" does not support sink execution.",
-            self.handler_id()
-        )))
+        Err(H::Error::invalid_request(
+            crate::error_codes::UNSUPPORTED_HANDLER_OPERATION,
+            format!(
+                "Flow handler \"{}\" does not support sink execution.",
+                self.handler_id()
+            ),
+        ))
     }
 
     /// Executes one action port on an action-capable node.
     ///
     /// The default implementation rejects action execution with
-    /// `invalid_request` for handlers that do not expose action ports.
+    /// [`UNSUPPORTED_HANDLER_OPERATION`](crate::error_codes::UNSUPPORTED_HANDLER_OPERATION)
+    /// for handlers that do not expose action ports.
     async fn execute_action(
         &self,
         _core: &H,
@@ -87,10 +98,13 @@ pub trait NodeHandler<H: ExecutionHost>: Send + Sync {
         _definition: &FlowNodeDefinition,
         _action_port: &str,
     ) -> Result<(), H::Error> {
-        Err(H::Error::invalid_request(format!(
-            "Flow handler \"{}\" does not support action execution.",
-            self.handler_id()
-        )))
+        Err(H::Error::invalid_request(
+            crate::error_codes::UNSUPPORTED_HANDLER_OPERATION,
+            format!(
+                "Flow handler \"{}\" does not support action execution.",
+                self.handler_id()
+            ),
+        ))
     }
 
     /// Executes one UI-controller action on a controller-capable node.
@@ -105,10 +119,13 @@ pub trait NodeHandler<H: ExecutionHost>: Send + Sync {
         _definition: &FlowNodeDefinition,
         _controller_action: &str,
     ) -> Result<(), H::Error> {
-        Err(H::Error::invalid_request(format!(
-            "Flow handler \"{}\" does not support controller actions.",
-            self.handler_id()
-        )))
+        Err(H::Error::invalid_request(
+            crate::error_codes::UNSUPPORTED_HANDLER_OPERATION,
+            format!(
+                "Flow handler \"{}\" does not support controller actions.",
+                self.handler_id()
+            ),
+        ))
     }
 
     /// Consumes one streaming delta. The runtime does not retain it for final execution.
@@ -123,10 +140,13 @@ pub trait NodeHandler<H: ExecutionHost>: Send + Sync {
         _token_value: &Token,
         _token: &CancellationToken,
     ) -> Result<(), H::Error> {
-        Err(H::Error::invalid_request(format!(
-            "Flow handler {:?} does not consume streaming inputs.",
-            self.handler_id()
-        )))
+        Err(H::Error::invalid_request(
+            crate::error_codes::UNSUPPORTED_HANDLER_OPERATION,
+            format!(
+                "Flow handler {:?} does not consume streaming inputs.",
+                self.handler_id()
+            ),
+        ))
     }
     /// Applies one custom event from an owned provider pump on the driver.
     async fn receive_provider_event(
@@ -139,6 +159,7 @@ pub trait NodeHandler<H: ExecutionHost>: Send + Sync {
         _token: &CancellationToken,
     ) -> Result<(), H::Error> {
         Err(H::Error::invalid_request(
+            crate::error_codes::UNSUPPORTED_HANDLER_OPERATION,
             "Handler does not accept custom provider events.",
         ))
     }

@@ -38,8 +38,10 @@ pub fn decode_tool_call(
     name: Option<&Value>,
     arguments: Option<Value>,
 ) -> Result<EngineLocalToolCall, EngineAdapterRequestError> {
-    let invalid =
-        || EngineAdapterRequestError::invalid_response(provider, "Malformed provider tool call.");
+    let invalid = || {
+        EngineAdapterRequestError::invalid_response(provider, "Malformed provider tool call.")
+            .with_tool_code(crate::ToolCode::MalformedToolCall)
+    };
     let id = id
         .and_then(Value::as_str)
         .filter(|value| !value.is_empty())
@@ -181,7 +183,8 @@ async fn drive_tool_loop(
             return Err(EngineAdapterRequestError::invalid_response(
                 &context.provider,
                 "Provider requested tools when tool use was disabled.",
-            ));
+            )
+            .with_tool_code(crate::ToolCode::ToolUseDisabled));
         }
         // Validate the complete batch before permitting any effects.
         let mut ids = HashSet::new();
@@ -190,7 +193,8 @@ async fn drive_tool_loop(
                 return Err(EngineAdapterRequestError::invalid_response(
                     &context.provider,
                     "Provider returned missing or duplicate tool call identifiers.",
-                ));
+                )
+                .with_tool_code(crate::ToolCode::InvalidToolCallId));
             }
             if !request
                 .local_tools
@@ -200,7 +204,8 @@ async fn drive_tool_loop(
                 return Err(EngineAdapterRequestError::invalid_response(
                     &context.provider,
                     format!("Provider requested an unoffered tool: {}.", call.name),
-                ));
+                )
+                .with_tool_code(crate::ToolCode::UnofferedTool));
             }
             if request.shared.chat.tool_choice.mode == crate::engine::EngineChatToolChoiceMode::Tool
                 && request
@@ -216,13 +221,15 @@ async fn drive_tool_loop(
                 return Err(EngineAdapterRequestError::invalid_response(
                     &context.provider,
                     "Provider requested a tool outside the named tool choice.",
-                ));
+                )
+                .with_tool_code(crate::ToolCode::ToolOutsideChoice));
             }
             if !call.arguments.is_object() {
                 return Err(EngineAdapterRequestError::invalid_response(
                     &context.provider,
                     format!("Tool arguments must be an object: {}.", call.name),
-                ));
+                )
+                .with_tool_code(crate::ToolCode::InvalidToolArguments));
             }
             let definition = request
                 .local_tools
@@ -236,9 +243,11 @@ async fn drive_tool_loop(
                         error.to_string(),
                         super::error::ErrorKind::InvalidRequest,
                     )
+                    .with_tool_code(crate::ToolCode::InvalidToolSchema)
                 })?;
             validator.validate(&call.arguments).map_err(|error| {
                 EngineAdapterRequestError::invalid_response(&context.provider, error.to_string())
+                    .with_tool_code(crate::ToolCode::InvalidToolArguments)
             })?;
         }
         results = Vec::with_capacity(calls.len());
@@ -271,7 +280,8 @@ async fn drive_tool_loop(
                     return Err(EngineAdapterRequestError::invalid_response(
                         &context.provider,
                         "Tool transcript exceeds its encoded-byte limit.",
-                    ));
+                    )
+                    .with_tool_code(crate::ToolCode::ToolTranscriptTooLarge));
                 }
             }
             let (content, message, classification) = match &result {
@@ -318,7 +328,8 @@ async fn drive_tool_loop(
         &context.provider,
         "Maximum local tool rounds exceeded.",
         "request",
-    ))
+    )
+    .with_tool_code(crate::ToolCode::ToolRoundsExceeded))
 }
 
 #[cfg(test)]
@@ -456,16 +467,22 @@ mod tests {
     }
     #[tokio::test]
     async fn validates_whole_batch_before_any_effect() {
-        for invalid in [
-            EngineLocalToolCall {
-                name: "unoffered".into(),
-                ..call("bad")
-            },
-            EngineLocalToolCall {
-                arguments: json!("broken"),
-                ..call("bad")
-            },
-            call("first"),
+        for (invalid, code) in [
+            (
+                EngineLocalToolCall {
+                    name: "unoffered".into(),
+                    ..call("bad")
+                },
+                crate::ToolCode::UnofferedTool,
+            ),
+            (
+                EngineLocalToolCall {
+                    arguments: json!("broken"),
+                    ..call("bad")
+                },
+                crate::ToolCode::InvalidToolArguments,
+            ),
+            (call("first"), crate::ToolCode::InvalidToolCallId),
         ] {
             let executor = Arc::new(Executor::default());
             let script = Script {
@@ -475,15 +492,22 @@ mod tests {
             let events = run(script, request(), executor.clone()).await;
             assert!(executor.calls.lock().unwrap().is_empty());
             assert!(
-                matches!(&events[..], [Err(error)] if error.classification.as_str() == "invalid_response")
+                matches!(&events[..], [Err(error)] if error.classification.as_str() == "invalid_response" && error.tool_code == Some(code)),
+                "{code}: {events:?}"
             );
         }
     }
     #[tokio::test]
     async fn enforces_disabled_and_named_tool_policy_before_execution() {
-        for mode in [
-            crate::engine::EngineChatToolChoiceMode::None,
-            crate::engine::EngineChatToolChoiceMode::Tool,
+        for (mode, code) in [
+            (
+                crate::engine::EngineChatToolChoiceMode::None,
+                crate::ToolCode::ToolUseDisabled,
+            ),
+            (
+                crate::engine::EngineChatToolChoiceMode::Tool,
+                crate::ToolCode::ToolOutsideChoice,
+            ),
         ] {
             let mut request = request();
             request.shared.chat.tool_choice.mode = mode;
@@ -496,7 +520,8 @@ mod tests {
             let events = run(script, request, executor.clone()).await;
             assert!(executor.calls.lock().unwrap().is_empty());
             assert!(
-                matches!(&events[..], [Err(error)] if error.classification.as_str() == "invalid_response")
+                matches!(&events[..], [Err(error)] if error.classification.as_str() == "invalid_response" && error.tool_code == Some(code)),
+                "{code}: {events:?}"
             );
         }
     }

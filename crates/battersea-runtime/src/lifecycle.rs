@@ -1,5 +1,5 @@
 //! Accepted execution identity, terminal outcomes and the common activation driver.
-use crate::{EventKind, ExecutionError, ExecutionHost};
+use crate::{error_codes, EventKind, ExecutionError, ExecutionHost};
 use async_trait::async_trait;
 use futures_util::FutureExt;
 use serde::{Deserialize, Serialize};
@@ -77,6 +77,7 @@ pub trait ActivationHost: ExecutionHost {
         _state: crate::recovery::VersionedState,
     ) -> Result<Self::State, Self::Error> {
         Err(Self::Error::invalid_request(
+            error_codes::UNSUPPORTED_HOST_OPERATION,
             "Host does not implement checkpoint restoration.",
         ))
     }
@@ -99,21 +100,27 @@ pub trait ActivationHost: ExecutionHost {
         token: CancellationToken,
     ) -> Result<(), Self::Error> {
         battersea_flow::execution::validate_execution_contract(&runtime.flow, &runtime.definitions)
-            .map_err(Self::Error::invalid_request)?;
+            .map_err(|issue| {
+                Self::Error::invalid_request(error_codes::INVALID_EXECUTION_CONTRACT, issue.message)
+            })?;
         self.handlers()
             .validate(runtime.definitions.values())
-            .map_err(Self::Error::invalid_request)?;
+            .map_err(|message| {
+                Self::Error::invalid_request(error_codes::UNKNOWN_HANDLER, message)
+            })?;
         self.validate_activation(runtime)?;
         let value_bytes = crate::pump::measure(
             &values,
             runtime.flow.execution.limits.node_retained_bytes as usize,
         )
-        .map_err(|e| Self::Error::invalid_request(e.to_string()))?;
+        .map_err(crate::pump::PumpError::into_error::<Self::Error>)?;
         runtime.activation_values_charge = Some(
             runtime
                 .retention
                 .reserve(0, value_bytes, Some(node))
-                .map_err(Self::Error::invalid_request)?,
+                .map_err(|message| {
+                    Self::Error::invalid_request(error_codes::CAPACITY_EXHAUSTED, message)
+                })?,
         );
         runtime.activated_node_id = Some(node.into());
         runtime.activation_values = values.clone();
@@ -154,9 +161,12 @@ pub trait ActivationHost: ExecutionHost {
         let accepted_scheduler = accepted.restore(self)?;
         let scheduler = checkpoint.restore(self)?;
         let runtime = self.restore_host_state(scheduler, checkpoint.host)?;
-        let durability = self
-            .durability(&runtime)?
-            .ok_or_else(|| Self::Error::invalid_request("Resume requires durable storage."))?;
+        let durability = self.durability(&runtime)?.ok_or_else(|| {
+            Self::Error::invalid_request(
+                error_codes::DURABLE_STORAGE_REQUIRED,
+                "Resume requires durable storage.",
+            )
+        })?;
         let expected =
             crate::durable::identity(&accepted_scheduler, durability.configuration_revision)
                 .map_err(recovery_error::<Self>)?;
@@ -178,6 +188,7 @@ pub trait ActivationHost: ExecutionHost {
         *runtime = self.restore_activation(&journal)?;
         if runtime.cancellation_requested {
             return Err(Self::Error::cancelled(
+                error_codes::ACTIVATION_CANCELLED,
                 "Checkpoint records a cancelled activation.",
             ));
         }
@@ -185,10 +196,12 @@ pub trait ActivationHost: ExecutionHost {
             .claim_resume(expected_revision)
             .map_err(crate::durable::recovery_error::<Self>)?;
         runtime.event_attempt = journal.record().revision;
-        let node = runtime
-            .activated_node_id
-            .clone()
-            .ok_or_else(|| Self::Error::invalid_request("Checkpoint has no activation entry."))?;
+        let node = runtime.activated_node_id.clone().ok_or_else(|| {
+            Self::Error::invalid_request(
+                error_codes::INCOMPATIBLE_CHECKPOINT,
+                "Checkpoint has no activation entry.",
+            )
+        })?;
         runtime.activation_token = token.clone();
         runtime.recovery = Some(crate::durable::DurableExecution::new(journal));
         self.drive_activation(runtime, &node, token).await
@@ -261,8 +274,8 @@ pub trait ActivationHost: ExecutionHost {
         let work = self.continue_activation(runtime, node, &token);
         let mut result = tokio::select! {
             biased;
-            _ = token.cancelled() => Err(Self::Error::cancelled("Flow activation cancelled.")),
-            result = AssertUnwindSafe(work).catch_unwind() => result.unwrap_or_else(|_| Err(Self::Error::interrupted("Activation task panicked."))),
+            _ = token.cancelled() => Err(Self::Error::cancelled(error_codes::ACTIVATION_CANCELLED, "Flow activation cancelled.")),
+            result = AssertUnwindSafe(work).catch_unwind() => result.unwrap_or_else(|_| Err(Self::Error::interrupted(error_codes::ACTIVATION_PANICKED, "Activation task panicked."))),
         };
         if result.is_ok() && runtime.recovery.is_some() {
             match crate::durable::capture(self, runtime) {
@@ -292,12 +305,19 @@ pub trait ActivationHost: ExecutionHost {
             .is_some_and(|recovery| recovery.failed)
         {
             runtime.producers.clear();
-            return Err(Self::Error::recovery_required(
-                result
-                    .err()
-                    .map(|error| error.to_string())
-                    .unwrap_or_else(|| "Checkpoint publication failed.".into()),
-            ));
+            // A Battersea code that named the cause names the recovery.
+            let (reason, message) = match result {
+                Ok(()) => (
+                    error_codes::EXECUTION_INTERRUPTED,
+                    "Checkpoint publication failed.".to_string(),
+                ),
+                Err(error) => (
+                    error_codes::declared(error.reason_code())
+                        .unwrap_or(error_codes::EXECUTION_INTERRUPTED),
+                    error.to_string(),
+                ),
+            };
+            return Err(Self::Error::recovery_required(reason, message));
         }
         if let (Some(recovery), Err(error)) = (runtime.recovery.as_mut(), &result) {
             recovery

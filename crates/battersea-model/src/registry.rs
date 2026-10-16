@@ -300,13 +300,14 @@ impl ToolRegistry {
     ) -> Result<(), EngineAdapterRequestError> {
         definition.name = local_tool_name(&definition.name);
         if definition.name.trim().is_empty() || self.tools.contains_key(&definition.name) {
-            return Err(invalid(
-                "tools",
-                "Duplicate, blank or colliding tool identifier.",
-            ));
+            return Err(
+                invalid("tools", "Duplicate, blank or colliding tool identifier.")
+                    .with_tool_code(crate::ToolCode::DuplicateTool),
+            );
         }
-        let validator = jsonschema::validator_for(&definition.input_schema)
-            .map_err(|e| invalid("tools", e.to_string()))?;
+        let validator = jsonschema::validator_for(&definition.input_schema).map_err(|e| {
+            invalid("tools", e.to_string()).with_tool_code(crate::ToolCode::InvalidToolSchema)
+        })?;
         self.tools.insert(
             definition.name.clone(),
             RegisteredTool {
@@ -328,13 +329,13 @@ impl EngineLocalToolExecutor for ToolRegistry {
         mut call: EngineLocalToolCall,
     ) -> Result<EngineLocalToolResult, EngineAdapterRequestError> {
         call.name = local_tool_name(&call.name);
-        let tool = self
-            .tools
-            .get(&call.name)
-            .ok_or_else(|| invalid("tools", "Tool is not registered."))?;
-        tool.validator
-            .validate(&call.arguments)
-            .map_err(|e| invalid("tools", e.to_string()))?;
+        let tool = self.tools.get(&call.name).ok_or_else(|| {
+            invalid("tools", "Tool is not registered.")
+                .with_tool_code(crate::ToolCode::UnregisteredTool)
+        })?;
+        tool.validator.validate(&call.arguments).map_err(|e| {
+            invalid("tools", e.to_string()).with_tool_code(crate::ToolCode::InvalidToolArguments)
+        })?;
         tool.executor.call(call).await
     }
 }

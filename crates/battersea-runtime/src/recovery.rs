@@ -104,6 +104,24 @@ impl std::fmt::Display for RecoveryError {
 }
 impl std::error::Error for RecoveryError {}
 
+impl RecoveryError {
+    /// The [`error_codes`](crate::error_codes) code naming this failure.
+    pub fn code(&self) -> &'static str {
+        use crate::error_codes::*;
+        match self {
+            Self::Missing => EXECUTION_JOURNAL_MISSING,
+            Self::Conflict => STALE_EXECUTION_REVISION,
+            Self::Incompatible(_) => EXECUTION_JOURNAL_INCOMPATIBLE,
+            Self::Invalid(_) => INVALID_RECOVERY_OPERATION,
+            Self::Storage(_) => EXECUTION_JOURNAL_STORAGE_FAILED,
+            Self::UnresolvedEffects(_) => UNRESOLVED_EFFECTS,
+            Self::CommitPending => HOST_COMMIT_PENDING,
+            Self::Terminal => EXECUTION_TERMINAL,
+            Self::Poisoned => EXECUTION_JOURNAL_POISONED,
+        }
+    }
+}
+
 /// The host implements atomic, durable compare-and-exchange and exclusive execution
 /// ownership. Loading is read-only, including for unsupported records. A write error
 /// may follow a durable write; the caller must inspect storage before continuing.

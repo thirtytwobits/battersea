@@ -238,15 +238,35 @@ async fn tool_registry_checks_argument_schema_and_normalised_identity_before_eff
         .unwrap();
     let mut collision = definition;
     collision.name = "example_lookup".into();
-    assert!(registry.register(collision, executor).is_err());
-    assert!(registry
-        .call(EngineLocalToolCall {
-            id: "invalid".into(),
-            name: "example.lookup".into(),
-            arguments: json!({"key":false})
-        })
-        .await
-        .is_err());
+    assert_eq!(
+        registry
+            .register(collision, executor)
+            .unwrap_err()
+            .tool_code,
+        Some(ToolCode::DuplicateTool)
+    );
+    for (name, arguments, code) in [
+        (
+            "example.lookup",
+            json!({"key":false}),
+            ToolCode::InvalidToolArguments,
+        ),
+        (
+            "example.unregistered",
+            json!({"key":"selected"}),
+            ToolCode::UnregisteredTool,
+        ),
+    ] {
+        let error = registry
+            .call(EngineLocalToolCall {
+                id: "invalid".into(),
+                name: name.into(),
+                arguments,
+            })
+            .await
+            .unwrap_err();
+        assert_eq!(error.tool_code, Some(code), "{name}");
+    }
     assert_eq!(calls.load(Ordering::SeqCst), 0);
     let arguments = json!({"key":"selected"});
     let result = registry

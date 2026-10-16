@@ -1,4 +1,4 @@
-use crate::{ExecutionHost, NodeHandler};
+use crate::{ExecutionError, ExecutionHost, NodeHandler};
 use battersea_flow::FlowNodeDefinition;
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -57,6 +57,13 @@ impl<H: ExecutionHost> HandlerRegistry<H> {
             .get(id)
             .map(|h| h.as_ref())
             .ok_or_else(|| format!("No runtime handler is registered for \"{id}\"."))
+    }
+    /// The handler registered for `id`, refused as
+    /// [`UNKNOWN_HANDLER`](crate::error_codes::UNKNOWN_HANDLER) when there is none.
+    pub(crate) fn resolve(&self, id: &str) -> Result<&dyn NodeHandler<H>, H::Error> {
+        self.get(id).map_err(|message| {
+            H::Error::invalid_request(crate::error_codes::UNKNOWN_HANDLER, message)
+        })
     }
     pub fn ids(&self) -> impl Iterator<Item = &str> {
         self.handlers.keys().map(String::as_str)

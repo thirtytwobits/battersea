@@ -2,11 +2,12 @@
 use crate::{
     catalog::node_definition,
     document::FLOW_DOCUMENT_VERSION,
+    issue_codes,
     ports::{
         expanded_automation_ports_for_node, expanded_input_ports_for_node,
         expanded_output_ports_for_node,
     },
-    FlowDocument, FlowEdgeKind, FlowNodeClass, FlowNodeDefinition,
+    FlowDocument, FlowEdgeKind, FlowNodeClass, FlowNodeDefinition, FlowValidationIssue,
 };
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -194,16 +195,32 @@ pub fn ordered_sources(
 
 /// Validate policy without effects or document mutation. Graph/type validation remains
 /// part of catalogue validation, which calls this function as well.
+///
+/// A document of another version is refused with
+/// [`UNSUPPORTED_DOCUMENT_VERSION`](issue_codes::UNSUPPORTED_DOCUMENT_VERSION); every other
+/// failure with [`INVALID_EXECUTION_CONTRACT`](issue_codes::INVALID_EXECUTION_CONTRACT).
 pub fn validate_execution_contract(
     flow: &FlowDocument,
     definitions: &HashMap<String, FlowNodeDefinition>,
-) -> Result<(), String> {
+) -> Result<(), FlowValidationIssue> {
     if flow.version != FLOW_DOCUMENT_VERSION {
-        return Err(format!(
-            "Flow version {} requires an explicit upgrade.",
-            flow.version
+        return Err(FlowValidationIssue::new(
+            issue_codes::UNSUPPORTED_DOCUMENT_VERSION,
+            format!(
+                "Flow version {} requires an explicit upgrade.",
+                flow.version
+            ),
         ));
     }
+    check_execution_contract(flow, definitions).map_err(|message| {
+        FlowValidationIssue::new(issue_codes::INVALID_EXECUTION_CONTRACT, message)
+    })
+}
+
+fn check_execution_contract(
+    flow: &FlowDocument,
+    definitions: &HashMap<String, FlowNodeDefinition>,
+) -> Result<(), String> {
     flow.execution.limits.validate()?;
     ordered_sources(flow, definitions)?;
     for node in &flow.nodes {
@@ -344,6 +361,6 @@ pub fn upgrade_v1_document(
             edge.queue = Some(flow.execution.limits.provider_queue.clone());
         }
     }
-    validate_execution_contract(&flow, definitions)?;
+    validate_execution_contract(&flow, definitions).map_err(|issue| issue.message)?;
     Ok(flow)
 }

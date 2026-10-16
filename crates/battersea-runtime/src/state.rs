@@ -1,6 +1,9 @@
 use crate::delivery::{Cause, ControlDelivery, DataDelivery, Producer};
 use crate::{Retained, RetentionBudget, Token};
-use battersea_flow::{FlowDocument, FlowEdge, FlowEdgeKind, FlowNode, FlowNodeDefinition};
+use battersea_flow::{
+    issue_codes, FlowDocument, FlowEdge, FlowEdgeKind, FlowNode, FlowNodeDefinition,
+    FlowValidationIssue,
+};
 use serde_json::Value;
 use std::collections::{HashMap, HashSet, VecDeque};
 use tokio_util::sync::CancellationToken;
@@ -51,9 +54,6 @@ pub struct SchedulerState {
     pub cancellation_requested: bool,
 }
 
-fn str_error(s: String) -> String {
-    s
-}
 impl SchedulerState {
     pub fn retained_values(&self) -> impl Iterator<Item = &serde_json::Value> {
         self.input_tokens
@@ -66,12 +66,18 @@ impl SchedulerState {
             .as_ref()
             .map(|recovery| recovery.journal.record())
     }
+    /// Build the scheduler for one activation of `flow`.
+    ///
+    /// A flow that breaks its execution contract, or connects more than one edge to an input,
+    /// action or signal port, is refused with the issues validation reports for it.
     pub fn new(
         run_id: String,
         flow: &FlowDocument,
         definitions: HashMap<String, FlowNodeDefinition>,
-    ) -> Result<Self, String> {
-        battersea_flow::execution::validate_execution_contract(flow, &definitions)?;
+    ) -> Result<Self, Vec<FlowValidationIssue>> {
+        battersea_flow::execution::validate_execution_contract(flow, &definitions)
+            .map_err(|issue| vec![issue])?;
+        let mut issues = Vec::new();
         let mut incoming_edges = HashMap::<(String, String), battersea_flow::FlowEdge>::new();
         let mut outgoing_edges = HashMap::<(String, String), Vec<battersea_flow::FlowEdge>>::new();
         let mut incoming_signal_edges =
@@ -83,34 +89,58 @@ impl SchedulerState {
                 FlowEdgeKind::Token => {
                     let target_key = (edge.target_node_id.clone(), edge.target_port.clone());
                     if incoming_edges.insert(target_key, edge.clone()).is_some() {
-                        return Err(str_error(format!(
-                            "Input port \"{}\" on node \"{}\" already has an incoming edge.",
-                            edge.target_port, edge.target_node_id
-                        )));
+                        issues.push(
+                            FlowValidationIssue::new(
+                                issue_codes::DUPLICATE_INPUT_EDGE,
+                                format!(
+                                    "Input port \"{}\" on node \"{}\" already has an incoming edge.",
+                                    edge.target_port, edge.target_node_id
+                                ),
+                            )
+                            .with_edge_id(&edge.id)
+                            .with_node_id(&edge.target_node_id),
+                        );
                     }
                     let key = (edge.source_node_id.clone(), edge.source_port.clone());
                     outgoing_edges.entry(key).or_default().push(edge.clone());
                 }
                 FlowEdgeKind::Signal => {
+                    let key = (edge.source_node_id.clone(), edge.source_port.clone());
+                    if outgoing_signal_edges.insert(key, edge.clone()).is_some() {
+                        issues.push(
+                            FlowValidationIssue::new(
+                                issue_codes::DUPLICATE_SIGNAL_EDGE,
+                                format!(
+                                    "Signal port \"{}\" on node \"{}\" already has an outgoing edge.",
+                                    edge.source_port, edge.source_node_id
+                                ),
+                            )
+                            .with_edge_id(&edge.id)
+                            .with_node_id(&edge.source_node_id),
+                        );
+                    }
                     let target_key = (edge.target_node_id.clone(), edge.target_port.clone());
                     if incoming_signal_edges
                         .insert(target_key, edge.clone())
                         .is_some()
                     {
-                        return Err(str_error(format!(
-                            "Action port \"{}\" on node \"{}\" already has an incoming edge.",
-                            edge.target_port, edge.target_node_id
-                        )));
-                    }
-                    let key = (edge.source_node_id.clone(), edge.source_port.clone());
-                    if outgoing_signal_edges.insert(key, edge.clone()).is_some() {
-                        return Err(str_error(format!(
-                            "Output port \"{}\" on node \"{}\" already has an outgoing edge.",
-                            edge.source_port, edge.source_node_id
-                        )));
+                        issues.push(
+                            FlowValidationIssue::new(
+                                issue_codes::DUPLICATE_ACTION_EDGE,
+                                format!(
+                                    "Action port \"{}\" on node \"{}\" already has an incoming edge.",
+                                    edge.target_port, edge.target_node_id
+                                ),
+                            )
+                            .with_edge_id(&edge.id)
+                            .with_node_id(&edge.target_node_id),
+                        );
                     }
                 }
             }
+        }
+        if !issues.is_empty() {
+            return Err(issues);
         }
         for edges in outgoing_edges.values_mut() {
             edges.sort_by(|a, b| (a.order, &a.id).cmp(&(b.order, &b.id)));

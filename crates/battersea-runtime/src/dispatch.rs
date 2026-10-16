@@ -12,8 +12,7 @@ pub async fn execute_registered_flow_node<H: ExecutionHost>(
     token: &CancellationToken,
 ) -> Result<(), H::Error> {
     core.handlers()
-        .get(&definition.handler_id)
-        .map_err(H::Error::invalid_request)?
+        .resolve(&definition.handler_id)?
         .execute_node(core, runtime, node, definition, activation_values, token)
         .await
 }
@@ -28,8 +27,7 @@ pub async fn materialize_registered_flow_node<H: ExecutionHost>(
     token: &CancellationToken,
 ) -> Result<(), H::Error> {
     core.handlers()
-        .get(&definition.handler_id)
-        .map_err(H::Error::invalid_request)?
+        .resolve(&definition.handler_id)?
         .materialize_node(core, runtime, node, definition, token)
         .await
 }
@@ -45,8 +43,7 @@ pub async fn execute_registered_sink<H: ExecutionHost>(
     token_value: Retained<Token>,
 ) -> Result<(), H::Error> {
     core.handlers()
-        .get(&definition.handler_id)
-        .map_err(H::Error::invalid_request)?
+        .resolve(&definition.handler_id)?
         .execute_sink(core, runtime, node, input_port, token_value)
         .await
 }
@@ -63,8 +60,7 @@ pub async fn receive_registered_input_token<H: ExecutionHost>(
     token: &CancellationToken,
 ) -> Result<(), H::Error> {
     core.handlers()
-        .get(&definition.handler_id)
-        .map_err(H::Error::invalid_request)?
+        .resolve(&definition.handler_id)?
         .receive_input_token(
             core,
             runtime,
@@ -87,8 +83,7 @@ pub async fn execute_registered_action<H: ExecutionHost>(
     action_port: &str,
 ) -> Result<(), H::Error> {
     core.handlers()
-        .get(&definition.handler_id)
-        .map_err(H::Error::invalid_request)?
+        .resolve(&definition.handler_id)?
         .execute_action(core, runtime, node, definition, action_port)
         .await
 }
@@ -103,8 +98,7 @@ pub async fn execute_registered_controller_action<H: ExecutionHost>(
     controller_action: &str,
 ) -> Result<(), H::Error> {
     core.handlers()
-        .get(&definition.handler_id)
-        .map_err(H::Error::invalid_request)?
+        .resolve(&definition.handler_id)?
         .execute_controller_action(core, runtime, node, definition, controller_action)
         .await
 }

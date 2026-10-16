@@ -15,33 +15,52 @@ use std::{
 use tokio_util::sync::CancellationToken;
 
 #[derive(Debug)]
-struct Error(&'static str, String);
+struct Error {
+    class: &'static str,
+    reason: Option<&'static str>,
+    message: String,
+}
+impl Error {
+    fn new(class: &'static str, reason: Option<&'static str>, message: impl Into<String>) -> Self {
+        Self {
+            class,
+            reason,
+            message: message.into(),
+        }
+    }
+}
 impl std::fmt::Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}: {}", self.0, self.1)
+        write!(f, "{}: {}", self.class, self.message)
     }
 }
 impl std::error::Error for Error {}
 impl ExecutionError for Error {
-    fn invalid_request(s: impl Into<String>) -> Self {
-        Self("invalid_request", s.into())
+    fn invalid_request(reason: &'static str, s: impl Into<String>) -> Self {
+        Self::new("invalid_request", Some(reason), s)
     }
     fn internal(s: impl Into<String>) -> Self {
-        Self("internal", s.into())
+        Self::new("internal", None, s)
     }
-    fn cancelled(s: impl Into<String>) -> Self {
-        Self("cancelled", s.into())
+    fn cancelled(reason: &'static str, s: impl Into<String>) -> Self {
+        Self::new("cancelled", Some(reason), s)
     }
-    fn interrupted(s: impl Into<String>) -> Self {
-        Self("interrupted", s.into())
+    fn interrupted(reason: &'static str, s: impl Into<String>) -> Self {
+        Self::new("interrupted", Some(reason), s)
     }
     fn code(&self) -> &str {
-        self.0
+        self.class
+    }
+    fn reason_code(&self) -> Option<&str> {
+        self.reason
     }
     fn message(&self) -> &str {
-        &self.1
+        &self.message
     }
 }
+/// The fixture host's own refusal codes.
+const FIXTURE_BORROWED_RESULTS: &str = "fixture_borrowed_results";
+const FIXTURE_STATE: &str = "fixture_state";
 struct Run {
     scheduler: SchedulerState,
     seen: Vec<(String, Value)>,
@@ -195,8 +214,21 @@ impl NodeHandler<Host> for Handler {
                 } else if node.parameter_values.get("never_close") == Some(&json!(true)) {
                     host.start_provider(run, &node.id, source.chain(stream::pending()))
                         .await?;
+                } else if node.parameter_values.get("panic") == Some(&json!(true)) {
+                    host.start_provider(
+                        run,
+                        &node.id,
+                        stream::poll_fn(|_| -> std::task::Poll<Option<ProviderEvent>> {
+                            panic!("fixture provider panic")
+                        }),
+                    )
+                    .await?;
                 } else {
                     host.start_provider(run, &node.id, source).await?;
+                }
+                if node.parameter_values.get("restart") == Some(&json!(true)) {
+                    host.start_provider(run, &node.id, stream::pending())
+                        .await?;
                 }
             } else {
                 for event in events {
@@ -349,6 +381,7 @@ impl ExecutionHost for Host {
     ) -> Result<battersea_runtime::recovery::VersionedState, Error> {
         if !run.held.is_empty() {
             return Err(Error::invalid_request(
+                FIXTURE_BORROWED_RESULTS,
                 "Fixture does not checkpoint borrowed join results.",
             ));
         }
@@ -418,20 +451,25 @@ impl ActivationHost for Host {
         state: battersea_runtime::recovery::VersionedState,
     ) -> Result<Run, Error> {
         if state.version != 1 {
-            return Err(Error::invalid_request("Unknown fixture state version."));
+            return Err(Error::invalid_request(
+                FIXTURE_STATE,
+                "Unknown fixture state version.",
+            ));
         }
         Ok(Run {
             scheduler,
             seen: serde_json::from_value(state.value["seen"].clone())
-                .map_err(|error| Error::invalid_request(error.to_string()))?,
+                .map_err(|error| Error::invalid_request(FIXTURE_STATE, error.to_string()))?,
             calls: serde_json::from_value(state.value["calls"].clone())
-                .map_err(|error| Error::invalid_request(error.to_string()))?,
+                .map_err(|error| Error::invalid_request(FIXTURE_STATE, error.to_string()))?,
             held: vec![],
             max_usage: Default::default(),
         })
     }
     fn validate_activation(&self, run: &Run) -> Result<(), Error> {
-        validate_execution_contract(&run.flow, &run.definitions).map_err(Error::invalid_request)
+        validate_execution_contract(&run.flow, &run.definitions).map_err(|issue| {
+            Error::invalid_request(error_codes::INVALID_EXECUTION_CONTRACT, issue.message)
+        })
     }
     async fn accept_activation(&self, _: &Run, _: &str) -> Result<(), Error> {
         self.phases.lock().unwrap().push(RunPhase::Accepted);
@@ -457,20 +495,25 @@ impl ActivationHost for Host {
         Ok(())
     }
 }
-fn fixture(nodes: Vec<Value>, edges: Vec<Value>, mode: &str) -> (Host, Run) {
-    let definitions=[
+fn definitions(mode: &str) -> HashMap<String, FlowNodeDefinition> {
+    [
         json!({"class_name":"Source","kind":"source","short_description":"source","long_description":"source","handler_id":"test.node","interfaces":["IFlowNodeActivate"],"output_ports":[{"name":"out","kind":"output","token_type":"text","mode":mode,"phase":"execution"}],"signal_ports":[{"name":"done"}],"action_ports":[{"name":"disable"}]}),
         json!({"class_name":"Sink","kind":"sink","short_description":"sink","long_description":"sink","handler_id":"test.node","input_ports":[{"name":"in","kind":"input","token_type":"text","mode":mode,"phase":"execution"}],"action_ports":[{"name":"go"},{"name":"back"}],"signal_ports":[{"name":"done"}]}),
         json!({"class_name":"Join","kind":"inline","short_description":"join","long_description":"join","handler_id":"test.node","output_ports":[{"name":"out","kind":"output","token_type":"text","mode":mode,"phase":"execution"}],"signal_ports":[{"name":"done"},{"name":"post_activate"}],"input_ports":[{"name":"in","kind":"input","token_type":"text","mode":mode,"phase":"execution"},{"name":"unused","kind":"input","token_type":"text","mode":"final_value","phase":"execution"}]}),
         json!({"class_name":"Action","kind":"control","short_description":"action","long_description":"action","handler_id":"test.node","action_ports":[{"name":"go"},{"name":"back"}],"signal_ports":[{"name":"done"}]}),
-    ].into_iter().map(|v| {let d:FlowNodeDefinition=serde_json::from_value(v).unwrap();(d.class_name.clone(),d)}).collect();
+    ].into_iter().map(|v| {let d:FlowNodeDefinition=serde_json::from_value(v).unwrap();(d.class_name.clone(),d)}).collect()
+}
+fn document(nodes: Vec<Value>, edges: Vec<Value>) -> FlowDocument {
     let sources = nodes
         .iter()
         .filter(|n| n["definition_name"] == "Source")
         .map(|n| n["id"].as_str().unwrap().to_string())
         .collect::<Vec<_>>();
-    let flow:FlowDocument=serde_json::from_value(json!({"version":battersea_flow::document::FLOW_DOCUMENT_VERSION,"flow_key":"test","title":"test","execution":{"source_order":sources,"limits":FlowExecutionLimits::default()},"nodes":nodes,"edges":edges})).unwrap();
-    let scheduler = SchedulerState::new("test-run".into(), &flow, definitions).unwrap();
+    serde_json::from_value(json!({"version":battersea_flow::document::FLOW_DOCUMENT_VERSION,"flow_key":"test","title":"test","execution":{"source_order":sources,"limits":FlowExecutionLimits::default()},"nodes":nodes,"edges":edges})).unwrap()
+}
+fn fixture(nodes: Vec<Value>, edges: Vec<Value>, mode: &str) -> (Host, Run) {
+    let flow = document(nodes, edges);
+    let scheduler = SchedulerState::new("test-run".into(), &flow, definitions(mode)).unwrap();
     let mut builder = RegistryBuilder::default();
     builder.register(Handler).unwrap();
     (
@@ -524,7 +567,11 @@ async fn durable_driver_resumes_after_a_saved_result_without_reexecuting_the_sou
     let store = Arc::new(RecoveryStore::default());
     store.fault.store(1, Ordering::SeqCst);
     host.recovery_store = Some(store.clone());
-    assert!(run(&host, &mut original).await.is_err());
+    let error = run(&host, &mut original).await.unwrap_err();
+    assert_eq!(
+        error.reason_code(),
+        Some(error_codes::EXECUTION_JOURNAL_STORAGE_FAILED)
+    );
     drop(original);
     let journal = Journal::open(store, "test-run").unwrap();
     journal.require_resumable().unwrap();
@@ -562,7 +609,11 @@ async fn a_dispatched_step_without_a_durable_result_blocks_reexecution() {
     let store = Arc::new(RecoveryStore::default());
     store.fault.store(3, Ordering::SeqCst);
     host.recovery_store = Some(store.clone());
-    assert!(run(&host, &mut original).await.is_err());
+    let error = run(&host, &mut original).await.unwrap_err();
+    assert_eq!(
+        error.reason_code(),
+        Some(error_codes::EXECUTION_JOURNAL_STORAGE_FAILED)
+    );
     let journal = Journal::open(store, "test-run").unwrap();
     assert!(matches!(
         journal.require_resumable(),
@@ -570,10 +621,11 @@ async fn a_dispatched_step_without_a_durable_result_blocks_reexecution() {
     ));
     let revision = journal.record().revision;
     let mut restored = host.restore_activation(&journal).unwrap();
-    assert!(host
+    let error = host
         .resume_activation(&mut restored, journal, revision, CancellationToken::new())
         .await
-        .is_err());
+        .unwrap_err();
+    assert_eq!(error.reason_code(), Some(error_codes::UNRESOLVED_EFFECTS));
     let starts = host
         .events
         .lock()
@@ -911,6 +963,10 @@ async fn cancellation_preempts_a_blocked_consumer_and_stops_a_full_provider_mail
     .unwrap_err();
     watcher.await.unwrap();
     assert_eq!(result.code(), "cancelled");
+    assert_eq!(
+        result.reason_code(),
+        Some(error_codes::ACTIVATION_CANCELLED)
+    );
     let polls = host.polled.load(Ordering::SeqCst);
     tokio::task::yield_now().await;
     assert_eq!(host.polled.load(Ordering::SeqCst), polls);
@@ -918,7 +974,7 @@ async fn cancellation_preempts_a_blocked_consumer_and_stops_a_full_provider_mail
     assert_eq!(state.retention.usage(), retention::Usage::default());
 }
 #[tokio::test]
-async fn queued_signals_follow_data_and_signal_cycles_report_the_causal_path() {
+async fn queued_signals_follow_data_and_signal_cycles_are_refused() {
     let (host, mut state) = fixture(
         vec![
             node(
@@ -953,8 +1009,7 @@ async fn queued_signals_follow_data_and_signal_cycles_report_the_causal_path() {
         "final_value",
     );
     let error = run(&host, &mut state).await.unwrap_err();
-    assert!(error.message().contains("Signal cycle"));
-    assert!(error.message().contains("a") && error.message().contains("b"));
+    assert_eq!(error.reason_code(), Some(error_codes::SIGNAL_CYCLE));
 }
 #[tokio::test]
 async fn preflight_cancellation_happens_before_provider_dispatch() {
@@ -970,10 +1025,9 @@ async fn preflight_cancellation_happens_before_provider_dispatch() {
         vec![signal("cancel", "source", "cancel", "go")],
         "stream",
     );
-    assert_eq!(
-        run(&host, &mut state).await.unwrap_err().code(),
-        "cancelled"
-    );
+    let error = run(&host, &mut state).await.unwrap_err();
+    assert_eq!(error.code(), "cancelled");
+    assert_eq!(error.reason_code(), Some(error_codes::ACTIVATION_CANCELLED));
     assert_eq!(host.polled.load(Ordering::SeqCst), 0);
     assert!(!state.calls.iter().any(|id| id == "source"));
 }
@@ -1011,7 +1065,13 @@ async fn invalid_or_oversize_fanout_is_rejected_before_any_destination_or_observ
         if mismatch {
             state.definitions.get_mut("Join").unwrap().input_ports[0].token_type = "other".into();
         }
-        assert!(run(&host, &mut state).await.is_err());
+        let refused = if mismatch {
+            error_codes::INCOMPATIBLE_EDGE_TARGET
+        } else {
+            error_codes::PAYLOAD_TOO_LARGE
+        };
+        let error = run(&host, &mut state).await.unwrap_err();
+        assert_eq!(error.reason_code(), Some(refused));
         assert!(state.seen.is_empty());
         assert!(!host
             .events
@@ -1043,8 +1103,7 @@ async fn fanout_that_cannot_be_reserved_reports_capacity_deadlock_without_partia
     state.scheduler =
         SchedulerState::new("capacity".into(), &flow, state.definitions.clone()).unwrap();
     let error = run(&host, &mut state).await.unwrap_err();
-    assert!(error.message().contains("Capacity deadlock"));
-    assert!(error.message().contains("edge"));
+    assert_eq!(error.reason_code(), Some(error_codes::CAPACITY_DEADLOCK));
     assert!(state.seen.is_empty());
     assert_eq!(state.retention.usage(), retention::Usage::default());
 }
@@ -1422,7 +1481,13 @@ async fn incompatible_handler_state_is_rejected_without_dispatch_or_publication(
     }
     let before = serde_json::to_vec(store.record.lock().unwrap().as_ref().unwrap()).unwrap();
     let journal = Journal::open(store.clone(), "test-run").unwrap();
-    assert!(host.restore_activation(&journal).is_err());
+    let Err(error) = host.restore_activation(&journal) else {
+        panic!("a changed handler version cannot restore");
+    };
+    assert_eq!(
+        error.reason_code(),
+        Some(error_codes::INCOMPATIBLE_CHECKPOINT)
+    );
     assert_eq!(
         serde_json::to_vec(store.record.lock().unwrap().as_ref().unwrap()).unwrap(),
         before
@@ -1514,11 +1579,421 @@ async fn an_unresolved_dependency_cycle_still_fails_instead_of_becoming_an_absen
         .await
         .expect_err("an open dependency is not an absent final value");
     assert_eq!(error.code(), "invalid_request");
-    assert!(error.message().contains("unsatisfied inputs"));
+    assert_eq!(error.reason_code(), Some(error_codes::UNSATISFIED_INPUTS));
     assert!(!host
         .events
         .lock()
         .unwrap()
         .iter()
         .any(|event| event.kind == EventKind::NodeSkipped));
+}
+
+/// The issues generic validation reports for `flow` against the fixture definitions.
+fn validation_issues(flow: &FlowDocument) -> Vec<FlowValidationIssue> {
+    let mut registry = battersea_flow::registry::Registry::default();
+    registry.register_token_type("text", json!(true)).unwrap();
+    registry.register_handler("test.node").unwrap();
+    battersea_flow::validation::validate_document(flow, &definitions("final_value"), &registry)
+        .issues
+}
+fn names(issue: &FlowValidationIssue, code: &str, node_id: &str, edge_id: &str) -> bool {
+    issue.code == code
+        && issue.node_id.as_deref() == Some(node_id)
+        && issue.edge_id.as_deref() == Some(edge_id)
+}
+
+#[test]
+fn the_scheduler_refuses_an_edge_shape_with_the_issues_validation_reports() {
+    let sources = || {
+        vec![
+            node("first", "Source", json!({})),
+            node("second", "Source", json!({})),
+        ]
+    };
+    let with = |extra: Vec<Value>| sources().into_iter().chain(extra).collect::<Vec<_>>();
+    let shapes = [
+        (
+            with(vec![node("sink", "Sink", json!({}))]),
+            vec![
+                edge("first-in", "first", "sink", 0, "final_value"),
+                edge("second-in", "second", "sink", 1, "final_value"),
+            ],
+            vec![(issue_codes::DUPLICATE_INPUT_EDGE, "sink", "second-in")],
+        ),
+        (
+            with(vec![
+                node("a", "Action", json!({})),
+                node("b", "Action", json!({})),
+            ]),
+            vec![
+                signal("to-a", "first", "a", "go"),
+                signal("to-b", "first", "b", "go"),
+            ],
+            vec![(issue_codes::DUPLICATE_SIGNAL_EDGE, "first", "to-b")],
+        ),
+        (
+            with(vec![node("action", "Action", json!({}))]),
+            vec![
+                signal("first-go", "first", "action", "go"),
+                signal("second-go", "second", "action", "go"),
+            ],
+            vec![(issue_codes::DUPLICATE_ACTION_EDGE, "action", "second-go")],
+        ),
+        (
+            with(vec![
+                node("sink", "Sink", json!({})),
+                node("action", "Action", json!({})),
+            ]),
+            vec![
+                edge("first-in", "first", "sink", 0, "final_value"),
+                edge("second-in", "second", "sink", 1, "final_value"),
+                signal("first-go", "first", "action", "go"),
+                signal("second-go", "second", "action", "go"),
+            ],
+            vec![
+                (issue_codes::DUPLICATE_INPUT_EDGE, "sink", "second-in"),
+                (issue_codes::DUPLICATE_ACTION_EDGE, "action", "second-go"),
+            ],
+        ),
+    ];
+    for (nodes, edges, expected) in shapes {
+        let flow = document(nodes, edges);
+        let issues =
+            SchedulerState::new("refused".into(), &flow, definitions("final_value")).unwrap_err();
+        let validated = validation_issues(&flow);
+        for (code, node_id, edge_id) in expected {
+            assert!(
+                issues
+                    .iter()
+                    .any(|issue| names(issue, code, node_id, edge_id)),
+                "expected {code} for {node_id} and {edge_id}: {issues:?}"
+            );
+        }
+        for issue in &issues {
+            assert!(
+                validated.iter().any(|reported| reported.code == issue.code
+                    && reported.node_id == issue.node_id
+                    && reported.edge_id == issue.edge_id),
+                "validation does not report {issue:?}: {validated:?}"
+            );
+        }
+    }
+
+    let fanned_out = document(
+        with(vec![
+            node("sink", "Sink", json!({})),
+            node("join", "Join", json!({})),
+            node("action", "Action", json!({})),
+        ]),
+        vec![
+            edge("to-sink", "first", "sink", 0, "final_value"),
+            edge("to-join", "first", "join", 1, "final_value"),
+            signal("go", "first", "action", "go"),
+            signal("back", "second", "action", "back"),
+        ],
+    );
+    assert!(validation_issues(&fanned_out).is_empty());
+    SchedulerState::new("accepted".into(), &fanned_out, definitions("final_value")).unwrap();
+}
+
+#[test]
+fn the_scheduler_refuses_a_flow_outside_its_execution_contract_with_its_issue_code() {
+    let flow = document(
+        vec![
+            node("source", "Source", json!({})),
+            node("action", "Action", json!({})),
+        ],
+        vec![signal("go", "source", "action", "go")],
+    );
+    SchedulerState::new("accepted".into(), &flow, definitions("final_value")).unwrap();
+
+    let mut queued = flow.clone();
+    queued.edges[0].queue = Some(FlowQueueLimits::default());
+    let mut upgraded = flow;
+    upgraded.version += 1;
+    for (refused, code) in [
+        (queued, issue_codes::INVALID_EXECUTION_CONTRACT),
+        (upgraded, issue_codes::UNSUPPORTED_DOCUMENT_VERSION),
+    ] {
+        let issues = SchedulerState::new("refused".into(), &refused, definitions("final_value"))
+            .unwrap_err();
+        assert!(issues.iter().any(|issue| issue.code == code), "{issues:?}");
+        assert!(validation_issues(&refused)
+            .iter()
+            .any(|issue| issue.code == code));
+    }
+}
+
+#[tokio::test]
+async fn entry_points_a_handler_does_not_implement_are_refused() {
+    let (host, mut state) = fixture(
+        vec![node("source", "Source", json!({}))],
+        vec![],
+        "final_value",
+    );
+    let node = state.nodes_by_id["source"].clone();
+    let definition = state.definitions["Source"].clone();
+    let handler = host.handlers().get("test.node").unwrap();
+    let controller = handler
+        .execute_controller_action(&host, &mut state, &node, &definition, "refresh")
+        .await
+        .unwrap_err();
+    let event = handler
+        .receive_provider_event(
+            &host,
+            &mut state,
+            &node,
+            &definition,
+            &json!({}),
+            &CancellationToken::new(),
+        )
+        .await
+        .unwrap_err();
+    for error in [controller, event] {
+        assert_eq!(
+            error.reason_code(),
+            Some(error_codes::UNSUPPORTED_HANDLER_OPERATION)
+        );
+    }
+}
+
+#[tokio::test]
+async fn execution_names_the_node_definition_or_input_it_cannot_find() {
+    let (host, mut state) = fixture(
+        vec![
+            node("source", "Source", json!({})),
+            node("sink", "Sink", json!({})),
+        ],
+        vec![edge("in", "source", "sink", 0, "final_value")],
+        "final_value",
+    );
+    let token = CancellationToken::new();
+    let missing = host
+        .execute_flow_node(&mut state, "missing", None, &token)
+        .await
+        .unwrap_err();
+    assert_eq!(missing.reason_code(), Some(error_codes::UNKNOWN_NODE));
+    let Err(input) = host.take_flow_input_token(&mut state, "sink", "in") else {
+        panic!("no value was delivered");
+    };
+    assert_eq!(input.reason_code(), Some(error_codes::MISSING_INPUT_VALUE));
+    state.definitions.remove("Source");
+    let definition = host
+        .execute_flow_node(&mut state, "source", None, &token)
+        .await
+        .unwrap_err();
+    assert_eq!(
+        definition.reason_code(),
+        Some(error_codes::UNKNOWN_DEFINITION)
+    );
+}
+
+#[tokio::test]
+async fn emission_is_refused_on_an_unknown_mistyped_or_closed_output() {
+    let (host, mut state) = fixture(
+        vec![node("source", "Source", json!({}))],
+        vec![],
+        "final_value",
+    );
+    let token = CancellationToken::new();
+    let value = |token_type: &str| Token {
+        token_type: token_type.into(),
+        value: json!("emitted"),
+    };
+    for (port, token_type, reason) in [
+        ("missing", "text", error_codes::UNKNOWN_OUTPUT_PORT),
+        ("out", "number", error_codes::INCOMPATIBLE_TOKEN_TYPE),
+    ] {
+        let error = host
+            .emit_flow_token(&mut state, "source", port, value(token_type), &token)
+            .await
+            .unwrap_err();
+        assert_eq!(error.reason_code(), Some(reason), "{port}");
+    }
+    host.emit_flow_token(&mut state, "source", "out", value("text"), &token)
+        .await
+        .unwrap();
+    let closed = host
+        .emit_flow_token(&mut state, "source", "out", value("text"), &token)
+        .await
+        .unwrap_err();
+    assert_eq!(closed.reason_code(), Some(error_codes::CLOSED_OUTPUT));
+}
+
+#[tokio::test]
+async fn a_final_value_input_accepts_one_value() {
+    let (host, mut state) = fixture(
+        vec![
+            node("source", "Source", json!({})),
+            node("join", "Join", json!({})),
+        ],
+        vec![edge("in", "source", "join", 0, "final_value")],
+        "final_value",
+    );
+    let edge = state.flow.edges[0].clone();
+    let token = CancellationToken::new();
+    let value = |state: &Run| {
+        state
+            .retention
+            .retain(
+                "join",
+                Token {
+                    token_type: "text".into(),
+                    value: json!("delivered"),
+                },
+            )
+            .unwrap()
+    };
+    let first = value(&state);
+    host.deliver_flow_token(&mut state, &edge, first, &token)
+        .await
+        .unwrap();
+    let second = value(&state);
+    let error = host
+        .deliver_flow_token(&mut state, &edge, second, &token)
+        .await
+        .unwrap_err();
+    assert_eq!(
+        error.reason_code(),
+        Some(error_codes::DUPLICATE_FINAL_VALUE)
+    );
+}
+
+#[tokio::test]
+async fn only_an_output_capable_node_can_be_disabled() {
+    let (host, mut state) = fixture(
+        vec![
+            node("source", "Source", json!({})),
+            node("action", "Action", json!({})),
+        ],
+        vec![],
+        "final_value",
+    );
+    let disable = battersea_flow::catalog::FLOW_ACTION_DISABLE;
+    let action = state.nodes_by_id["action"].clone();
+    let error = host
+        .execute_flow_action(&mut state, &action, disable)
+        .await
+        .unwrap_err();
+    assert_eq!(
+        error.reason_code(),
+        Some(error_codes::UNSUPPORTED_ACTION_PORT)
+    );
+    let source = state.nodes_by_id["source"].clone();
+    host.execute_flow_action(&mut state, &source, disable)
+        .await
+        .unwrap();
+    assert!(state.disabled_output_nodes.contains("source"));
+}
+
+#[tokio::test]
+async fn a_node_runs_one_provider_at_a_time() {
+    let (host, mut state) = fixture(
+        vec![node(
+            "source",
+            "Source",
+            json!({"values":["first"],"pump":true,"never_close":true,"restart":true}),
+        )],
+        vec![],
+        "stream",
+    );
+    let error = run(&host, &mut state).await.unwrap_err();
+    assert_eq!(error.reason_code(), Some(error_codes::DUPLICATE_PROVIDER));
+}
+
+#[tokio::test]
+async fn a_panicking_provider_interrupts_the_activation() {
+    let (host, mut state) = fixture(
+        vec![node(
+            "source",
+            "Source",
+            json!({"values":[],"pump":true,"panic":true}),
+        )],
+        vec![],
+        "stream",
+    );
+    let error = run(&host, &mut state).await.unwrap_err();
+    assert_eq!(error.code(), "interrupted");
+    assert_eq!(error.reason_code(), Some(error_codes::PROVIDER_STOPPED));
+    assert_eq!(state.retention.usage(), retention::Usage::default());
+}
+
+#[tokio::test]
+async fn resume_requires_durable_storage() {
+    use battersea_runtime::recovery::Journal;
+    let (mut host, mut original) = fixture(
+        vec![
+            node("source", "Source", json!({"values":["retained"]})),
+            node("sink", "Sink", json!({})),
+        ],
+        vec![edge("output", "source", "sink", 0, "final_value")],
+        "final_value",
+    );
+    let store = Arc::new(RecoveryStore::default());
+    store.fault.store(1, Ordering::SeqCst);
+    host.recovery_store = Some(store.clone());
+    run(&host, &mut original).await.unwrap_err();
+    let journal = Journal::open(store, "test-run").unwrap();
+    host.recovery_store = None;
+    let Err(error) = host.restore_activation(&journal) else {
+        panic!("resume without storage cannot restore");
+    };
+    assert_eq!(
+        error.reason_code(),
+        Some(error_codes::DURABLE_STORAGE_REQUIRED)
+    );
+}
+
+#[tokio::test]
+async fn a_host_state_that_cannot_be_checkpointed_leaves_the_run_requiring_recovery() {
+    let (mut host, mut state) = fixture(
+        vec![
+            node("source", "Source", json!({"values":["held"]})),
+            node("join", "Join", json!({})),
+        ],
+        vec![edge("in", "source", "join", 0, "final_value")],
+        "final_value",
+    );
+    host.recovery_store = Some(Arc::new(RecoveryStore::default()));
+    let error = run(&host, &mut state).await.unwrap_err();
+    assert_eq!(error.code(), "interrupted", "the default recovery class");
+    assert_eq!(
+        error.reason_code(),
+        Some(error_codes::EXECUTION_INTERRUPTED)
+    );
+}
+
+#[test]
+fn every_journal_and_pump_failure_is_named_by_a_declared_code() {
+    use battersea_runtime::{pump::PumpError, recovery::RecoveryError};
+    let journal = [
+        RecoveryError::Missing,
+        RecoveryError::Conflict,
+        RecoveryError::Incompatible("version".into()),
+        RecoveryError::Invalid("operation".into()),
+        RecoveryError::Storage("write".into()),
+        RecoveryError::UnresolvedEffects(vec!["effect".into()]),
+        RecoveryError::CommitPending,
+        RecoveryError::Terminal,
+        RecoveryError::Poisoned,
+    ]
+    .map(|error| error.code());
+    let pump = [
+        PumpError::InvalidLimits,
+        PumpError::PayloadTooLarge { limit: 1 },
+        PumpError::Serialization("value".into()),
+        PumpError::Capacity("budget".into()),
+        PumpError::Cancelled,
+        PumpError::ProducerPanicked,
+        PumpError::ProducerStopped,
+    ]
+    .map(|error| error.code());
+    for code in journal.iter().chain(&pump) {
+        assert!(error_codes::ALL.contains(code), "{code}");
+    }
+    assert_eq!(
+        journal.iter().collect::<HashSet<_>>().len(),
+        journal.len(),
+        "each journal failure has its own code"
+    );
 }

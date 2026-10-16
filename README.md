@@ -14,6 +14,7 @@ and the activation lifecycle. Applications supply their state, effects and durab
 through host interfaces. Optional durable execution captures versioned scheduler and host state,
 pins accepted inputs, and fences explicit resume and effect resolution. Hosts implement the
 storage and commit reconciliation ports described by the [recovery contract](contracts/recovery.md).
+Each runtime refusal carries a stable code: `error_codes` names Battersea's, and hosts supply their own.
 `battersea-derive` attaches inline manifest metadata to a Rust node type; definitions share the
 manifest parser and host registry. The [isolation evaluation](contracts/isolation.md) defines the
 requirements for untrusted execution.
@@ -21,7 +22,7 @@ requirements for untrusted execution.
 product session.
 
 `battersea-model` supplies content-block messages, provider and tool registration, typed errors,
-request admission and the shared tool loop. `battersea-providers` supplies OpenAI, Anthropic,
+request admission and the shared tool loop. `ToolCode` names the tool runner's refusals. `battersea-providers` supplies OpenAI, Anthropic,
 Google, Runway and mock transports through individual Cargo features. Text admission accepts
 text blocks; provider-native tool continuation retains opaque signed fields.
 

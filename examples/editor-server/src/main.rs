@@ -13,7 +13,7 @@ use battersea_flow::{
 };
 use battersea_runtime::{ActivationHost, ExecutionError};
 use clap::{Parser, Subcommand};
-use runtime::{Application, Error};
+use runtime::{codes, Application, Error};
 use serde::Deserialize;
 use serde_json::{json, Value};
 use std::{
@@ -105,7 +105,7 @@ fn key(value: &str) -> Result<&str, Error> {
             .bytes()
             .all(|b| b.is_ascii_alphanumeric() || b == b'-' || b == b'_')
     {
-        Err(Error::invalid_request("invalid key"))
+        Err(Error::invalid_request(codes::INVALID_KEY, "invalid key"))
     } else {
         Ok(value)
     }
@@ -187,7 +187,10 @@ async fn save(
     key(&flow.flow_key)?;
     let validation = app.runtime.catalog.validate(&flow);
     if !validation.valid {
-        return Err(Error::invalid_request(format!("{:?}", validation.issues)));
+        return Err(Error::invalid_request(
+            codes::INVALID_FLOW,
+            format!("{:?}", validation.issues),
+        ));
     }
     let path = app
         .runtime
@@ -196,7 +199,8 @@ async fn save(
         .join(format!("{}.json", flow.flow_key));
     match std::fs::read_to_string(&path) {
         Ok(source) => {
-            load_document(&source).map_err(|e| Error::invalid_request(e.to_string()))?;
+            load_document(&source)
+                .map_err(|e| Error::invalid_request(codes::INVALID_DOCUMENT, e.to_string()))?;
         }
         Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
         Err(error) => return Err(io(error)),
@@ -265,7 +269,10 @@ async fn activate(
     let mut run = app.runtime.run(id.clone(), &flow)?;
     app.runtime.validate_activation(&run)?;
     if !flow.nodes.iter().any(|n| n.id == request.node_id) {
-        return Err(Error::invalid_request("node is not in the flow"));
+        return Err(Error::invalid_request(
+            battersea_runtime::error_codes::UNKNOWN_NODE,
+            "node is not in the flow",
+        ));
     }
     let token = CancellationToken::new();
     app.runs.lock().unwrap().insert(
@@ -313,7 +320,7 @@ async fn inspect(State(app): State<App>, Path(id): Path<String>) -> Result<Json<
     let runs = app.runs.lock().unwrap();
     let live = runs
         .get(&id)
-        .ok_or_else(|| Error::invalid_request("unknown activation"))?;
+        .ok_or_else(|| Error::invalid_request(codes::UNKNOWN_ACTIVATION, "unknown activation"))?;
     let view = app.runtime.view.lock().unwrap();
     let mut events = Vec::new();
     for delta in view.history() {
@@ -369,6 +376,7 @@ async fn runtime_view(
         },
         _ => {
             return Err(Error::invalid_request(
+                codes::INVALID_RUNTIME_CURSOR,
                 "Runtime cursor requires epoch and revision",
             ))
         }
@@ -379,7 +387,7 @@ async fn cancel(State(app): State<App>, Path(id): Path<String>) -> Result<Json<V
     let runs = app.runs.lock().unwrap();
     let run = runs
         .get(&id)
-        .ok_or_else(|| Error::invalid_request("unknown activation"))?;
+        .ok_or_else(|| Error::invalid_request(codes::UNKNOWN_ACTIVATION, "unknown activation"))?;
     run.token.cancel();
     Ok(Json(json!({"id":id})))
 }

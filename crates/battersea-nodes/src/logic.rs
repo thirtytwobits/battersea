@@ -6,7 +6,9 @@ use async_trait::async_trait;
 use battersea_flow::{FlowNode, FlowNodeDefinition};
 
 use crate::{NodeError as EngineError, NodeResult as EngineResult};
-use battersea_runtime::{ExecutionError, ExecutionHost, NodeHandler as FlowRuntimeHandler};
+use battersea_runtime::{
+    error_codes, ExecutionError, ExecutionHost, NodeHandler as FlowRuntimeHandler,
+};
 
 pub struct LogicMultiplexerHandler;
 pub struct LogicDemultiplexerHandler;
@@ -26,10 +28,13 @@ fn record_logic_action<H: ExecutionHost>(
         battersea_flow::ports::expanded_action_ports_for_node(&runtime.definitions, node)
             .map_err(H::Error::internal)?;
     if !action_ports.iter().any(|port| port.name == action_port) {
-        return Err(H::Error::invalid_request(format!(
-            "{} does not support action port \"{}\".",
-            definition.class_name, action_port
-        )));
+        return Err(H::Error::invalid_request(
+            error_codes::UNSUPPORTED_ACTION_PORT,
+            format!(
+                "{} does not support action port \"{}\".",
+                definition.class_name, action_port
+            ),
+        ));
     }
     core.record_logic_action_signal(runtime, node, action_port);
     Ok(())
@@ -143,10 +148,13 @@ pub fn prepare_logic_outputs(
             }
         }
         _ => {
-            return Err(EngineError::invalid_request(format!(
-                "Flow handler \"{}\" does not support logic evaluation.",
-                definition.handler_id
-            )));
+            return Err(EngineError::invalid_request(
+                error_codes::UNSUPPORTED_HANDLER_OPERATION,
+                format!(
+                    "Flow handler \"{}\" does not support logic evaluation.",
+                    definition.handler_id
+                ),
+            ));
         }
     })
 }
