@@ -297,7 +297,7 @@ impl ToolConversation for Conversation {
                 )?);
             }
         }
-        if (finish == "tool_calls") != !calls.is_empty() {
+        if (finish == "tool_calls") == calls.is_empty() {
             return Err(invalid(
                 provider,
                 "Finish reason disagrees with the tool calls.",

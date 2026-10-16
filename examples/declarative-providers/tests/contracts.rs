@@ -13,6 +13,7 @@ use futures_util::StreamExt;
 use serde_json::{json, Value};
 use std::{
     collections::{BTreeMap, VecDeque},
+    fmt::Write,
     sync::{
         atomic::{AtomicUsize, Ordering},
         Arc, Mutex,
@@ -62,10 +63,10 @@ fn reply(value: Value) -> (u16, String, String) {
     (200, "application/json".into(), value.to_string())
 }
 fn sse(events: Vec<Value>, done: bool) -> (u16, String, String) {
-    let mut body = events
-        .into_iter()
-        .map(|v| format!("data: {v}\n\n"))
-        .collect::<String>();
+    let mut body = String::new();
+    for event in events {
+        writeln!(body, "data: {event}\n").unwrap();
+    }
     if done {
         body.push_str("data: [DONE]\n\n");
     }
