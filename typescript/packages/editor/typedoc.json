@@ -1,0 +1,11 @@
+{
+  "entryPoints": [
+    "src/index.ts",
+    "src/graph.ts",
+    "src/core/*.ts",
+    "src/core/*.tsx",
+    "src/components/*.tsx",
+    "src/hooks/*.ts",
+    "src/graph/layout/*.ts"
+  ]
+}

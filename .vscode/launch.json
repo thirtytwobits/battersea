@@ -1,0 +1,231 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Rust: Custom Node",
+      "type": "lldb",
+      "request": "launch",
+      "cargo": {
+        "args": [
+          "build",
+          "--locked",
+          "-p",
+          "custom-node-example"
+        ],
+        "cwd": "${workspaceFolder}",
+        "filter": {
+          "name": "custom-node-example",
+          "kind": "bin"
+        }
+      },
+      "args": [],
+      "cwd": "${workspaceFolder}",
+      "env": {
+        "RUST_BACKTRACE": "1"
+      },
+      "sourceLanguages": [
+        "rust"
+      ],
+      "terminal": "integrated",
+      "stopOnEntry": false
+    },
+    {
+      "name": "Rust: Catalogue",
+      "type": "lldb",
+      "request": "launch",
+      "cargo": {
+        "args": [
+          "build",
+          "--locked",
+          "-p",
+          "catalogue-example"
+        ],
+        "cwd": "${workspaceFolder}",
+        "filter": {
+          "name": "catalogue-example",
+          "kind": "bin"
+        }
+      },
+      "args": [],
+      "cwd": "${workspaceFolder}",
+      "env": {
+        "RUST_BACKTRACE": "1"
+      },
+      "sourceLanguages": [
+        "rust"
+      ],
+      "terminal": "integrated",
+      "stopOnEntry": false
+    },
+    {
+      "name": "Rust: Mock Backend",
+      "type": "lldb",
+      "request": "launch",
+      "cargo": {
+        "args": [
+          "build",
+          "--locked",
+          "-p",
+          "backend-example"
+        ],
+        "cwd": "${workspaceFolder}",
+        "filter": {
+          "name": "backend-example",
+          "kind": "bin"
+        }
+      },
+      "args": [],
+      "cwd": "${workspaceFolder}",
+      "env": {
+        "RUST_BACKTRACE": "1"
+      },
+      "sourceLanguages": [
+        "rust"
+      ],
+      "terminal": "integrated",
+      "stopOnEntry": false
+    },
+    {
+      "name": "Rust: Editor Server",
+      "type": "lldb",
+      "request": "launch",
+      "cargo": {
+        "args": [
+          "build",
+          "--locked",
+          "-p",
+          "editor-server-example"
+        ],
+        "cwd": "${workspaceFolder}",
+        "filter": {
+          "name": "editor-server-example",
+          "kind": "bin"
+        }
+      },
+      "args": [
+        "serve",
+        "${input:editorDataDirectory}",
+        "--port",
+        "18180"
+      ],
+      "cwd": "${workspaceFolder}",
+      "env": {
+        "RUST_BACKTRACE": "1"
+      },
+      "sourceLanguages": [
+        "rust"
+      ],
+      "terminal": "integrated",
+      "stopOnEntry": false
+    },
+    {
+      "name": "Rust: Editor CLI Activation",
+      "type": "lldb",
+      "request": "launch",
+      "cargo": {
+        "args": [
+          "build",
+          "--locked",
+          "-p",
+          "editor-server-example"
+        ],
+        "cwd": "${workspaceFolder}",
+        "filter": {
+          "name": "editor-server-example",
+          "kind": "bin"
+        }
+      },
+      "args": [
+        "activate",
+        "--server",
+        "${input:editorServerUrl}",
+        "${input:editorFlow}",
+        "${input:editorNode}",
+        "${input:editorText}"
+      ],
+      "cwd": "${workspaceFolder}",
+      "env": {
+        "RUST_BACKTRACE": "1"
+      },
+      "sourceLanguages": [
+        "rust"
+      ],
+      "terminal": "integrated",
+      "stopOnEntry": false
+    },
+    {
+      "name": "TypeScript: Current Test",
+      "type": "node",
+      "request": "launch",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        "--import",
+        "tsx",
+        "--test",
+        "--test-concurrency=1"
+      ],
+      "args": [
+        "${file}"
+      ],
+      "cwd": "${workspaceFolder}/typescript",
+      "preLaunchTask": "TypeScript: Build",
+      "console": "integratedTerminal",
+      "autoAttachChildProcesses": true,
+      "sourceMaps": true,
+      "skipFiles": [
+        "<node_internals>/**"
+      ]
+    },
+    {
+      "name": "Browser: Editor Sample",
+      "type": "chrome",
+      "request": "launch",
+      "url": "http://127.0.0.1:18181",
+      "webRoot": "${workspaceFolder}/examples/editor-server/web",
+      "preLaunchTask": "Example: Dev Editor Web",
+      "sourceMaps": true
+    },
+    {
+      "name": "Rust: Attach to Process",
+      "type": "lldb",
+      "request": "attach",
+      "pid": "${command:lldb.pickMyProcess}",
+      "sourceLanguages": [
+        "rust"
+      ],
+      "stopOnEntry": false
+    }
+  ],
+  "inputs": [
+    {
+      "id": "editorDataDirectory",
+      "type": "promptString",
+      "description": "Existing initialized editor application directory, relative to the repository root or absolute",
+      "default": "target/editor-example"
+    },
+    {
+      "id": "editorServerUrl",
+      "type": "promptString",
+      "description": "Running editor server URL",
+      "default": "http://127.0.0.1:18180"
+    },
+    {
+      "id": "editorFlow",
+      "type": "promptString",
+      "description": "Flow key to activate",
+      "default": "example"
+    },
+    {
+      "id": "editorNode",
+      "type": "promptString",
+      "description": "Activation entry node ID",
+      "default": "text"
+    },
+    {
+      "id": "editorText",
+      "type": "promptString",
+      "description": "Text supplied to the activation",
+      "default": "A debugger-authored input"
+    }
+  ]
+}

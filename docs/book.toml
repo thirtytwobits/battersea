@@ -1,0 +1,21 @@
+[book]
+title = "Battersea handbook"
+authors = ["Scott A Dixon"]
+language = "en"
+src = "src"
+
+[build]
+create-missing = false
+
+[output.html]
+default-theme = "light"
+preferred-dark-theme = "navy"
+git-repository-url = "https://github.com/thirtytwobits/battersea"
+additional-css = ["version.css"]
+input-404 = ""
+
+[output.html.playground]
+runnable = false
+
+[output.html.search]
+enable = true

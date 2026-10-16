@@ -54,6 +54,76 @@ jobs:
       - run: rustup default 1.99.0
       - run: cargo install cargo-public-api --version 0.50.2 --locked
       - run: cargo xtask api
+  documentation-rust:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install documentation tools
+        run: |
+          rustup toolchain install "$(jq -r .rust docs/toolchain.json)" --profile minimal
+          rustup default "$(jq -r .rust docs/toolchain.json)"
+          cargo install mdbook --version "$(jq -r .mdbook docs/toolchain.json)" --locked
+      - name: Refuse Node invocations in the documentation lane
+        run: |
+          mkdir "$RUNNER_TEMP/no-node"
+          for tool in node npm npx yarn pnpm; do
+            printf '#!/bin/sh\necho "Rust documentation invoked Node tooling" >&2\nexit 1\n' > "$RUNNER_TEMP/no-node/$tool"
+            chmod +x "$RUNNER_TEMP/no-node/$tool"
+          done
+          echo "$RUNNER_TEMP/no-node" >> "$GITHUB_PATH"
+      - run: cargo xtask docs
+      - run: git diff --exit-code
+      - uses: actions/upload-artifact@v4
+        with:
+          name: documentation-part-rust
+          path: target/documentation/site
+          if-no-files-found: error
+          include-hidden-files: true
+  documentation-typescript:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: typescript
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: typescript/package-lock.json
+      - run: npm ci --ignore-scripts
+      - run: npm run docs
+      - run: git diff --exit-code
+      - uses: actions/upload-artifact@v4
+        with:
+          name: documentation-part-typescript
+          path: target/documentation/site
+          if-no-files-found: error
+  documentation:
+    needs: [documentation-rust, documentation-typescript]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - name: Select documentation Rust toolchain
+        run: |
+          rustup toolchain install "$(jq -r .rust docs/toolchain.json)" --profile minimal
+          rustup default "$(jq -r .rust docs/toolchain.json)"
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: documentation-part-*
+          merge-multiple: true
+          path: target/documentation/site
+      - run: cargo test --locked -p xtask docs::tests
+      - run: cargo xtask docs-check
+      - uses: actions/upload-artifact@v4
+        with:
+          name: documentation-preview
+          path: target/documentation/site
+          if-no-files-found: error
+          include-hidden-files: true
   editor-example:
     runs-on: ubuntu-24.04
     timeout-minutes: 20

@@ -1,0 +1,664 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Build: All",
+      "dependsOn": [
+        "Rust: Build",
+        "TypeScript: Build"
+      ],
+      "dependsOrder": "sequence",
+      "problemMatcher": [],
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "detail": "Build the Rust workspace, then both npm packages using their existing commands."
+    },
+    {
+      "label": "Rust: Build",
+      "type": "shell",
+      "command": "cargo",
+      "args": [
+        "build",
+        "--workspace",
+        "--all-features",
+        "--locked"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": [],
+      "group": "build"
+    },
+    {
+      "label": "Rust: Build Release",
+      "type": "shell",
+      "command": "cargo",
+      "args": [
+        "build",
+        "--workspace",
+        "--all-features",
+        "--locked",
+        "--release"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": [],
+      "group": "build"
+    },
+    {
+      "label": "Rust: Check",
+      "type": "shell",
+      "command": "cargo",
+      "args": [
+        "check",
+        "--workspace",
+        "--all-features",
+        "--locked",
+        "--all-targets"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": [],
+      "detail": "Check all Rust targets without producing final executables.",
+      "group": "build"
+    },
+    {
+      "label": "Rust: Test",
+      "type": "shell",
+      "command": "cargo",
+      "args": [
+        "test",
+        "--workspace",
+        "--all-features",
+        "--locked"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": [],
+      "group": "test"
+    },
+    {
+      "label": "Rust: Validate",
+      "type": "shell",
+      "command": "cargo",
+      "args": [
+        "xtask",
+        "check"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": [],
+      "group": "test",
+      "detail": "Run the repository Rust gate: formatting, boundaries, bindings, feature checks, tests, Clippy and documentation."
+    },
+    {
+      "label": "Rust: Build Package",
+      "type": "shell",
+      "command": "cargo",
+      "args": [
+        "build",
+        "-p",
+        "${input:rustPackage}",
+        "--all-features",
+        "--locked"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": [],
+      "group": "build",
+      "detail": "Choose a Cargo workspace package to build."
+    },
+    {
+      "label": "Rust: Check Package",
+      "type": "shell",
+      "command": "cargo",
+      "args": [
+        "check",
+        "-p",
+        "${input:rustPackage}",
+        "--all-features",
+        "--locked",
+        "--all-targets"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": [],
+      "group": "build"
+    },
+    {
+      "label": "Rust: Test Package",
+      "type": "shell",
+      "command": "cargo",
+      "args": [
+        "test",
+        "-p",
+        "${input:rustPackage}",
+        "--all-features",
+        "--locked"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": [],
+      "group": "test"
+    },
+    {
+      "label": "TypeScript: Build",
+      "type": "shell",
+      "command": "npm",
+      "args": [
+        "run",
+        "build"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}/typescript"
+      },
+      "problemMatcher": [
+        {
+          "base": "$tsc",
+          "fileLocation": [
+            "relative",
+            "${workspaceFolder}/typescript"
+          ]
+        }
+      ],
+      "group": "build",
+      "detail": "Build @battersea/flow, then @battersea/editor."
+    },
+    {
+      "label": "TypeScript: Typecheck",
+      "type": "shell",
+      "command": "npm",
+      "args": [
+        "run",
+        "typecheck"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}/typescript"
+      },
+      "problemMatcher": [
+        {
+          "base": "$tsc",
+          "fileLocation": [
+            "relative",
+            "${workspaceFolder}/typescript"
+          ]
+        }
+      ],
+      "group": "build"
+    },
+    {
+      "label": "TypeScript: Test",
+      "dependsOn": [
+        "TypeScript: Test Contracts",
+        "TypeScript: Test Editor"
+      ],
+      "dependsOrder": "sequence",
+      "problemMatcher": [],
+      "group": "test",
+      "detail": "Run both the script/contract suite and the React editor suite."
+    },
+    {
+      "label": "TypeScript: Test Contracts",
+      "type": "shell",
+      "command": "npm",
+      "args": [
+        "test"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}/typescript"
+      },
+      "problemMatcher": [],
+      "group": "test"
+    },
+    {
+      "label": "TypeScript: Test Editor",
+      "type": "shell",
+      "command": "npm",
+      "args": [
+        "run",
+        "test:editor"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}/typescript"
+      },
+      "problemMatcher": [],
+      "group": "test"
+    },
+    {
+      "label": "TypeScript: Validate",
+      "type": "shell",
+      "command": "npm",
+      "args": [
+        "run",
+        "check"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}/typescript"
+      },
+      "problemMatcher": [
+        {
+          "base": "$tsc",
+          "fileLocation": [
+            "relative",
+            "${workspaceFolder}/typescript"
+          ]
+        }
+      ],
+      "group": "test",
+      "detail": "Run the existing npm build, typecheck, tests and package/API consistency checks."
+    },
+    {
+      "label": "Packages: Check Rust",
+      "type": "shell",
+      "command": "cargo",
+      "args": [
+        "xtask",
+        "package"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": [],
+      "group": "test",
+      "detail": "Build Cargo archives and compile independent consumers."
+    },
+    {
+      "label": "Packages: Check TypeScript",
+      "type": "shell",
+      "command": "npm",
+      "args": [
+        "run",
+        "package:check"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}/typescript"
+      },
+      "problemMatcher": [
+        {
+          "base": "$tsc",
+          "fileLocation": [
+            "relative",
+            "${workspaceFolder}/typescript"
+          ]
+        }
+      ],
+      "group": "test",
+      "detail": "Run the npm gate and install packed packages into isolated consumers."
+    },
+    {
+      "label": "API: Check Rust",
+      "type": "shell",
+      "command": "cargo",
+      "args": [
+        "xtask",
+        "api"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": [],
+      "group": "test",
+      "detail": "Requires cargo-public-api and the nightly toolchain pinned in api/toolchain.json."
+    },
+    {
+      "label": "Bindings: Check",
+      "type": "shell",
+      "command": "cargo",
+      "args": [
+        "xtask",
+        "bindings",
+        "--check"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": [],
+      "group": "test",
+      "detail": "Check generated schemas, TypeScript bindings and shared fixtures without writing them."
+    },
+    {
+      "label": "Bindings: Generate",
+      "type": "shell",
+      "command": "cargo",
+      "args": [
+        "xtask",
+        "bindings"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": [],
+      "detail": "Write generated schemas, TypeScript bindings and shared fixtures; review the resulting diff."
+    },
+    {
+      "label": "Example: Build Catalogue",
+      "type": "shell",
+      "command": "cargo",
+      "args": [
+        "build",
+        "--locked",
+        "-p",
+        "catalogue-example"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": [],
+      "group": "build"
+    },
+    {
+      "label": "Example: Run Catalogue",
+      "type": "shell",
+      "command": "cargo",
+      "args": [
+        "run",
+        "--locked",
+        "-p",
+        "catalogue-example"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Example: Build Custom Node",
+      "type": "shell",
+      "command": "cargo",
+      "args": [
+        "build",
+        "--locked",
+        "-p",
+        "custom-node-example"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": [],
+      "group": "build"
+    },
+    {
+      "label": "Example: Run Custom Node",
+      "type": "shell",
+      "command": "cargo",
+      "args": [
+        "run",
+        "--locked",
+        "-p",
+        "custom-node-example"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Example: Build Backend",
+      "type": "shell",
+      "command": "cargo",
+      "args": [
+        "build",
+        "--locked",
+        "-p",
+        "backend-example"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": [],
+      "group": "build"
+    },
+    {
+      "label": "Example: Run Backend",
+      "type": "shell",
+      "command": "cargo",
+      "args": [
+        "run",
+        "--locked",
+        "-p",
+        "backend-example"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Example: Build Editor Server",
+      "type": "shell",
+      "command": "cargo",
+      "args": [
+        "build",
+        "--locked",
+        "-p",
+        "editor-server-example"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": [],
+      "group": "build"
+    },
+    {
+      "label": "Example: Initialize Editor",
+      "type": "shell",
+      "command": "cargo",
+      "args": [
+        "run",
+        "--locked",
+        "-p",
+        "editor-server-example",
+        "--",
+        "init",
+        "${input:editorDataDirectory}"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": [],
+      "detail": "Explicitly initialize the selected example application directory before serving it."
+    },
+    {
+      "label": "Example: Serve Editor",
+      "type": "shell",
+      "command": "cargo",
+      "args": [
+        "run",
+        "--locked",
+        "-p",
+        "editor-server-example",
+        "--",
+        "serve",
+        "${input:editorDataDirectory}"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": [],
+      "detail": "Serve an already initialized application directory on loopback port 18180; stop the task to stop the server."
+    },
+    {
+      "label": "Example: Verify Editor Integration",
+      "dependsOn": [
+        "Example: Build Editor Server",
+        "TypeScript: Build",
+        "Example: Test Editor Integration"
+      ],
+      "dependsOrder": "sequence",
+      "problemMatcher": [],
+      "group": "test",
+      "detail": "Verify freshly packed workspace packages in the existing isolated browser and CLI integration harness."
+    },
+    {
+      "label": "Example: Test Editor Integration",
+      "type": "shell",
+      "command": "npm",
+      "args": [
+        "run",
+        "test:example"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}/typescript"
+      },
+      "problemMatcher": [],
+      "group": "test",
+      "detail": "Requires built packages and the editor-server-example binary; use Example: Verify Editor Integration for the full sequence."
+    },
+    {
+      "label": "Example: Build Editor Web",
+      "type": "shell",
+      "command": "npm",
+      "args": [
+        "run",
+        "build"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}/examples/editor-server/web"
+      },
+      "problemMatcher": [
+        {
+          "base": "$tsc",
+          "fileLocation": [
+            "relative",
+            "${workspaceFolder}/examples/editor-server/web"
+          ]
+        }
+      ],
+      "group": "build",
+      "detail": "Build the standalone web sample against its manifest-pinned release packages. Install its dependencies first."
+    },
+    {
+      "label": "Example: Dev Editor Web",
+      "type": "shell",
+      "command": "npm",
+      "args": [
+        "run",
+        "dev",
+        "--",
+        "--strictPort"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}/examples/editor-server/web"
+      },
+      "problemMatcher": [
+        {
+          "base": "$tsc",
+          "fileLocation": [
+            "relative",
+            "${workspaceFolder}/examples/editor-server/web"
+          ],
+          "background": {
+            "activeOnStart": true,
+            "beginsPattern": ".*VITE.*",
+            "endsPattern": "Local:\\s+http://127\\.0\\.0\\.1:18181/"
+          }
+        }
+      ],
+      "detail": "Serve the standalone Vite sample on loopback port 18181 using its manifest-pinned release packages. Stop the task to stop Vite.",
+      "isBackground": true
+    },
+    {
+      "label": "Documentation: Build",
+      "detail": "Build the handbook and both API references, then check the complete site.",
+      "dependsOn": [
+        "Documentation: Rust and handbook",
+        "Documentation: TypeScript",
+        "Documentation: Check"
+      ],
+      "dependsOrder": "sequence",
+      "group": "build",
+      "problemMatcher": []
+    },
+    {
+      "label": "Documentation: Rust and handbook",
+      "type": "shell",
+      "command": "cargo",
+      "args": [
+        "xtask",
+        "docs"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}",
+        "env": {
+          "PATH": "${workspaceFolder}/target/documentation/tools/bin:${env:PATH}"
+        }
+      },
+      "windows": {
+        "options": {
+          "env": {
+            "PATH": "${workspaceFolder}\\target\\documentation\\tools\\bin;${env:PATH}"
+          }
+        }
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Documentation: TypeScript",
+      "type": "shell",
+      "command": "npm",
+      "args": [
+        "run",
+        "docs"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}/typescript"
+      },
+      "problemMatcher": [
+        "$tsc"
+      ]
+    },
+    {
+      "label": "Documentation: Check",
+      "type": "shell",
+      "command": "cargo",
+      "args": [
+        "xtask",
+        "docs-check"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": []
+    }
+  ],
+  "inputs": [
+    {
+      "id": "rustPackage",
+      "type": "pickString",
+      "description": "Cargo workspace package",
+      "default": "battersea-flow",
+      "options": [
+        "battersea-config",
+        "battersea-derive",
+        "battersea-flow",
+        "battersea-guard",
+        "battersea-model",
+        "battersea-nodes",
+        "battersea-pianola",
+        "battersea-providers",
+        "battersea-runtime",
+        "battersea-telemetry",
+        "backend-example",
+        "catalogue-example",
+        "custom-node-example",
+        "editor-server-example",
+        "xtask"
+      ]
+    },
+    {
+      "id": "editorDataDirectory",
+      "type": "promptString",
+      "description": "Example application data directory, relative to the repository root or absolute (initialize explicitly before serving)",
+      "default": "target/editor-example"
+    }
+  ]
+}

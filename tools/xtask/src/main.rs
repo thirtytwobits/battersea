@@ -1,4 +1,5 @@
 mod bindings;
+mod docs;
 use clap::{Parser, Subcommand};
 use serde_json::Value;
 use std::{
@@ -41,6 +42,17 @@ enum Task {
     Package,
     /// Check publication decisions and require the tag to match all package versions.
     ReleaseCheck { tag: String },
+    /// Build the handbook and public Rust reference. Needs mdBook, but no Node.
+    Docs,
+    /// Check the assembled documentation, including links and anchors.
+    DocsCheck {
+        #[arg(long, default_value = "target/documentation/site")]
+        site: PathBuf,
+    },
+    /// Check and archive this version's documentation for a release.
+    DocsArchive,
+    /// Assemble GitHub Pages from checksummed, published release archives. Needs gh.
+    DocsSite,
 }
 fn root() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR"))
@@ -465,6 +477,10 @@ fn scan_prompts(root: &Path) -> Result<()> {
 fn main() -> Result<()> {
     let root = root();
     match Cli::parse().command {
+        Task::Docs => docs::build(&root),
+        Task::DocsCheck { site } => docs::check(&root.join(site)),
+        Task::DocsArchive => docs::archive(&root),
+        Task::DocsSite => docs::published_site(&root),
         Task::Bindings { check } => bindings::generate(&root, check),
         Task::Boundaries => boundaries(&root),
         Task::ScanPrompts => scan_prompts(&root),
