@@ -1,4 +1,6 @@
 //! Protocol implementations and immutable configured service identities.
+mod redaction;
+
 use crate::{ChatProvider, EngineAdapterRequestError, ErrorKind, MediaProvider};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -57,15 +59,9 @@ impl SecretString {
     pub fn expose(&self) -> &str {
         &self.0
     }
-    /// Mask raw and URL-encoded representations in diagnostics.
+    /// Mask raw, URI/form-encoded and JSON-escaped representations in diagnostics.
     pub fn redact(&self, text: &str) -> String {
-        if self.0.is_empty() {
-            return text.to_owned();
-        }
-        let encoded = url::form_urlencoded::byte_serialize(self.0.as_bytes()).collect::<String>();
-        text.replace(&encoded.replace('+', "%20"), "[REDACTED]")
-            .replace(&encoded, "[REDACTED]")
-            .replace(&self.0, "[REDACTED]")
+        redaction::redact(&self.0, text)
     }
 }
 impl From<String> for SecretString {

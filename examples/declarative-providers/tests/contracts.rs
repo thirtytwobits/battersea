@@ -1014,6 +1014,136 @@ impl CredentialResolver for FixedCredential {
         })
     }
 }
+
+#[tokio::test]
+async fn encoded_credentials_are_masked_in_returned_errors_and_request_and_error_logs() {
+    for (credential, aliases) in [
+        (
+            "account~+ /token",
+            vec![
+                "account~+ /token",
+                "account%7E%2B+%2Ftoken",
+                "account~%2B%20%2Ftoken",
+                "account~%2b%20%2ftoken",
+                "%61ccount%7e%2B+%2ftoken",
+            ],
+        ),
+        (
+            r#"account\path/"token"#,
+            vec![
+                r#"account\path/"token"#,
+                r#"account\\path\/\"token"#,
+                r#"account\u005cpath\u002f\u0022token"#,
+            ],
+        ),
+    ] {
+        let replies = aliases
+            .iter()
+            .map(|alias| {
+                (
+                    401,
+                    "application/json".into(),
+                    json!({"error":{"message":format!("rejected {alias}")}}).to_string(),
+                )
+            })
+            .collect();
+        let (url, wire, task) = server(replies).await;
+        let config = configuration("openai-chat-completions", &url);
+        let logs = Arc::new(Logs::default());
+        let configured = config
+            .validate(&protocols())
+            .unwrap()
+            .bind(
+                &FixedCredential {
+                    value: credential,
+                    scope: "account-1",
+                },
+                Some(logs.clone()),
+            )
+            .unwrap();
+        for alias in &aliases {
+            logs.0.lock().unwrap().clear();
+            let mut req = request(&config);
+            req.shared.messages = vec![Message::text(Role::User, format!("echo {alias}"))];
+            let error = events(configured.chat("office-chat").unwrap(), req)
+                .await
+                .unwrap_err();
+            assert_eq!(
+                &*error.message,
+                "Provider HTTP request failed with status 401: rejected [REDACTED]"
+            );
+            assert_eq!(error.classification, ErrorKind::Authentication);
+            assert_eq!(error.status_code, Some(401));
+            let entries = logs.0.lock().unwrap();
+            let logged_error = entries
+                .iter()
+                .find(|entry| entry["detail"]["message"].is_string())
+                .unwrap();
+            assert_eq!(logged_error["detail"]["message"], &*error.message);
+            let logged_request = entries
+                .iter()
+                .find(|entry| entry["detail"]["body"].is_object())
+                .unwrap();
+            assert_eq!(
+                logged_request["detail"]["body"]["messages"][0]["content"][0]["text"],
+                "echo [REDACTED]"
+            );
+        }
+        assert_eq!(wire.requests.lock().unwrap().len(), aliases.len());
+        task.abort();
+    }
+}
+
+#[tokio::test]
+async fn runway_error_bodies_mask_uri_and_json_escaped_credentials() {
+    let credential = r"account~+ /token\path";
+    let aliases = [
+        credential,
+        "account%7E%2B+%2Ftoken%5Cpath",
+        "account~%2B%20%2Ftoken%5Cpath",
+        "account~%2b%20%2ftoken%5cpath",
+    ];
+    let replies = aliases
+        .iter()
+        .map(|alias| {
+            (
+                401,
+                "application/json".into(),
+                json!({"error":format!("rejected {alias}")})
+                    .to_string()
+                    .replace('/', r"\/"),
+            )
+        })
+        .collect();
+    let (url, wire, task) = server(replies).await;
+    let config = media_configuration("runway-tasks", &url);
+    let configured = config
+        .validate(&protocols())
+        .unwrap()
+        .bind(
+            &FixedCredential {
+                value: credential,
+                scope: "account-1",
+            },
+            None,
+        )
+        .unwrap();
+    for _ in aliases {
+        let error = configured
+            .media("office-image")
+            .unwrap()
+            .generate(image_request(), CancellationToken::new(), None, None)
+            .await
+            .err()
+            .unwrap();
+        assert_eq!(error.status_code, Some(401));
+        let body: Value = serde_json::from_str(&error.message).unwrap();
+        assert_eq!(body["error"], "rejected [REDACTED]");
+    }
+    assert_eq!(wire.requests.lock().unwrap().len(), aliases.len());
+    task.abort();
+}
+
 #[tokio::test]
 async fn credentials_are_redacted_and_rotation_requires_a_new_binding() {
     let (url, wire, task) = server(vec![
