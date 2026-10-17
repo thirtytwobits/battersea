@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 
 export async function testNodeMeasurementRecovery(page, origin) {
   await page.addInitScript(() => {
+    if (location.pathname !== "/tests/node-measurement-recovery.html") return;
     const NativeResizeObserver = window.ResizeObserver;
     window.ResizeObserver = class extends NativeResizeObserver {
       constructor(callback) {

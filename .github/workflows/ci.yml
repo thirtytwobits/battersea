@@ -139,21 +139,7 @@ jobs:
       - run: cargo build --locked -p editor-server-example
       - run: npm ci --ignore-scripts
         working-directory: typescript
-      - name: Repeat browser flow to capture issue 10
-        run: |
-          python3 - <<'PY'
-          from pathlib import Path
-          source = Path('scripts/example-check.mjs').read_text()
-          source = source.replace('  run("npm", ["test"], web);', '''  const fixture = await (await fetch("http://127.0.0.1:18180/api/flows/example")).json();
-            for (let attempt = 1; attempt <= 20; attempt++) {
-              console.log(`Browser repetition ${attempt}/20`);
-              await fetch("http://127.0.0.1:18180/api/flows", {method: "PUT", headers: {"Content-Type": "application/json"}, body: JSON.stringify(fixture)});
-              run("npm", ["test"], web);
-            }''')
-          Path('scripts/.editor-diagnostics.mjs').write_text(source)
-          PY
-          npm run build
-          node scripts/.editor-diagnostics.mjs
+      - run: npm run build && npm run test:example
         working-directory: typescript
       - uses: actions/upload-artifact@v4
         if: always()

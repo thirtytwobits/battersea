@@ -224,6 +224,7 @@ for (const [name, engine] of Object.entries({ chromium, webkit })) {
         .every(node => getComputedStyle(node).visibility === "visible"),
       { id: branchNode, edges: branchBaseline.edges.length });
     await capture(page, name, "fanout-ready");
+    expectedGraph = null;
     const outputHandle = page.locator('.react-flow__node[data-id="text"] .react-flow__handle[data-handleid="output-0"]');
     const inputHandle = page.locator(`.react-flow__node[data-id="${branchNode}"] .react-flow__handle[data-handleid="input-0"]`);
     // Locator actions wait for fit-view animation to finish before hit testing.
