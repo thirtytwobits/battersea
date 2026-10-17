@@ -9,6 +9,7 @@
 - [Integrate the editor](editor-integration.md)
   - [Editor package guide](editor.md)
 - [Choose provider features](features.md)
+  - [Configure services](providers.md)
 - [Project overview](overview.md)
 - [Contracts](contracts.md)
   - [Extraction boundary](contracts/extraction.md)

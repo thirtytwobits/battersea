@@ -853,6 +853,7 @@ mod tests {
 
     fn mock_image_backend(extra: BTreeMap<String, serde_json::Value>) -> MediaBackendConfig {
         MediaBackendConfig {
+            binding: None,
             id: "mock-image".to_string(),
             provider: "mock".to_string(),
             capability: MediaCapability::ImageGeneration,

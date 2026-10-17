@@ -107,6 +107,7 @@ async fn server() -> (String, Server, tokio::task::JoinHandle<()>) {
 }
 fn backend(provider: &str, url: &str, kind: MediaKind) -> MediaBackendConfig {
     MediaBackendConfig {
+        binding: None,
         id: "media-fixture".into(), provider: provider.into(), capability: match kind { MediaKind::Image => MediaCapability::ImageGeneration, MediaKind::Video => MediaCapability::VideoGeneration, MediaKind::Audio => MediaCapability::AudioGeneration },
         label: "Fixture".into(), enabled: true, endpoint: format!("{url}/v1"), model: if provider == "replicate" { "owner/model".into() } else { "gen4_image".into() },
         capabilities: MediaBackendCapabilities { supported_media_parameters: vec!["count".into()], aspect_ratio_options: vec![], size_options: vec![], supports_partial_image_streaming: false, estimated_generation_seconds: 1.0 },

@@ -1,0 +1,21 @@
+[package]
+name = "declarative-providers-example"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish = false
+
+[dependencies]
+battersea-model = { path = "../../crates/battersea-model" }
+battersea-config = { path = "../../crates/battersea-config" }
+battersea-providers = { path = "../../crates/battersea-providers" }
+async-trait.workspace = true
+serde_json.workspace = true
+futures-util.workspace = true
+tokio.workspace = true
+tokio-util.workspace = true
+
+[dev-dependencies]
+axum.workspace = true
+jsonschema = { version = "0.30", default-features = false }

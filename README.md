@@ -26,10 +26,14 @@ product session.
 
 `battersea-model` supplies content-block messages, provider and tool registration, typed errors,
 request admission and the shared tool loop. `ToolCode` names the tool runner's refusals. `battersea-providers` supplies OpenAI, Anthropic,
-Google, Runway and mock transports through individual Cargo features. Text admission accepts
+Google, Runway, Replicate and mock transports through individual Cargo features. Text admission accepts
 text blocks; provider-native tool continuation retains opaque signed fields.
 
 `battersea-config` composes backend configuration schemas with application schemas.
+Its versioned provider configuration binds service identities to registered protocol adapters,
+with explicit endpoints, credential references and capabilities. OpenAI Responses and Chat
+Completions have separate adapters. See [provider contract](contracts/providers.md) and
+`examples/declarative-providers`.
 `battersea-nodes` supplies explicit node manifests and generic handlers. `battersea-guard`
 scans source against the application's declared prompt roots. Applications retain their
 prompts, product tools, storage and asset ownership.

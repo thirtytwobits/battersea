@@ -6,12 +6,15 @@ Run examples from a checkout of the documentation's release tag:
 cargo run --locked -p catalogue-example
 cargo run --locked -p custom-node-example
 cargo run --locked -p backend-example
+cargo run --locked -p declarative-providers-example
 cargo run --locked -p editor-server-example -- --help
 ```
 
 The catalogue example validates and round-trips application-owned graphs. The custom-node
 example implements a complete host. The backend example registers mock chat, tools, and
 media independently of a product session.
+The declarative-provider example binds two service identities to the same mock adapter and
+checks their diagnostic identities. Its contract tests exercise HTTP protocols with local fixtures.
 
 The [editor server](editor-server.md) joins installed npm packages to an independent Rust
 application. To try its API in an empty application directory:

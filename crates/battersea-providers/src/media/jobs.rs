@@ -308,7 +308,22 @@ impl RemoteJob {
                     ));
                 }
                 let mut request = client.get(url.clone());
-                if let Some(key) = self.transport.asset_auth(&url) {
+                if let Some(binding) = &self.transport.backend().binding {
+                    let base =
+                        reqwest::Url::parse(&binding.connection.base_url).expect("validated base");
+                    if url.origin() == base.origin()
+                        || binding
+                            .connection
+                            .delivery_origins
+                            .contains(&url.origin().ascii_serialization())
+                    {
+                        request = crate::connection::authenticate(
+                            request,
+                            Some(binding),
+                            &self.transport.backend().auth,
+                        )?;
+                    }
+                } else if let Some(key) = self.transport.asset_auth(&url) {
                     request = request.bearer_auth(key);
                 }
                 let response = request
@@ -427,6 +442,9 @@ impl RemoteJob {
 }
 #[async_trait]
 impl MediaJob for RemoteJob {
+    fn provider(&self) -> &str {
+        self.transport.provider()
+    }
     fn id(&self) -> &str {
         &self.snapshot.id
     }

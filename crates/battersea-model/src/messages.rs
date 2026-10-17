@@ -48,6 +48,15 @@ pub enum ContentBlock {
         text: String,
         signature: Option<String>,
     },
+    NativeV2 {
+        origin: crate::ProviderContentOrigin,
+        payload: Value,
+    },
+    ReasoningV2 {
+        origin: crate::ProviderContentOrigin,
+        text: String,
+        signature: Option<String>,
+    },
     Native {
         provider: String,
         payload: Value,

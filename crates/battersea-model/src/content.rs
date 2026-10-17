@@ -206,6 +206,11 @@ pub fn validate_messages(
                         ));
                     }
                 }
+                ContentBlock::NativeV2 { .. } | ContentBlock::ReasoningV2 { .. } => {
+                    return Err(invalid(
+                        "Versioned continuation requires its configured provider binding.",
+                    ));
+                }
                 ContentBlock::Native {
                     provider: owner,
                     payload,

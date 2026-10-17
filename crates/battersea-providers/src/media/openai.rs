@@ -5,7 +5,6 @@ use super::{
 };
 use crate::adapter::error::EngineAdapterRequestError;
 use crate::http_payload::BoundedResponse as _;
-use async_openai::config::{Config, OpenAIConfig};
 #[cfg(test)]
 use async_openai::error::OpenAIError;
 use async_openai::types::images::{
@@ -31,17 +30,17 @@ pub(crate) fn create_openai_media_generator(
         .options
         .timeout_ms
         .ok_or_else(|| missing_openai_media_option("timeoutMs"))?;
-    let base_url = resolve_openai_base_url(&backend.endpoint);
     let http_client = reqwest::Client::builder()
+        .retry(reqwest::retry::never())
+        .redirect(reqwest::redirect::Policy::none())
         .timeout(std::time::Duration::from_millis(timeout_ms))
         .build()
         .map_err(|error| EngineAdapterRequestError::transport("openai", error.to_string()))?;
-    let config = OpenAIConfig::new()
-        .with_api_key(backend.auth.api_key.clone().unwrap_or_default())
-        .with_api_base(base_url);
+    if let Some(binding) = &backend.binding {
+        crate::connection::headers(binding, &backend.auth)?;
+    }
     Ok(Arc::new(OpenAiMediaGenerator {
         http_client,
-        config,
         backend,
     }))
 }
@@ -58,7 +57,6 @@ fn missing_openai_media_option(key: &str) -> EngineAdapterRequestError {
 
 struct OpenAiMediaGenerator {
     http_client: reqwest::Client,
-    config: OpenAIConfig,
     backend: MediaBackendConfig,
 }
 
@@ -161,7 +159,7 @@ impl OpenAiMediaGenerator {
         let response = if stream_partial_images {
             let request_future = send_image_generation_stream_request(
                 &self.http_client,
-                &self.config,
+                &self.backend,
                 provider_request.clone(),
                 target_asset_count,
                 partial_images,
@@ -182,7 +180,7 @@ impl OpenAiMediaGenerator {
                 cancellation.clone(),
                 send_image_generation_json_request(
                     &self.http_client,
-                    &self.config,
+                    &self.backend,
                     provider_request.clone(),
                 ),
             )
@@ -256,15 +254,32 @@ impl OpenAiMediaGenerator {
     }
 }
 
+fn image_request(
+    client: &reqwest::Client,
+    backend: &MediaBackendConfig,
+) -> Result<reqwest::RequestBuilder, EngineAdapterRequestError> {
+    if let Some(binding) = &backend.binding {
+        crate::connection::authenticate(
+            client.post(binding.connection.route("images/generations")?),
+            Some(binding),
+            &backend.auth,
+        )
+    } else {
+        Ok(client
+            .post(format!(
+                "{}/images/generations",
+                resolve_openai_base_url(&backend.endpoint)
+            ))
+            .bearer_auth(backend.auth.api_key.as_deref().unwrap_or("")))
+    }
+}
+
 async fn send_image_generation_json_request(
     http_client: &reqwest::Client,
-    config: &OpenAIConfig,
+    backend: &MediaBackendConfig,
     request_body: Value,
 ) -> Result<OpenAiImagesResponse, EngineAdapterRequestError> {
-    let response = http_client
-        .post(config.url("/images/generations"))
-        .headers(config.headers())
-        .query(&config.query())
+    let response = image_request(http_client, backend)?
         .json(&request_body)
         .send()
         .await
@@ -295,17 +310,14 @@ async fn send_image_generation_json_request(
 
 async fn send_image_generation_stream_request(
     http_client: &reqwest::Client,
-    config: &OpenAIConfig,
+    backend: &MediaBackendConfig,
     request_body: Value,
     target_asset_count: usize,
     partial_images: u8,
     activity_reporter: Option<Arc<dyn MediaGenerationActivityReporter>>,
     cancellation: CancellationToken,
 ) -> Result<OpenAiImagesResponse, EngineAdapterRequestError> {
-    let response = http_client
-        .post(config.url("/images/generations"))
-        .headers(config.headers())
-        .query(&config.query())
+    let response = image_request(http_client, backend)?
         .json(&request_body)
         .send()
         .await
@@ -776,6 +788,7 @@ mod tests {
 
     fn sample_backend() -> MediaBackendConfig {
         MediaBackendConfig {
+            binding: None,
             id: "openai-image".to_string(),
             provider: "openai".to_string(),
             capability: MediaCapability::ImageGeneration,
@@ -810,7 +823,7 @@ mod tests {
                 version_header: None,
                 version: None,
                 has_api_key: true,
-                api_key: Some("secret".to_string()),
+                api_key: Some("secret".into()),
             },
             short_description: String::new(),
             long_description: String::new(),

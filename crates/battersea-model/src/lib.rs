@@ -10,3 +10,5 @@ pub mod messages;
 pub use messages::*;
 pub mod registry;
 pub use registry::*;
+pub mod protocol;
+pub use protocol::*;

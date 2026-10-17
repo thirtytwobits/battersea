@@ -18,8 +18,13 @@ accepted-job records.
 A failed retrieval can be repeated on the same job. It never submits generation. Outputs have
 an aggregate encoded-byte bound, optionally reduced with `maxOutputBytes`. Missing/expired
 outputs, mismatched MIME types and truncated downloads fail without partial success. Provider
-credentials go only to the configured API origin or Replicate's HTTPS delivery domains.
-Redirects re-evaluate credential eligibility.
+credentials from declarative bindings go only to the configured API origin or explicitly listed
+HTTPS delivery origins. Redirects re-evaluate credential eligibility. Legacy Replicate backends
+use Replicate's HTTPS delivery domains.
+
+Prepared requests and remote jobs retain the accepted service binding. Submission rejects a
+prepared request from another binding. Polling, cancellation and retrieval use the retained
+endpoint and resolved credential even after the host binds a new configuration generation.
 
 The snapshot exposes output expiry and whether its timestamp is an estimate. Runway uses the
 lower end of its documented 24–48 hour output lifetime; Replicate uses completion plus its

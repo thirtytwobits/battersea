@@ -5,6 +5,7 @@ use std::io::{Read, Write};
 
 fn backend(provider: &str) -> MediaBackendConfig {
     MediaBackendConfig {
+        binding: None,
         id: provider.into(),
         provider: provider.into(),
         label: provider.into(),

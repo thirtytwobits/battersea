@@ -398,6 +398,7 @@ pub fn check(site: &Path) -> Result<()> {
     let mut paths = Vec::new();
     files(&site, &mut paths)?;
     let selector = Selector::parse("[href], [src], [id], a[name]").unwrap();
+    let refresh_selector = Selector::parse("meta[http-equiv][content]").unwrap();
     let mut pages = BTreeMap::new();
     for path in paths
         .iter()
@@ -418,56 +419,98 @@ pub fn check(site: &Path) -> Result<()> {
                 }
             }
         }
-        pages.insert(path.strip_prefix(&site)?.to_path_buf(), (ids, links));
+        let redirect = html.select(&refresh_selector).find_map(|element| {
+            if !element
+                .value()
+                .attr("http-equiv")?
+                .eq_ignore_ascii_case("refresh")
+            {
+                return None;
+            }
+            let (delay, destination) = element.value().attr("content")?.split_once(';')?;
+            let (name, destination) = destination.trim().split_once('=')?;
+            (delay.trim() == "0" && name.trim().eq_ignore_ascii_case("url"))
+                .then(|| destination.trim().trim_matches(['\'', '"']).to_owned())
+        });
+        if let Some(destination) = &redirect {
+            links.push(destination.clone());
+        }
+        pages.insert(
+            path.strip_prefix(&site)?.to_path_buf(),
+            (ids, links, redirect),
+        );
     }
     let mut errors = Vec::new();
-    for (path, (_, links)) in &pages {
+    for (path, (_, links, _)) in &pages {
         let page_url = base.join(&path.to_string_lossy())?;
         for link in links {
-            let target = match page_url.join(link) {
+            let mut target = match page_url.join(link) {
                 Ok(target) => target,
                 Err(_) => {
                     errors.push(format!("{}: invalid URL {link}", path.display()));
                     continue;
                 }
             };
-            if target.origin() != base.origin() {
-                continue;
-            }
-            let Some(relative) = target.path().strip_prefix(base.path()) else {
-                errors.push(format!(
-                    "{}: link escapes project prefix: {link}",
-                    path.display()
-                ));
-                continue;
-            };
-            let mut relative = PathBuf::from(percent_decode_str(relative).decode_utf8()?.as_ref());
-            if relative
-                .components()
-                .any(|c| !matches!(c, Component::Normal(_)))
-            {
-                errors.push(format!("{}: unsafe encoded path: {link}", path.display()));
-                continue;
-            }
-            if site.join(&relative).is_dir() {
-                relative.push("index.html");
-            }
-            if !site.join(&relative).is_file() {
-                errors.push(format!("{}: missing {link}", path.display()));
-            } else if let Some(fragment) = target.fragment().filter(|f| !f.is_empty()) {
-                // Rustdoc's line ranges are applied by JavaScript to source pages.
-                let decoded = percent_decode_str(fragment).decode_utf8()?;
-                let first = decoded.split('-').next().unwrap();
-                let source_range = relative.starts_with("src")
-                    || relative.components().any(|c| c.as_os_str() == "src");
-                let valid = pages.get(&relative).is_some_and(|(ids, _)| {
-                    ids.contains(fragment)
-                        || ids.contains(decoded.as_ref())
-                        || (source_range && ids.contains(first))
-                });
-                if !valid && pages.contains_key(&relative) {
-                    errors.push(format!("{}: missing anchor {link}", path.display()));
+            let mut visited = HashSet::new();
+            loop {
+                if target.origin() != base.origin() {
+                    break;
                 }
+                let Some(relative) = target.path().strip_prefix(base.path()) else {
+                    errors.push(format!(
+                        "{}: link escapes project prefix: {link}",
+                        path.display()
+                    ));
+                    break;
+                };
+                let mut relative =
+                    PathBuf::from(percent_decode_str(relative).decode_utf8()?.as_ref());
+                if relative
+                    .components()
+                    .any(|c| !matches!(c, Component::Normal(_)))
+                {
+                    errors.push(format!("{}: unsafe encoded path: {link}", path.display()));
+                    break;
+                }
+                if site.join(&relative).is_dir() {
+                    relative.push("index.html");
+                }
+                if !site.join(&relative).is_file() {
+                    errors.push(format!("{}: missing {link}", path.display()));
+                    break;
+                }
+                if !visited.insert(relative.clone()) {
+                    errors.push(format!("{}: redirect cycle: {link}", path.display()));
+                    break;
+                }
+                if let Some((_, _, Some(destination))) = pages.get(&relative) {
+                    let Ok(mut next) = target.join(destination) else {
+                        errors.push(format!("{}: invalid redirect for {link}", path.display()));
+                        break;
+                    };
+                    // Rustdoc redirects preserve the incoming anchor on the canonical API page.
+                    if next.fragment().is_none() {
+                        next.set_fragment(target.fragment());
+                    }
+                    target = next;
+                    continue;
+                }
+                if let Some(fragment) = target.fragment().filter(|f| !f.is_empty()) {
+                    // Rustdoc's line ranges are applied by JavaScript to source pages.
+                    let decoded = percent_decode_str(fragment).decode_utf8()?;
+                    let first = decoded.split('-').next().unwrap();
+                    let source_range = relative.starts_with("src")
+                        || relative.components().any(|c| c.as_os_str() == "src");
+                    let valid = pages.get(&relative).is_some_and(|(ids, _, _)| {
+                        ids.contains(fragment)
+                            || ids.contains(decoded.as_ref())
+                            || (source_range && ids.contains(first))
+                    });
+                    if !valid && pages.contains_key(&relative) {
+                        errors.push(format!("{}: missing anchor {link}", path.display()));
+                    }
+                }
+                break;
             }
         }
     }
@@ -850,6 +893,43 @@ mod tests {
         }
         fs::write(&guide, "<img src=\"missing.png\">").unwrap();
         assert!(check(temp.path()).is_err());
+    }
+
+    #[test]
+    fn site_checks_anchors_through_rustdoc_redirects() {
+        let temp = tempfile::tempdir().unwrap();
+        fixture(temp.path(), "v1.0.0");
+        write_index(
+            temp.path(),
+            &BTreeMap::from([("v1.0.0".into(), false)]),
+            Some("v1.0.0"),
+        )
+        .unwrap();
+        let guide = temp.path().join("v1.0.0/guide/index.html");
+        let alias = temp.path().join("v1.0.0/rust/alias.html");
+        let redirect = |destination: &str| {
+            format!("<meta http-equiv=\"refresh\" content=\"0;URL={destination}\">")
+        };
+        fs::write(&alias, redirect("canonical.html")).unwrap();
+        fs::write(
+            temp.path().join("v1.0.0/rust/canonical.html"),
+            redirect("index.html"),
+        )
+        .unwrap();
+        fs::write(&guide, "<a href=\"../rust/alias.html#present\">API</a>").unwrap();
+        check(temp.path()).unwrap();
+
+        fs::write(&guide, "<a href=\"../rust/alias.html#absent\">API</a>").unwrap();
+        assert!(check(temp.path())
+            .unwrap_err()
+            .to_string()
+            .contains("missing anchor"));
+        fs::write(&alias, redirect("index.html#present")).unwrap();
+        check(temp.path()).unwrap();
+        for destination in ["missing.html", "alias.html", "/outside.html"] {
+            fs::write(&alias, redirect(destination)).unwrap();
+            assert!(check(temp.path()).is_err(), "{destination} must fail");
+        }
     }
 
     #[test]

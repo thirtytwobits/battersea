@@ -486,6 +486,7 @@ mod tests {
 
         fn backend_with(estimated_generation_seconds: f64) -> MediaBackendConfig {
             MediaBackendConfig {
+                binding: None,
                 id: "test".to_string(),
                 provider: "synthetic".to_string(),
                 capability: MediaCapability::ImageGeneration,
@@ -521,6 +522,7 @@ mod tests {
             serde_json::json!(5),
         );
         MediaBackendConfig {
+            binding: None,
             id: "google-image".to_string(),
             provider: "google".to_string(),
             capability: MediaCapability::ImageGeneration,

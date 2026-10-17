@@ -32,13 +32,17 @@ pub(crate) fn create(
     {
         return Err(invalid("Replicate endpoint must be an HTTP(S) base URL without credentials, query or fragment."));
     }
-    if backend
-        .auth
-        .api_key
-        .as_deref()
-        .is_none_or(|v| v.trim().is_empty())
+    if backend.binding.is_none()
+        && backend
+            .auth
+            .api_key
+            .as_deref()
+            .is_none_or(|v| v.trim().is_empty())
     {
         return Err(invalid("Replicate requires auth.apiKey."));
+    }
+    if let Some(binding) = &backend.binding {
+        crate::connection::headers(binding, &backend.auth)?;
     }
     let kind = match backend.capability {
         MediaCapability::ImageGeneration => MediaKind::Image,
@@ -47,6 +51,7 @@ pub(crate) fn create(
         _ => return Err(invalid("Unsupported media capability.")),
     };
     let client = reqwest::Client::builder()
+        .retry(reqwest::retry::never())
         .redirect(reqwest::redirect::Policy::none())
         .timeout(Duration::from_millis(backend.options.timeout_ms.unwrap()))
         .build()
@@ -165,6 +170,7 @@ pub(crate) fn prepare(
     }
     battersea_model::adapter::payload::check_payload(&body, "replicate")?;
     Ok(PreparedMediaRequest {
+        binding_revision: None,
         path,
         body,
         prompt_text: request.prompt_text.clone(),
@@ -192,9 +198,17 @@ impl Replicate {
         format!("{}/{}", self.base.as_str().trim_end_matches('/'), path)
     }
     fn request(&self, method: reqwest::Method, path: &str) -> reqwest::RequestBuilder {
-        self.client
-            .request(method, self.url(path))
-            .bearer_auth(self.backend.auth.api_key.as_deref().unwrap())
+        let request = self.client.request(method, self.url(path));
+        if self.backend.binding.is_some() {
+            crate::connection::authenticate(
+                request,
+                self.backend.binding.as_ref(),
+                &self.backend.auth,
+            )
+            .expect("validated authentication")
+        } else {
+            request.bearer_auth(self.backend.auth.api_key.as_deref().unwrap())
+        }
     }
     fn decode(&self, raw: Value) -> Result<RemoteUpdate, EngineAdapterRequestError> {
         let bad = |message| EngineAdapterRequestError::invalid_response("replicate", message);
@@ -348,7 +362,7 @@ impl MediaGenerationAdapter for Replicate {
 #[async_trait]
 impl JobTransport for Replicate {
     fn provider(&self) -> &str {
-        "replicate"
+        &self.backend.provider
     }
     fn backend(&self) -> &MediaBackendConfig {
         &self.backend
