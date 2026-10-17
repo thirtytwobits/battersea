@@ -10,6 +10,9 @@ use battersea_model::{
 };
 use serde_json::{json, Value};
 
+pub(crate) const OPENAI_IMAGE_MIME_TYPES: &[&str] =
+    &["image/png", "image/jpeg", "image/webp", "image/gif"];
+
 pub(crate) fn capabilities(provider: &str) -> ContentCapabilities {
     use Modality::*;
     use StructuredOutputMode::*;
@@ -130,8 +133,7 @@ pub(crate) fn messages(
                     match protocol {
                         "openai" => match block {
                             ContentBlock::Image { .. }
-                                if ["image/png", "image/jpeg", "image/webp", "image/gif"]
-                                    .contains(&mime_type.as_str()) =>
+                                if OPENAI_IMAGE_MIME_TYPES.contains(&mime_type.as_str()) =>
                             {
                                 json!({"type": "input_image", "image_url": url, "detail": "auto"})
                             }

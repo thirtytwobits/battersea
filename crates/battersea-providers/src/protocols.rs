@@ -154,8 +154,12 @@ fn options_schema(id: &str) -> Value {
     }
     if matches!(id, "runway-tasks" | "replicate-predictions") {
         add(
-            "pollIntervalMs pollRetryDelayMs maxPollRetryDelayMs maxOutputBytes",
+            "pollIntervalMs pollRetryDelayMs maxPollRetryDelayMs",
             json!({"type":"integer","minimum":1}),
+        );
+        add(
+            "maxOutputBytes",
+            json!({"type":"integer","minimum":1,"maximum":battersea_model::adapter::payload::PROVIDER_PAYLOAD_BYTES}),
         );
         add(
             "maxPollRetryCount",

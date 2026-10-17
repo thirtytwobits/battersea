@@ -417,6 +417,59 @@ async fn completions_streams_validated_structured_output_and_refuses_counting_wi
     task.abort();
 }
 
+#[tokio::test]
+async fn completions_reject_unsupported_image_formats_before_dispatch() {
+    let (url, wire, task) = server(vec![]).await;
+    let config = configuration("openai-chat-completions", &url);
+    let configured = config
+        .validate(&protocols())
+        .unwrap()
+        .bind(&Secrets::new(), None)
+        .unwrap();
+    let adapter = configured.chat("office-chat").unwrap();
+    for mime in ["image/svg+xml", "image/heic", "image/bmp"] {
+        for url in [
+            "https://images.example/input".into(),
+            format!("data:{mime};base64,aW1hZ2U="),
+        ] {
+            let mut req = request(&config);
+            req.shared.messages[0].content.push(ContentBlock::Image {
+                url,
+                mime_type: mime.into(),
+            });
+            let error = events(adapter, req).await.unwrap_err();
+            assert_eq!(error.classification, ErrorKind::InvalidRequest);
+            assert_eq!(error.dispatch, DispatchState::NotSent);
+        }
+    }
+    assert!(wire.requests.lock().unwrap().is_empty());
+
+    for mime in ["image/png", "image/jpeg", "image/webp", "image/gif"] {
+        for image_url in [
+            "https://images.example/input".into(),
+            format!("data:{mime};base64,aW1hZ2U="),
+        ] {
+            wire.replies
+                .lock()
+                .unwrap()
+                .push_back(streamed_completion("ok"));
+            let mut req = request(&config);
+            req.shared.messages[0].content.push(ContentBlock::Image {
+                url: image_url.clone(),
+                mime_type: mime.into(),
+            });
+            events(adapter, req).await.unwrap();
+            assert_eq!(
+                wire.requests.lock().unwrap().last().unwrap().2["messages"][0]["content"][1]
+                    ["image_url"]["url"],
+                image_url
+            );
+        }
+    }
+    assert_eq!(wire.requests.lock().unwrap().len(), 8);
+    task.abort();
+}
+
 struct Echo(Arc<AtomicUsize>);
 #[async_trait]
 impl EngineLocalToolExecutor for Echo {
@@ -620,6 +673,73 @@ fn media_configuration(protocol: &str, url: &str) -> ProviderConfiguration {
     })).unwrap());
     config
 }
+
+#[test]
+fn media_output_byte_limit_is_validated_before_credentials_and_factories() {
+    let builtins = protocols();
+    let limit = battersea_model::adapter::payload::PROVIDER_PAYLOAD_BYTES as u64;
+    for protocol in ["runway-tasks", "replicate-predictions"] {
+        let constructions = Arc::new(AtomicUsize::new(0));
+        let mut registry = ProtocolRegistry::default();
+        for id in ["mock", protocol] {
+            let mut descriptor = builtins.adapter(id).unwrap().as_ref().clone();
+            if id == "mock" {
+                let original = descriptor.chat.as_ref().unwrap().factory.clone();
+                let count = constructions.clone();
+                descriptor.chat.as_mut().unwrap().factory = Arc::new(move |backend, logger| {
+                    count.fetch_add(1, Ordering::SeqCst);
+                    original(backend, logger)
+                });
+            } else {
+                let original = descriptor.media.as_ref().unwrap().factory.clone();
+                let count = constructions.clone();
+                descriptor.media.as_mut().unwrap().factory = Arc::new(move |backend| {
+                    count.fetch_add(1, Ordering::SeqCst);
+                    original(backend)
+                });
+            }
+            registry.register(descriptor).unwrap();
+        }
+        let secrets = Secrets::new();
+        let mut config = media_configuration(protocol, "https://media.example/v1/");
+        for bytes in [0, limit + 1, u64::MAX] {
+            config
+                .media_backends
+                .get_mut("office-image")
+                .unwrap()
+                .options
+                .as_mut()
+                .unwrap()
+                .extra
+                .insert("maxOutputBytes".into(), json!(bytes));
+            let result = config
+                .validate(&registry)
+                .and_then(|valid| valid.bind(&secrets, None));
+            let error = result.err().unwrap();
+            assert_eq!(error.code, ProviderCode::InvalidOptions);
+            assert!(error.path.starts_with("mediaBackends.office-image"));
+            assert_eq!(secrets.calls.load(Ordering::SeqCst), 0);
+            assert_eq!(constructions.load(Ordering::SeqCst), 0);
+        }
+        config
+            .media_backends
+            .get_mut("office-image")
+            .unwrap()
+            .options
+            .as_mut()
+            .unwrap()
+            .extra
+            .insert("maxOutputBytes".into(), json!(limit));
+        config
+            .validate(&registry)
+            .unwrap()
+            .bind(&secrets, None)
+            .unwrap();
+        assert_eq!(secrets.calls.load(Ordering::SeqCst), 2);
+        assert_eq!(constructions.load(Ordering::SeqCst), 2);
+    }
+}
+
 fn image_request() -> MediaRenderRequest {
     MediaRenderRequest {
         kind: MediaKind::Image,
@@ -788,6 +908,72 @@ async fn application_adapter_registration_is_pinned_and_validated_before_constru
         .unwrap()
         .iter()
         .any(|e| matches!(e,EngineTextStreamEvent::TextDelta { text } if text.contains("custom"))));
+}
+
+#[test]
+fn application_adapter_required_headers_match_case_insensitively() {
+    let builtins = protocols();
+    let mut custom = builtins.adapter("mock").unwrap().as_ref().clone();
+    custom.id = "application-text".into();
+    custom.required_headers = vec!["X-Protocol-Version".into()];
+    let constructions = Arc::new(AtomicUsize::new(0));
+    let count = constructions.clone();
+    let original = custom.chat.as_ref().unwrap().factory.clone();
+    custom.chat.as_mut().unwrap().factory = Arc::new(move |backend, logger| {
+        count.fetch_add(1, Ordering::SeqCst);
+        original(backend, logger)
+    });
+    let mut registry = ProtocolRegistry::default();
+    registry.register(custom).unwrap();
+    let secrets = Secrets::new();
+    let mut config = configuration("mock", "");
+    config
+        .providers
+        .get_mut("office")
+        .unwrap()
+        .chat
+        .as_mut()
+        .unwrap()
+        .adapter = "application-text".into();
+    for header in [
+        "x-protocol-version",
+        "X-Protocol-Version",
+        "X-PROTOCOL-VERSION",
+    ] {
+        config
+            .providers
+            .get_mut("office")
+            .unwrap()
+            .chat
+            .as_mut()
+            .unwrap()
+            .headers = BTreeMap::from([(header.into(), "1".into())]);
+        config
+            .validate(&registry)
+            .unwrap()
+            .bind(&secrets, None)
+            .unwrap();
+    }
+    assert_eq!(secrets.calls.load(Ordering::SeqCst), 3);
+    assert_eq!(constructions.load(Ordering::SeqCst), 3);
+    config
+        .providers
+        .get_mut("office")
+        .unwrap()
+        .chat
+        .as_mut()
+        .unwrap()
+        .headers
+        .clear();
+    let result = config
+        .validate(&registry)
+        .and_then(|valid| valid.bind(&secrets, None));
+    assert_eq!(
+        result.err().unwrap().code,
+        ProviderCode::InvalidAuthentication
+    );
+    assert_eq!(secrets.calls.load(Ordering::SeqCst), 3);
+    assert_eq!(constructions.load(Ordering::SeqCst), 3);
 }
 
 #[derive(Default)]

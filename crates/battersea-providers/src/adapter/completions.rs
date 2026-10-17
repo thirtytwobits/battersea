@@ -7,7 +7,10 @@ use battersea_model::{engine::*, *};
 use eventsource_stream::Eventsource;
 use futures_util::StreamExt;
 use serde_json::{json, Value};
-use std::{collections::BTreeMap, sync::Arc};
+use std::{
+    collections::{btree_map::Entry, BTreeMap},
+    sync::Arc,
+};
 use tokio_stream::wrappers::ReceiverStream;
 
 pub(crate) fn registration() -> ChatProvider {
@@ -137,7 +140,13 @@ fn messages(provider: &str, messages: &[Message]) -> Result<Vec<Value>, EngineAd
         for block in &message.content {
             match block {
                 ContentBlock::Text { text } => content.push(json!({"type":"text","text":text})),
-                ContentBlock::Image { url,mime_type } => { crate::content::media_source("openai",provider,url,mime_type)?;content.push(json!({"type":"image_url","image_url":{"url":url}})); },
+                ContentBlock::Image { url,mime_type } => {
+                    if !crate::content::OPENAI_IMAGE_MIME_TYPES.contains(&mime_type.as_str()) {
+                        return Err(EngineAdapterRequestError::new(provider,"Chat Completions does not support the requested image type.",ErrorKind::InvalidRequest));
+                    }
+                    crate::content::media_source("openai",provider,url,mime_type)?;
+                    content.push(json!({"type":"image_url","image_url":{"url":url}}));
+                },
                 ContentBlock::ToolCall { id,name,arguments } => calls.push(json!({"id":id,"type":"function","function":{"name":local_tool_name(name),"arguments":arguments.to_string()}})),
                 ContentBlock::ToolResult { id,content } => { special=true;result.push(json!({"role":"tool","tool_call_id":id,"content":content.to_string()})); },
                 ContentBlock::Native { provider:owner,payload } if owner == provider && payload["role"] == "assistant" => { special=true;result.push(payload.clone()); },
@@ -369,6 +378,94 @@ impl ToolConversation for Conversation {
 fn invalid(provider: &str, message: &str) -> EngineAdapterRequestError {
     EngineAdapterRequestError::invalid_response(provider, message)
 }
+
+struct CompletionBuffer {
+    text: String,
+    tools: BTreeMap<u64, Value>,
+    budget: CompletionBudget,
+}
+struct CompletionBudget {
+    encoded_bytes: usize,
+    limit: usize,
+}
+impl CompletionBudget {
+    fn reserve(&mut self, bytes: usize, provider: &str) -> Result<(), EngineAdapterRequestError> {
+        if bytes > self.limit.saturating_sub(self.encoded_bytes) {
+            return Err(invalid(
+                provider,
+                "Completion exceeds its encoded-byte limit.",
+            ));
+        }
+        self.encoded_bytes += bytes;
+        Ok(())
+    }
+    fn reserve_string(
+        &mut self,
+        part: &str,
+        provider: &str,
+    ) -> Result<(), EngineAdapterRequestError> {
+        // Fragment quotes already belong to the retained string's envelope.
+        self.reserve(payload::check_payload(part, provider)? - 2, provider)
+    }
+}
+impl CompletionBuffer {
+    fn new(limit: usize) -> Self {
+        Self {
+            text: String::new(),
+            tools: BTreeMap::new(),
+            budget: CompletionBudget {
+                encoded_bytes: b"[\"\",{}]".len(),
+                limit,
+            },
+        }
+    }
+    fn push_text(&mut self, part: &str, provider: &str) -> Result<(), EngineAdapterRequestError> {
+        self.budget.reserve_string(part, provider)?;
+        self.text.push_str(part);
+        Ok(())
+    }
+    fn push_tool(&mut self, call: &Value, provider: &str) -> Result<(), EngineAdapterRequestError> {
+        if !call["type"].is_null() && call["type"] != "function" {
+            return Err(invalid(provider, "Unsupported streamed tool type."));
+        }
+        let index = call["index"]
+            .as_u64()
+            .ok_or_else(|| invalid(provider, "Missing tool index."))?;
+        let separator = usize::from(!self.tools.is_empty());
+        if let Entry::Vacant(entry) = self.tools.entry(index) {
+            let tool = json!({"id":"","type":"function","function":{"name":"","arguments":""}});
+            let entry_bytes = payload::check_payload(&tool, provider)?
+                + index.to_string().len()
+                + 3 // Map key quotes and colon.
+                + separator;
+            self.budget.reserve(entry_bytes, provider)?;
+            entry.insert(tool);
+        }
+        for pointer in ["/id", "/function/name", "/function/arguments"] {
+            if call
+                .pointer(pointer)
+                .is_some_and(|v| !v.is_null() && !v.is_string())
+            {
+                return Err(invalid(provider, "Malformed tool delta."));
+            }
+            if let Some(part) = call.pointer(pointer).and_then(Value::as_str) {
+                self.budget.reserve_string(part, provider)?;
+                let Value::String(target) = self
+                    .tools
+                    .get_mut(&index)
+                    .unwrap()
+                    .pointer_mut(pointer)
+                    .unwrap()
+                else {
+                    unreachable!("tool string fields retain their type")
+                };
+                target.push_str(part);
+            }
+        }
+        Ok(())
+    }
+}
+
 async fn decode_stream(
     provider: &str,
     response: reqwest::Response,
@@ -376,10 +473,9 @@ async fn decode_stream(
 ) -> Result<(Value, String, Value), EngineAdapterRequestError> {
     let stream = crate::http_payload::bounded_stream(response).eventsource();
     futures_util::pin_mut!(stream);
-    let mut text = String::new();
+    let mut buffer = CompletionBuffer::new(payload::PROVIDER_PAYLOAD_BYTES);
     let mut finish = String::new();
     let mut usage = Value::Null;
-    let mut tools = BTreeMap::<u64, Value>::new();
     let mut done = false;
     while let Some(event) = stream.next().await {
         let event = event.map_err(|_| invalid(provider, "Interrupted completion stream."))?;
@@ -427,7 +523,7 @@ async fn decode_stream(
             return Err(invalid(provider, "Completion refused."));
         }
         if let Some(part) = delta["content"].as_str() {
-            text.push_str(part);
+            buffer.push_text(part, provider)?;
             send_event(
                 events,
                 EngineTextStreamEvent::TextDelta { text: part.into() },
@@ -436,27 +532,7 @@ async fn decode_stream(
         }
         if let Some(calls) = delta["tool_calls"].as_array() {
             for call in calls {
-                if !call["type"].is_null() && call["type"] != "function" {
-                    return Err(invalid(provider, "Unsupported streamed tool type."));
-                }
-                let index = call["index"]
-                    .as_u64()
-                    .ok_or_else(|| invalid(provider, "Missing tool index."))?;
-                let accumulated = tools.entry(index).or_insert_with(
-                    || json!({"id":"","type":"function","function":{"name":"","arguments":""}}),
-                );
-                for pointer in ["/id", "/function/name", "/function/arguments"] {
-                    if call
-                        .pointer(pointer)
-                        .is_some_and(|v| !v.is_null() && !v.is_string())
-                    {
-                        return Err(invalid(provider, "Malformed tool delta."));
-                    }
-                    if let Some(part) = call.pointer(pointer).and_then(Value::as_str) {
-                        let target = accumulated.pointer_mut(pointer).unwrap();
-                        *target = json!(format!("{}{part}", target.as_str().unwrap()));
-                    }
-                }
+                buffer.push_tool(call, provider)?;
             }
         }
         if let Some(reason) = choices[0]["finish_reason"].as_str() {
@@ -465,7 +541,6 @@ async fn decode_stream(
             }
             finish = reason.into();
         }
-        payload::check_payload(&(&text, &tools), provider)?;
     }
     if !done || finish.is_empty() {
         return Err(invalid(
@@ -473,9 +548,86 @@ async fn decode_stream(
             "Completion stream ended before its terminal event.",
         ));
     }
-    let mut message = json!({"role":"assistant","content":text});
-    if !tools.is_empty() {
-        message["tool_calls"] = json!(tools.into_values().collect::<Vec<_>>());
+    let mut message = json!({"role":"assistant","content":buffer.text});
+    if !buffer.tools.is_empty() {
+        message["tool_calls"] = json!(buffer.tools.into_values().collect::<Vec<_>>());
     }
     Ok((message, finish, usage))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn assert_encoded_size(buffer: &CompletionBuffer) {
+        assert_eq!(
+            buffer.budget.encoded_bytes,
+            serde_json::to_vec(&(&buffer.text, &buffer.tools))
+                .unwrap()
+                .len()
+        );
+    }
+
+    #[test]
+    fn stream_budget_counts_escaping_and_each_tool_map_envelope() {
+        let mut buffer = CompletionBuffer::new(payload::PROVIDER_PAYLOAD_BYTES);
+        assert_encoded_size(&buffer);
+        for part in ["plain", "\"\\\n\r\t\u{0008}\u{000c}\0", "\u{001f}é🦀", ""] {
+            buffer.push_text(part, "test").unwrap();
+            assert_encoded_size(&buffer);
+        }
+        for index in [0, 10, u64::MAX] {
+            for call in [
+                json!({"index":index,"type":"function","id":"call-\"","function":{"name":"ec\\ho","arguments":"{\"value\":\""}}),
+                json!({"index":index,"id":"end","function":{"name":"é","arguments":"\n\0🦀\"}"}}),
+                json!({"index":index,"function":{"arguments":""}}),
+            ] {
+                buffer.push_tool(&call, "test").unwrap();
+                assert_encoded_size(&buffer);
+            }
+        }
+    }
+
+    #[test]
+    fn stream_budget_accepts_the_limit_and_refuses_growth_before_retaining_it() {
+        let call = json!({"index":10,"id":"call","function":{"name":"echo","arguments":"{\"value\":\"é\\\n\"}"}});
+        let mut reference = CompletionBuffer::new(payload::PROVIDER_PAYLOAD_BYTES);
+        reference.push_text("answer\n", "test").unwrap();
+        reference.push_tool(&call, "test").unwrap();
+        let limit = reference.budget.encoded_bytes;
+        let mut exact = CompletionBuffer::new(limit);
+        exact.push_text("answer\n", "test").unwrap();
+        exact.push_tool(&call, "test").unwrap();
+        assert_encoded_size(&exact);
+        assert!(exact.push_text("\0", "test").is_err());
+        assert!(exact.push_tool(&json!({"index":0}), "test").is_err());
+        assert!(exact
+            .push_tool(&json!({"index":10,"function":{"arguments":"\""}}), "test")
+            .is_err());
+        assert_eq!(exact.budget.encoded_bytes, limit);
+        assert_eq!(exact.text, reference.text);
+        assert_eq!(exact.tools, reference.tools);
+
+        let mut smaller = CompletionBuffer::new(limit - 1);
+        smaller.push_text("answer\n", "test").unwrap();
+        assert!(smaller.push_tool(&call, "test").is_err());
+        assert_encoded_size(&smaller);
+        assert!(smaller.budget.encoded_bytes < limit);
+    }
+
+    #[test]
+    fn fragmented_text_and_tool_arguments_append_to_the_retained_buffers() {
+        let mut buffer = CompletionBuffer::new(payload::PROVIDER_PAYLOAD_BYTES);
+        let call = json!({"index":0,"function":{"arguments":"é\n\""}});
+        for _ in 0..20_000 {
+            buffer.push_text("text", "test").unwrap();
+            buffer.push_tool(&call, "test").unwrap();
+        }
+        assert_eq!(buffer.text, "text".repeat(20_000));
+        assert_eq!(
+            buffer.tools[&0]["function"]["arguments"],
+            "é\n\"".repeat(20_000)
+        );
+        assert_encoded_size(&buffer);
+    }
 }

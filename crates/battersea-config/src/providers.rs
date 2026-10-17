@@ -180,7 +180,10 @@ impl ProviderConfiguration {
                     ));
                 }
                 for header in &adapter.required_headers {
-                    if !connection.headers.contains_key(header) {
+                    if !connection
+                        .headers
+                        .contains_key(&header.to_ascii_lowercase())
+                    {
                         return Err(error(
                             ProviderCode::InvalidAuthentication,
                             &format!("{base}.headers"),
