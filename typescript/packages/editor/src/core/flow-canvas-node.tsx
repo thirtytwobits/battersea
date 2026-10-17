@@ -192,20 +192,14 @@ export function FlowStudioCanvasNode({
     "--flow-studio-node-width": `${viewModel.layout.nodeWidthPx}px`,
   } as React.CSSProperties;
 
+  // Controlled node replacement can clear handle bounds while retaining dimensions.
   useUiRuntimeClientLayoutEffect(() => {
-    (globalThis as { readFlowDiagnostics?: () => unknown }).readFlowDiagnostics = () => {
-      const state = graphStore.getState();
-      return {
-        transform: state.transform,
-        nodes: [...state.nodeLookup.values()].map(node => ({
-          id: node.id,
-          measured: node.measured,
-          userMeasured: node.internals.userNode.measured,
-          handles: node.internals.handleBounds,
-        })),
-        edges: state.edges.map(edge => ({ id: edge.id, source: edge.source, target: edge.target, sourceHandle: edge.sourceHandle, targetHandle: edge.targetHandle })),
-      };
-    };
+    if (!graphStore.getState().nodeLookup.get(id)?.internals.handleBounds) {
+      updateNodeInternals(id);
+    }
+  });
+
+  useUiRuntimeClientLayoutEffect(() => {
     updateNodeInternals(id);
   }, [
     id,

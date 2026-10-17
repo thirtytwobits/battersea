@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import fs from "node:fs/promises";
 import { chromium, webkit } from "playwright";
+import { testNodeMeasurementRecovery } from "./tests/node-measurement-recovery.mjs";
 const origin = process.env.EDITOR_URL ?? "http://127.0.0.1:18181";
 const out = process.env.EDITOR_ARTIFACTS ?? "test-artifacts";
 await fs.mkdir(out, { recursive: true });
@@ -58,6 +59,10 @@ for (const [name, engine] of Object.entries({ chromium, webkit })) {
       if (m.type() === "error") errors.push(m.text());
     });
     page.on("dialog", (dialog) => dialog.accept());
+    expectedGraph = { nodes: ["source", "target", "branch"], edges: ["existing"] };
+    await testNodeMeasurementRecovery(page, origin);
+    console.log(`${name}: restored node dimensions retain edges and connectable handles`);
+    expectedGraph = null;
     await page.goto(origin);
     const fixture = await read(page);
     fixture.layout = {
@@ -376,7 +381,6 @@ for (const [name, engine] of Object.entries({ chromium, webkit })) {
         };
       };
       return {
-        internal: globalThis.readFlowDiagnostics?.(),
         viewport: [...document.querySelectorAll(".react-flow__viewport")].map(describe),
         nodes: [...document.querySelectorAll(".react-flow__node")].map(node => ({
           ...describe(node),
