@@ -376,6 +376,7 @@ for (const [name, engine] of Object.entries({ chromium, webkit })) {
         };
       };
       return {
+        internal: globalThis.readFlowDiagnostics?.(),
         viewport: [...document.querySelectorAll(".react-flow__viewport")].map(describe),
         nodes: [...document.querySelectorAll(".react-flow__node")].map(node => ({
           ...describe(node),

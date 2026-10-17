@@ -6,6 +6,7 @@
 import React from "react";
 import {
   Position,
+  useStoreApi,
   useUpdateNodeInternals,
   type Node,
   type NodeProps,
@@ -181,6 +182,7 @@ export function FlowStudioCanvasNode({
   id,
   selected,
 }: NodeProps<FlowStudioCanvasNodeType>): React.JSX.Element {
+  const graphStore = useStoreApi();
   const updateNodeInternals = useUpdateNodeInternals();
   const viewModel = resolveFlowStudioCanvasNodeViewModel(data);
   const frameStyle = {
@@ -191,6 +193,19 @@ export function FlowStudioCanvasNode({
   } as React.CSSProperties;
 
   useUiRuntimeClientLayoutEffect(() => {
+    (globalThis as { readFlowDiagnostics?: () => unknown }).readFlowDiagnostics = () => {
+      const state = graphStore.getState();
+      return {
+        transform: state.transform,
+        nodes: [...state.nodeLookup.values()].map(node => ({
+          id: node.id,
+          measured: node.measured,
+          userMeasured: node.internals.userNode.measured,
+          handles: node.internals.handleBounds,
+        })),
+        edges: state.edges.map(edge => ({ id: edge.id, source: edge.source, target: edge.target, sourceHandle: edge.sourceHandle, targetHandle: edge.targetHandle })),
+      };
+    };
     updateNodeInternals(id);
   }, [
     id,
