@@ -7,6 +7,8 @@
 - Retain accepted adapter registrations and resolved credentials; expose safe snapshots and revisions for host-owned recovery.
 - Bind native continuations and media jobs to their accepted service, protocol and account scope.
 - Add explicit legacy configuration and continuation conversion, plus an independent declarative-provider example.
+- Mask raw, URI/form-encoded and JSON-escaped credentials in provider errors and logs.
+- Deliver versioned Rust and TypeScript API documentation with release archives and GitHub Pages publication.
 - Breaking Rust API: backend structs carry an optional `ProviderBinding`, API keys use `SecretString`, prepared media carries a binding revision, and content has versioned native/reasoning variants. Legacy backend parsing remains explicit.
 
 ## 0.13.0 — 2026-10-16
