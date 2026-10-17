@@ -9,5 +9,5 @@
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "allowSyntheticDefaultImports": true
   },
-  "include": ["*.tsx", "ports.ts"]
+  "include": ["*.tsx", "ports.ts", "tests/*.tsx"]
 }

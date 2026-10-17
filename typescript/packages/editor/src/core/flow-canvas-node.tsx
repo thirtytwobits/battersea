@@ -6,6 +6,7 @@
 import React from "react";
 import {
   Position,
+  useStoreApi,
   useUpdateNodeInternals,
   type Node,
   type NodeProps,
@@ -181,6 +182,7 @@ export function FlowStudioCanvasNode({
   id,
   selected,
 }: NodeProps<FlowStudioCanvasNodeType>): React.JSX.Element {
+  const graphStore = useStoreApi();
   const updateNodeInternals = useUpdateNodeInternals();
   const viewModel = resolveFlowStudioCanvasNodeViewModel(data);
   const frameStyle = {
@@ -189,6 +191,13 @@ export function FlowStudioCanvasNode({
     "--flow-studio-node-port-pill-width": `${viewModel.layout.pillMaxWidthPx}px`,
     "--flow-studio-node-width": `${viewModel.layout.nodeWidthPx}px`,
   } as React.CSSProperties;
+
+  // Controlled node replacement can clear handle bounds while retaining dimensions.
+  useUiRuntimeClientLayoutEffect(() => {
+    if (!graphStore.getState().nodeLookup.get(id)?.internals.handleBounds) {
+      updateNodeInternals(id);
+    }
+  });
 
   useUiRuntimeClientLayoutEffect(() => {
     updateNodeInternals(id);

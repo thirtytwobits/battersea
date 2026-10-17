@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import fs from "node:fs/promises";
 import { chromium, webkit } from "playwright";
+import { testNodeMeasurementRecovery } from "./tests/node-measurement-recovery.mjs";
 const origin = process.env.EDITOR_URL ?? "http://127.0.0.1:18181";
 const out = process.env.EDITOR_ARTIFACTS ?? "test-artifacts";
 await fs.mkdir(out, { recursive: true });
@@ -47,16 +48,21 @@ async function capture(page, name, state) {
 }
 for (const [name, engine] of Object.entries({ chromium, webkit })) {
   const browser = await engine.launch({ headless: true });
+  const page = await browser.newPage({
+    viewport: { width: 1440, height: 1000 },
+  });
+  const errors = [];
+  let expectedGraph = null;
   try {
-    const page = await browser.newPage({
-      viewport: { width: 1440, height: 1000 },
-    });
-    const errors = [];
     page.on("pageerror", (e) => errors.push(e.message));
     page.on("console", (m) => {
       if (m.type() === "error") errors.push(m.text());
     });
     page.on("dialog", (dialog) => dialog.accept());
+    expectedGraph = { nodes: ["source", "target", "branch"], edges: ["existing"] };
+    await testNodeMeasurementRecovery(page, origin);
+    console.log(`${name}: restored node dimensions retain edges and connectable handles`);
+    expectedGraph = null;
     await page.goto(origin);
     const fixture = await read(page);
     fixture.layout = {
@@ -204,6 +210,7 @@ for (const [name, engine] of Object.entries({ chromium, webkit })) {
     await page.waitForFunction(count => document.querySelectorAll(".react-flow__node").length === count, knownNodes.size + 1);
     const branchNode = await page.locator(".react-flow__node").evaluateAll((nodes, known) => nodes.map(node => node.dataset.id).find(id => !known.includes(id)), [...knownNodes]);
     assert.ok(branchNode);
+    expectedGraph = { nodes: ["text", branchNode], edges: branchBaseline.edges.map(edge => edge.id) };
     const branchStyle = await page.locator(`.react-flow__node[data-id="${branchNode}"]`).getAttribute("style");
     await page.getByRole("button", { name: "Auto layout: apply Dagre", exact: true }).click();
     await page.waitForFunction(({id, before}) => document.querySelector(`.react-flow__node[data-id="${id}"]`)?.getAttribute("style") !== before, {id: branchNode, before: branchStyle});
@@ -217,6 +224,7 @@ for (const [name, engine] of Object.entries({ chromium, webkit })) {
         .every(node => getComputedStyle(node).visibility === "visible"),
       { id: branchNode, edges: branchBaseline.edges.length });
     await capture(page, name, "fanout-ready");
+    expectedGraph = null;
     const outputHandle = page.locator('.react-flow__node[data-id="text"] .react-flow__handle[data-handleid="output-0"]');
     const inputHandle = page.locator(`.react-flow__node[data-id="${branchNode}"] .react-flow__handle[data-handleid="input-0"]`);
     // Locator actions wait for fit-view animation to finish before hit testing.
@@ -358,6 +366,33 @@ for (const [name, engine] of Object.entries({ chromium, webkit })) {
     console.log(
       `${name}: load, read purity, edit, undo, save/reload, layout, activate, diagnostics, cancel and fan-out edit/undo/save/reload/execute passed`,
     );
+  } catch (error) {
+    const state = await page.evaluate(() => {
+      const describe = (element) => {
+        const style = getComputedStyle(element);
+        return {
+          id: element.getAttribute("data-id"),
+          handle: element.getAttribute("data-handleid"),
+          visibility: style.visibility,
+          display: style.display,
+          transform: style.transform,
+          rect: element.getBoundingClientRect().toJSON(),
+          width: element.offsetWidth,
+          height: element.offsetHeight,
+        };
+      };
+      return {
+        viewport: [...document.querySelectorAll(".react-flow__viewport")].map(describe),
+        nodes: [...document.querySelectorAll(".react-flow__node")].map(node => ({
+          ...describe(node),
+          handles: [...node.querySelectorAll(".react-flow__handle")].map(describe),
+        })),
+        edges: [...document.querySelectorAll(".react-flow__edge")].map(describe),
+      };
+    });
+    await fs.writeFile(`${out}/${name}-failure.json`, JSON.stringify({ error: String(error), errors, expectedGraph, state }, null, 2));
+    await page.screenshot({ path: `${out}/${name}-failure.png` });
+    throw error;
   } finally {
     await browser.close();
   }
