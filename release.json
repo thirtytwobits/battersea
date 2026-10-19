@@ -1,5 +1,5 @@
 {
-  "version": "0.15.0",
+  "version": "0.14.0",
   "repository": "https://github.com/thirtytwobits/battersea",
   "license": "MIT",
   "security_contact": "https://github.com/thirtytwobits/battersea/security/advisories/new",
@@ -26,14 +26,6 @@
       "README.md",
       "LICENSE",
       "NOTICE"
-    ],
-    "battersea-tools": [
-      "Cargo.toml",
-      "src/lib.rs",
-      "README.md",
-      "LICENSE",
-      "NOTICE",
-      "schemas/tools.schema.json"
     ],
     "battersea-providers": [
       "Cargo.toml",
@@ -100,8 +92,7 @@
       "schemas/flow.schema.json",
       "fixtures/token-type-compatibility.json",
       "fixtures/flows.json",
-      "schemas/runtime.schema.json",
-      "schemas/tools.schema.json"
+      "schemas/runtime.schema.json"
     ],
     "@battersea/editor": [
       "package.json",

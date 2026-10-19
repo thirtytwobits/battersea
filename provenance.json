@@ -61,13 +61,6 @@
         "engine/crates/primrose-engine-core/src/pianola.rs",
         "engine/schemas/pianola-roll.schema.yaml"
       ]
-    },
-    {
-      "milestone": "M6",
-      "source_commit": "f1b1b31dc937724eb1761b7e01aad062338e3553",
-      "source_paths": [
-        "engine/crates/primrose-engine-core/src/chat_tool_catalog.rs"
-      ]
     }
   ]
 }

@@ -230,10 +230,6 @@ pub fn build(root: &Path) -> Result<()> {
             "runtime.schema.json",
         ),
         (
-            "crates/battersea-tools/schemas/tools.schema.json",
-            "tools.schema.json",
-        ),
-        (
             "crates/battersea-pianola/schemas/pianola-roll.schema.json",
             "pianola-roll.schema.json",
         ),

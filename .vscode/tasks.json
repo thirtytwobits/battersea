@@ -647,7 +647,6 @@
         "battersea-providers",
         "battersea-runtime",
         "battersea-telemetry",
-        "battersea-tools",
         "backend-example",
         "catalogue-example",
         "custom-node-example",

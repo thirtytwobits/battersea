@@ -4,9 +4,6 @@
     "battersea-flow"
   ],
   "battersea-model": [],
-  "battersea-tools": [
-    "battersea-model"
-  ],
   "battersea-providers": [
     "battersea-model"
   ],

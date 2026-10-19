@@ -98,10 +98,6 @@ pub enum ToolCode {
     DuplicateTool,
     /// A tool's input schema is not a valid JSON Schema.
     InvalidToolSchema,
-    /// A tool's record cannot be offered: its name is outside the tool-name alphabet, it has
-    /// no description, its input schema is not an object schema, or its profiles are not
-    /// distinct names.
-    InvalidToolDefinition,
     /// The request's tool choice names a tool the request does not offer.
     UnofferedToolChoice,
     /// The provider returned a tool call without an id, name or object arguments.
@@ -129,7 +125,6 @@ impl ToolCode {
         Self::InvalidToolRounds,
         Self::DuplicateTool,
         Self::InvalidToolSchema,
-        Self::InvalidToolDefinition,
         Self::UnofferedToolChoice,
         Self::MalformedToolCall,
         Self::ToolUseDisabled,
@@ -147,7 +142,6 @@ impl ToolCode {
             Self::InvalidToolRounds => "invalid_tool_rounds",
             Self::DuplicateTool => "duplicate_tool",
             Self::InvalidToolSchema => "invalid_tool_schema",
-            Self::InvalidToolDefinition => "invalid_tool_definition",
             Self::UnofferedToolChoice => "unoffered_tool_choice",
             Self::MalformedToolCall => "malformed_tool_call",
             Self::ToolUseDisabled => "tool_use_disabled",

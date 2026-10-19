@@ -210,6 +210,76 @@ async fn idle_watchdog_reports_one_typed_timeout_then_ends() {
         .expect("terminal stream")
         .is_none());
 }
+struct Tool(Arc<AtomicUsize>);
+#[async_trait]
+impl EngineLocalToolExecutor for Tool {
+    async fn call(
+        &self,
+        call: EngineLocalToolCall,
+    ) -> Result<EngineLocalToolResult, EngineAdapterRequestError> {
+        self.0.fetch_add(1, Ordering::SeqCst);
+        Ok(EngineLocalToolResult {
+            content: call.arguments,
+        })
+    }
+}
+#[tokio::test]
+async fn tool_registry_checks_argument_schema_and_normalised_identity_before_effects() {
+    let calls = Arc::new(AtomicUsize::new(0));
+    let executor = Arc::new(Tool(calls.clone()));
+    let mut registry = ToolRegistry::default();
+    let definition = EngineLocalToolDefinition {
+        name: "example.lookup".into(),
+        description: "Lookup.".into(),
+        input_schema: json!({"type":"object","properties":{"key":{"type":"string"}},"required":["key"],"additionalProperties":false}),
+    };
+    registry
+        .register(definition.clone(), executor.clone())
+        .unwrap();
+    let mut collision = definition;
+    collision.name = "example_lookup".into();
+    assert_eq!(
+        registry
+            .register(collision, executor)
+            .unwrap_err()
+            .tool_code,
+        Some(ToolCode::DuplicateTool)
+    );
+    for (name, arguments, code) in [
+        (
+            "example.lookup",
+            json!({"key":false}),
+            ToolCode::InvalidToolArguments,
+        ),
+        (
+            "example.unregistered",
+            json!({"key":"selected"}),
+            ToolCode::UnregisteredTool,
+        ),
+    ] {
+        let error = registry
+            .call(EngineLocalToolCall {
+                id: "invalid".into(),
+                name: name.into(),
+                arguments,
+            })
+            .await
+            .unwrap_err();
+        assert_eq!(error.tool_code, Some(code), "{name}");
+    }
+    assert_eq!(calls.load(Ordering::SeqCst), 0);
+    let arguments = json!({"key":"selected"});
+    let result = registry
+        .call(EngineLocalToolCall {
+            id: "valid".into(),
+            name: "example_lookup".into(),
+            arguments: arguments.clone(),
+        })
+        .await
+        .unwrap();
+    assert_eq!(result.content, arguments);
+    assert_eq!(calls.load(Ordering::SeqCst), 1);
+}
 struct PendingJob(Arc<AtomicUsize>);
 #[async_trait]
 impl MediaJob for PendingJob {

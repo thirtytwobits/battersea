@@ -335,9 +335,6 @@ export { FLOW_DOCUMENT_VERSION } from "./defaults.js";
 export { createFlowExecutionPolicy, requireSupportedFlowVersion } from "./execution.js";
 export type * as Runtime from "./runtime-contract.js";
 export { applyRuntimeDelta, applyRuntimeUpdate, RuntimeResyncRequired } from "./runtime-view.js";
-export type * as Tools from "./tools-contract.js";
-export { MCP_PROTOCOL_REVISION, TOOL_PROFILES_META_KEY } from "./tools-defaults.js";
-export { toolProfiles } from "./tools.js";
 
 // ports.d.ts
 /** Nominal token compatibility, including pass-through outputs with inferred input types. */
@@ -585,47 +582,3 @@ export declare class RuntimeResyncRequired extends Error {
 /** Returns a replacement snapshot; stale, duplicate and missing deltas cannot mutate it. */
 export declare function applyRuntimeDelta(snapshot: Snapshot, delta: Delta): Snapshot;
 export declare function applyRuntimeUpdate(snapshot: Snapshot | null, update: import("./runtime-contract.js").Update): Snapshot;
-
-// tools-contract.d.ts
-export type Icon = {
-    "mimeType"?: string;
-    "sizes"?: Array<string>;
-    "src": string;
-    "theme"?: IconTheme;
-};
-export type IconTheme = "light" | "dark";
-export type Tool = {
-    "_meta"?: {
-        [key: string]: unknown;
-    };
-    "annotations"?: ToolAnnotations;
-    "description"?: string;
-    "icons"?: Array<Icon>;
-    "inputSchema": {
-        [key: string]: unknown;
-    };
-    "name": string;
-    "outputSchema"?: {
-        [key: string]: unknown;
-    };
-    "title"?: string;
-};
-export type ToolAnnotations = {
-    "destructiveHint"?: boolean;
-    "idempotentHint"?: boolean;
-    "openWorldHint"?: boolean;
-    "readOnlyHint"?: boolean;
-    "title"?: string;
-};
-
-// tools-defaults.d.ts
-export declare const MCP_PROTOCOL_REVISION = "2026-07-28";
-export declare const TOOL_PROFILES_META_KEY = "io.github.thirtytwobits.battersea/profiles";
-
-// tools.d.ts
-import type { Tool } from "./tools-contract.js";
-/**
- * The agent profiles permitted to call `tool`, or `undefined` when its profiles entry is not a
- * list of names. A tool that lists no profiles is permitted to none.
- */
-export declare function toolProfiles(tool: Pick<Tool, "_meta">): string[] | undefined;
