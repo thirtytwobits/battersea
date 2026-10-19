@@ -24,11 +24,8 @@ requirements for untrusted execution.
 `examples/custom-node` runs a separately compiled node without a
 product session.
 
-`battersea-model` supplies content-block messages, provider registration, typed errors,
-request admission and the shared tool loop. `ToolCode` names the tool runner's refusals.
-`battersea-tools` holds application tools as Model Context Protocol tool records with their
-permitted agent profiles, and the registry that offers them to providers and runs their calls.
-See the [tool contract](contracts/tools.md). `battersea-providers` supplies OpenAI, Anthropic,
+`battersea-model` supplies content-block messages, provider and tool registration, typed errors,
+request admission and the shared tool loop. `ToolCode` names the tool runner's refusals. `battersea-providers` supplies OpenAI, Anthropic,
 Google, Runway, Replicate and mock transports through individual Cargo features. Text admission accepts
 text blocks; provider-native tool continuation retains opaque signed fields.
 

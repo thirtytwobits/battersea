@@ -137,7 +137,6 @@ impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusi
 pub battersea_model::adapter::error::ToolCode::DuplicateTool
 pub battersea_model::adapter::error::ToolCode::InvalidToolArguments
 pub battersea_model::adapter::error::ToolCode::InvalidToolCallId
-pub battersea_model::adapter::error::ToolCode::InvalidToolDefinition
 pub battersea_model::adapter::error::ToolCode::InvalidToolRounds
 pub battersea_model::adapter::error::ToolCode::InvalidToolSchema
 pub battersea_model::adapter::error::ToolCode::MalformedToolCall
@@ -1744,36 +1743,6 @@ impl<T> serde_core::de::DeserializeOwned for battersea_model::MockToolCallSpec w
 impl<T> typenum::type_operators::Same for battersea_model::MockToolCallSpec
 pub type battersea_model::MockToolCallSpec::Output = T
 impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_model::MockToolCallSpec where T: ?core::marker::Sized
-pub struct battersea_model::adapter::NoLocalTools
-impl battersea_model::EngineLocalToolExecutor for battersea_model::NoLocalTools
-pub fn battersea_model::NoLocalTools::call<'life0, 'async_trait>(&'life0 self, call: battersea_model::EngineLocalToolCall) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<battersea_model::EngineLocalToolResult, battersea_model::EngineAdapterRequestError>> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait
-impl core::marker::Freeze for battersea_model::NoLocalTools
-impl core::marker::Send for battersea_model::NoLocalTools
-impl core::marker::Sync for battersea_model::NoLocalTools
-impl core::marker::Unpin for battersea_model::NoLocalTools
-impl core::panic::unwind_safe::RefUnwindSafe for battersea_model::NoLocalTools
-impl core::panic::unwind_safe::UnwindSafe for battersea_model::NoLocalTools
-impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_model::NoLocalTools where ST: ?core::marker::Sized, DT: ?core::marker::Sized
-impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_model::NoLocalTools where ST: ?core::marker::Sized, DT: ?core::marker::Sized
-impl<T, U> core::convert::Into<U> for battersea_model::NoLocalTools where U: core::convert::From<T>
-pub fn battersea_model::NoLocalTools::into(self) -> U
-impl<T, U> core::convert::TryFrom<U> for battersea_model::NoLocalTools where U: core::convert::Into<T>
-pub type battersea_model::NoLocalTools::Error = core::convert::Infallible
-pub fn battersea_model::NoLocalTools::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
-impl<T, U> core::convert::TryInto<U> for battersea_model::NoLocalTools where U: core::convert::TryFrom<T>
-pub type battersea_model::NoLocalTools::Error = <U as core::convert::TryFrom<T>>::Error
-pub fn battersea_model::NoLocalTools::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
-impl<T> core::any::Any for battersea_model::NoLocalTools where T: 'static + ?core::marker::Sized
-pub fn battersea_model::NoLocalTools::type_id(&self) -> core::any::TypeId
-impl<T> core::borrow::Borrow<T> for battersea_model::NoLocalTools where T: ?core::marker::Sized
-pub fn battersea_model::NoLocalTools::borrow(&self) -> &T
-impl<T> core::borrow::BorrowMut<T> for battersea_model::NoLocalTools where T: ?core::marker::Sized
-pub fn battersea_model::NoLocalTools::borrow_mut(&mut self) -> &mut T
-impl<T> core::convert::From<T> for battersea_model::NoLocalTools
-pub fn battersea_model::NoLocalTools::from(t: T) -> T
-impl<T> typenum::type_operators::Same for battersea_model::NoLocalTools
-pub type battersea_model::NoLocalTools::Output = T
-impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_model::NoLocalTools where T: ?core::marker::Sized
 pub trait battersea_model::adapter::EngineAdapter: core::marker::Send + core::marker::Sync
 pub fn battersea_model::adapter::EngineAdapter::count_text_stream_input_tokens<'life0, 'async_trait>(&'life0 self, request: battersea_model::EngineTextStreamRequest) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<u64, battersea_model::EngineAdapterRequestError>> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait
 pub fn battersea_model::adapter::EngineAdapter::describe_debug_context(&self) -> battersea_model::EngineAdapterDebugContext
@@ -1786,8 +1755,8 @@ pub fn battersea_model::adapter::EngineAdapterLogger::on_retry<'life0, 'async_tr
 pub fn battersea_model::adapter::EngineAdapterLogger::on_stream_event<'life0, 'async_trait>(&'life0 self, _entry: battersea_model::EngineAdapterStreamLog) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = ()> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait
 pub trait battersea_model::adapter::EngineLocalToolExecutor: core::marker::Send + core::marker::Sync
 pub fn battersea_model::adapter::EngineLocalToolExecutor::call<'life0, 'async_trait>(&'life0 self, call: battersea_model::EngineLocalToolCall) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<battersea_model::EngineLocalToolResult, battersea_model::EngineAdapterRequestError>> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait
-impl battersea_model::EngineLocalToolExecutor for battersea_model::NoLocalTools
-pub fn battersea_model::NoLocalTools::call<'life0, 'async_trait>(&'life0 self, call: battersea_model::EngineLocalToolCall) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<battersea_model::EngineLocalToolResult, battersea_model::EngineAdapterRequestError>> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait
+impl battersea_model::EngineLocalToolExecutor for battersea_model::ToolRegistry
+pub fn battersea_model::ToolRegistry::call<'life0, 'async_trait>(&'life0 self, call: battersea_model::EngineLocalToolCall) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<battersea_model::EngineLocalToolResult, battersea_model::EngineAdapterRequestError>> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait
 pub async fn battersea_model::adapter::emit_error(logger: core::option::Option<&alloc::sync::Arc<dyn battersea_model::EngineAdapterLogger>>, context: &battersea_model::EngineAdapterDebugContext, operation: battersea_model::EngineOperation, error: &battersea_model::EngineAdapterRequestError)
 pub async fn battersea_model::adapter::emit_request(logger: core::option::Option<&alloc::sync::Arc<dyn battersea_model::EngineAdapterLogger>>, context: &battersea_model::EngineAdapterDebugContext, request: &battersea_model::EngineAdapterRequest, schema_name: core::option::Option<&str>, body: core::option::Option<serde_json::value::Value>)
 pub async fn battersea_model::adapter::emit_response(logger: core::option::Option<&alloc::sync::Arc<dyn battersea_model::EngineAdapterLogger>>, context: &battersea_model::EngineAdapterDebugContext, operation: battersea_model::EngineOperation, status: u16, detail: battersea_model::EngineAdapterResponseDetail)
@@ -3116,7 +3085,6 @@ impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusi
 pub battersea_model::error::ToolCode::DuplicateTool
 pub battersea_model::error::ToolCode::InvalidToolArguments
 pub battersea_model::error::ToolCode::InvalidToolCallId
-pub battersea_model::error::ToolCode::InvalidToolDefinition
 pub battersea_model::error::ToolCode::InvalidToolRounds
 pub battersea_model::error::ToolCode::InvalidToolSchema
 pub battersea_model::error::ToolCode::MalformedToolCall
@@ -5837,6 +5805,41 @@ pub fn battersea_model::ProviderRegistry::from(t: T) -> T
 impl<T> typenum::type_operators::Same for battersea_model::ProviderRegistry
 pub type battersea_model::ProviderRegistry::Output = T
 impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_model::ProviderRegistry where T: ?core::marker::Sized
+pub struct battersea_model::registry::ToolRegistry
+impl battersea_model::ToolRegistry
+pub fn battersea_model::ToolRegistry::definitions(&self) -> alloc::vec::Vec<battersea_model::EngineLocalToolDefinition>
+pub fn battersea_model::ToolRegistry::register(&mut self, definition: battersea_model::EngineLocalToolDefinition, executor: alloc::sync::Arc<dyn battersea_model::EngineLocalToolExecutor>) -> core::result::Result<(), battersea_model::EngineAdapterRequestError>
+impl battersea_model::EngineLocalToolExecutor for battersea_model::ToolRegistry
+pub fn battersea_model::ToolRegistry::call<'life0, 'async_trait>(&'life0 self, call: battersea_model::EngineLocalToolCall) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<battersea_model::EngineLocalToolResult, battersea_model::EngineAdapterRequestError>> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait
+impl core::default::Default for battersea_model::ToolRegistry
+pub fn battersea_model::ToolRegistry::default() -> battersea_model::ToolRegistry
+impl core::marker::Freeze for battersea_model::ToolRegistry
+impl core::marker::Send for battersea_model::ToolRegistry
+impl core::marker::Sync for battersea_model::ToolRegistry
+impl core::marker::Unpin for battersea_model::ToolRegistry
+impl !core::panic::unwind_safe::RefUnwindSafe for battersea_model::ToolRegistry
+impl !core::panic::unwind_safe::UnwindSafe for battersea_model::ToolRegistry
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_model::ToolRegistry where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_model::ToolRegistry where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<T, U> core::convert::Into<U> for battersea_model::ToolRegistry where U: core::convert::From<T>
+pub fn battersea_model::ToolRegistry::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_model::ToolRegistry where U: core::convert::Into<T>
+pub type battersea_model::ToolRegistry::Error = core::convert::Infallible
+pub fn battersea_model::ToolRegistry::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for battersea_model::ToolRegistry where U: core::convert::TryFrom<T>
+pub type battersea_model::ToolRegistry::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_model::ToolRegistry::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> core::any::Any for battersea_model::ToolRegistry where T: 'static + ?core::marker::Sized
+pub fn battersea_model::ToolRegistry::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_model::ToolRegistry where T: ?core::marker::Sized
+pub fn battersea_model::ToolRegistry::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_model::ToolRegistry where T: ?core::marker::Sized
+pub fn battersea_model::ToolRegistry::borrow_mut(&mut self) -> &mut T
+impl<T> core::convert::From<T> for battersea_model::ToolRegistry
+pub fn battersea_model::ToolRegistry::from(t: T) -> T
+impl<T> typenum::type_operators::Same for battersea_model::ToolRegistry
+pub type battersea_model::ToolRegistry::Output = T
+impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_model::ToolRegistry where T: ?core::marker::Sized
 pub mod battersea_model::tool_loop
 pub struct battersea_model::tool_loop::ExecutedToolCall
 pub battersea_model::tool_loop::ExecutedToolCall::call: battersea_model::EngineLocalToolCall
@@ -6820,7 +6823,6 @@ impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusi
 pub battersea_model::ToolCode::DuplicateTool
 pub battersea_model::ToolCode::InvalidToolArguments
 pub battersea_model::ToolCode::InvalidToolCallId
-pub battersea_model::ToolCode::InvalidToolDefinition
 pub battersea_model::ToolCode::InvalidToolRounds
 pub battersea_model::ToolCode::InvalidToolSchema
 pub battersea_model::ToolCode::MalformedToolCall
@@ -8329,36 +8331,6 @@ impl<T> serde_core::de::DeserializeOwned for battersea_model::MockToolCallSpec w
 impl<T> typenum::type_operators::Same for battersea_model::MockToolCallSpec
 pub type battersea_model::MockToolCallSpec::Output = T
 impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_model::MockToolCallSpec where T: ?core::marker::Sized
-pub struct battersea_model::NoLocalTools
-impl battersea_model::EngineLocalToolExecutor for battersea_model::NoLocalTools
-pub fn battersea_model::NoLocalTools::call<'life0, 'async_trait>(&'life0 self, call: battersea_model::EngineLocalToolCall) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<battersea_model::EngineLocalToolResult, battersea_model::EngineAdapterRequestError>> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait
-impl core::marker::Freeze for battersea_model::NoLocalTools
-impl core::marker::Send for battersea_model::NoLocalTools
-impl core::marker::Sync for battersea_model::NoLocalTools
-impl core::marker::Unpin for battersea_model::NoLocalTools
-impl core::panic::unwind_safe::RefUnwindSafe for battersea_model::NoLocalTools
-impl core::panic::unwind_safe::UnwindSafe for battersea_model::NoLocalTools
-impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_model::NoLocalTools where ST: ?core::marker::Sized, DT: ?core::marker::Sized
-impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_model::NoLocalTools where ST: ?core::marker::Sized, DT: ?core::marker::Sized
-impl<T, U> core::convert::Into<U> for battersea_model::NoLocalTools where U: core::convert::From<T>
-pub fn battersea_model::NoLocalTools::into(self) -> U
-impl<T, U> core::convert::TryFrom<U> for battersea_model::NoLocalTools where U: core::convert::Into<T>
-pub type battersea_model::NoLocalTools::Error = core::convert::Infallible
-pub fn battersea_model::NoLocalTools::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
-impl<T, U> core::convert::TryInto<U> for battersea_model::NoLocalTools where U: core::convert::TryFrom<T>
-pub type battersea_model::NoLocalTools::Error = <U as core::convert::TryFrom<T>>::Error
-pub fn battersea_model::NoLocalTools::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
-impl<T> core::any::Any for battersea_model::NoLocalTools where T: 'static + ?core::marker::Sized
-pub fn battersea_model::NoLocalTools::type_id(&self) -> core::any::TypeId
-impl<T> core::borrow::Borrow<T> for battersea_model::NoLocalTools where T: ?core::marker::Sized
-pub fn battersea_model::NoLocalTools::borrow(&self) -> &T
-impl<T> core::borrow::BorrowMut<T> for battersea_model::NoLocalTools where T: ?core::marker::Sized
-pub fn battersea_model::NoLocalTools::borrow_mut(&mut self) -> &mut T
-impl<T> core::convert::From<T> for battersea_model::NoLocalTools
-pub fn battersea_model::NoLocalTools::from(t: T) -> T
-impl<T> typenum::type_operators::Same for battersea_model::NoLocalTools
-pub type battersea_model::NoLocalTools::Output = T
-impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_model::NoLocalTools where T: ?core::marker::Sized
 pub struct battersea_model::ProtocolAdapter
 pub battersea_model::ProtocolAdapter::chat: core::option::Option<battersea_model::ChatProvider>
 pub battersea_model::ProtocolAdapter::chat_streaming: alloc::vec::Vec<bool>
@@ -8820,6 +8792,41 @@ impl<T> serde_core::de::DeserializeOwned for battersea_model::SecretString where
 impl<T> typenum::type_operators::Same for battersea_model::SecretString
 pub type battersea_model::SecretString::Output = T
 impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_model::SecretString where T: ?core::marker::Sized
+pub struct battersea_model::ToolRegistry
+impl battersea_model::ToolRegistry
+pub fn battersea_model::ToolRegistry::definitions(&self) -> alloc::vec::Vec<battersea_model::EngineLocalToolDefinition>
+pub fn battersea_model::ToolRegistry::register(&mut self, definition: battersea_model::EngineLocalToolDefinition, executor: alloc::sync::Arc<dyn battersea_model::EngineLocalToolExecutor>) -> core::result::Result<(), battersea_model::EngineAdapterRequestError>
+impl battersea_model::EngineLocalToolExecutor for battersea_model::ToolRegistry
+pub fn battersea_model::ToolRegistry::call<'life0, 'async_trait>(&'life0 self, call: battersea_model::EngineLocalToolCall) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<battersea_model::EngineLocalToolResult, battersea_model::EngineAdapterRequestError>> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait
+impl core::default::Default for battersea_model::ToolRegistry
+pub fn battersea_model::ToolRegistry::default() -> battersea_model::ToolRegistry
+impl core::marker::Freeze for battersea_model::ToolRegistry
+impl core::marker::Send for battersea_model::ToolRegistry
+impl core::marker::Sync for battersea_model::ToolRegistry
+impl core::marker::Unpin for battersea_model::ToolRegistry
+impl !core::panic::unwind_safe::RefUnwindSafe for battersea_model::ToolRegistry
+impl !core::panic::unwind_safe::UnwindSafe for battersea_model::ToolRegistry
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_model::ToolRegistry where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_model::ToolRegistry where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<T, U> core::convert::Into<U> for battersea_model::ToolRegistry where U: core::convert::From<T>
+pub fn battersea_model::ToolRegistry::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_model::ToolRegistry where U: core::convert::Into<T>
+pub type battersea_model::ToolRegistry::Error = core::convert::Infallible
+pub fn battersea_model::ToolRegistry::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for battersea_model::ToolRegistry where U: core::convert::TryFrom<T>
+pub type battersea_model::ToolRegistry::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_model::ToolRegistry::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> core::any::Any for battersea_model::ToolRegistry where T: 'static + ?core::marker::Sized
+pub fn battersea_model::ToolRegistry::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_model::ToolRegistry where T: ?core::marker::Sized
+pub fn battersea_model::ToolRegistry::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_model::ToolRegistry where T: ?core::marker::Sized
+pub fn battersea_model::ToolRegistry::borrow_mut(&mut self) -> &mut T
+impl<T> core::convert::From<T> for battersea_model::ToolRegistry
+pub fn battersea_model::ToolRegistry::from(t: T) -> T
+impl<T> typenum::type_operators::Same for battersea_model::ToolRegistry
+pub type battersea_model::ToolRegistry::Output = T
+impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_model::ToolRegistry where T: ?core::marker::Sized
 pub struct battersea_model::WatchdogFailure
 pub battersea_model::WatchdogFailure::limit_ms: u64
 impl core::clone::Clone for battersea_model::WatchdogFailure
@@ -8882,8 +8889,8 @@ pub fn battersea_model::EngineAdapterLogger::on_retry<'life0, 'async_trait>(&'li
 pub fn battersea_model::EngineAdapterLogger::on_stream_event<'life0, 'async_trait>(&'life0 self, _entry: battersea_model::EngineAdapterStreamLog) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = ()> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait
 pub trait battersea_model::EngineLocalToolExecutor: core::marker::Send + core::marker::Sync
 pub fn battersea_model::EngineLocalToolExecutor::call<'life0, 'async_trait>(&'life0 self, call: battersea_model::EngineLocalToolCall) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<battersea_model::EngineLocalToolResult, battersea_model::EngineAdapterRequestError>> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait
-impl battersea_model::EngineLocalToolExecutor for battersea_model::NoLocalTools
-pub fn battersea_model::NoLocalTools::call<'life0, 'async_trait>(&'life0 self, call: battersea_model::EngineLocalToolCall) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<battersea_model::EngineLocalToolResult, battersea_model::EngineAdapterRequestError>> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait
+impl battersea_model::EngineLocalToolExecutor for battersea_model::ToolRegistry
+pub fn battersea_model::ToolRegistry::call<'life0, 'async_trait>(&'life0 self, call: battersea_model::EngineLocalToolCall) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<battersea_model::EngineLocalToolResult, battersea_model::EngineAdapterRequestError>> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait
 pub fn battersea_model::configuration_digest(value: &serde_json::value::Value) -> alloc::string::String
 pub async fn battersea_model::emit_error(logger: core::option::Option<&alloc::sync::Arc<dyn battersea_model::EngineAdapterLogger>>, context: &battersea_model::EngineAdapterDebugContext, operation: battersea_model::EngineOperation, error: &battersea_model::EngineAdapterRequestError)
 pub async fn battersea_model::emit_request(logger: core::option::Option<&alloc::sync::Arc<dyn battersea_model::EngineAdapterLogger>>, context: &battersea_model::EngineAdapterDebugContext, request: &battersea_model::EngineAdapterRequest, schema_name: core::option::Option<&str>, body: core::option::Option<serde_json::value::Value>)
