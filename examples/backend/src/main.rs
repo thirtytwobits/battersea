@@ -1,6 +1,7 @@
 //! A standalone application: explicitly registered providers, a local tool and media generation.
 use async_trait::async_trait;
 use battersea_model::{engine::*, media::*, *};
+use battersea_tools::{Tool, ToolAnnotations, ToolRegistry};
 use futures_util::StreamExt;
 use serde_json::json;
 use std::sync::Arc;
@@ -61,10 +62,17 @@ async fn demonstrate() -> Result<(), Box<dyn std::error::Error>> {
     let mut providers = ProviderRegistry::default();
     battersea_providers::register_builtin_providers(&mut providers)?;
     let mut tools = ToolRegistry::default();
-    tools.register(EngineLocalToolDefinition {
-        name: "example.echo".into(), description: "Echo the supplied text.".into(),
-        input_schema: json!({"type":"object","properties":{"text":{"type":"string"}},"required":["text"],"additionalProperties":false}),
-    }, Arc::new(Echo))?;
+    let input_schema = json!({"type":"object","properties":{"text":{"type":"string"}},"required":["text"],"additionalProperties":false});
+    tools.register(
+        Tool::new(
+            "example.echo",
+            input_schema.as_object().cloned().unwrap_or_default(),
+        )
+        .with_title("Echo text")
+        .with_description("Echo the supplied text.")
+        .with_annotations(ToolAnnotations::read_only_closed_world()),
+        Arc::new(Echo),
+    )?;
     let backend = chat_backend();
     let adapter = providers.create_chat(backend.clone(), None)?;
     let input = "A quiet landscape.";

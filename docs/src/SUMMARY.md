@@ -17,6 +17,7 @@
   - [Execution](contracts/execution.md)
   - [Recovery](contracts/recovery.md)
   - [Provider conversations](contracts/providers.md)
+  - [Application tools](contracts/tools.md)
   - [Media jobs](contracts/media-jobs.md)
   - [Observation and accounting](contracts/observability.md)
   - [Untrusted execution](contracts/isolation.md)

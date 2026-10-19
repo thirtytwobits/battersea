@@ -446,7 +446,7 @@ fn scan_prompts(root: &Path) -> Result<()> {
     let policy = battersea_guard::PromptPolicy::new(
         &["crates/battersea-nodes/src/nodes.yaml"],
         &[
-            r"^crates/(battersea-model|battersea-providers|battersea-config|battersea-nodes)/src/.*\.(rs|yaml)$",
+            r"^crates/(battersea-model|battersea-tools|battersea-providers|battersea-config|battersea-nodes)/src/.*\.(rs|yaml)$",
         ],
     )?;
     fn visit(

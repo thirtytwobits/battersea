@@ -1,0 +1,354 @@
+pub mod battersea_tools
+pub mod battersea_tools::schema
+pub fn battersea_tools::schema::contract_schema() -> serde_json::value::Value
+pub enum battersea_tools::IconTheme
+pub battersea_tools::IconTheme::Dark
+pub battersea_tools::IconTheme::Light
+impl core::clone::Clone for battersea_tools::IconTheme
+pub fn battersea_tools::IconTheme::clone(&self) -> battersea_tools::IconTheme
+impl core::cmp::Eq for battersea_tools::IconTheme
+impl core::cmp::PartialEq for battersea_tools::IconTheme
+pub fn battersea_tools::IconTheme::eq(&self, other: &battersea_tools::IconTheme) -> bool
+impl core::fmt::Debug for battersea_tools::IconTheme
+pub fn battersea_tools::IconTheme::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for battersea_tools::IconTheme
+impl core::marker::StructuralPartialEq for battersea_tools::IconTheme
+impl schemars::JsonSchema for battersea_tools::IconTheme
+pub fn battersea_tools::IconTheme::inline_schema() -> bool
+pub fn battersea_tools::IconTheme::json_schema(generator: &mut schemars::generate::SchemaGenerator) -> schemars::schema::Schema
+pub fn battersea_tools::IconTheme::schema_id() -> alloc::borrow::Cow<'static, str>
+pub fn battersea_tools::IconTheme::schema_name() -> alloc::borrow::Cow<'static, str>
+impl serde_core::ser::Serialize for battersea_tools::IconTheme
+pub fn battersea_tools::IconTheme::serialize<__S>(&self, __serializer: __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for battersea_tools::IconTheme
+pub fn battersea_tools::IconTheme::deserialize<__D>(__deserializer: __D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for battersea_tools::IconTheme
+impl core::marker::Send for battersea_tools::IconTheme
+impl core::marker::Sync for battersea_tools::IconTheme
+impl core::marker::Unpin for battersea_tools::IconTheme
+impl core::panic::unwind_safe::RefUnwindSafe for battersea_tools::IconTheme
+impl core::panic::unwind_safe::UnwindSafe for battersea_tools::IconTheme
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_tools::IconTheme where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_tools::IconTheme where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<T, U> core::convert::Into<U> for battersea_tools::IconTheme where U: core::convert::From<T>
+pub fn battersea_tools::IconTheme::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_tools::IconTheme where U: core::convert::Into<T>
+pub type battersea_tools::IconTheme::Error = core::convert::Infallible
+pub fn battersea_tools::IconTheme::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for battersea_tools::IconTheme where U: core::convert::TryFrom<T>
+pub type battersea_tools::IconTheme::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_tools::IconTheme::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for battersea_tools::IconTheme where T: core::clone::Clone
+pub type battersea_tools::IconTheme::Owned = T
+pub fn battersea_tools::IconTheme::clone_into(&self, target: &mut T)
+pub fn battersea_tools::IconTheme::to_owned(&self) -> T
+impl<T> core::any::Any for battersea_tools::IconTheme where T: 'static + ?core::marker::Sized
+pub fn battersea_tools::IconTheme::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_tools::IconTheme where T: ?core::marker::Sized
+pub fn battersea_tools::IconTheme::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_tools::IconTheme where T: ?core::marker::Sized
+pub fn battersea_tools::IconTheme::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for battersea_tools::IconTheme where T: core::clone::Clone
+pub unsafe fn battersea_tools::IconTheme::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for battersea_tools::IconTheme
+pub fn battersea_tools::IconTheme::from(t: T) -> T
+impl<T> dyn_clone::DynClone for battersea_tools::IconTheme where T: core::clone::Clone
+pub fn battersea_tools::IconTheme::__clone_box(&self, _: dyn_clone::sealed::Private) -> *mut ()
+impl<T> outref::AsOut<T> for battersea_tools::IconTheme where T: core::marker::Copy
+pub fn battersea_tools::IconTheme::as_out(&mut self) -> outref::Out<'_, T>
+impl<T> serde_core::de::DeserializeOwned for battersea_tools::IconTheme where T: for<'de> serde_core::de::Deserialize<'de>
+impl<T> typenum::type_operators::Same for battersea_tools::IconTheme
+pub type battersea_tools::IconTheme::Output = T
+impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_tools::IconTheme where T: ?core::marker::Sized
+pub struct battersea_tools::Icon
+pub battersea_tools::Icon::mime_type: core::option::Option<alloc::string::String>
+pub battersea_tools::Icon::sizes: alloc::vec::Vec<alloc::string::String>
+pub battersea_tools::Icon::src: alloc::string::String
+pub battersea_tools::Icon::theme: core::option::Option<battersea_tools::IconTheme>
+impl core::clone::Clone for battersea_tools::Icon
+pub fn battersea_tools::Icon::clone(&self) -> battersea_tools::Icon
+impl core::cmp::Eq for battersea_tools::Icon
+impl core::cmp::PartialEq for battersea_tools::Icon
+pub fn battersea_tools::Icon::eq(&self, other: &battersea_tools::Icon) -> bool
+impl core::fmt::Debug for battersea_tools::Icon
+pub fn battersea_tools::Icon::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for battersea_tools::Icon
+impl schemars::JsonSchema for battersea_tools::Icon
+pub fn battersea_tools::Icon::inline_schema() -> bool
+pub fn battersea_tools::Icon::json_schema(generator: &mut schemars::generate::SchemaGenerator) -> schemars::schema::Schema
+pub fn battersea_tools::Icon::schema_id() -> alloc::borrow::Cow<'static, str>
+pub fn battersea_tools::Icon::schema_name() -> alloc::borrow::Cow<'static, str>
+impl serde_core::ser::Serialize for battersea_tools::Icon
+pub fn battersea_tools::Icon::serialize<__S>(&self, __serializer: __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for battersea_tools::Icon
+pub fn battersea_tools::Icon::deserialize<__D>(__deserializer: __D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for battersea_tools::Icon
+impl core::marker::Send for battersea_tools::Icon
+impl core::marker::Sync for battersea_tools::Icon
+impl core::marker::Unpin for battersea_tools::Icon
+impl core::panic::unwind_safe::RefUnwindSafe for battersea_tools::Icon
+impl core::panic::unwind_safe::UnwindSafe for battersea_tools::Icon
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_tools::Icon where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_tools::Icon where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<T, U> core::convert::Into<U> for battersea_tools::Icon where U: core::convert::From<T>
+pub fn battersea_tools::Icon::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_tools::Icon where U: core::convert::Into<T>
+pub type battersea_tools::Icon::Error = core::convert::Infallible
+pub fn battersea_tools::Icon::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for battersea_tools::Icon where U: core::convert::TryFrom<T>
+pub type battersea_tools::Icon::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_tools::Icon::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for battersea_tools::Icon where T: core::clone::Clone
+pub type battersea_tools::Icon::Owned = T
+pub fn battersea_tools::Icon::clone_into(&self, target: &mut T)
+pub fn battersea_tools::Icon::to_owned(&self) -> T
+impl<T> core::any::Any for battersea_tools::Icon where T: 'static + ?core::marker::Sized
+pub fn battersea_tools::Icon::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_tools::Icon where T: ?core::marker::Sized
+pub fn battersea_tools::Icon::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_tools::Icon where T: ?core::marker::Sized
+pub fn battersea_tools::Icon::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for battersea_tools::Icon where T: core::clone::Clone
+pub unsafe fn battersea_tools::Icon::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for battersea_tools::Icon
+pub fn battersea_tools::Icon::from(t: T) -> T
+impl<T> dyn_clone::DynClone for battersea_tools::Icon where T: core::clone::Clone
+pub fn battersea_tools::Icon::__clone_box(&self, _: dyn_clone::sealed::Private) -> *mut ()
+impl<T> serde_core::de::DeserializeOwned for battersea_tools::Icon where T: for<'de> serde_core::de::Deserialize<'de>
+impl<T> typenum::type_operators::Same for battersea_tools::Icon
+pub type battersea_tools::Icon::Output = T
+impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_tools::Icon where T: ?core::marker::Sized
+pub struct battersea_tools::Tool
+pub battersea_tools::Tool::annotations: core::option::Option<battersea_tools::ToolAnnotations>
+pub battersea_tools::Tool::description: core::option::Option<alloc::string::String>
+pub battersea_tools::Tool::icons: alloc::vec::Vec<battersea_tools::Icon>
+pub battersea_tools::Tool::input_schema: serde_json::map::Map<alloc::string::String, serde_json::value::Value>
+pub battersea_tools::Tool::meta: serde_json::map::Map<alloc::string::String, serde_json::value::Value>
+pub battersea_tools::Tool::name: alloc::string::String
+pub battersea_tools::Tool::output_schema: core::option::Option<serde_json::map::Map<alloc::string::String, serde_json::value::Value>>
+pub battersea_tools::Tool::title: core::option::Option<alloc::string::String>
+impl battersea_tools::Tool
+pub fn battersea_tools::Tool::effect(&self) -> battersea_tools::ToolEffect
+pub fn battersea_tools::Tool::new(name: impl core::convert::Into<alloc::string::String>, input_schema: serde_json::map::Map<alloc::string::String, serde_json::value::Value>) -> Self
+pub fn battersea_tools::Tool::permits(&self, profile: &str) -> bool
+pub fn battersea_tools::Tool::profiles(&self) -> core::option::Option<alloc::vec::Vec<&str>>
+pub fn battersea_tools::Tool::with_annotations(self, annotations: battersea_tools::ToolAnnotations) -> Self
+pub fn battersea_tools::Tool::with_description(self, description: impl core::convert::Into<alloc::string::String>) -> Self
+pub fn battersea_tools::Tool::with_profiles<I, S>(self, profiles: I) -> Self where I: core::iter::traits::collect::IntoIterator<Item = S>, S: core::convert::Into<alloc::string::String>
+pub fn battersea_tools::Tool::with_title(self, title: impl core::convert::Into<alloc::string::String>) -> Self
+impl core::clone::Clone for battersea_tools::Tool
+pub fn battersea_tools::Tool::clone(&self) -> battersea_tools::Tool
+impl core::cmp::PartialEq for battersea_tools::Tool
+pub fn battersea_tools::Tool::eq(&self, other: &battersea_tools::Tool) -> bool
+impl core::fmt::Debug for battersea_tools::Tool
+pub fn battersea_tools::Tool::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for battersea_tools::Tool
+impl schemars::JsonSchema for battersea_tools::Tool
+pub fn battersea_tools::Tool::inline_schema() -> bool
+pub fn battersea_tools::Tool::json_schema(generator: &mut schemars::generate::SchemaGenerator) -> schemars::schema::Schema
+pub fn battersea_tools::Tool::schema_id() -> alloc::borrow::Cow<'static, str>
+pub fn battersea_tools::Tool::schema_name() -> alloc::borrow::Cow<'static, str>
+impl serde_core::ser::Serialize for battersea_tools::Tool
+pub fn battersea_tools::Tool::serialize<__S>(&self, __serializer: __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for battersea_tools::Tool
+pub fn battersea_tools::Tool::deserialize<__D>(__deserializer: __D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for battersea_tools::Tool
+impl core::marker::Send for battersea_tools::Tool
+impl core::marker::Sync for battersea_tools::Tool
+impl core::marker::Unpin for battersea_tools::Tool
+impl core::panic::unwind_safe::RefUnwindSafe for battersea_tools::Tool
+impl core::panic::unwind_safe::UnwindSafe for battersea_tools::Tool
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_tools::Tool where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_tools::Tool where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<T, U> core::convert::Into<U> for battersea_tools::Tool where U: core::convert::From<T>
+pub fn battersea_tools::Tool::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_tools::Tool where U: core::convert::Into<T>
+pub type battersea_tools::Tool::Error = core::convert::Infallible
+pub fn battersea_tools::Tool::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for battersea_tools::Tool where U: core::convert::TryFrom<T>
+pub type battersea_tools::Tool::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_tools::Tool::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for battersea_tools::Tool where T: core::clone::Clone
+pub type battersea_tools::Tool::Owned = T
+pub fn battersea_tools::Tool::clone_into(&self, target: &mut T)
+pub fn battersea_tools::Tool::to_owned(&self) -> T
+impl<T> core::any::Any for battersea_tools::Tool where T: 'static + ?core::marker::Sized
+pub fn battersea_tools::Tool::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_tools::Tool where T: ?core::marker::Sized
+pub fn battersea_tools::Tool::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_tools::Tool where T: ?core::marker::Sized
+pub fn battersea_tools::Tool::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for battersea_tools::Tool where T: core::clone::Clone
+pub unsafe fn battersea_tools::Tool::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for battersea_tools::Tool
+pub fn battersea_tools::Tool::from(t: T) -> T
+impl<T> dyn_clone::DynClone for battersea_tools::Tool where T: core::clone::Clone
+pub fn battersea_tools::Tool::__clone_box(&self, _: dyn_clone::sealed::Private) -> *mut ()
+impl<T> serde_core::de::DeserializeOwned for battersea_tools::Tool where T: for<'de> serde_core::de::Deserialize<'de>
+impl<T> typenum::type_operators::Same for battersea_tools::Tool
+pub type battersea_tools::Tool::Output = T
+impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_tools::Tool where T: ?core::marker::Sized
+pub struct battersea_tools::ToolAnnotations
+pub battersea_tools::ToolAnnotations::destructive_hint: core::option::Option<bool>
+pub battersea_tools::ToolAnnotations::idempotent_hint: core::option::Option<bool>
+pub battersea_tools::ToolAnnotations::open_world_hint: core::option::Option<bool>
+pub battersea_tools::ToolAnnotations::read_only_hint: core::option::Option<bool>
+pub battersea_tools::ToolAnnotations::title: core::option::Option<alloc::string::String>
+impl battersea_tools::ToolAnnotations
+pub fn battersea_tools::ToolAnnotations::effect(&self) -> battersea_tools::ToolEffect
+pub fn battersea_tools::ToolAnnotations::read_only_closed_world() -> Self
+impl core::clone::Clone for battersea_tools::ToolAnnotations
+pub fn battersea_tools::ToolAnnotations::clone(&self) -> battersea_tools::ToolAnnotations
+impl core::cmp::Eq for battersea_tools::ToolAnnotations
+impl core::cmp::PartialEq for battersea_tools::ToolAnnotations
+pub fn battersea_tools::ToolAnnotations::eq(&self, other: &battersea_tools::ToolAnnotations) -> bool
+impl core::default::Default for battersea_tools::ToolAnnotations
+pub fn battersea_tools::ToolAnnotations::default() -> battersea_tools::ToolAnnotations
+impl core::fmt::Debug for battersea_tools::ToolAnnotations
+pub fn battersea_tools::ToolAnnotations::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for battersea_tools::ToolAnnotations
+impl schemars::JsonSchema for battersea_tools::ToolAnnotations
+pub fn battersea_tools::ToolAnnotations::inline_schema() -> bool
+pub fn battersea_tools::ToolAnnotations::json_schema(generator: &mut schemars::generate::SchemaGenerator) -> schemars::schema::Schema
+pub fn battersea_tools::ToolAnnotations::schema_id() -> alloc::borrow::Cow<'static, str>
+pub fn battersea_tools::ToolAnnotations::schema_name() -> alloc::borrow::Cow<'static, str>
+impl serde_core::ser::Serialize for battersea_tools::ToolAnnotations
+pub fn battersea_tools::ToolAnnotations::serialize<__S>(&self, __serializer: __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for battersea_tools::ToolAnnotations
+pub fn battersea_tools::ToolAnnotations::deserialize<__D>(__deserializer: __D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for battersea_tools::ToolAnnotations
+impl core::marker::Send for battersea_tools::ToolAnnotations
+impl core::marker::Sync for battersea_tools::ToolAnnotations
+impl core::marker::Unpin for battersea_tools::ToolAnnotations
+impl core::panic::unwind_safe::RefUnwindSafe for battersea_tools::ToolAnnotations
+impl core::panic::unwind_safe::UnwindSafe for battersea_tools::ToolAnnotations
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_tools::ToolAnnotations where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_tools::ToolAnnotations where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<T, U> core::convert::Into<U> for battersea_tools::ToolAnnotations where U: core::convert::From<T>
+pub fn battersea_tools::ToolAnnotations::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_tools::ToolAnnotations where U: core::convert::Into<T>
+pub type battersea_tools::ToolAnnotations::Error = core::convert::Infallible
+pub fn battersea_tools::ToolAnnotations::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for battersea_tools::ToolAnnotations where U: core::convert::TryFrom<T>
+pub type battersea_tools::ToolAnnotations::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_tools::ToolAnnotations::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for battersea_tools::ToolAnnotations where T: core::clone::Clone
+pub type battersea_tools::ToolAnnotations::Owned = T
+pub fn battersea_tools::ToolAnnotations::clone_into(&self, target: &mut T)
+pub fn battersea_tools::ToolAnnotations::to_owned(&self) -> T
+impl<T> core::any::Any for battersea_tools::ToolAnnotations where T: 'static + ?core::marker::Sized
+pub fn battersea_tools::ToolAnnotations::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_tools::ToolAnnotations where T: ?core::marker::Sized
+pub fn battersea_tools::ToolAnnotations::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_tools::ToolAnnotations where T: ?core::marker::Sized
+pub fn battersea_tools::ToolAnnotations::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for battersea_tools::ToolAnnotations where T: core::clone::Clone
+pub unsafe fn battersea_tools::ToolAnnotations::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for battersea_tools::ToolAnnotations
+pub fn battersea_tools::ToolAnnotations::from(t: T) -> T
+impl<T> dyn_clone::DynClone for battersea_tools::ToolAnnotations where T: core::clone::Clone
+pub fn battersea_tools::ToolAnnotations::__clone_box(&self, _: dyn_clone::sealed::Private) -> *mut ()
+impl<T> serde_core::de::DeserializeOwned for battersea_tools::ToolAnnotations where T: for<'de> serde_core::de::Deserialize<'de>
+impl<T> typenum::type_operators::Same for battersea_tools::ToolAnnotations
+pub type battersea_tools::ToolAnnotations::Output = T
+impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_tools::ToolAnnotations where T: ?core::marker::Sized
+pub struct battersea_tools::ToolEffect
+pub battersea_tools::ToolEffect::destructive: bool
+pub battersea_tools::ToolEffect::idempotent: bool
+pub battersea_tools::ToolEffect::open_world: bool
+pub battersea_tools::ToolEffect::read_only: bool
+impl core::clone::Clone for battersea_tools::ToolEffect
+pub fn battersea_tools::ToolEffect::clone(&self) -> battersea_tools::ToolEffect
+impl core::cmp::Eq for battersea_tools::ToolEffect
+impl core::cmp::PartialEq for battersea_tools::ToolEffect
+pub fn battersea_tools::ToolEffect::eq(&self, other: &battersea_tools::ToolEffect) -> bool
+impl core::fmt::Debug for battersea_tools::ToolEffect
+pub fn battersea_tools::ToolEffect::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for battersea_tools::ToolEffect
+impl core::marker::StructuralPartialEq for battersea_tools::ToolEffect
+impl core::marker::Freeze for battersea_tools::ToolEffect
+impl core::marker::Send for battersea_tools::ToolEffect
+impl core::marker::Sync for battersea_tools::ToolEffect
+impl core::marker::Unpin for battersea_tools::ToolEffect
+impl core::panic::unwind_safe::RefUnwindSafe for battersea_tools::ToolEffect
+impl core::panic::unwind_safe::UnwindSafe for battersea_tools::ToolEffect
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_tools::ToolEffect where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_tools::ToolEffect where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<T, U> core::convert::Into<U> for battersea_tools::ToolEffect where U: core::convert::From<T>
+pub fn battersea_tools::ToolEffect::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_tools::ToolEffect where U: core::convert::Into<T>
+pub type battersea_tools::ToolEffect::Error = core::convert::Infallible
+pub fn battersea_tools::ToolEffect::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for battersea_tools::ToolEffect where U: core::convert::TryFrom<T>
+pub type battersea_tools::ToolEffect::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_tools::ToolEffect::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for battersea_tools::ToolEffect where T: core::clone::Clone
+pub type battersea_tools::ToolEffect::Owned = T
+pub fn battersea_tools::ToolEffect::clone_into(&self, target: &mut T)
+pub fn battersea_tools::ToolEffect::to_owned(&self) -> T
+impl<T> core::any::Any for battersea_tools::ToolEffect where T: 'static + ?core::marker::Sized
+pub fn battersea_tools::ToolEffect::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_tools::ToolEffect where T: ?core::marker::Sized
+pub fn battersea_tools::ToolEffect::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_tools::ToolEffect where T: ?core::marker::Sized
+pub fn battersea_tools::ToolEffect::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for battersea_tools::ToolEffect where T: core::clone::Clone
+pub unsafe fn battersea_tools::ToolEffect::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for battersea_tools::ToolEffect
+pub fn battersea_tools::ToolEffect::from(t: T) -> T
+impl<T> dyn_clone::DynClone for battersea_tools::ToolEffect where T: core::clone::Clone
+pub fn battersea_tools::ToolEffect::__clone_box(&self, _: dyn_clone::sealed::Private) -> *mut ()
+impl<T> outref::AsOut<T> for battersea_tools::ToolEffect where T: core::marker::Copy
+pub fn battersea_tools::ToolEffect::as_out(&mut self) -> outref::Out<'_, T>
+impl<T> typenum::type_operators::Same for battersea_tools::ToolEffect
+pub type battersea_tools::ToolEffect::Output = T
+impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_tools::ToolEffect where T: ?core::marker::Sized
+pub struct battersea_tools::ToolRegistry
+impl battersea_tools::ToolRegistry
+pub fn battersea_tools::ToolRegistry::definitions(&self) -> alloc::vec::Vec<battersea_model::adapter::EngineLocalToolDefinition>
+pub fn battersea_tools::ToolRegistry::for_profile(&self, profile: &str) -> Self
+pub fn battersea_tools::ToolRegistry::register(&mut self, tool: battersea_tools::Tool, executor: alloc::sync::Arc<dyn battersea_model::adapter::EngineLocalToolExecutor>) -> core::result::Result<(), battersea_model::adapter::error::EngineAdapterRequestError>
+pub fn battersea_tools::ToolRegistry::tools(&self) -> impl core::iter::traits::iterator::Iterator<Item = &battersea_tools::Tool>
+impl battersea_model::adapter::EngineLocalToolExecutor for battersea_tools::ToolRegistry
+pub fn battersea_tools::ToolRegistry::call<'life0, 'async_trait>(&'life0 self, call: battersea_model::adapter::EngineLocalToolCall) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<battersea_model::adapter::EngineLocalToolResult, battersea_model::adapter::error::EngineAdapterRequestError>> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait
+impl core::clone::Clone for battersea_tools::ToolRegistry
+pub fn battersea_tools::ToolRegistry::clone(&self) -> battersea_tools::ToolRegistry
+impl core::default::Default for battersea_tools::ToolRegistry
+pub fn battersea_tools::ToolRegistry::default() -> battersea_tools::ToolRegistry
+impl core::marker::Freeze for battersea_tools::ToolRegistry
+impl core::marker::Send for battersea_tools::ToolRegistry
+impl core::marker::Sync for battersea_tools::ToolRegistry
+impl core::marker::Unpin for battersea_tools::ToolRegistry
+impl !core::panic::unwind_safe::RefUnwindSafe for battersea_tools::ToolRegistry
+impl !core::panic::unwind_safe::UnwindSafe for battersea_tools::ToolRegistry
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_tools::ToolRegistry where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_tools::ToolRegistry where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<T, U> core::convert::Into<U> for battersea_tools::ToolRegistry where U: core::convert::From<T>
+pub fn battersea_tools::ToolRegistry::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_tools::ToolRegistry where U: core::convert::Into<T>
+pub type battersea_tools::ToolRegistry::Error = core::convert::Infallible
+pub fn battersea_tools::ToolRegistry::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for battersea_tools::ToolRegistry where U: core::convert::TryFrom<T>
+pub type battersea_tools::ToolRegistry::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_tools::ToolRegistry::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for battersea_tools::ToolRegistry where T: core::clone::Clone
+pub type battersea_tools::ToolRegistry::Owned = T
+pub fn battersea_tools::ToolRegistry::clone_into(&self, target: &mut T)
+pub fn battersea_tools::ToolRegistry::to_owned(&self) -> T
+impl<T> core::any::Any for battersea_tools::ToolRegistry where T: 'static + ?core::marker::Sized
+pub fn battersea_tools::ToolRegistry::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_tools::ToolRegistry where T: ?core::marker::Sized
+pub fn battersea_tools::ToolRegistry::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_tools::ToolRegistry where T: ?core::marker::Sized
+pub fn battersea_tools::ToolRegistry::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for battersea_tools::ToolRegistry where T: core::clone::Clone
+pub unsafe fn battersea_tools::ToolRegistry::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for battersea_tools::ToolRegistry
+pub fn battersea_tools::ToolRegistry::from(t: T) -> T
+impl<T> dyn_clone::DynClone for battersea_tools::ToolRegistry where T: core::clone::Clone
+pub fn battersea_tools::ToolRegistry::__clone_box(&self, _: dyn_clone::sealed::Private) -> *mut ()
+impl<T> typenum::type_operators::Same for battersea_tools::ToolRegistry
+pub type battersea_tools::ToolRegistry::Output = T
+impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_tools::ToolRegistry where T: ?core::marker::Sized
+pub const battersea_tools::MCP_PROTOCOL_REVISION: &str
+pub const battersea_tools::PROFILES_META_KEY: &str
