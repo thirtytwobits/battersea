@@ -85,7 +85,7 @@ impl EngineAdapter for MockAdapter {
         let executor = request
             .local_tool_executor
             .clone()
-            .unwrap_or_else(|| Arc::new(battersea_model::ToolRegistry::default()));
+            .unwrap_or_else(|| Arc::new(battersea_model::NoLocalTools));
         let (tx, rx) = tokio::sync::mpsc::channel(16);
         let logger = self.logger.clone();
         tokio::spawn(run_tool_loop(

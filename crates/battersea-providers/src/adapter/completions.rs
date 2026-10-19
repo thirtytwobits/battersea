@@ -112,7 +112,7 @@ impl EngineAdapter for Completions {
         let executor = request
             .local_tool_executor
             .clone()
-            .unwrap_or_else(|| Arc::new(ToolRegistry::default()));
+            .unwrap_or_else(|| Arc::new(NoLocalTools));
         let (tx, rx) = tokio::sync::mpsc::channel(16);
         tokio::spawn(run_tool_loop(
             conversation,

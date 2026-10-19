@@ -1,4 +1,4 @@
-//! Explicit provider and tool registration. Construction and admission perform no provider I/O.
+//! Explicit provider registration. Construction and admission perform no provider I/O.
 use crate::{adapter::*, media::*, EngineAdapterRequestError, ErrorKind};
 use async_trait::async_trait;
 use std::{collections::BTreeMap, sync::Arc};
@@ -282,63 +282,6 @@ impl ProviderRegistry {
             ));
         }
         (provider.prepare)(backend, request)
-    }
-}
-
-struct RegisteredTool {
-    definition: EngineLocalToolDefinition,
-    validator: jsonschema::Validator,
-    executor: Arc<dyn EngineLocalToolExecutor>,
-}
-#[derive(Default)]
-pub struct ToolRegistry {
-    tools: BTreeMap<String, RegisteredTool>,
-}
-impl ToolRegistry {
-    pub fn register(
-        &mut self,
-        mut definition: EngineLocalToolDefinition,
-        executor: Arc<dyn EngineLocalToolExecutor>,
-    ) -> Result<(), EngineAdapterRequestError> {
-        definition.name = local_tool_name(&definition.name);
-        if definition.name.trim().is_empty() || self.tools.contains_key(&definition.name) {
-            return Err(
-                invalid("tools", "Duplicate, blank or colliding tool identifier.")
-                    .with_tool_code(crate::ToolCode::DuplicateTool),
-            );
-        }
-        let validator = jsonschema::validator_for(&definition.input_schema).map_err(|e| {
-            invalid("tools", e.to_string()).with_tool_code(crate::ToolCode::InvalidToolSchema)
-        })?;
-        self.tools.insert(
-            definition.name.clone(),
-            RegisteredTool {
-                definition,
-                validator,
-                executor,
-            },
-        );
-        Ok(())
-    }
-    pub fn definitions(&self) -> Vec<EngineLocalToolDefinition> {
-        self.tools.values().map(|t| t.definition.clone()).collect()
-    }
-}
-#[async_trait]
-impl EngineLocalToolExecutor for ToolRegistry {
-    async fn call(
-        &self,
-        mut call: EngineLocalToolCall,
-    ) -> Result<EngineLocalToolResult, EngineAdapterRequestError> {
-        call.name = local_tool_name(&call.name);
-        let tool = self.tools.get(&call.name).ok_or_else(|| {
-            invalid("tools", "Tool is not registered.")
-                .with_tool_code(crate::ToolCode::UnregisteredTool)
-        })?;
-        tool.validator.validate(&call.arguments).map_err(|e| {
-            invalid("tools", e.to_string()).with_tool_code(crate::ToolCode::InvalidToolArguments)
-        })?;
-        tool.executor.call(call).await
     }
 }
 
