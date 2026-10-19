@@ -27,7 +27,7 @@ none is permitted to none. The application names its profiles and chooses each r
 | No description | `invalid_tool_definition` |
 | Input schema whose root is not an object schema | `invalid_tool_definition` |
 | Profiles that are not distinct, non-blank names | `invalid_tool_definition` |
-| Input schema that does not compile | `invalid_tool_schema` |
+| Input or output schema that does not compile | `invalid_tool_schema` |
 | Provider-facing name already registered | `duplicate_tool` |
 
 A provider is offered each tool under its provider-facing name, `local_tool_name` of its own,
@@ -35,4 +35,5 @@ with its description exactly as written.
 `ToolRegistry::for_profile` keeps the tools permitted to one profile. A call names its tool by
 either name. The registry refuses a call to a tool it does not hold as `unregistered_tool`, and
 arguments outside the tool's input schema as `invalid_tool_arguments`, before any executor runs.
-The executor receives the call under the tool's own name.
+The executor receives the call under the tool's own name. Where the tool declares an output
+schema, a result outside it is refused as `invalid_tool_result`.

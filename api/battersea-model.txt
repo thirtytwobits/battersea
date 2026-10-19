@@ -138,6 +138,7 @@ pub battersea_model::adapter::error::ToolCode::DuplicateTool
 pub battersea_model::adapter::error::ToolCode::InvalidToolArguments
 pub battersea_model::adapter::error::ToolCode::InvalidToolCallId
 pub battersea_model::adapter::error::ToolCode::InvalidToolDefinition
+pub battersea_model::adapter::error::ToolCode::InvalidToolResult
 pub battersea_model::adapter::error::ToolCode::InvalidToolRounds
 pub battersea_model::adapter::error::ToolCode::InvalidToolSchema
 pub battersea_model::adapter::error::ToolCode::MalformedToolCall
@@ -3117,6 +3118,7 @@ pub battersea_model::error::ToolCode::DuplicateTool
 pub battersea_model::error::ToolCode::InvalidToolArguments
 pub battersea_model::error::ToolCode::InvalidToolCallId
 pub battersea_model::error::ToolCode::InvalidToolDefinition
+pub battersea_model::error::ToolCode::InvalidToolResult
 pub battersea_model::error::ToolCode::InvalidToolRounds
 pub battersea_model::error::ToolCode::InvalidToolSchema
 pub battersea_model::error::ToolCode::MalformedToolCall
@@ -6821,6 +6823,7 @@ pub battersea_model::ToolCode::DuplicateTool
 pub battersea_model::ToolCode::InvalidToolArguments
 pub battersea_model::ToolCode::InvalidToolCallId
 pub battersea_model::ToolCode::InvalidToolDefinition
+pub battersea_model::ToolCode::InvalidToolResult
 pub battersea_model::ToolCode::InvalidToolRounds
 pub battersea_model::ToolCode::InvalidToolSchema
 pub battersea_model::ToolCode::MalformedToolCall

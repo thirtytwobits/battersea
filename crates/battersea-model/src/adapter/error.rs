@@ -116,6 +116,8 @@ pub enum ToolCode {
     ToolOutsideChoice,
     /// A tool call's arguments do not satisfy the tool's input schema.
     InvalidToolArguments,
+    /// A tool's result does not satisfy the output schema the tool declares.
+    InvalidToolResult,
     /// The registry holds no tool with the called name.
     UnregisteredTool,
     /// The tool calls and results of a run exceed their encoded-byte limit.
@@ -137,6 +139,7 @@ impl ToolCode {
         Self::UnofferedTool,
         Self::ToolOutsideChoice,
         Self::InvalidToolArguments,
+        Self::InvalidToolResult,
         Self::UnregisteredTool,
         Self::ToolTranscriptTooLarge,
         Self::ToolRoundsExceeded,
@@ -155,6 +158,7 @@ impl ToolCode {
             Self::UnofferedTool => "unoffered_tool",
             Self::ToolOutsideChoice => "tool_outside_choice",
             Self::InvalidToolArguments => "invalid_tool_arguments",
+            Self::InvalidToolResult => "invalid_tool_result",
             Self::UnregisteredTool => "unregistered_tool",
             Self::ToolTranscriptTooLarge => "tool_transcript_too_large",
             Self::ToolRoundsExceeded => "tool_rounds_exceeded",

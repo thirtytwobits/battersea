@@ -15,6 +15,7 @@ struct RegisteredTool {
     tool: Tool,
     definition: EngineLocalToolDefinition,
     validator: jsonschema::Validator,
+    output_validator: Option<jsonschema::Validator>,
     executor: Arc<dyn EngineLocalToolExecutor>,
 }
 
@@ -22,7 +23,8 @@ struct RegisteredTool {
 ///
 /// A provider is offered each tool under its provider-facing name, [`local_tool_name`] of its
 /// own. A call is validated against the tool's input schema before its executor runs, and the
-/// executor receives it under the tool's own name.
+/// executor receives it under the tool's own name. Where the tool declares an output schema,
+/// its result is validated against that before it is returned.
 #[derive(Clone, Default)]
 pub struct ToolRegistry {
     tools: BTreeMap<String, Arc<RegisteredTool>>,
@@ -45,7 +47,7 @@ impl ToolRegistry {
     /// Refuses a tool whose name is outside the protocol's tool-name alphabet, that has no
     /// description, whose input schema is not an object schema, or whose profiles entry is
     /// not a list of distinct, non-blank names, as [`ToolCode::InvalidToolDefinition`]; an
-    /// input schema that does not compile as [`ToolCode::InvalidToolSchema`]; and a tool
+    /// input or output schema that does not compile as [`ToolCode::InvalidToolSchema`]; and a tool
     /// whose provider-facing name is already registered as [`ToolCode::DuplicateTool`].
     pub fn register(
         &mut self,
@@ -110,6 +112,13 @@ impl ToolRegistry {
         let input_schema = Value::Object(tool.input_schema.clone());
         let validator = jsonschema::validator_for(&input_schema)
             .map_err(|error| refusal(error.to_string(), ToolCode::InvalidToolSchema))?;
+        let output_validator = match &tool.output_schema {
+            Some(schema) => Some(
+                jsonschema::validator_for(&Value::Object(schema.clone()))
+                    .map_err(|error| refusal(error.to_string(), ToolCode::InvalidToolSchema))?,
+            ),
+            None => None,
+        };
         let definition = EngineLocalToolDefinition {
             name: provider_name.clone(),
             description,
@@ -121,6 +130,7 @@ impl ToolRegistry {
                 tool,
                 definition,
                 validator,
+                output_validator,
                 executor,
             }),
         );
@@ -158,7 +168,8 @@ impl ToolRegistry {
 #[async_trait]
 impl EngineLocalToolExecutor for ToolRegistry {
     /// Runs `call` with the executor of the tool it names, under either the tool's own name or
-    /// its provider-facing one.
+    /// its provider-facing one. A result outside the tool's declared output schema is refused
+    /// as [`ToolCode::InvalidToolResult`].
     async fn call(
         &self,
         mut call: EngineLocalToolCall,
@@ -177,6 +188,18 @@ impl EngineLocalToolExecutor for ToolRegistry {
             .validate(&call.arguments)
             .map_err(|error| refusal(error.to_string(), ToolCode::InvalidToolArguments))?;
         call.name.clone_from(&registered.tool.name);
-        registered.executor.call(call).await
+        let result = registered.executor.call(call).await?;
+        if let Some(output) = &registered.output_validator {
+            output.validate(&result.content).map_err(|error| {
+                refusal(
+                    format!(
+                        "Tool \"{}\" returned a result outside its output schema: {error}",
+                        registered.tool.name
+                    ),
+                    ToolCode::InvalidToolResult,
+                )
+            })?;
+        }
+        Ok(result)
     }
 }

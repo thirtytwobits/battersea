@@ -161,6 +161,13 @@ fn a_record_that_cannot_be_offered_is_refused() {
             "{case}"
         );
     }
+    let mut uncompilable_output = lookup("example.lookup");
+    uncompilable_output.output_schema =
+        Some(object(json!({"type": "object", "minProperties": "one"})));
+    let error = ToolRegistry::default()
+        .register(uncompilable_output, Arc::new(Recorder::default()))
+        .unwrap_err();
+    assert_eq!(error.tool_code, Some(ToolCode::InvalidToolSchema));
     let uncompilable = Tool::new(
         "example.lookup",
         object(json!({"type": "object", "minProperties": "one"})),
@@ -174,6 +181,37 @@ fn a_record_that_cannot_be_offered_is_refused() {
     assert!(ToolRegistry::default()
         .register(longest, Arc::new(Recorder::default()))
         .is_ok());
+}
+
+#[tokio::test]
+async fn a_result_outside_the_declared_output_schema_is_refused() {
+    let recorder = Arc::new(Recorder::default());
+    let mut registry = ToolRegistry::default();
+    let mut echo = lookup("example.echo");
+    echo.output_schema = Some(keyed_schema());
+    let mut answers = lookup("example.answers");
+    answers.output_schema = Some(object(
+        json!({"type": "object", "required": ["value"], "properties": {"value": {"type": "string"}}}),
+    ));
+    for tool in [&echo, &answers] {
+        registry.register(tool.clone(), recorder.clone()).unwrap();
+    }
+    let arguments = json!({"key": "selected"});
+    let result = registry
+        .call(call(&echo.name, arguments.clone()))
+        .await
+        .unwrap();
+    assert_eq!(result.content, arguments);
+    let error = registry
+        .call(call(&answers.name, arguments.clone()))
+        .await
+        .unwrap_err();
+    assert_eq!(error.tool_code, Some(ToolCode::InvalidToolResult));
+    assert_eq!(
+        recorder.calls().len(),
+        2,
+        "the executor ran before its result was checked"
+    );
 }
 
 #[tokio::test]

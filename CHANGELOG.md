@@ -8,7 +8,8 @@
 - Breaking Rust API: `ToolRegistry` moves from `battersea-model` to `battersea-tools` and registers
   `Tool` records. It refuses a record it cannot offer as `ToolCode::InvalidToolDefinition`, keeps
   one profile's tools with `for_profile`, and passes each call to its executor under the tool's
-  own name.
+  own name. A result outside the tool's declared output schema is refused as
+  `ToolCode::InvalidToolResult`.
 - `NoLocalTools` refuses every call of a request offered no tools. The Chat Completions and mock
   adapters run with it when a request carries no executor.
 

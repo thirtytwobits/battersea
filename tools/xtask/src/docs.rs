@@ -21,6 +21,9 @@ const PUBLISHED: &str = "target/documentation/published";
 // This bounds unpacked release assets, rather than trusting tar headers or gzip sizes.
 const MAX_ARCHIVE_BYTES: u64 = 1024 * 1024 * 1024;
 
+/// The first release whose documentation publishes the tool record's schema.
+const TOOLS_SCHEMA_SINCE: Version = Version::new(0, 15, 0);
+
 fn tag_version(tag: &str) -> Result<Version> {
     let version = Version::parse(tag.strip_prefix('v').ok_or("Tag must start with v")?)?;
     if tag != format!("v{version}") {
@@ -375,7 +378,7 @@ pub fn check(site: &Path) -> Result<()> {
         .ok_or("No documentation versions")?
     {
         let tag = string(entry, "tag")?;
-        tag_version(tag)?;
+        let version = tag_version(tag)?;
         let directory = site.join(tag);
         let metadata = json(directory.join("documentation.json"))?;
         if metadata["tag"] != tag || metadata["version"] != tag.trim_start_matches('v') {
@@ -392,7 +395,12 @@ pub fn check(site: &Path) -> Result<()> {
             "schemas/pianola-roll.schema.json",
             "LICENSE",
             "NOTICE",
-        ] {
+        ]
+        .into_iter()
+        .chain(
+            (Version::new(version.major, version.minor, version.patch) >= TOOLS_SCHEMA_SINCE)
+                .then_some("schemas/tools.schema.json"),
+        ) {
             if !directory.join(required).is_file() {
                 return Err(format!("Missing {tag}/{required}").into());
             }
@@ -856,6 +864,7 @@ mod tests {
             "schemas/flow.schema.json",
             "schemas/runtime.schema.json",
             "schemas/pianola-roll.schema.json",
+            "schemas/tools.schema.json",
             "LICENSE",
             "NOTICE",
         ] {
@@ -934,6 +943,19 @@ mod tests {
             fs::write(&alias, redirect(destination)).unwrap();
             assert!(check(temp.path()).is_err(), "{destination} must fail");
         }
+    }
+
+    #[test]
+    fn versions_from_0_15_0_must_publish_the_tool_schema() {
+        let temp = tempfile::tempdir().unwrap();
+        fixture(temp.path(), "v0.14.0");
+        fixture(temp.path(), "v0.15.0");
+        fs::remove_file(temp.path().join("v0.14.0/schemas/tools.schema.json")).unwrap();
+        let versions = BTreeMap::from([("v0.14.0".into(), false), ("v0.15.0".into(), false)]);
+        write_index(temp.path(), &versions, Some("v0.15.0")).unwrap();
+        check(temp.path()).unwrap();
+        fs::remove_file(temp.path().join("v0.15.0/schemas/tools.schema.json")).unwrap();
+        assert!(check(temp.path()).is_err());
     }
 
     #[test]
