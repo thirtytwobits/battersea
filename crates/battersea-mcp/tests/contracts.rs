@@ -529,3 +529,31 @@ async fn abandoned_discovery_closes_its_pending_request_state() {
         .unwrap();
     assert!(connection.discover().await.is_err());
 }
+
+#[tokio::test]
+async fn duplicate_names_in_a_refresh_invalidate_existing_bindings() {
+    let server = server();
+    let original = tool("write");
+    let mut changed = original.clone();
+    changed["description"] = json!("Another definition");
+    let (connection, _tx, _) = connect(server.clone(), config()).await;
+    let executor = binding(&connection).await.executor();
+    for records in [
+        vec![original.clone(), original.clone()],
+        vec![changed, original.clone()],
+    ] {
+        *server.tools.lock().unwrap() = records;
+        let catalogue = connection.discover().await.unwrap();
+        assert!(!catalogue.diagnostics().is_empty());
+        let error = executor.call(call()).await.unwrap_err();
+        assert_eq!(
+            error.tool_call.unwrap().outcome,
+            ToolCallOutcome::NotDispatched
+        );
+        assert_eq!(server.calls.load(Ordering::SeqCst), 0);
+    }
+    *server.tools.lock().unwrap() = vec![original];
+    connection.discover().await.unwrap();
+    executor.call(call()).await.unwrap();
+    assert_eq!(server.calls.load(Ordering::SeqCst), 1);
+}

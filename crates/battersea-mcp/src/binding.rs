@@ -167,7 +167,11 @@ impl McpCatalogue {
             }
             *connection.0.published.lock().unwrap() = Some(Published {
                 epoch,
-                records: records.clone(),
+                records: records
+                    .iter()
+                    .filter(|(name, _)| admitted.contains_key(*name))
+                    .map(|(name, record)| (name.clone(), record.clone()))
+                    .collect(),
             });
             let revision = connection.0.revision.fetch_add(1, Ordering::SeqCst) + 1;
             Ok(Self {
