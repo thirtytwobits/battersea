@@ -28,7 +28,9 @@ product session.
 request admission and the shared tool loop. `ToolCode` names the tool runner's refusals.
 `battersea-tools` holds application tools as Model Context Protocol tool records with their
 permitted agent profiles, and the registry that offers them to providers and runs their calls.
-See the [tool contract](contracts/tools.md). `battersea-providers` supplies OpenAI, Anthropic,
+`battersea-mcp` binds tools from host-owned MCP connections through optional stdio and
+Streamable HTTP transports. The adapter requires Rust 1.88; core crates require Rust 1.85.
+See the [MCP adapter contract](contracts/mcp.md) and [tool contract](contracts/tools.md). `battersea-providers` supplies OpenAI, Anthropic,
 Google, Runway, Replicate and mock transports through individual Cargo features. Text admission accepts
 text blocks; provider-native tool continuation retains opaque signed fields.
 

@@ -12,7 +12,11 @@ jobs:
     timeout-minutes: 20
     strategy:
       matrix:
-        rust: ['1.85.0', '1.99.0']
+        include:
+          - rust: '1.85.0'
+            selection: '--core-only'
+          - rust: '1.99.0'
+            selection: ''
     steps:
       - uses: actions/checkout@v7
       - name: Install Rust
@@ -27,8 +31,18 @@ jobs:
             chmod +x "$RUNNER_TEMP/no-node/$tool"
           done
           echo "$RUNNER_TEMP/no-node" >> "$GITHUB_PATH"
-      - run: cargo xtask check
-      - run: cargo xtask package
+      - run: cargo xtask check ${{ matrix.selection }}
+      - run: cargo xtask package ${{ matrix.selection }}
+  mcp-msrv:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - run: rustup toolchain install 1.88.0 --profile minimal
+      - run: cargo +1.88.0 test --locked -p battersea-mcp --all-features
+      - run: cargo +1.88.0 check --locked -p battersea-mcp --no-default-features
+      - run: cargo +1.88.0 check --locked -p battersea-mcp --features stdio
+      - run: cargo +1.88.0 check --locked -p battersea-mcp --features http
   typescript:
     runs-on: ubuntu-24.04
     timeout-minutes: 10
