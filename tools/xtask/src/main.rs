@@ -406,7 +406,7 @@ fn package(root: &Path, core_only: bool) -> Result<()> {
             fs::read_to_string(root.join(format!("examples/{example}/src/main.rs")))?,
         )?;
         if example == "mcp" {
-            for module in ["lib.rs", "host.rs", "fixture.rs"] {
+            for module in ["lib.rs", "host.rs", "fixture.rs", "journal.rs"] {
                 fs::copy(
                     root.join("examples/mcp/src").join(module),
                     consumer.join("src").join(module),

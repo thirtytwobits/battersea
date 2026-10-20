@@ -468,3 +468,199 @@ async fn catalogue_admission_and_alias_collisions_use_shared_registry_rules() {
         .is_err());
     connection.close();
 }
+
+#[tokio::test]
+async fn durable_pending_calls_resume_from_disk_once_without_regenerating() {
+    use battersea_tools::{
+        DurableToolApprovalScope, DurableToolExecutor, ToolApprovalAction,
+        ToolApprovalJournalLimits,
+    };
+    use mcp_example::journal::FileApprovalStore;
+    use std::time::{SystemTime, UNIX_EPOCH};
+    for transport in TRANSPORTS {
+        let (directory, ledger) = temporary_ledger();
+        let remote = Remote::start(transport, &ledger, Fault::None, Duration::from_secs(10))
+            .await
+            .unwrap();
+        let (binding, tools) = host::bind(&remote.connection).await.unwrap();
+        let scope = DurableToolApprovalScope {
+            run_id: "durable-run".into(),
+            binding_revision: binding.revision().into(),
+            expires_at_unix_ms: SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap()
+                .as_millis() as u64
+                + 60000,
+        };
+        let store = || Arc::new(FileApprovalStore::new(directory.path().into()));
+        let executor = DurableToolExecutor::create(
+            store(),
+            tools.for_profile("operator"),
+            scope.clone(),
+            ToolApprovalJournalLimits {
+                max_calls: 8,
+                max_bytes: 65536,
+            },
+            Duration::from_secs(5),
+        )
+        .await
+        .unwrap();
+        let fixture = ProviderFixture::new(json!({"value":1}), false);
+        let provider = fixture::provider_http(fixture.clone()).await.unwrap();
+        let (adapter, chat) = host::provider(&provider.endpoint).unwrap();
+        let mut request = host::request(&tools, "operator", chat);
+        request.local_tools = executor.definitions();
+        request.local_tool_executor = Some(Arc::new(executor));
+        let error = collect(&adapter, request).await.unwrap_err();
+        assert_eq!(
+            error.tool_code,
+            Some(battersea_model::ToolCode::ToolApprovalPending)
+        );
+        assert_eq!(fixture::effect_count(&ledger).unwrap(), 0);
+        let executor = DurableToolExecutor::open(
+            store(),
+            tools.for_profile("operator"),
+            scope.clone(),
+            65536,
+            Duration::from_secs(5),
+        )
+        .await
+        .unwrap();
+        let pending = executor.inspect().await.unwrap();
+        let approved = executor
+            .decide(
+                "effect-1",
+                &pending.calls["effect-1"].request_revision,
+                pending.revision,
+                ToolApprovalAction::Allow,
+                "operator",
+            )
+            .await
+            .unwrap();
+        drop(executor);
+        let executor = DurableToolExecutor::open(
+            store(),
+            tools.for_profile("operator"),
+            scope.clone(),
+            65536,
+            Duration::from_secs(5),
+        )
+        .await
+        .unwrap();
+        let result = executor
+            .resume("effect-1", approved.revision)
+            .await
+            .unwrap();
+        assert!(serde_json::to_string(&result)
+            .unwrap()
+            .contains("private-receipt"));
+        assert!(!format!("{:?}", executor.inspect().await.unwrap()).contains("private-receipt"));
+        drop(executor);
+        let executor = DurableToolExecutor::open(
+            store(),
+            tools.for_profile("operator"),
+            scope,
+            65536,
+            Duration::from_secs(5),
+        )
+        .await
+        .unwrap();
+        let completed = executor.inspect().await.unwrap();
+        assert_eq!(
+            executor
+                .resume("effect-1", completed.revision)
+                .await
+                .unwrap(),
+            result
+        );
+        assert_eq!(fixture::effect_count(&ledger).unwrap(), 1);
+        assert_eq!(fixture.requests.lock().unwrap().len(), 1);
+        remote.close().await;
+        drop(provider);
+    }
+}
+
+#[tokio::test]
+async fn file_approval_store_fences_competing_handles_and_bounds_read_only_loads() {
+    use battersea_tools::{
+        DurableToolApprovalScope, DurableToolExecutor, ToolApprovalJournalLimits,
+        ToolApprovalStore, ToolApprovalStoreError,
+    };
+    use mcp_example::journal::FileApprovalStore;
+    use std::time::{SystemTime, UNIX_EPOCH};
+    let directory = tempfile::tempdir().unwrap();
+    let store = Arc::new(FileApprovalStore::new(directory.path().into()));
+    let scope = DurableToolApprovalScope {
+        run_id: "file-race".into(),
+        binding_revision: "binding-1".into(),
+        expires_at_unix_ms: SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_millis() as u64
+            + 60000,
+    };
+    let executor = DurableToolExecutor::create(
+        store.clone(),
+        ToolRegistry::default(),
+        scope,
+        ToolApprovalJournalLimits {
+            max_calls: 1,
+            max_bytes: 4096,
+        },
+        Duration::from_secs(5),
+    )
+    .await
+    .unwrap();
+    let mut next = executor.inspect().await.unwrap();
+    next.revision += 1;
+    let second = FileApprovalStore::new(directory.path().into());
+    let (a, b) = tokio::join!(
+        store.compare_exchange("file-race", Some(1), &next),
+        second.compare_exchange("file-race", Some(1), &next)
+    );
+    assert_ne!(a.is_ok(), b.is_ok());
+    assert_eq!(
+        store
+            .load("file-race", 4096)
+            .await
+            .unwrap()
+            .unwrap()
+            .revision,
+        2
+    );
+    let before = std::fs::read(directory.path().join("approval.json")).unwrap();
+    assert_eq!(
+        store.load("file-race", 1).await.unwrap_err(),
+        ToolApprovalStoreError::Unavailable
+    );
+    assert_eq!(
+        store.load("another-run", 4096).await.unwrap_err(),
+        ToolApprovalStoreError::Conflict
+    );
+    assert_eq!(
+        std::fs::read(directory.path().join("approval.json")).unwrap(),
+        before
+    );
+    std::fs::write(
+        directory.path().join("approval.lock"),
+        b"host must inspect crash-left lock",
+    )
+    .unwrap();
+    next.revision += 1;
+    assert_eq!(
+        store
+            .compare_exchange("file-race", Some(2), &next)
+            .await
+            .unwrap_err(),
+        ToolApprovalStoreError::Conflict
+    );
+    assert_eq!(
+        store
+            .load("file-race", 4096)
+            .await
+            .unwrap()
+            .unwrap()
+            .revision,
+        2
+    );
+}

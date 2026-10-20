@@ -102,7 +102,14 @@ impl EngineAdapterRequestError {
 #[serde(rename_all = "snake_case")]
 #[non_exhaustive]
 pub enum ToolCode {
-    /// The host supplied an invalid approval scope or capacity.
+    /// The durable approval journal or request revision changed.
+    ToolApprovalConflict,
+    /// An approval storage operation requires inspection before continuing.
+    ToolApprovalStorage,
+    /// A durable tool dispatch intent requires reconciliation.
+    ToolApprovalUnresolved,
+
+    /// The host supplied an invalid approval scope, capacity or journal.
     InvalidToolApproval,
     /// The host denied the validated tool call.
     ToolApprovalDenied,
@@ -110,7 +117,7 @@ pub enum ToolCode {
     ToolApprovalPending,
     /// The approval scope expired before dispatch.
     ToolApprovalExpired,
-    /// The approval executor cannot retain another call identity.
+    /// The approval executor exhausted its call or payload capacity.
     ToolApprovalCapacity,
 
     /// A request's tool round limit is outside the supported range.
@@ -151,6 +158,9 @@ pub enum ToolCode {
 impl ToolCode {
     /// Every tool runner refusal.
     pub const ALL: &[Self] = &[
+        Self::ToolApprovalConflict,
+        Self::ToolApprovalStorage,
+        Self::ToolApprovalUnresolved,
         Self::InvalidToolApproval,
         Self::ToolApprovalDenied,
         Self::ToolApprovalPending,
@@ -176,6 +186,10 @@ impl ToolCode {
     /// The stable snake_case code.
     pub fn as_str(self) -> &'static str {
         match self {
+            Self::ToolApprovalConflict => "tool_approval_conflict",
+            Self::ToolApprovalStorage => "tool_approval_storage",
+            Self::ToolApprovalUnresolved => "tool_approval_unresolved",
+
             Self::InvalidToolApproval => "invalid_tool_approval",
             Self::ToolApprovalDenied => "tool_approval_denied",
             Self::ToolApprovalPending => "tool_approval_pending",
