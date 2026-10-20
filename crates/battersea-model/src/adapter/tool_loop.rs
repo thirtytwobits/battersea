@@ -96,7 +96,10 @@ pub async fn run_tool_loop(
                 None => run.await,
             }
         } => {
-            if let Err(error) = result {
+            if let Err(mut error) = result {
+                if error.tool_call.is_none() {
+                    error.tool_call = active_tool.clone().map(Box::new);
+                }
                 emit_error(logger.as_ref(), &context, request.shared.operation, &error).await;
                 let _ = events.send(Err(error)).await;
             }
@@ -186,7 +189,20 @@ async fn drive_tool_loop(
                 Some(event) = turn_rx.recv() => { forward_turn_event(events,event,turn).await?; }
             }
         };
-        super::payload::check_payload(&calls, &context.provider)?;
+        // The provider turn has consumed the preceding results successfully.
+        *active_tool = None;
+        super::payload::check_payload(&calls, &context.provider).map_err(|error| {
+            let mut error = error.with_tool_code(crate::ToolCode::ToolTranscriptTooLarge);
+            if let Some(call) = calls.first() {
+                error = error.with_tool_call(crate::ToolCallEvidence {
+                    call_id: call.id.clone(),
+                    tool_name: call.name.clone(),
+                    outcome: crate::ToolCallOutcome::NotDispatched,
+                    request_id: None,
+                });
+            }
+            error
+        })?;
         if calls.is_empty() {
             send_event(
                 events,
@@ -402,7 +418,6 @@ async fn drive_tool_loop(
                 result,
                 provider_content,
             });
-            *active_tool = None;
         }
     }
     emit_stream_event(
@@ -758,6 +773,121 @@ mod tests {
         let wire = serde_json::to_value(error).unwrap();
         let restored: EngineAdapterRequestError = serde_json::from_value(wire).unwrap();
         assert_eq!(restored.tool_call.as_deref(), Some(&evidence));
+    }
+
+    #[tokio::test]
+    async fn completed_evidence_survives_provider_delivery_failures_and_deadlines() {
+        enum Failure {
+            Returned,
+            Streamed,
+            Deadline,
+        }
+        struct Delivery {
+            calls_returned: bool,
+            failure: Failure,
+        }
+        #[async_trait]
+        impl ToolConversation for Delivery {
+            async fn next_turn(
+                &mut self,
+                _: &EngineTextStreamRequest,
+                results: Vec<ExecutedToolCall>,
+                events: &ToolEventSender,
+            ) -> Result<Vec<EngineLocalToolCall>, EngineAdapterRequestError> {
+                if !self.calls_returned {
+                    self.calls_returned = true;
+                    return Ok(vec![call("first"), call("second")]);
+                }
+                assert_eq!(results.len(), 2);
+                assert_eq!(results[1].call.id, "second");
+                let error = EngineAdapterRequestError::transport("test", "delivery failed")
+                    .with_request_id(Some("provider-request".into()));
+                match self.failure {
+                    Failure::Returned => Err(error),
+                    Failure::Streamed => {
+                        events.send(Err(error)).await.unwrap();
+                        std::future::pending().await
+                    }
+                    Failure::Deadline => std::future::pending().await,
+                }
+            }
+        }
+        for failure in [Failure::Returned, Failure::Streamed, Failure::Deadline] {
+            let deadline = matches!(failure, Failure::Deadline);
+            let executor = Arc::new(Executor::default());
+            let mut context = context();
+            context.timeout_ms = Some(200);
+            let (tx, mut rx) = mpsc::channel(64);
+            run_tool_loop(
+                Delivery {
+                    calls_returned: false,
+                    failure,
+                },
+                request(),
+                executor.clone(),
+                None,
+                context,
+                tx,
+            )
+            .await;
+            let mut completed = Vec::new();
+            let mut failure = None;
+            while let Some(event) = rx.recv().await {
+                match event {
+                    Ok(EngineTextStreamEvent::ToolCallCompleted { id, ok: true, .. }) => {
+                        completed.push(id);
+                    }
+                    Err(error) => failure = Some(error),
+                    _ => {}
+                }
+            }
+            assert_eq!(completed, ["first", "second"]);
+            assert_eq!(executor.calls.lock().unwrap().len(), 2);
+            let error = failure.expect("delivery failed");
+            assert_eq!(error.dispatch, DispatchState::Unknown);
+            assert_eq!(
+                error.classification,
+                if deadline {
+                    crate::ErrorKind::Timeout
+                } else {
+                    crate::ErrorKind::Transport
+                }
+            );
+            if !deadline {
+                assert_eq!(error.request_id.as_deref(), Some("provider-request"));
+            }
+            let evidence = error.tool_call.expect("retained completion");
+            assert_eq!(evidence.call_id, "second");
+            assert_eq!(evidence.outcome, crate::ToolCallOutcome::Completed);
+        }
+    }
+
+    #[tokio::test]
+    async fn oversized_call_batch_retains_refusal_evidence_without_execution() {
+        let executor = Arc::new(Executor::default());
+        let mut oversized = call("oversized");
+        oversized.arguments = json!({
+            "key": "x".repeat(super::super::payload::PROVIDER_PAYLOAD_BYTES)
+        });
+        let events = run(
+            Script {
+                turns: vec![vec![oversized]],
+                received: Default::default(),
+            },
+            request(),
+            executor.clone(),
+        )
+        .await;
+        assert!(executor.calls.lock().unwrap().is_empty());
+        assert_eq!(events.len(), 1);
+        let error = events[0].as_ref().unwrap_err();
+        assert_eq!(
+            error.tool_code,
+            Some(crate::ToolCode::ToolTranscriptTooLarge)
+        );
+        let evidence = error.tool_call.as_ref().expect("retained refusal");
+        assert_eq!(evidence.call_id, "oversized");
+        assert_eq!(evidence.outcome, crate::ToolCallOutcome::NotDispatched);
     }
 
     #[tokio::test]

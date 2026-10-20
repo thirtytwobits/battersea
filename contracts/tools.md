@@ -53,7 +53,7 @@ in the completion event, excluded from provider projections and logger events, a
 against payload limits. Debug formatting excludes metadata values.
 
 `ToolCallCompleted.ok` reports tool success. A tool-reported error emits `ok: false` with
-its result and allows the provider conversation to continue. Executor and delivery failures
+its result and allows the provider conversation to continue. Executor and result-projection failures
 emit `ok: false` and stop the conversation.
 
 ## Outcome evidence
@@ -63,6 +63,12 @@ emit `ok: false` and stop the conversation.
 `not_dispatched`. A returned result is `completed`, including tool errors and results that
 fail output validation or provider delivery. An executor failure without explicit evidence
 is `uncertain`. A deadline while awaiting an executor is also `uncertain`.
+An oversized call batch is refused as `tool_transcript_too_large`, with `not_dispatched`
+evidence identifying its first call. The whole batch is refused before execution.
+
+Completion evidence remains available until the following provider turn succeeds. A failed
+or timed-out continuation retains the latest completed call's evidence; each call's completion
+event retains its own evidence.
 
 Evidence about a tool survives classification of the enclosing provider request. Completion
 does not prove durable publication or authorise replay; journal intents and host reconciliation
