@@ -37,6 +37,8 @@ Read-only response retrieval may retry transport failures without creating anoth
 Backoff uses explicit initial and maximum delays and a finite retry count. Retry-After is a lower
 bound; a delay beyond the configured maximum stops instead of retrying early. One operation
 deadline covers attempts, backoff and tool turns. Dropping the request cancels pending work.
+Background-response cancellation retains ownership of its cleanup request when its caller is
+dropped, with one cancellation attempt per response guard.
 Retries do not invoke the tool runner. A tool result is appended once; a rejected continuation
 resends that exact body. Background recovery retrieves the same response ID after the last
 accepted sequence, discarding duplicates and never moving the cursor backwards.
