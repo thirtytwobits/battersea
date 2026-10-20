@@ -80,10 +80,19 @@ try {
   run(server, ["init", data]);
   const api = start(server, ["serve", data]);
   await ready("http://127.0.0.1:18180/api/flows", api);
+  // Browser tests use a fixed copy of the example.
+  const browserConfig = path.join(web, "vite.browser.config.mjs");
+  fs.writeFileSync(browserConfig, [
+    'import config from "./vite.config.mjs";',
+    'export default { ...config, server: { ...config.server, watch: null } };',
+    "",
+  ].join("\n"));
   const vite = start(
     process.execPath,
     [
       path.join(web, "node_modules/vite/bin/vite.js"),
+      "--config",
+      browserConfig,
       "--host",
       "127.0.0.1",
       "--port",

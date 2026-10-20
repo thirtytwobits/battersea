@@ -41,6 +41,7 @@ const initialNodes: CanvasNode[] = [
 
 function MeasurementRecovery() {
   const [nodes, setNodes] = React.useState(initialNodes);
+  const [moveBranchOnConnect, setMoveBranchOnConnect] = React.useState(false);
   const [edges, setEdges] = React.useState<Edge[]>([{
     id: "existing",
     source: "source",
@@ -61,12 +62,26 @@ function MeasurementRecovery() {
   return (
     <>
       <button onClick={restoreMeasurements}>Restore measured nodes</button>
+      <label>
+        <input
+          type="checkbox"
+          checked={moveBranchOnConnect}
+          onChange={event => setMoveBranchOnConnect(event.target.checked)}
+        />
+        Move branch when connecting
+      </label>
       <div style={{ width: 900, height: 600 }}>
         <ReactFlow<CanvasNode>
           nodes={nodes}
           edges={edges}
           nodeTypes={nodeTypes}
           onNodesChange={changes => setNodes(current => applyNodeChanges(changes, current))}
+          onConnectStart={() => {
+            if (moveBranchOnConnect) {
+              flushSync(() => setNodes(current => current.map(node =>
+                node.id === "branch" ? { ...node, position: { x: 500, y: 380 } } : node)));
+            }
+          }}
           onConnect={connection => setEdges(current => addEdge(connection, current))}
         />
       </div>
