@@ -395,7 +395,13 @@ impl ProviderBinding {
                 .into_boxed_str();
             error.request_id = error
                 .request_id
-                .map(|id| SecretString::from(secret).redact(&id));
+                .map(|id| SecretString::from(secret).redact(&id).into_boxed_str());
+            if let Some(evidence) = &mut error.tool_call {
+                evidence.request_id = evidence
+                    .request_id
+                    .take()
+                    .map(|id| SecretString::from(secret).redact(&id));
+            }
         }
         error
     }
@@ -532,6 +538,37 @@ mod tests {
             auth: Authentication::None,
             headers: BTreeMap::new(),
             delivery_origins: vec![],
+        }
+    }
+
+    #[test]
+    fn binding_errors_redact_nested_tool_request_ids_and_preserve_outcomes() {
+        let binding = ProviderBinding {
+            provider: "service".into(),
+            adapter: "test".into(),
+            contract_version: 1,
+            chat_streaming: vec![true],
+            context_overflow: vec![],
+            revision: "binding".into(),
+            credential_scope_revision: "account".into(),
+            connection: connection("https://service.example/v1/"),
+        };
+        for request_id in ["special+ /token", "special%2B+%2Ftoken"] {
+            let error = EngineAdapterRequestError::transport("remote", "tool failed")
+                .with_tool_call(crate::ToolCallEvidence {
+                    call_id: "call".into(),
+                    tool_name: "lookup".into(),
+                    outcome: crate::ToolCallOutcome::Uncertain,
+                    request_id: Some(format!("request-{request_id}")),
+                });
+            let error = binding.error(error, Some("special+ /token"));
+            let wire = serde_json::to_value(&error).unwrap();
+            assert_eq!(wire["tool_call"]["request_id"], "request-[REDACTED]");
+            assert!(!format!("{error:?}").contains(request_id));
+            let evidence = error.tool_call.unwrap();
+            assert_eq!(evidence.call_id, "call");
+            assert_eq!(evidence.tool_name, "lookup");
+            assert_eq!(evidence.outcome, crate::ToolCallOutcome::Uncertain);
         }
     }
 

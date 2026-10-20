@@ -310,7 +310,7 @@ pub fn battersea_tools::ToolRegistry::for_profile(&self, profile: &str) -> Self
 pub fn battersea_tools::ToolRegistry::register(&mut self, tool: battersea_tools::Tool, executor: alloc::sync::Arc<dyn battersea_model::adapter::EngineLocalToolExecutor>) -> core::result::Result<(), battersea_model::adapter::error::EngineAdapterRequestError>
 pub fn battersea_tools::ToolRegistry::tools(&self) -> impl core::iter::traits::iterator::Iterator<Item = &battersea_tools::Tool>
 impl battersea_model::adapter::EngineLocalToolExecutor for battersea_tools::ToolRegistry
-pub fn battersea_tools::ToolRegistry::call<'life0, 'async_trait>(&'life0 self, call: battersea_model::adapter::EngineLocalToolCall) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<battersea_model::adapter::EngineLocalToolResult, battersea_model::adapter::error::EngineAdapterRequestError>> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait
+pub fn battersea_tools::ToolRegistry::call<'life0, 'async_trait>(&'life0 self, call: battersea_model::adapter::EngineLocalToolCall) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<battersea_model::adapter::tool_result::EngineLocalToolResult, battersea_model::adapter::error::EngineAdapterRequestError>> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait
 impl core::clone::Clone for battersea_tools::ToolRegistry
 pub fn battersea_tools::ToolRegistry::clone(&self) -> battersea_tools::ToolRegistry
 impl core::default::Default for battersea_tools::ToolRegistry

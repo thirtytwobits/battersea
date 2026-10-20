@@ -35,5 +35,47 @@ with its description exactly as written.
 `ToolRegistry::for_profile` keeps the tools permitted to one profile. A call names its tool by
 either name. The registry refuses a call to a tool it does not hold as `unregistered_tool`, and
 arguments outside the tool's input schema as `invalid_tool_arguments`, before any executor runs.
-The executor receives the call under the tool's own name. Where the tool declares an output
-schema, a result outside it is refused as `invalid_tool_result`.
+The executor receives the call under the tool's own name.
+
+## Results
+
+`EngineLocalToolResult::json` retains ordinary application JSON. A content result carries
+ordered blocks, optional structured output, an execution-error flag and host metadata.
+Where a tool declares an output schema, the registry validates successful application JSON
+or the content result's structured output. Missing or invalid structured output is refused
+as `invalid_tool_result`. Tool-reported execution errors bypass the success schema and
+return to the provider as results.
+
+Text tool conversations preserve text, resource links and embedded text in a JSON envelope
+with `content`, optional `structuredContent` and `isError`. Binary content is refused as
+`unsupported_tool_content`. Resource references are not fetched. Host metadata is retained
+in the completion event, excluded from provider projections and logger events, and charged
+against payload limits. Debug formatting excludes metadata values.
+
+`ToolCallCompleted.ok` reports tool success. A tool-reported error emits `ok: false` with
+its result and allows the provider conversation to continue. Executor and result-projection failures
+emit `ok: false` and stop the conversation.
+
+## Outcome evidence
+
+`ToolCallEvidence` records the call ID, tool name, optional remote request ID and one outcome:
+`not_dispatched`, `completed` or `uncertain`. Tool-loop and registry refusals before execution are
+`not_dispatched`. A returned result is `completed`, including tool errors and results that
+fail output validation or provider delivery. An executor failure without explicit evidence
+is `uncertain`. A deadline while awaiting an executor is also `uncertain`.
+An oversized call batch is refused as `tool_transcript_too_large`, with `not_dispatched`
+evidence identifying its first call. The whole batch is refused before execution.
+
+Completion evidence remains available until the following provider turn succeeds. A failed
+or timed-out continuation retains the latest completed call's evidence; each call's completion
+event retains its own evidence.
+
+Evidence about a tool survives classification of the enclosing provider request. Completion
+does not prove durable publication or authorise replay; journal intents and host reconciliation
+govern recovery. Dropping a stream cancels pending execution and may leave a started call
+without a completion event.
+
+The host-controlled approval boundary belongs between argument validation and executor
+dispatch. Run identity, definition and binding revisions, approval decisions and durable
+continuation belong to that shared boundary. Tool outcome evidence describes execution;
+it does not grant authority to execute.
