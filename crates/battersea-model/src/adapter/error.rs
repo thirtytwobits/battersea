@@ -98,6 +98,10 @@ pub enum ToolCode {
     DuplicateTool,
     /// A tool's input schema is not a valid JSON Schema.
     InvalidToolSchema,
+    /// A tool's record cannot be offered: its name is outside the tool-name alphabet, it has
+    /// no description, its input schema is not an object schema, or its profiles are not
+    /// distinct names.
+    InvalidToolDefinition,
     /// The request's tool choice names a tool the request does not offer.
     UnofferedToolChoice,
     /// The provider returned a tool call without an id, name or object arguments.
@@ -112,6 +116,8 @@ pub enum ToolCode {
     ToolOutsideChoice,
     /// A tool call's arguments do not satisfy the tool's input schema.
     InvalidToolArguments,
+    /// A tool's result does not satisfy the output schema the tool declares.
+    InvalidToolResult,
     /// The registry holds no tool with the called name.
     UnregisteredTool,
     /// The tool calls and results of a run exceed their encoded-byte limit.
@@ -125,6 +131,7 @@ impl ToolCode {
         Self::InvalidToolRounds,
         Self::DuplicateTool,
         Self::InvalidToolSchema,
+        Self::InvalidToolDefinition,
         Self::UnofferedToolChoice,
         Self::MalformedToolCall,
         Self::ToolUseDisabled,
@@ -132,6 +139,7 @@ impl ToolCode {
         Self::UnofferedTool,
         Self::ToolOutsideChoice,
         Self::InvalidToolArguments,
+        Self::InvalidToolResult,
         Self::UnregisteredTool,
         Self::ToolTranscriptTooLarge,
         Self::ToolRoundsExceeded,
@@ -142,6 +150,7 @@ impl ToolCode {
             Self::InvalidToolRounds => "invalid_tool_rounds",
             Self::DuplicateTool => "duplicate_tool",
             Self::InvalidToolSchema => "invalid_tool_schema",
+            Self::InvalidToolDefinition => "invalid_tool_definition",
             Self::UnofferedToolChoice => "unoffered_tool_choice",
             Self::MalformedToolCall => "malformed_tool_call",
             Self::ToolUseDisabled => "tool_use_disabled",
@@ -149,6 +158,7 @@ impl ToolCode {
             Self::UnofferedTool => "unoffered_tool",
             Self::ToolOutsideChoice => "tool_outside_choice",
             Self::InvalidToolArguments => "invalid_tool_arguments",
+            Self::InvalidToolResult => "invalid_tool_result",
             Self::UnregisteredTool => "unregistered_tool",
             Self::ToolTranscriptTooLarge => "tool_transcript_too_large",
             Self::ToolRoundsExceeded => "tool_rounds_exceeded",

@@ -439,6 +439,27 @@ pub trait EngineLocalToolExecutor: Send + Sync {
     ) -> Result<EngineLocalToolResult, EngineAdapterRequestError>;
 }
 
+/// The executor of a request offered no tools: it refuses every call as
+/// [`ToolCode::UnregisteredTool`](crate::ToolCode::UnregisteredTool).
+pub struct NoLocalTools;
+
+// async-trait adds must_use to boxed futures, which already carry it.
+#[allow(clippy::double_must_use)]
+#[async_trait]
+impl EngineLocalToolExecutor for NoLocalTools {
+    async fn call(
+        &self,
+        call: EngineLocalToolCall,
+    ) -> Result<EngineLocalToolResult, EngineAdapterRequestError> {
+        Err(EngineAdapterRequestError::new(
+            "tools",
+            format!("Tool \"{}\" is not registered.", call.name),
+            error::ErrorKind::InvalidRequest,
+        )
+        .with_tool_code(crate::ToolCode::UnregisteredTool))
+    }
+}
+
 /// Represents a backend request that expects a streaming text response.
 pub type MockResponseRenderer = dyn Fn(&str) -> String + Send + Sync;
 

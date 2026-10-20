@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.15.0 — 2026-10-19
+
+- Add `battersea-tools`. `Tool` is the Model Context Protocol 2026-07-28 tool record, and a tool
+  lists the agent profiles permitted to call it under `_meta`. `tools.schema.json` and the `Tools`
+  types in `@battersea/flow` publish the record, and `toolProfiles` reads a tool's profiles.
+- Breaking Rust API: `ToolRegistry` moves from `battersea-model` to `battersea-tools` and registers
+  `Tool` records. It refuses a record it cannot offer as `ToolCode::InvalidToolDefinition`, keeps
+  one profile's tools with `for_profile`, and passes each call to its executor under the tool's
+  own name. A result outside the tool's declared output schema is refused as
+  `ToolCode::InvalidToolResult`.
+- A local tool's failure after a provider turn reports its dispatch as unknown, never as not sent.
+- `NoLocalTools` refuses every call of a request offered no tools. The Chat Completions and mock
+  adapters run with it when a request carries no executor.
+
 ## 0.14.0 — 2026-10-16
 
 - Bind versioned provider configurations to registered protocol adapters with explicit service identities, endpoints, authentication and capability restrictions.
