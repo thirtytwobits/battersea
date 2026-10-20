@@ -14,7 +14,7 @@ impl EngineLocalToolExecutor for Echo {
         &self,
         call: EngineLocalToolCall,
     ) -> Result<EngineLocalToolResult, EngineAdapterRequestError> {
-        Ok(EngineLocalToolResult {
+        Ok(EngineLocalToolResult::Json {
             content: call.arguments,
         })
     }

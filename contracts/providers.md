@@ -44,6 +44,8 @@ accepted sequence, discarding duplicates and never moving the cursor backwards.
 Errors retain dispatch certainty, HTTP status, request identity and retry delay. A local tool fails
 after the provider turn that called it, so its failure never reports the request as not sent. Retry observations
 identify the attempt and delay. Unknown remote outcome remains unknown for spend accounting.
+Nested tool errors retain separate `ToolCallEvidence`; changing provider dispatch certainty
+does not change the tool's recorded outcome.
 
 ## Content
 

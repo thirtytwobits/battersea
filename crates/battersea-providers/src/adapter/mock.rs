@@ -115,7 +115,7 @@ impl ToolConversation for MockConversation {
         events: &ToolEventSender,
     ) -> Result<Vec<EngineLocalToolCall>, EngineAdapterRequestError> {
         for result in results {
-            let serialized = result.result.content.to_string();
+            let serialized = result.provider_content.to_string();
             let collapsed = serialized.split_whitespace().collect::<Vec<_>>().join(" ");
             let summary = if collapsed.chars().count() > 160 {
                 format!("{}...", collapsed.chars().take(157).collect::<String>())

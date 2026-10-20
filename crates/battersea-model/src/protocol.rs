@@ -395,7 +395,7 @@ impl ProviderBinding {
                 .into_boxed_str();
             error.request_id = error
                 .request_id
-                .map(|id| SecretString::from(secret).redact(&id));
+                .map(|id| SecretString::from(secret).redact(&id).into_boxed_str());
         }
         error
     }

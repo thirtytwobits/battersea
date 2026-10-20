@@ -15,7 +15,7 @@ impl EngineLocalToolExecutor for Recorder {
     ) -> Result<EngineLocalToolResult, EngineAdapterRequestError> {
         let content = call.arguments.clone();
         self.0.lock().unwrap().push(call);
-        Ok(EngineLocalToolResult { content })
+        Ok(EngineLocalToolResult::json(content))
     }
 }
 impl Recorder {
@@ -86,7 +86,7 @@ async fn an_executor_receives_a_call_under_its_tools_own_name() {
     let arguments = json!({"key": "selected"});
     for name in [offered[0].name.as_str(), tool.name.as_str()] {
         let result = registry.call(call(name, arguments.clone())).await.unwrap();
-        assert_eq!(result.content, arguments);
+        assert_eq!(result, EngineLocalToolResult::json(arguments.clone()));
     }
     let calls = recorder.calls();
     assert_eq!(calls.len(), 2);
@@ -205,17 +205,85 @@ async fn a_result_outside_the_declared_output_schema_is_refused() {
         .call(call(&echo.name, arguments.clone()))
         .await
         .unwrap();
-    assert_eq!(result.content, arguments);
+    assert_eq!(result, EngineLocalToolResult::json(arguments.clone()));
     let error = registry
         .call(call(&answers.name, arguments.clone()))
         .await
         .unwrap_err();
     assert_eq!(error.tool_code, Some(ToolCode::InvalidToolResult));
+    assert_eq!(error.tool_call.unwrap().outcome, ToolCallOutcome::Completed);
     assert_eq!(
         recorder.calls().len(),
         2,
         "the executor ran before its result was checked"
     );
+}
+
+struct FixedResult(EngineLocalToolResult);
+#[async_trait]
+impl EngineLocalToolExecutor for FixedResult {
+    async fn call(
+        &self,
+        _: EngineLocalToolCall,
+    ) -> Result<EngineLocalToolResult, EngineAdapterRequestError> {
+        Ok(self.0.clone())
+    }
+}
+
+#[tokio::test]
+async fn content_results_validate_structured_output_and_preserve_tool_errors() {
+    for (structured_content, is_error, accepted) in [
+        (Some(json!({"key": "value"})), false, true),
+        (Some(json!({"key": 42})), false, false),
+        (None, false, false),
+        (Some(Value::Null), false, false),
+        (None, true, true),
+        (Some(json!({"error": "missing"})), true, true),
+    ] {
+        let result = EngineLocalToolResult::Content(ToolContentResult {
+            content_blocks: vec![ToolContentBlock::Text {
+                text: "human-readable result".into(),
+            }],
+            structured_content,
+            is_error,
+            meta: Map::from_iter([("private".into(), json!("retained"))]),
+        });
+        let mut tool = lookup("example.lookup");
+        tool.output_schema = Some(keyed_schema());
+        let mut registry = ToolRegistry::default();
+        registry
+            .register(tool, Arc::new(FixedResult(result.clone())))
+            .unwrap();
+        let returned = registry
+            .call(call("example.lookup", json!({"key": "query"})))
+            .await;
+        if accepted {
+            assert_eq!(returned.unwrap(), result);
+        } else {
+            let error = returned.unwrap_err();
+            assert_eq!(error.tool_code, Some(ToolCode::InvalidToolResult));
+            assert_eq!(error.tool_call.unwrap().outcome, ToolCallOutcome::Completed);
+        }
+    }
+}
+
+#[tokio::test]
+async fn registry_refusals_retain_not_dispatched_evidence() {
+    let recorder = Arc::new(Recorder::default());
+    let mut registry = ToolRegistry::default();
+    registry
+        .register(lookup("example.lookup"), recorder.clone())
+        .unwrap();
+    for (name, arguments) in [
+        ("missing", json!({})),
+        ("example.lookup", json!({"key": 3})),
+    ] {
+        let error = registry.call(call(name, arguments)).await.unwrap_err();
+        let evidence = error.tool_call.unwrap();
+        assert_eq!(evidence.call_id, "call");
+        assert_eq!(evidence.outcome, ToolCallOutcome::NotDispatched);
+    }
+    assert!(recorder.calls().is_empty());
 }
 
 #[tokio::test]

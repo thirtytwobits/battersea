@@ -698,7 +698,7 @@ impl ToolConversation for OpenAiToolConversation {
         events: &ToolEventSender,
     ) -> Result<Vec<EngineLocalToolCall>, EngineAdapterRequestError> {
         self.input.extend(results.into_iter().map(|item| json!({
-            "type": "function_call_output", "call_id": item.call.id, "output": item.result.content.to_string()
+            "type": "function_call_output", "call_id": item.call.id, "output": item.provider_content.to_string()
         })));
         let body = build_local_tool_body(&self.backend, request, Value::Array(self.input.clone()));
         let body = match self.transport {

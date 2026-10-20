@@ -478,7 +478,7 @@ impl EngineLocalToolExecutor for Echo {
         call: EngineLocalToolCall,
     ) -> Result<EngineLocalToolResult, EngineAdapterRequestError> {
         self.0.fetch_add(1, Ordering::SeqCst);
-        Ok(EngineLocalToolResult {
+        Ok(EngineLocalToolResult::Json {
             content: call.arguments,
         })
     }

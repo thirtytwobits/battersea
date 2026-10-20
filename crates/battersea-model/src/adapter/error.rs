@@ -8,7 +8,7 @@ pub struct EngineAdapterRequestError {
     pub message: Box<str>,
     pub classification: ErrorKind,
     pub status_code: Option<u16>,
-    pub request_id: Option<String>,
+    pub request_id: Option<Box<str>>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub watchdog: Option<Box<WatchdogFailure>>,
     #[serde(default)]
@@ -20,6 +20,9 @@ pub struct EngineAdapterRequestError {
     /// The tool runner's name for this refusal; `classification` is its class.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub tool_code: Option<ToolCode>,
+    /// Evidence about a nested tool call, independent from provider dispatch.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub tool_call: Option<Box<ToolCallEvidence>>,
 }
 
 impl EngineAdapterRequestError {
@@ -45,12 +48,19 @@ impl EngineAdapterRequestError {
             retry_after_ms: None,
             attempts: 0,
             tool_code: None,
+            tool_call: None,
         }
     }
 
     /// Names a refusal of the tool runner.
     pub fn with_tool_code(mut self, code: ToolCode) -> Self {
         self.tool_code = Some(code);
+        self
+    }
+
+    /// Retains evidence about a nested tool invocation.
+    pub fn with_tool_call(mut self, evidence: ToolCallEvidence) -> Self {
+        self.tool_call = Some(Box::new(evidence));
         self
     }
 
@@ -69,7 +79,7 @@ impl EngineAdapterRequestError {
     }
 
     pub fn with_request_id(mut self, request_id: Option<String>) -> Self {
-        self.request_id = request_id;
+        self.request_id = request_id.map(String::into_boxed_str);
         self
     }
 
@@ -118,6 +128,8 @@ pub enum ToolCode {
     InvalidToolArguments,
     /// A tool's result does not satisfy the output schema the tool declares.
     InvalidToolResult,
+    /// The provider conversation cannot represent the tool's returned content.
+    UnsupportedToolContent,
     /// The registry holds no tool with the called name.
     UnregisteredTool,
     /// The tool calls and results of a run exceed their encoded-byte limit.
@@ -140,6 +152,7 @@ impl ToolCode {
         Self::ToolOutsideChoice,
         Self::InvalidToolArguments,
         Self::InvalidToolResult,
+        Self::UnsupportedToolContent,
         Self::UnregisteredTool,
         Self::ToolTranscriptTooLarge,
         Self::ToolRoundsExceeded,
@@ -159,6 +172,7 @@ impl ToolCode {
             Self::ToolOutsideChoice => "tool_outside_choice",
             Self::InvalidToolArguments => "invalid_tool_arguments",
             Self::InvalidToolResult => "invalid_tool_result",
+            Self::UnsupportedToolContent => "unsupported_tool_content",
             Self::UnregisteredTool => "unregistered_tool",
             Self::ToolTranscriptTooLarge => "tool_transcript_too_large",
             Self::ToolRoundsExceeded => "tool_rounds_exceeded",
@@ -267,6 +281,29 @@ pub enum DispatchState {
     Accepted,
     #[default]
     Unknown,
+}
+
+/// What is known about a tool invocation, independently from result delivery and durability.
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum ToolCallOutcome {
+    /// The executor or transport confirms the call was not dispatched.
+    NotDispatched,
+    /// The executor returned a complete result, including a tool-reported execution error.
+    Completed,
+    /// The call may have run; cancellation and connection loss do not resolve its effects.
+    Uncertain,
+}
+
+/// Host evidence about one tool call. Completion does not establish durable publication.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct ToolCallEvidence {
+    pub call_id: String,
+    pub tool_name: String,
+    pub outcome: ToolCallOutcome,
+    /// The remote transport's request identity, when available.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub request_id: Option<String>,
 }
 
 #[cfg(test)]

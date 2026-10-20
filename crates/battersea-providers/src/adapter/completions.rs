@@ -187,7 +187,7 @@ impl ToolConversation for Conversation {
     ) -> Result<Vec<EngineLocalToolCall>, EngineAdapterRequestError> {
         let provider = &self.backend.provider;
         for result in results {
-            self.messages.push(json!({"role":"tool","tool_call_id":result.call.id,"content":result.result.content.to_string()}));
+            self.messages.push(json!({"role":"tool","tool_call_id":result.call.id,"content":result.provider_content.to_string()}));
         }
         let chat = &request.shared.chat;
         let mut body =
