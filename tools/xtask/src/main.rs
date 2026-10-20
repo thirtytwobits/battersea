@@ -360,18 +360,38 @@ fn package(root: &Path, core_only: bool) -> Result<()> {
         "backend",
         "declarative-providers",
         "editor-server",
+        "mcp",
     ] {
+        if core_only && example == "mcp" {
+            continue;
+        }
         let consumer = unpack_root.path().join(example);
         fs::create_dir_all(consumer.join("src"))?;
-        let mut manifest = format!("[package]\nname = \"package-{example}\"\nversion = \"0.0.0\"\nedition = \"2021\"\n[dependencies]\nserde_json = \"1\"\nfutures-util = \"0.3\"\nasync-trait = \"0.1\"\ntokio = {{ version = \"1\", features = [\"macros\", \"rt-multi-thread\", \"net\", \"time\"] }}\ntokio-util = \"0.7\"\n");
+        let tokio_features = if example == "mcp" {
+            r#"["macros", "rt-multi-thread", "net", "time", "io-util", "io-std", "process"]"#
+        } else {
+            r#"["macros", "rt-multi-thread", "net", "time"]"#
+        };
+        let mut manifest = format!("[package]\nname = \"package-{example}\"\nversion = \"0.0.0\"\nedition = \"2021\"\n[dependencies]\nserde_json = \"1\"\nfutures-util = \"0.3\"\nasync-trait = \"0.1\"\ntokio = {{ version = \"1\", features = {tokio_features} }}\ntokio-util = \"0.7\"\n");
         if example == "editor-server" {
             manifest.push_str("sha2 = \"0.10\"\naxum = { version = \"0.8\", features = [\"json\"] }\nclap = { version = \"4\", features = [\"derive\"] }\nserde = { version = \"1\", features = [\"derive\"] }\nreqwest = { version = \"0.12\", default-features = false, features = [\"json\", \"rustls-tls\"] }\nuuid = { version = \"1\", features = [\"v4\"] }\ntempfile = \"3\"\n");
         }
+        if example == "mcp" {
+            manifest.push_str("axum = { version = \"0.8\", features = [\"json\"] }\nclap = { version = \"4\", features = [\"derive\"] }\ntempfile = \"3\"\n");
+        }
         for name in crates.keys() {
+            let features = if example == "mcp" && name == "battersea-mcp" {
+                ", features = [\"stdio\", \"http\"]"
+            } else {
+                ""
+            };
             manifest.push_str(&format!(
-                "{name} = {{ path = {:?} }}\n",
+                "{name} = {{ path = {:?}{features} }}\n",
                 unpack_root.path().join(format!("{name}-{version}"))
             ));
+        }
+        if example == "mcp" {
+            manifest.push_str("[lib]\nname = \"mcp_example\"\n[[bin]]\nname = \"mcp-example\"\npath = \"src/main.rs\"\n");
         }
         manifest.push_str("[patch.crates-io]\n");
         for name in crates.keys() {
@@ -385,6 +405,22 @@ fn package(root: &Path, core_only: bool) -> Result<()> {
             consumer.join("src/main.rs"),
             fs::read_to_string(root.join(format!("examples/{example}/src/main.rs")))?,
         )?;
+        if example == "mcp" {
+            for module in ["lib.rs", "host.rs", "fixture.rs"] {
+                fs::copy(
+                    root.join("examples/mcp/src").join(module),
+                    consumer.join("src").join(module),
+                )?;
+            }
+            fs::create_dir_all(consumer.join("tests"))?;
+            fs::copy(
+                root.join("examples/mcp/tests/contracts.rs"),
+                consumer.join("tests/contracts.rs"),
+            )?;
+            for asset in ["LICENSE", "NOTICE"] {
+                fs::copy(root.join("examples/mcp").join(asset), consumer.join(asset))?;
+            }
+        }
         if example == "declarative-providers" {
             fs::copy(
                 root.join("examples/declarative-providers/providers.yaml"),
@@ -410,7 +446,7 @@ fn package(root: &Path, core_only: bool) -> Result<()> {
             &consumer,
             "cargo",
             &[
-                if example == "editor-server" {
+                if matches!(example, "editor-server" | "mcp") {
                     "test"
                 } else {
                     "run"
@@ -507,7 +543,10 @@ fn workspace_args<'a>(args: &[&'a str], core_only: bool) -> Vec<&'a str> {
             .iter()
             .position(|arg| *arg == "--")
             .unwrap_or(result.len());
-        result.splice(index..index, ["--exclude", "battersea-mcp"]);
+        result.splice(
+            index..index,
+            ["--exclude", "battersea-mcp", "--exclude", "mcp-example"],
+        );
     }
     result
 }
