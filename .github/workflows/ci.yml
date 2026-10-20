@@ -39,7 +39,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - run: rustup toolchain install 1.88.0 --profile minimal
-      - run: cargo +1.88.0 test --locked -p battersea-mcp --all-features
+      - run: cargo +1.88.0 test --locked -p battersea-mcp -p mcp-example --all-features
       - run: cargo +1.88.0 check --locked -p battersea-mcp --no-default-features
       - run: cargo +1.88.0 check --locked -p battersea-mcp --features stdio
       - run: cargo +1.88.0 check --locked -p battersea-mcp --features http

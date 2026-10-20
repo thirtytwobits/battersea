@@ -10,6 +10,7 @@
   - [Editor package guide](editor.md)
 - [Choose provider features](features.md)
   - [Configure services](providers.md)
+  - [Connect MCP tools](mcp.md)
 - [Project overview](overview.md)
 - [Contracts](contracts.md)
   - [Extraction boundary](contracts/extraction.md)
