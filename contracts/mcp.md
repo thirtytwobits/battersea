@@ -66,3 +66,14 @@ measured from received payload bytes including JSON whitespace.
 Queued and active message capacity must fit within 64 MiB. A host can open a new connection
 after a lifetime limit is reached.
 Credentials and response diagnostic data are excluded from adapter error messages.
+
+## Consumer integration
+
+`examples/mcp` connects host-launched stdio and controlled HTTP JSON/SSE servers to the shared
+provider tool loop. The host assigns profiles, retains the binding revision and owns process
+shutdown. Provider continuation retries reuse the retained tool result. Reconnecting and
+rediscovering after timeout, disconnect or cancellation leaves the fixture's effect ledger unchanged.
+
+The consumer tests exercise the packaged crate archives as well as the workspace. Rust 1.88
+runs the adapter and consumer; the Rust 1.85 core selection excludes both. Shared approval and
+durable tool continuation are tracked in [#7](https://github.com/thirtytwobits/battersea/issues/7).

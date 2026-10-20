@@ -7,6 +7,7 @@ cargo run --locked -p catalogue-example
 cargo run --locked -p custom-node-example
 cargo run --locked -p backend-example
 cargo run --locked -p declarative-providers-example
+cargo run --locked -p mcp-example
 cargo run --locked -p editor-server-example -- --help
 ```
 
@@ -15,6 +16,10 @@ example implements a complete host. The backend example registers mock chat, too
 media independently of a product session.
 The declarative-provider example binds two service identities to the same mock adapter and
 checks their diagnostic identities. Its contract tests exercise HTTP protocols with local fixtures.
+
+The [MCP consumer](mcp.md) requires Rust 1.88. It launches a controlled stdio child and local
+HTTP JSON/SSE servers, then delivers remote tool results through a provider conversation.
+Its tests inject lost replies, disconnects, cancellation and provider continuation retries.
 
 The [editor server](editor-server.md) joins installed npm packages to an independent Rust
 application. To try its API in an empty application directory:
