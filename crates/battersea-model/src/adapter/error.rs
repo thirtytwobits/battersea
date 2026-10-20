@@ -102,6 +102,17 @@ impl EngineAdapterRequestError {
 #[serde(rename_all = "snake_case")]
 #[non_exhaustive]
 pub enum ToolCode {
+    /// The host supplied an invalid approval scope or capacity.
+    InvalidToolApproval,
+    /// The host denied the validated tool call.
+    ToolApprovalDenied,
+    /// The validated tool call requires a host decision before dispatch.
+    ToolApprovalPending,
+    /// The approval scope expired before dispatch.
+    ToolApprovalExpired,
+    /// The approval executor cannot retain another call identity.
+    ToolApprovalCapacity,
+
     /// A request's tool round limit is outside the supported range.
     InvalidToolRounds,
     /// Two tools share a name, or a tool's name is blank, once names are normalised.
@@ -140,6 +151,11 @@ pub enum ToolCode {
 impl ToolCode {
     /// Every tool runner refusal.
     pub const ALL: &[Self] = &[
+        Self::InvalidToolApproval,
+        Self::ToolApprovalDenied,
+        Self::ToolApprovalPending,
+        Self::ToolApprovalExpired,
+        Self::ToolApprovalCapacity,
         Self::InvalidToolRounds,
         Self::DuplicateTool,
         Self::InvalidToolSchema,
@@ -160,6 +176,12 @@ impl ToolCode {
     /// The stable snake_case code.
     pub fn as_str(self) -> &'static str {
         match self {
+            Self::InvalidToolApproval => "invalid_tool_approval",
+            Self::ToolApprovalDenied => "tool_approval_denied",
+            Self::ToolApprovalPending => "tool_approval_pending",
+            Self::ToolApprovalExpired => "tool_approval_expired",
+            Self::ToolApprovalCapacity => "tool_approval_capacity",
+
             Self::InvalidToolRounds => "invalid_tool_rounds",
             Self::DuplicateTool => "duplicate_tool",
             Self::InvalidToolSchema => "invalid_tool_schema",

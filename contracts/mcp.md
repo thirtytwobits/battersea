@@ -74,6 +74,11 @@ provider tool loop. The host assigns profiles, retains the binding revision and 
 shutdown. Provider continuation retries reuse the retained tool result. Reconnecting and
 rediscovering after timeout, disconnect or cancellation leaves the fixture's effect ledger unchanged.
 
+The consumer applies `ApprovedToolExecutor` after host profile selection, using the MCP binding
+revision in its approval scope. The host receives the validated call and the remote author's
+effect claims. Denied and pending decisions leave the server's effect ledger unchanged. Provider
+continuation retries reuse the allowed call's result without another approval decision.
+
 The consumer tests exercise the packaged crate archives as well as the workspace. Rust 1.88
-runs the adapter and consumer; the Rust 1.85 core selection excludes both. Shared approval and
-durable tool continuation are tracked in [#7](https://github.com/thirtytwobits/battersea/issues/7).
+runs the adapter and consumer; the Rust 1.85 core selection excludes both. Durable approval and
+tool continuation are tracked in [#7](https://github.com/thirtytwobits/battersea/issues/7).

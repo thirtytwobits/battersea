@@ -31,7 +31,7 @@ pub struct ToolRegistry {
     tools: BTreeMap<String, Arc<RegisteredTool>>,
 }
 
-fn refusal(message: impl Into<String>, code: ToolCode) -> EngineAdapterRequestError {
+pub(crate) fn refusal(message: impl Into<String>, code: ToolCode) -> EngineAdapterRequestError {
     EngineAdapterRequestError::new("tools", message, ErrorKind::InvalidRequest).with_tool_code(code)
 }
 
@@ -43,6 +43,42 @@ fn portable_name(name: &str) -> bool {
 }
 
 impl ToolRegistry {
+    pub(crate) fn prepare(
+        &self,
+        mut call: EngineLocalToolCall,
+    ) -> Result<PreparedCall, EngineAdapterRequestError> {
+        let mut evidence = ToolCallEvidence {
+            call_id: call.id.clone(),
+            tool_name: call.name.clone(),
+            outcome: ToolCallOutcome::NotDispatched,
+            request_id: None,
+        };
+        let registered = self
+            .tools
+            .get(&local_tool_name(&call.name))
+            .ok_or_else(|| {
+                refusal(
+                    format!("Tool \"{}\" is not registered.", call.name),
+                    ToolCode::UnregisteredTool,
+                )
+                .with_tool_call(evidence.clone())
+            })?;
+        evidence.tool_name.clone_from(&registered.tool.name);
+        registered
+            .validator
+            .validate(&call.arguments)
+            .map_err(|error| {
+                refusal(error.to_string(), ToolCode::InvalidToolArguments)
+                    .with_tool_call(evidence.clone())
+            })?;
+        call.name.clone_from(&registered.tool.name);
+        Ok(PreparedCall {
+            registered: registered.clone(),
+            call,
+            evidence,
+        })
+    }
+
     /// Registers `tool`, run by `executor`.
     ///
     /// Refuses a tool whose name is outside the protocol's tool-name alphabet, that has no
@@ -173,33 +209,28 @@ impl EngineLocalToolExecutor for ToolRegistry {
     /// [`ToolCode::InvalidToolResult`]. Tool-reported errors bypass the success schema.
     async fn call(
         &self,
-        mut call: EngineLocalToolCall,
+        call: EngineLocalToolCall,
     ) -> Result<EngineLocalToolResult, EngineAdapterRequestError> {
-        let mut evidence = ToolCallEvidence {
-            call_id: call.id.clone(),
-            tool_name: call.name.clone(),
-            outcome: ToolCallOutcome::NotDispatched,
-            request_id: None,
-        };
-        let registered = self
-            .tools
-            .get(&local_tool_name(&call.name))
-            .ok_or_else(|| {
-                refusal(
-                    format!("Tool \"{}\" is not registered.", call.name),
-                    ToolCode::UnregisteredTool,
-                )
-                .with_tool_call(evidence.clone())
-            })?;
-        evidence.tool_name.clone_from(&registered.tool.name);
-        registered
-            .validator
-            .validate(&call.arguments)
-            .map_err(|error| {
-                refusal(error.to_string(), ToolCode::InvalidToolArguments)
-                    .with_tool_call(evidence.clone())
-            })?;
-        call.name.clone_from(&registered.tool.name);
+        self.prepare(call)?.execute().await
+    }
+}
+
+pub(crate) struct PreparedCall {
+    registered: Arc<RegisteredTool>,
+    pub call: EngineLocalToolCall,
+    pub evidence: ToolCallEvidence,
+}
+impl PreparedCall {
+    pub fn tool(&self) -> &Tool {
+        &self.registered.tool
+    }
+
+    pub async fn execute(self) -> Result<EngineLocalToolResult, EngineAdapterRequestError> {
+        let Self {
+            registered,
+            call,
+            mut evidence,
+        } = self;
         evidence.outcome = ToolCallOutcome::Uncertain;
         let result = registered.executor.call(call).await.map_err(|mut error| {
             if error.tool_call.is_none() {

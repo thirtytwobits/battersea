@@ -3,8 +3,13 @@
 use crate::fixture::{Fault, Result};
 use battersea_mcp::{McpConfig, McpConnection, McpSelection, McpToolBinding};
 use battersea_model::{engine::*, *};
-use battersea_tools::ToolRegistry;
-use std::{path::Path, process::Stdio, sync::Arc, time::Duration};
+use battersea_tools::{ApprovedToolExecutor, ToolApprovalPolicy, ToolApprovalScope, ToolRegistry};
+use std::{
+    path::Path,
+    process::Stdio,
+    sync::Arc,
+    time::{Duration, Instant},
+};
 use tokio_util::sync::CancellationToken;
 
 pub fn mcp_config(timeout: Duration) -> McpConfig {
@@ -125,4 +130,28 @@ pub fn request(
         max_tool_rounds: 2,
         mock_response: None,
     }
+}
+
+/// Apply the host's decision policy to this run's selected MCP binding.
+pub fn approved_request(
+    binding: &McpToolBinding,
+    registry: &ToolRegistry,
+    chat: EngineChatParameters,
+    run_id: &str,
+    policy: Arc<dyn ToolApprovalPolicy>,
+) -> Result<EngineTextStreamRequest> {
+    let executor = ApprovedToolExecutor::new(
+        registry.for_profile("operator"),
+        ToolApprovalScope {
+            run_id: run_id.into(),
+            binding_revision: binding.revision().into(),
+            deadline: Instant::now() + Duration::from_secs(5),
+        },
+        policy,
+        8,
+    )?;
+    let mut request = request(registry, "operator", chat);
+    request.local_tools = executor.definitions();
+    request.local_tool_executor = Some(Arc::new(executor));
+    Ok(request)
 }
