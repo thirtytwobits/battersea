@@ -70,6 +70,7 @@ where
             self.reader.consume(count);
             if end.is_some() {
                 let message = wire::decode(&self.frame).and_then(|message| {
+                    self.state.observe_bytes(&message, self.frame.len())?;
                     self.state.observe(&message, self.notifications)?;
                     Ok(message)
                 });

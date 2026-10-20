@@ -60,7 +60,8 @@ reconciliation.
 `McpLimits` bounds each stdio frame and the complete body of each HTTP response, including SSE.
 Oversized frames fail the connection explicitly. Limits also bound catalogue retention,
 concurrent operations, waiting operations and incoming requests/notifications over the
-connection's lifetime. Incoming request and notification payloads share a 64 MiB lifetime budget.
+connection's lifetime. Incoming request and notification payloads share a 64 MiB lifetime budget,
+measured from received payload bytes including JSON whitespace.
 Queued and active message capacity must fit within 64 MiB. A host can open a new connection
 after a lifetime limit is reached.
 Credentials and response diagnostic data are excluded from adapter error messages.

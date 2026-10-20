@@ -57,14 +57,29 @@ async fn handle(State(server): State<Arc<Server>>, Json(request): Json<Value>) -
         _ => return StatusCode::ACCEPTED.into_response(),
     };
     let response = json!({"jsonrpc":"2.0","id":request["id"],"result":result});
-    if server.mode.load(Ordering::SeqCst) == 5 {
+    let mode = server.mode.load(Ordering::SeqCst);
+    if matches!(mode, 5 | 8) {
         (
-            [("content-type", "text/event-stream")],
+            [(
+                "content-type",
+                if mode == 8 {
+                    "Text/Event-Stream ; charset=utf-8"
+                } else {
+                    "text/event-stream"
+                },
+            )],
             format!("data: {response}\n\n"),
         )
             .into_response()
     } else {
-        Json(response).into_response()
+        let mut response = Json(response).into_response();
+        if mode == 7 {
+            response.headers_mut().insert(
+                "content-type",
+                "Application/JSON ; charset=utf-8".parse().unwrap(),
+            );
+        }
+        response
     }
 }
 async fn setup(mode: usize) -> (McpConnection, Arc<Server>, tokio::task::JoinHandle<()>) {
@@ -98,7 +113,7 @@ fn call() -> EngineLocalToolCall {
 }
 #[tokio::test]
 async fn json_and_sse_discovery_and_invocation_preserve_results() {
-    for mode in [0, 5] {
+    for mode in [0, 5, 7, 8] {
         let (connection, server, task) = setup(mode).await;
         let catalogue = connection.discover().await.unwrap();
         assert_eq!(

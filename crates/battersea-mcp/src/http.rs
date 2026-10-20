@@ -1,7 +1,7 @@
 //! Copyright (c) Scott A Dixon
 //! Streamable HTTP with bounded response bodies and disabled POST recovery.
 use crate::{connection::State, wire, McpConfig, McpConnection, McpError};
-use futures_util::{stream::BoxStream, StreamExt, TryStreamExt};
+use futures_util::{stream::BoxStream, StreamExt};
 use http::{HeaderName, HeaderValue};
 use rmcp::{
     model::{ClientJsonRpcMessage, ServerJsonRpcMessage},
@@ -33,13 +33,36 @@ impl std::fmt::Debug for McpHttpOptions {
 struct BoundedHttp {
     client: reqwest::Client,
     limit: usize,
+    timeout: Duration,
     state: Arc<State>,
 }
 type HttpError = StreamableHttpError<McpError>;
 fn error(e: McpError) -> HttpError {
     StreamableHttpError::Client(e)
 }
+fn media_type(response: &reqwest::Response, expected: &str) -> bool {
+    response
+        .headers()
+        .get("content-type")
+        .and_then(|value| value.to_str().ok())
+        .and_then(|value| value.split(';').next())
+        .is_some_and(|value| value.trim().eq_ignore_ascii_case(expected))
+}
 impl BoundedHttp {
+    fn new(config: &McpConfig, state: Arc<State>) -> Result<Self, McpError> {
+        let client = reqwest::Client::builder()
+            .redirect(reqwest::redirect::Policy::none())
+            .retry(reqwest::retry::never())
+            .connect_timeout(config.operation_timeout)
+            .build()
+            .map_err(|_| McpError::Configuration)?;
+        Ok(Self {
+            client,
+            limit: config.limits.message_bytes,
+            timeout: config.operation_timeout,
+            state,
+        })
+    }
     fn request(
         &self,
         method: reqwest::Method,
@@ -48,10 +71,14 @@ impl BoundedHttp {
         auth: Option<String>,
         headers: HashMap<HeaderName, HeaderValue>,
     ) -> reqwest::RequestBuilder {
+        let persistent = method == reqwest::Method::GET;
         let mut request = self
             .client
             .request(method, uri)
             .header("accept", "application/json, text/event-stream");
+        if !persistent {
+            request = request.timeout(self.timeout);
+        }
         if let Some(session) = session {
             request = request.header("mcp-session-id", session);
         }
@@ -91,11 +118,19 @@ impl BoundedHttp {
             }
             std::future::ready(Some(result))
         });
+        let state = self.state.clone();
         SseStream::from_bytes_stream(bytes)
-            .map_ok(|mut event| {
+            .map(move |event| {
+                let mut event = event?;
                 // Preserve raw catalogue records through the SDK's untagged result parser.
                 if let Some(data) = &mut event.data {
                     if let Ok(mut value) = serde_json::from_str::<serde_json::Value>(data) {
+                        if value.get("method").is_some() {
+                            if let Err(error) = state.charge_incoming_bytes(data.len()) {
+                                state.fail(error.clone());
+                                return Err(SseError::Body(Box::new(error)));
+                            }
+                        }
                         if value.get("result").and_then(|r| r.get("tools")).is_some() {
                             value["result"] =
                                 serde_json::json!({"batterseaCatalogue": value["result"].take()});
@@ -103,7 +138,7 @@ impl BoundedHttp {
                         }
                     }
                 }
-                event
+                Ok(event)
             })
             .boxed()
     }
@@ -141,18 +176,13 @@ impl StreamableHttpClient for BoundedHttp {
             .map(|h| h.to_str().map(str::to_owned))
             .transpose()
             .map_err(|_| error(McpError::Protocol))?;
-        let content_type = response
-            .headers()
-            .get("content-type")
-            .and_then(|h| h.to_str().ok())
-            .unwrap_or("");
-        if content_type.split(';').next() == Some("text/event-stream") {
+        if media_type(&response, "text/event-stream") {
             return Ok(StreamableHttpPostResponse::Sse(
                 self.stream(response),
                 session,
             ));
         }
-        if content_type.split(';').next() != Some("application/json") {
+        if !media_type(&response, "application/json") {
             return Err(error(McpError::Protocol));
         }
         let mut bytes = Vec::new();
@@ -165,10 +195,12 @@ impl StreamableHttpClient for BoundedHttp {
             }
             bytes.extend_from_slice(&chunk);
         }
-        Ok(StreamableHttpPostResponse::Json(
-            wire::decode(&bytes).map_err(error)?,
-            session,
-        ))
+        let message = wire::decode(&bytes).map_err(error)?;
+        if let Err(fault) = self.state.observe_bytes(&message, bytes.len()) {
+            self.state.fail(fault.clone());
+            return Err(error(fault));
+        }
+        Ok(StreamableHttpPostResponse::Json(message, session))
     }
     async fn delete_session(
         &self,
@@ -199,9 +231,9 @@ impl StreamableHttpClient for BoundedHttp {
         if let Some(last) = last {
             request = request.header("last-event-id", last);
         }
-        let response = request
-            .send()
+        let response = tokio::time::timeout(self.timeout, request.send())
             .await
+            .map_err(|_| error(McpError::Timeout))?
             .map_err(|_| error(McpError::Transport))?;
         if response.status().as_u16() == 405 {
             return Err(StreamableHttpError::ServerDoesNotSupportSse);
@@ -209,13 +241,7 @@ impl StreamableHttpClient for BoundedHttp {
         if !response.status().is_success() {
             return Err(error(McpError::Transport));
         }
-        if response
-            .headers()
-            .get("content-type")
-            .and_then(|h| h.to_str().ok())
-            .and_then(|s| s.split(';').next())
-            != Some("text/event-stream")
-        {
+        if !media_type(&response, "text/event-stream") {
             return Err(error(McpError::Protocol));
         }
         Ok(self.stream(response))
@@ -265,18 +291,8 @@ impl McpConnection {
         {
             return Err(McpError::Configuration);
         }
-        let client = reqwest::Client::builder()
-            .redirect(reqwest::redirect::Policy::none())
-            .retry(reqwest::retry::never())
-            .timeout(config.operation_timeout)
-            .build()
-            .map_err(|_| McpError::Configuration)?;
         let state = State::new();
-        let backend = BoundedHttp {
-            client,
-            limit: config.limits.message_bytes,
-            state: state.clone(),
-        };
+        let backend = BoundedHttp::new(&config, state.clone())?;
         let mut transport_config = StreamableHttpClientTransportConfig::with_uri(options.endpoint);
         transport_config.auth_header = options.bearer_token;
         transport_config.reinit_on_expired_session = false;
@@ -291,5 +307,196 @@ impl McpConnection {
             notifications: config.limits.notifications,
         };
         Self::start(transport, config, state).await
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use axum::{
+        response::{IntoResponse, Response},
+        routing::get,
+        Router,
+    };
+
+    async fn persistent_sse() -> Response {
+        let events = futures_util::stream::unfold((), |()| async {
+            tokio::time::sleep(Duration::from_millis(25)).await;
+            Some((
+                Ok::<_, std::convert::Infallible>(
+                    axum::response::sse::Event::default()
+                        .data(r#"{"jsonrpc":"2.0","method":"notifications/tools/list_changed"}"#),
+                ),
+                (),
+            ))
+        });
+        let mut response = axum::response::Sse::new(events).into_response();
+        response.headers_mut().insert(
+            "content-type",
+            "Text/Event-Stream ; charset=utf-8".parse().unwrap(),
+        );
+        response
+    }
+
+    async fn slow_headers() -> Response {
+        tokio::time::sleep(Duration::from_secs(5)).await;
+        persistent_sse().await
+    }
+
+    async fn slow_body() -> Response {
+        let chunks = futures_util::stream::once(async {
+            tokio::time::sleep(Duration::from_secs(5)).await;
+            Ok::<_, std::convert::Infallible>("{}")
+        });
+        let mut response = axum::body::Body::from_stream(chunks).into_response();
+        response
+            .headers_mut()
+            .insert("content-type", "application/json".parse().unwrap());
+        response
+    }
+
+    async fn padded_notification(
+        axum::extract::Path(format): axum::extract::Path<String>,
+    ) -> Response {
+        let payload = format!(
+            r#"{{"jsonrpc":"2.0","method":"notifications/tools/list_changed"}}{}"#,
+            " ".repeat(512)
+        );
+        if format == "sse" {
+            (
+                [("content-type", "text/event-stream")],
+                format!("data: {payload}\n\n"),
+            )
+                .into_response()
+        } else {
+            ([("content-type", "application/json")], payload).into_response()
+        }
+    }
+
+    async fn server() -> (String, tokio::task::JoinHandle<()>) {
+        let app = Router::new()
+            .route("/events", get(persistent_sse))
+            .route(
+                "/notification/{format}",
+                axum::routing::post(padded_notification),
+            )
+            .route("/slow-headers", get(slow_headers))
+            .route("/slow-body", axum::routing::post(slow_body));
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let endpoint = format!("http://{}", listener.local_addr().unwrap());
+        let task = tokio::spawn(async {
+            axum::serve(listener, app).await.unwrap();
+        });
+        (endpoint, task)
+    }
+
+    fn backend() -> BoundedHttp {
+        let mut config = McpConfig::new("remote", "scope");
+        config.operation_timeout = Duration::from_millis(200);
+        BoundedHttp::new(&config, State::new()).unwrap()
+    }
+
+    #[tokio::test]
+    async fn persistent_sse_survives_operation_deadlines() {
+        let (endpoint, task) = server().await;
+        let backend = backend();
+        let mut stream = backend
+            .get_stream(
+                format!("{endpoint}/events").into(),
+                None,
+                None,
+                None,
+                HashMap::new(),
+            )
+            .await
+            .unwrap();
+        tokio::time::sleep(Duration::from_millis(600)).await;
+        let event = tokio::time::timeout(Duration::from_secs(1), stream.next())
+            .await
+            .unwrap()
+            .unwrap()
+            .unwrap();
+        assert!(event
+            .data
+            .unwrap()
+            .contains("notifications/tools/list_changed"));
+        assert_eq!(backend.state.check(), Ok(()));
+        task.abort();
+    }
+
+    #[tokio::test]
+    async fn padded_http_notifications_charge_received_payload_bytes() {
+        let (endpoint, task) = server().await;
+        for format in ["json", "sse"] {
+            let backend = backend();
+            backend
+                .state
+                .charge_incoming_bytes(64 * 1024 * 1024 - 128)
+                .unwrap();
+            let message =
+                serde_json::from_value(serde_json::json!({"jsonrpc":"2.0","id":1,"method":"ping"}))
+                    .unwrap();
+            let response = backend
+                .post_message(
+                    format!("{endpoint}/notification/{format}").into(),
+                    message,
+                    None,
+                    None,
+                    HashMap::new(),
+                )
+                .await;
+            if format == "sse" {
+                let StreamableHttpPostResponse::Sse(mut stream, _) = response.unwrap() else {
+                    panic!("expected SSE response");
+                };
+                assert!(stream.next().await.unwrap().is_err());
+            } else {
+                assert!(matches!(
+                    response,
+                    Err(StreamableHttpError::Client(McpError::Limit))
+                ));
+            }
+            assert_eq!(backend.state.check(), Err(McpError::Limit));
+        }
+        task.abort();
+    }
+
+    #[tokio::test]
+    async fn finite_requests_and_get_headers_keep_deadlines() {
+        let (endpoint, task) = server().await;
+        let backend = backend();
+        let get = tokio::time::timeout(
+            Duration::from_secs(1),
+            backend.get_stream(
+                format!("{endpoint}/slow-headers").into(),
+                None,
+                None,
+                None,
+                HashMap::new(),
+            ),
+        )
+        .await
+        .unwrap();
+        assert!(matches!(
+            get,
+            Err(StreamableHttpError::Client(McpError::Timeout))
+        ));
+        let message =
+            serde_json::from_value(serde_json::json!({"jsonrpc":"2.0","id":1,"method":"ping"}))
+                .unwrap();
+        let post = tokio::time::timeout(
+            Duration::from_secs(1),
+            backend.post_message(
+                format!("{endpoint}/slow-body").into(),
+                message,
+                None,
+                None,
+                HashMap::new(),
+            ),
+        )
+        .await
+        .unwrap();
+        assert!(post.is_err());
+        task.abort();
     }
 }

@@ -20,6 +20,7 @@ struct Server {
     lists: AtomicUsize,
     cancelled: AtomicUsize,
     mode: AtomicUsize,
+    padding: AtomicUsize,
     replies: Mutex<Vec<Value>>,
 }
 fn tool(name: &str) -> Value {
@@ -35,6 +36,7 @@ fn server() -> Arc<Server> {
         lists: AtomicUsize::new(0),
         cancelled: AtomicUsize::new(0),
         mode: AtomicUsize::new(0),
+        padding: AtomicUsize::new(0),
         replies: Mutex::new(Vec::new()),
     })
 }
@@ -110,11 +112,10 @@ async fn connect(
                     json!({"jsonrpc":"2.0","id":request["id"],"result":result})
                 }
             };
-            if writer
-                .write_all(format!("{outgoing}\n").as_bytes())
-                .await
-                .is_err()
-            {
+            let mut frame = outgoing.to_string().into_bytes();
+            frame.resize(frame.len().max(server.padding.load(Ordering::SeqCst)), b' ');
+            frame.push(b'\n');
+            if writer.write_all(&frame).await.is_err() {
                 break;
             }
         }
@@ -556,4 +557,28 @@ async fn duplicate_names_in_a_refresh_invalidate_existing_bindings() {
     connection.discover().await.unwrap();
     executor.call(call()).await.unwrap();
     assert_eq!(server.calls.load(Ordering::SeqCst), 1);
+}
+
+#[tokio::test]
+async fn padded_notifications_exhaust_the_received_byte_budget() {
+    let server = server();
+    let config = config();
+    let frame_bytes = config.limits.message_bytes;
+    let (connection, tx, shutdown) = connect(server.clone(), config).await;
+    server.padding.store(frame_bytes - 1, Ordering::SeqCst);
+    tokio::time::timeout(Duration::from_secs(15), async {
+        for _ in 0..65 {
+            if tx
+                .send(json!({"jsonrpc":"2.0","method":"notifications/tools/list_changed"}))
+                .await
+                .is_err()
+            {
+                break;
+            }
+        }
+        shutdown.cancelled().await;
+    })
+    .await
+    .unwrap();
+    assert!(matches!(connection.discover().await, Err(McpError::Limit)));
 }

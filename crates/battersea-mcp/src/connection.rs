@@ -167,19 +167,36 @@ impl State {
         Ok(())
     }
     #[cfg(any(feature = "stdio", feature = "http"))]
-    pub fn observe(&self, message: &ServerJsonRpcMessage, limit: usize) -> Result<(), McpError> {
+    pub fn charge_incoming_bytes(&self, bytes: usize) -> Result<(), McpError> {
+        const BUDGET: usize = 64 * 1024 * 1024;
+        if bytes > BUDGET || self.incoming_bytes.fetch_add(bytes, Ordering::SeqCst) > BUDGET - bytes
+        {
+            return Err(McpError::Limit);
+        }
+        Ok(())
+    }
+    #[cfg(any(feature = "stdio", feature = "http"))]
+    pub fn observe_bytes(
+        &self,
+        message: &ServerJsonRpcMessage,
+        bytes: usize,
+    ) -> Result<(), McpError> {
         if matches!(
             message,
             ServerJsonRpcMessage::Request(_) | ServerJsonRpcMessage::Notification(_)
         ) {
-            const BUDGET: usize = 64 * 1024 * 1024;
-            if self.incoming.fetch_add(1, Ordering::SeqCst) >= limit {
-                return Err(McpError::Limit);
-            }
-            let bytes = crate::wire::encode(message, BUDGET)?.len();
-            if self.incoming_bytes.fetch_add(bytes, Ordering::SeqCst) > BUDGET - bytes {
-                return Err(McpError::Limit);
-            }
+            self.charge_incoming_bytes(bytes)?;
+        }
+        Ok(())
+    }
+    #[cfg(any(feature = "stdio", feature = "http"))]
+    pub fn observe(&self, message: &ServerJsonRpcMessage, limit: usize) -> Result<(), McpError> {
+        if matches!(
+            message,
+            ServerJsonRpcMessage::Request(_) | ServerJsonRpcMessage::Notification(_)
+        ) && self.incoming.fetch_add(1, Ordering::SeqCst) >= limit
+        {
+            return Err(McpError::Limit);
         }
         // Invalidate before the service schedules its notification handler.
         if matches!(message, ServerJsonRpcMessage::Notification(n) if matches!(n.notification, ServerNotification::ToolListChangedNotification(_)))
