@@ -60,6 +60,99 @@ impl<T> serde_core::de::DeserializeOwned for battersea_tools::IconTheme where T:
 impl<T> typenum::type_operators::Same for battersea_tools::IconTheme
 pub type battersea_tools::IconTheme::Output = T
 impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_tools::IconTheme where T: ?core::marker::Sized
+pub enum battersea_tools::ToolApprovalDecision
+pub battersea_tools::ToolApprovalDecision::Allow
+pub battersea_tools::ToolApprovalDecision::Deny
+pub battersea_tools::ToolApprovalDecision::Pending
+impl core::clone::Clone for battersea_tools::ToolApprovalDecision
+pub fn battersea_tools::ToolApprovalDecision::clone(&self) -> battersea_tools::ToolApprovalDecision
+impl core::cmp::Eq for battersea_tools::ToolApprovalDecision
+impl core::cmp::PartialEq for battersea_tools::ToolApprovalDecision
+pub fn battersea_tools::ToolApprovalDecision::eq(&self, other: &battersea_tools::ToolApprovalDecision) -> bool
+impl core::fmt::Debug for battersea_tools::ToolApprovalDecision
+pub fn battersea_tools::ToolApprovalDecision::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for battersea_tools::ToolApprovalDecision
+impl core::marker::StructuralPartialEq for battersea_tools::ToolApprovalDecision
+impl core::marker::Freeze for battersea_tools::ToolApprovalDecision
+impl core::marker::Send for battersea_tools::ToolApprovalDecision
+impl core::marker::Sync for battersea_tools::ToolApprovalDecision
+impl core::marker::Unpin for battersea_tools::ToolApprovalDecision
+impl core::panic::unwind_safe::RefUnwindSafe for battersea_tools::ToolApprovalDecision
+impl core::panic::unwind_safe::UnwindSafe for battersea_tools::ToolApprovalDecision
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_tools::ToolApprovalDecision where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_tools::ToolApprovalDecision where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<T, U> core::convert::Into<U> for battersea_tools::ToolApprovalDecision where U: core::convert::From<T>
+pub fn battersea_tools::ToolApprovalDecision::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_tools::ToolApprovalDecision where U: core::convert::Into<T>
+pub type battersea_tools::ToolApprovalDecision::Error = core::convert::Infallible
+pub fn battersea_tools::ToolApprovalDecision::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for battersea_tools::ToolApprovalDecision where U: core::convert::TryFrom<T>
+pub type battersea_tools::ToolApprovalDecision::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_tools::ToolApprovalDecision::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for battersea_tools::ToolApprovalDecision where T: core::clone::Clone
+pub type battersea_tools::ToolApprovalDecision::Owned = T
+pub fn battersea_tools::ToolApprovalDecision::clone_into(&self, target: &mut T)
+pub fn battersea_tools::ToolApprovalDecision::to_owned(&self) -> T
+impl<T> core::any::Any for battersea_tools::ToolApprovalDecision where T: 'static + ?core::marker::Sized
+pub fn battersea_tools::ToolApprovalDecision::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_tools::ToolApprovalDecision where T: ?core::marker::Sized
+pub fn battersea_tools::ToolApprovalDecision::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_tools::ToolApprovalDecision where T: ?core::marker::Sized
+pub fn battersea_tools::ToolApprovalDecision::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for battersea_tools::ToolApprovalDecision where T: core::clone::Clone
+pub unsafe fn battersea_tools::ToolApprovalDecision::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for battersea_tools::ToolApprovalDecision
+pub fn battersea_tools::ToolApprovalDecision::from(t: T) -> T
+impl<T> dyn_clone::DynClone for battersea_tools::ToolApprovalDecision where T: core::clone::Clone
+pub fn battersea_tools::ToolApprovalDecision::__clone_box(&self, _: dyn_clone::sealed::Private) -> *mut ()
+impl<T> outref::AsOut<T> for battersea_tools::ToolApprovalDecision where T: core::marker::Copy
+pub fn battersea_tools::ToolApprovalDecision::as_out(&mut self) -> outref::Out<'_, T>
+impl<T> typenum::type_operators::Same for battersea_tools::ToolApprovalDecision
+pub type battersea_tools::ToolApprovalDecision::Output = T
+impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_tools::ToolApprovalDecision where T: ?core::marker::Sized
+pub struct battersea_tools::ApprovedToolExecutor
+impl battersea_tools::ApprovedToolExecutor
+pub fn battersea_tools::ApprovedToolExecutor::definitions(&self) -> alloc::vec::Vec<battersea_model::adapter::EngineLocalToolDefinition>
+pub fn battersea_tools::ApprovedToolExecutor::new(registry: battersea_tools::ToolRegistry, scope: battersea_tools::ToolApprovalScope, policy: alloc::sync::Arc<dyn battersea_tools::ToolApprovalPolicy>, max_calls: usize) -> core::result::Result<Self, battersea_model::adapter::error::EngineAdapterRequestError>
+impl battersea_model::adapter::EngineLocalToolExecutor for battersea_tools::ApprovedToolExecutor
+pub fn battersea_tools::ApprovedToolExecutor::call<'life0, 'async_trait>(&'life0 self, call: battersea_model::adapter::EngineLocalToolCall) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<battersea_model::adapter::tool_result::EngineLocalToolResult, battersea_model::adapter::error::EngineAdapterRequestError>> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait
+impl core::clone::Clone for battersea_tools::ApprovedToolExecutor
+pub fn battersea_tools::ApprovedToolExecutor::clone(&self) -> battersea_tools::ApprovedToolExecutor
+impl core::marker::Freeze for battersea_tools::ApprovedToolExecutor
+impl core::marker::Send for battersea_tools::ApprovedToolExecutor
+impl core::marker::Sync for battersea_tools::ApprovedToolExecutor
+impl core::marker::Unpin for battersea_tools::ApprovedToolExecutor
+impl !core::panic::unwind_safe::RefUnwindSafe for battersea_tools::ApprovedToolExecutor
+impl !core::panic::unwind_safe::UnwindSafe for battersea_tools::ApprovedToolExecutor
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_tools::ApprovedToolExecutor where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_tools::ApprovedToolExecutor where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<T, U> core::convert::Into<U> for battersea_tools::ApprovedToolExecutor where U: core::convert::From<T>
+pub fn battersea_tools::ApprovedToolExecutor::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_tools::ApprovedToolExecutor where U: core::convert::Into<T>
+pub type battersea_tools::ApprovedToolExecutor::Error = core::convert::Infallible
+pub fn battersea_tools::ApprovedToolExecutor::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for battersea_tools::ApprovedToolExecutor where U: core::convert::TryFrom<T>
+pub type battersea_tools::ApprovedToolExecutor::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_tools::ApprovedToolExecutor::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for battersea_tools::ApprovedToolExecutor where T: core::clone::Clone
+pub type battersea_tools::ApprovedToolExecutor::Owned = T
+pub fn battersea_tools::ApprovedToolExecutor::clone_into(&self, target: &mut T)
+pub fn battersea_tools::ApprovedToolExecutor::to_owned(&self) -> T
+impl<T> core::any::Any for battersea_tools::ApprovedToolExecutor where T: 'static + ?core::marker::Sized
+pub fn battersea_tools::ApprovedToolExecutor::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_tools::ApprovedToolExecutor where T: ?core::marker::Sized
+pub fn battersea_tools::ApprovedToolExecutor::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_tools::ApprovedToolExecutor where T: ?core::marker::Sized
+pub fn battersea_tools::ApprovedToolExecutor::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for battersea_tools::ApprovedToolExecutor where T: core::clone::Clone
+pub unsafe fn battersea_tools::ApprovedToolExecutor::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for battersea_tools::ApprovedToolExecutor
+pub fn battersea_tools::ApprovedToolExecutor::from(t: T) -> T
+impl<T> dyn_clone::DynClone for battersea_tools::ApprovedToolExecutor where T: core::clone::Clone
+pub fn battersea_tools::ApprovedToolExecutor::__clone_box(&self, _: dyn_clone::sealed::Private) -> *mut ()
+impl<T> typenum::type_operators::Same for battersea_tools::ApprovedToolExecutor
+pub type battersea_tools::ApprovedToolExecutor::Output = T
+impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_tools::ApprovedToolExecutor where T: ?core::marker::Sized
 pub struct battersea_tools::Icon
 pub battersea_tools::Icon::mime_type: core::option::Option<alloc::string::String>
 pub battersea_tools::Icon::sizes: alloc::vec::Vec<alloc::string::String>
@@ -252,6 +345,81 @@ impl<T> serde_core::de::DeserializeOwned for battersea_tools::ToolAnnotations wh
 impl<T> typenum::type_operators::Same for battersea_tools::ToolAnnotations
 pub type battersea_tools::ToolAnnotations::Output = T
 impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_tools::ToolAnnotations where T: ?core::marker::Sized
+pub struct battersea_tools::ToolApprovalRequest<'a>
+pub battersea_tools::ToolApprovalRequest::call: &'a battersea_model::adapter::EngineLocalToolCall
+pub battersea_tools::ToolApprovalRequest::revision: &'a str
+pub battersea_tools::ToolApprovalRequest::scope: &'a battersea_tools::ToolApprovalScope
+pub battersea_tools::ToolApprovalRequest::tool: &'a battersea_tools::Tool
+impl<'a> core::marker::Freeze for battersea_tools::ToolApprovalRequest<'a>
+impl<'a> core::marker::Send for battersea_tools::ToolApprovalRequest<'a>
+impl<'a> core::marker::Sync for battersea_tools::ToolApprovalRequest<'a>
+impl<'a> core::marker::Unpin for battersea_tools::ToolApprovalRequest<'a>
+impl<'a> core::panic::unwind_safe::RefUnwindSafe for battersea_tools::ToolApprovalRequest<'a>
+impl<'a> core::panic::unwind_safe::UnwindSafe for battersea_tools::ToolApprovalRequest<'a>
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_tools::ToolApprovalRequest<'a> where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_tools::ToolApprovalRequest<'a> where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<T, U> core::convert::Into<U> for battersea_tools::ToolApprovalRequest<'a> where U: core::convert::From<T>
+pub fn battersea_tools::ToolApprovalRequest<'a>::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_tools::ToolApprovalRequest<'a> where U: core::convert::Into<T>
+pub type battersea_tools::ToolApprovalRequest<'a>::Error = core::convert::Infallible
+pub fn battersea_tools::ToolApprovalRequest<'a>::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for battersea_tools::ToolApprovalRequest<'a> where U: core::convert::TryFrom<T>
+pub type battersea_tools::ToolApprovalRequest<'a>::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_tools::ToolApprovalRequest<'a>::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> core::any::Any for battersea_tools::ToolApprovalRequest<'a> where T: 'static + ?core::marker::Sized
+pub fn battersea_tools::ToolApprovalRequest<'a>::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_tools::ToolApprovalRequest<'a> where T: ?core::marker::Sized
+pub fn battersea_tools::ToolApprovalRequest<'a>::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_tools::ToolApprovalRequest<'a> where T: ?core::marker::Sized
+pub fn battersea_tools::ToolApprovalRequest<'a>::borrow_mut(&mut self) -> &mut T
+impl<T> core::convert::From<T> for battersea_tools::ToolApprovalRequest<'a>
+pub fn battersea_tools::ToolApprovalRequest<'a>::from(t: T) -> T
+impl<T> typenum::type_operators::Same for battersea_tools::ToolApprovalRequest<'a>
+pub type battersea_tools::ToolApprovalRequest<'a>::Output = T
+impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_tools::ToolApprovalRequest<'a> where T: ?core::marker::Sized
+pub struct battersea_tools::ToolApprovalScope
+pub battersea_tools::ToolApprovalScope::binding_revision: alloc::string::String
+pub battersea_tools::ToolApprovalScope::deadline: std::time::Instant
+pub battersea_tools::ToolApprovalScope::run_id: alloc::string::String
+impl core::clone::Clone for battersea_tools::ToolApprovalScope
+pub fn battersea_tools::ToolApprovalScope::clone(&self) -> battersea_tools::ToolApprovalScope
+impl core::fmt::Debug for battersea_tools::ToolApprovalScope
+pub fn battersea_tools::ToolApprovalScope::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Freeze for battersea_tools::ToolApprovalScope
+impl core::marker::Send for battersea_tools::ToolApprovalScope
+impl core::marker::Sync for battersea_tools::ToolApprovalScope
+impl core::marker::Unpin for battersea_tools::ToolApprovalScope
+impl core::panic::unwind_safe::RefUnwindSafe for battersea_tools::ToolApprovalScope
+impl core::panic::unwind_safe::UnwindSafe for battersea_tools::ToolApprovalScope
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_tools::ToolApprovalScope where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_tools::ToolApprovalScope where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<T, U> core::convert::Into<U> for battersea_tools::ToolApprovalScope where U: core::convert::From<T>
+pub fn battersea_tools::ToolApprovalScope::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_tools::ToolApprovalScope where U: core::convert::Into<T>
+pub type battersea_tools::ToolApprovalScope::Error = core::convert::Infallible
+pub fn battersea_tools::ToolApprovalScope::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for battersea_tools::ToolApprovalScope where U: core::convert::TryFrom<T>
+pub type battersea_tools::ToolApprovalScope::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_tools::ToolApprovalScope::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for battersea_tools::ToolApprovalScope where T: core::clone::Clone
+pub type battersea_tools::ToolApprovalScope::Owned = T
+pub fn battersea_tools::ToolApprovalScope::clone_into(&self, target: &mut T)
+pub fn battersea_tools::ToolApprovalScope::to_owned(&self) -> T
+impl<T> core::any::Any for battersea_tools::ToolApprovalScope where T: 'static + ?core::marker::Sized
+pub fn battersea_tools::ToolApprovalScope::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_tools::ToolApprovalScope where T: ?core::marker::Sized
+pub fn battersea_tools::ToolApprovalScope::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_tools::ToolApprovalScope where T: ?core::marker::Sized
+pub fn battersea_tools::ToolApprovalScope::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for battersea_tools::ToolApprovalScope where T: core::clone::Clone
+pub unsafe fn battersea_tools::ToolApprovalScope::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for battersea_tools::ToolApprovalScope
+pub fn battersea_tools::ToolApprovalScope::from(t: T) -> T
+impl<T> dyn_clone::DynClone for battersea_tools::ToolApprovalScope where T: core::clone::Clone
+pub fn battersea_tools::ToolApprovalScope::__clone_box(&self, _: dyn_clone::sealed::Private) -> *mut ()
+impl<T> typenum::type_operators::Same for battersea_tools::ToolApprovalScope
+pub type battersea_tools::ToolApprovalScope::Output = T
+impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_tools::ToolApprovalScope where T: ?core::marker::Sized
 pub struct battersea_tools::ToolEffect
 pub battersea_tools::ToolEffect::destructive: bool
 pub battersea_tools::ToolEffect::idempotent: bool
@@ -352,3 +520,5 @@ pub type battersea_tools::ToolRegistry::Output = T
 impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_tools::ToolRegistry where T: ?core::marker::Sized
 pub const battersea_tools::MCP_PROTOCOL_REVISION: &str
 pub const battersea_tools::PROFILES_META_KEY: &str
+pub trait battersea_tools::ToolApprovalPolicy: core::marker::Send + core::marker::Sync
+pub fn battersea_tools::ToolApprovalPolicy::decide(&self, request: battersea_tools::ToolApprovalRequest<'_>) -> battersea_tools::ToolApprovalDecision

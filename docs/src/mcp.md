@@ -15,8 +15,9 @@ launches and reaps its child; the adapter's shutdown token signals when that wor
 Discovery returns raw provenance, admitted tool names and diagnostics. Select admitted names
 with host-authored profiles, bind them against the application's registry, and retain the binding
 revision with the accepted run. `McpToolBinding::register_into` registers the immutable definitions
-and executor atomically. Apply `ToolRegistry::for_profile` before passing definitions and the
-executor to `EngineTextStreamRequest`.
+and executor atomically. Apply `ToolRegistry::for_profile`, then create an `ApprovedToolExecutor`
+with the host policy, conversation identity, binding revision, absolute deadline and call capacity.
+Pass its definitions and executor to `EngineTextStreamRequest`.
 
 `ToolCallCompleted` retains content, host metadata and completion evidence. Provider projections
 exclude host metadata and preserve text and resource references. A tool-reported error reaches
@@ -34,7 +35,13 @@ Dropping a provider stream cancels local work and requests remote cancellation. 
 may have no completion event, so the host's outstanding intent remains unresolved. The
 [recovery contract](contracts/recovery.md) governs durable publication and reconciliation.
 
-Profiles select which tools a run can use. Per-call approval decisions and durable tool
-continuation belong to the shared boundary tracked in
-[#7](https://github.com/thirtytwobits/battersea/issues/7). Server annotations are author claims;
-the host determines authority to execute.
+Profiles select which tools a run can use. The shared approval policy receives the tool record
+and validated arguments before dispatch. It returns an available allow, deny or pending decision.
+The example permits writes to its application-created fixture. Server annotations are author
+claims; the host determines authority to execute.
+
+Denied and pending calls stop with `not_dispatched` evidence. Pending requires host interaction;
+explicit durable continuation is tracked in [#7](https://github.com/thirtytwobits/battersea/issues/7).
+Retain the executor for the conversation: its bounded call-ID reservations prevent repeated
+dispatch, including after cancellation. Recreating it does not restore those reservations. The
+host must reconcile interrupted runs before replacing their execution state.

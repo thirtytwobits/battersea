@@ -553,16 +553,50 @@ pub enum EngineTextStreamEvent {
 pub type EngineTextStream =
     BoxStream<'static, Result<EngineTextStreamEvent, EngineAdapterRequestError>>;
 
-/// Wraps a provider text stream with an idle watchdog: if no event arrives
-/// within `idle`, the stream surfaces a single timeout error and then ENDS,
-/// so the consumer stops and the underlying provider connection is dropped
-/// rather than left hanging. The clock resets on every event, so a slow but
-/// live stream keeps flowing; only a genuine stall trips it.
-///
-/// This is the guardrail against a silent, unbounded hang — a model reasoning
-/// against a dead stream, burning money with no result and no error. The
-/// window is authored in `engine.yaml` (`options.streamIdleTimeoutMs`), never
-/// hardcoded here.
+pub(crate) fn retain_tool_evidence(
+    retained: &mut Option<error::ToolCallEvidence>,
+    event: &EngineTextStreamEvent,
+) {
+    match event {
+        EngineTextStreamEvent::ToolCallStarted { id, name, .. } => {
+            *retained = Some(error::ToolCallEvidence {
+                call_id: id.clone(),
+                tool_name: name.clone(),
+                outcome: error::ToolCallOutcome::Uncertain,
+                request_id: None,
+            });
+        }
+        EngineTextStreamEvent::ToolCallCompleted {
+            id,
+            name,
+            ok,
+            tool_result,
+            tool_call,
+            ..
+        } => {
+            *retained = Some(
+                tool_call
+                    .clone()
+                    .unwrap_or_else(|| error::ToolCallEvidence {
+                        call_id: id.clone(),
+                        tool_name: name.clone(),
+                        outcome: if *ok || tool_result.is_some() {
+                            error::ToolCallOutcome::Completed
+                        } else {
+                            error::ToolCallOutcome::Uncertain
+                        },
+                        request_id: None,
+                    }),
+            );
+        }
+        EngineTextStreamEvent::MessageStop { .. } => *retained = None,
+        _ => (),
+    }
+}
+
+/// Ends a stream with one timeout error when no event arrives within `idle`.
+/// Every event resets the clock. The timeout retains the latest observed tool evidence
+/// and drops the underlying stream.
 pub fn with_stream_idle_watchdog(
     stream: EngineTextStream,
     idle: std::time::Duration,
@@ -570,14 +604,19 @@ pub fn with_stream_idle_watchdog(
 ) -> EngineTextStream {
     use futures_util::StreamExt as _;
     Box::pin(futures_util::stream::unfold(
-        Some((stream, provider.into())),
+        Some((stream, provider.into(), None)),
         move |state| async move {
-            let (mut stream, provider) = state?;
+            let (mut stream, provider, mut tool_call) = state?;
             match tokio::time::timeout(idle, stream.next()).await {
-                Ok(Some(event)) => Some((event, Some((stream, provider)))),
+                Ok(Some(event)) => {
+                    if let Ok(event) = &event {
+                        retain_tool_evidence(&mut tool_call, event);
+                    }
+                    Some((event, Some((stream, provider, tool_call))))
+                }
                 Ok(None) => None,
-                Err(_) => Some((
-                    Err(EngineAdapterRequestError::new(
+                Err(_) => {
+                    let mut error = EngineAdapterRequestError::new(
                         provider,
                         format!(
                             "Provider stream idle deadline exceeded ({}ms).",
@@ -585,9 +624,10 @@ pub fn with_stream_idle_watchdog(
                         ),
                         error::ErrorKind::Timeout,
                     )
-                    .with_idle_watchdog(idle.as_millis().min(u64::MAX as u128) as u64)),
-                    None,
-                )),
+                    .with_idle_watchdog(idle.as_millis().min(u64::MAX as u128) as u64);
+                    error.tool_call = tool_call.map(Box::new);
+                    Some((Err(error), None))
+                }
             }
         },
     ))
