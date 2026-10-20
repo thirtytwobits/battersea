@@ -225,6 +225,15 @@ impl PreparedCall {
         &self.registered.tool
     }
 
+    pub fn validate_result(
+        &self,
+        result: &EngineLocalToolResult,
+    ) -> Result<(), EngineAdapterRequestError> {
+        let mut evidence = self.evidence.clone();
+        evidence.outcome = ToolCallOutcome::Completed;
+        validate_result(&self.registered, result, &evidence)
+    }
+
     pub async fn execute(self) -> Result<EngineLocalToolResult, EngineAdapterRequestError> {
         let Self {
             registered,
@@ -239,30 +248,39 @@ impl PreparedCall {
             error
         })?;
         evidence.outcome = ToolCallOutcome::Completed;
-        if !result.is_error() {
-            if let Some(output) = &registered.output_validator {
-                let value = result.structured_output().ok_or_else(|| {
-                    refusal(
-                        format!(
-                            "Tool \"{}\" omitted its structured output.",
-                            registered.tool.name
-                        ),
-                        ToolCode::InvalidToolResult,
-                    )
-                    .with_tool_call(evidence.clone())
-                })?;
-                output.validate(value).map_err(|error| {
-                    refusal(
-                        format!(
-                            "Tool \"{}\" returned a result outside its output schema: {error}",
-                            registered.tool.name
-                        ),
-                        ToolCode::InvalidToolResult,
-                    )
-                    .with_tool_call(evidence.clone())
-                })?;
-            }
-        }
+        validate_result(&registered, &result, &evidence)?;
         Ok(result)
     }
+}
+
+fn validate_result(
+    registered: &RegisteredTool,
+    result: &EngineLocalToolResult,
+    evidence: &ToolCallEvidence,
+) -> Result<(), EngineAdapterRequestError> {
+    if !result.is_error() {
+        if let Some(output) = &registered.output_validator {
+            let value = result.structured_output().ok_or_else(|| {
+                refusal(
+                    format!(
+                        "Tool \"{}\" omitted its structured output.",
+                        registered.tool.name
+                    ),
+                    ToolCode::InvalidToolResult,
+                )
+                .with_tool_call(evidence.clone())
+            })?;
+            output.validate(value).map_err(|error| {
+                refusal(
+                    format!(
+                        "Tool \"{}\" returned a result outside its output schema: {error}",
+                        registered.tool.name
+                    ),
+                    ToolCode::InvalidToolResult,
+                )
+                .with_tool_call(evidence.clone())
+            })?;
+        }
+    }
+    Ok(())
 }

@@ -61,3 +61,10 @@ configuration, unknown versions, corrupt or oversized state, cancellation and te
 
 Each explicit resume starts a new observation attempt. Event identities combine run, attempt
 and sequence so observations from an interrupted attempt cannot be overwritten.
+
+## Tool approvals
+
+The [tool approval journal](tools.md#durable-approval) persists pending requests, host decisions,
+dispatch intents and results through application-owned storage. Each conversation has its own
+revision-fenced scope and expiry. A recovered tool result can satisfy the host's retained
+continuation; the enclosing driver intent still requires its own checkpoint and publication.

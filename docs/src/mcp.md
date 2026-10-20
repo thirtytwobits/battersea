@@ -40,8 +40,27 @@ and validated arguments before dispatch. It returns an available allow, deny or 
 The example permits writes to its application-created fixture. Server annotations are author
 claims; the host determines authority to execute.
 
-Denied and pending calls stop with `not_dispatched` evidence. Pending requires host interaction;
-explicit durable continuation is tracked in [#7](https://github.com/thirtytwobits/battersea/issues/7).
+Denied and pending calls stop with `not_dispatched` evidence. Pending requires host interaction.
 Retain the executor for the conversation: its bounded call-ID reservations prevent repeated
 dispatch, including after cancellation. Recreating it does not restore those reservations. The
 host must reconcile interrupted runs before replacing their execution state.
+
+
+## Durable decisions
+
+The example's `FileApprovalStore` persists one conversation per application-owned directory.
+It bounds reads, serialises competing writes with a lock file, atomically replaces the journal,
+and synchronises the file and directory before acknowledgement. The filesystem must support
+durable replacement. A crash-left lock requires host inspection and executor fencing before removal.
+Cancelled storage operations can finish in the background; subsequent commands inspect durable state.
+
+Create a `DurableToolExecutor` with the profile-filtered registry, binding revision, conversation
+identity, absolute expiry and journal limits. Its provider-facing call persists the pending request
+and stops before dispatch. Reopen the same scope, inspect the request, record the authenticated
+host's decision, then explicitly resume the stored call. Published results remain available after
+another reopen. An outstanding intent requires effect inspection and explicit reconciliation.
+
+The consumer tests reopen file storage between pending, approval and completion over all three
+transports. The effect occurs once and its private metadata survives storage. The provider receives
+one generation request: provider transcript restoration is a separate continuation boundary governed
+by the [recovery contract](contracts/recovery.md).

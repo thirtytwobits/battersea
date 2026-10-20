@@ -7,6 +7,7 @@ license.workspace = true
 publish = false
 
 [dependencies]
+async-trait.workspace = true
 battersea-mcp = { path = "../../crates/battersea-mcp", features = ["stdio", "http"] }
 battersea-model = { path = "../../crates/battersea-model" }
 battersea-tools = { path = "../../crates/battersea-tools" }
