@@ -8,6 +8,8 @@ import { TOOL_PROFILES_META_KEY } from "./tools-defaults.js";
 export function toolProfiles(tool: Pick<Tool, "_meta">): string[] | undefined {
   const profiles = tool._meta?.[TOOL_PROFILES_META_KEY];
   if (profiles === undefined) return [];
-  if (!Array.isArray(profiles) || !profiles.every(profile => typeof profile === "string")) return undefined;
-  return profiles;
+  if (!Array.isArray(profiles)) return undefined;
+  // A copy turns a sparse array's holes into undefined entries, which `every` would otherwise skip.
+  const names: unknown[] = Array.from(profiles);
+  return names.every(profile => typeof profile === "string") ? names as string[] : undefined;
 }

@@ -10,6 +10,7 @@
   one profile's tools with `for_profile`, and passes each call to its executor under the tool's
   own name. A result outside the tool's declared output schema is refused as
   `ToolCode::InvalidToolResult`.
+- A local tool's failure after a provider turn reports its dispatch as unknown, never as not sent.
 - `NoLocalTools` refuses every call of a request offered no tools. The Chat Completions and mock
   adapters run with it when a request carries no executor.
 

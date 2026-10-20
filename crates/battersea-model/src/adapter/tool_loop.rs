@@ -1,9 +1,9 @@
 //! Provider-neutral orchestration for engine-local tools.
 
 use super::{
-    emit_error, emit_stream_event, EngineAdapterDebugContext, EngineAdapterLogger,
-    EngineAdapterRequestError, EngineLocalToolCall, EngineLocalToolExecutor, EngineLocalToolResult,
-    EngineTextStreamEvent, EngineTextStreamRequest,
+    emit_error, emit_stream_event, error::DispatchState, EngineAdapterDebugContext,
+    EngineAdapterLogger, EngineAdapterRequestError, EngineLocalToolCall, EngineLocalToolExecutor,
+    EngineLocalToolResult, EngineTextStreamEvent, EngineTextStreamRequest,
 };
 use async_trait::async_trait;
 use serde_json::{json, Value};
@@ -94,6 +94,16 @@ pub async fn run_tool_loop(
                 let _ = events.send(Err(error)).await;
             }
         }
+    }
+}
+
+/// A local tool fails after the provider has answered the turn that called it, so its failure
+/// cannot report the provider request as not sent.
+fn after_provider_turn(error: EngineAdapterRequestError) -> EngineAdapterRequestError {
+    if error.dispatch == DispatchState::NotSent {
+        error.with_dispatch(DispatchState::Unknown)
+    } else {
+        error
     }
 }
 
@@ -312,7 +322,7 @@ async fn drive_tool_loop(
             .await?;
             results.push(ExecutedToolCall {
                 call,
-                result: result?,
+                result: result.map_err(after_provider_turn)?,
             });
         }
     }
@@ -545,6 +555,11 @@ mod tests {
             Ok(EngineTextStreamEvent::ToolCallCompleted { ok: false, error_classification: Some(kind), .. }), Err(error)]
             if kind == error.classification.as_str())
         );
+        // The provider answered the turn before the executor ran.
+        let Some(Err(error)) = events.last() else {
+            unreachable!("the run ends in the executor's failure")
+        };
+        assert_ne!(error.dispatch, crate::DispatchState::NotSent);
     }
     #[tokio::test]
     async fn limits_provider_rounds_without_issuing_an_extra_request() {

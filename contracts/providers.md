@@ -41,7 +41,8 @@ Retries do not invoke the tool runner. A tool result is appended once; a rejecte
 resends that exact body. Background recovery retrieves the same response ID after the last
 accepted sequence, discarding duplicates and never moving the cursor backwards.
 
-Errors retain dispatch certainty, HTTP status, request identity and retry delay. Retry observations
+Errors retain dispatch certainty, HTTP status, request identity and retry delay. A local tool fails
+after the provider turn that called it, so its failure never reports the request as not sent. Retry observations
 identify the attempt and delay. Unknown remote outcome remains unknown for spend accounting.
 
 ## Content

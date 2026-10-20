@@ -140,6 +140,10 @@ fn a_record_that_cannot_be_offered_is_refused() {
             Tool::new("example.lookup", object(json!({"type": "array"})))
                 .with_description("Lists."),
         ),
+        (
+            "untyped input schema",
+            Tool::new("example.lookup", Map::new()).with_description("Looks a key up."),
+        ),
         ("profiles not a list", profiles_not_names),
         ("profiles not names", not_a_list),
         (

@@ -11,7 +11,9 @@ test('a tool reads back the profiles it lists, and lists none without an entry',
 });
 
 test('a profiles entry that is not a list of names reads as undefined', () => {
-  for (const entry of ['author', [1], [null], { author: true }]) {
+  const deleted = ['author', 'player'];
+  delete deleted[0];
+  for (const entry of ['author', [1], [null], { author: true }, new Array(1), deleted]) {
     assert.equal(toolProfiles({ _meta: { [TOOL_PROFILES_META_KEY]: entry } }), undefined, JSON.stringify(entry));
   }
 });
