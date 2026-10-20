@@ -18,6 +18,7 @@
   - [Recovery](contracts/recovery.md)
   - [Provider conversations](contracts/providers.md)
   - [Application tools](contracts/tools.md)
+  - [MCP adapter](contracts/mcp.md)
   - [Media jobs](contracts/media-jobs.md)
   - [Observation and accounting](contracts/observability.md)
   - [Untrusted execution](contracts/isolation.md)

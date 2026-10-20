@@ -21,7 +21,11 @@ struct Cli {
 #[derive(Subcommand)]
 enum Task {
     /// Format, check dependencies/versions, test and build Rust documentation. Needs no Node.
-    Check,
+    Check {
+        /// Check core packages on their Rust 1.85 minimum.
+        #[arg(long)]
+        core_only: bool,
+    },
     /// Check dependency direction and synchronised Cargo/npm versions.
     Boundaries,
     /// Scan AI-facing source against declared prompt roots.
@@ -39,7 +43,11 @@ enum Task {
         update: bool,
     },
     /// Build crate archives and compile an independent consumer of each archive.
-    Package,
+    Package {
+        /// Package core crates on their Rust 1.85 minimum.
+        #[arg(long)]
+        core_only: bool,
+    },
     /// Check publication decisions and require the tag to match all package versions.
     ReleaseCheck { tag: String },
     /// Build the handbook and public Rust reference. Needs mdBook, but no Node.
@@ -132,6 +140,9 @@ fn dependency_errors(metadata: &Value, policy: &Value, root: &Path) -> Vec<Strin
             }
             let target = packages.iter().find(|p| p["id"] == id).unwrap();
             let target_name = target["name"].as_str().unwrap();
+            if target_name == "rmcp" && name != "battersea-mcp" {
+                errors.push(format!("{name} reaches rmcp outside the MCP adapter"));
+            }
             if target_name.starts_with("primrose-") || target_name.starts_with("clerkenwell-") {
                 errors.push(format!("{name} reaches product dependency {target_name}"));
             }
@@ -256,7 +267,7 @@ fn api(root: &Path, update: bool) -> Result<()> {
     }
     Ok(())
 }
-fn package(root: &Path) -> Result<()> {
+fn package(root: &Path, core_only: bool) -> Result<()> {
     boundaries(root)?;
     let release = json(root.join("release.json"))?;
     let version = string(&release, "version")?;
@@ -270,7 +281,10 @@ fn package(root: &Path) -> Result<()> {
             .as_str()
             .ok_or("Cargo returned no target directory")?,
     );
-    let crates = release["crates"].as_object().unwrap();
+    let mut crates = release["crates"].as_object().unwrap().clone();
+    if core_only {
+        crates.remove("battersea-mcp");
+    }
     let mut directories = std::collections::BTreeMap::new();
     for name in crates.keys() {
         let manifest = metadata["packages"]
@@ -289,7 +303,7 @@ fn package(root: &Path) -> Result<()> {
         );
     }
     let unpack_root = tempfile::tempdir()?;
-    for (name, required) in crates {
+    for (name, required) in &crates {
         let directory = &directories[name];
         for asset in ["LICENSE", "NOTICE"] {
             fs::copy(root.join(asset), directory.join(asset))?;
@@ -446,7 +460,7 @@ fn scan_prompts(root: &Path) -> Result<()> {
     let policy = battersea_guard::PromptPolicy::new(
         &["crates/battersea-nodes/src/nodes.yaml"],
         &[
-            r"^crates/(battersea-model|battersea-tools|battersea-providers|battersea-config|battersea-nodes)/src/.*\.(rs|yaml)$",
+            r"^crates/(battersea-model|battersea-tools|battersea-mcp|battersea-providers|battersea-config|battersea-nodes)/src/.*\.(rs|yaml)$",
         ],
     )?;
     fn visit(
@@ -486,6 +500,18 @@ fn scan_prompts(root: &Path) -> Result<()> {
     }
 }
 
+fn workspace_args<'a>(args: &[&'a str], core_only: bool) -> Vec<&'a str> {
+    let mut result = args.to_vec();
+    if core_only {
+        let index = result
+            .iter()
+            .position(|arg| *arg == "--")
+            .unwrap_or(result.len());
+        result.splice(index..index, ["--exclude", "battersea-mcp"]);
+    }
+    result
+}
+
 fn main() -> Result<()> {
     let root = root();
     match Cli::parse().command {
@@ -496,7 +522,7 @@ fn main() -> Result<()> {
         Task::Bindings { check } => bindings::generate(&root, check),
         Task::Boundaries => boundaries(&root),
         Task::ScanPrompts => scan_prompts(&root),
-        Task::Check => {
+        Task::Check { core_only } => {
             run(&root, "cargo", &["fmt", "--all", "--check"])?;
             boundaries(&root)?;
             bindings::generate(&root, true)?;
@@ -537,30 +563,36 @@ fn main() -> Result<()> {
             run(
                 &root,
                 "cargo",
-                &["test", "--workspace", "--all-features", "--locked"],
+                &workspace_args(
+                    &["test", "--workspace", "--all-features", "--locked"],
+                    core_only,
+                ),
             )?;
             run(
                 &root,
                 "cargo",
-                &[
-                    "clippy",
-                    "--workspace",
-                    "--all-targets",
-                    "--all-features",
-                    "--locked",
-                    "--",
-                    "-D",
-                    "warnings",
-                ],
+                &workspace_args(
+                    &[
+                        "clippy",
+                        "--workspace",
+                        "--all-targets",
+                        "--all-features",
+                        "--locked",
+                        "--",
+                        "-D",
+                        "warnings",
+                    ],
+                    core_only,
+                ),
             )?;
             run(
                 &root,
                 "cargo",
-                &["doc", "--workspace", "--no-deps", "--locked"],
+                &workspace_args(&["doc", "--workspace", "--no-deps", "--locked"], core_only),
             )
         }
         Task::Api { update } => api(&root, update),
-        Task::Package => package(&root),
+        Task::Package { core_only } => package(&root, core_only),
         Task::ReleaseCheck { tag } => release_check(&root, &tag),
     }
 }
@@ -607,6 +639,20 @@ mod tests {
         )
         .is_empty());
     }
+    #[test]
+    fn the_mcp_sdk_is_confined_to_the_adapter() {
+        let mut data = metadata("rmcp", json!("registry"), "/cache/Cargo.toml");
+        assert!(
+            dependency_errors(&data, &json!({"battersea-flow":[]}), Path::new("/repo"))
+                .iter()
+                .any(|error| error.contains("rmcp"))
+        );
+        data["packages"][0]["name"] = json!("battersea-mcp");
+        assert!(
+            dependency_errors(&data, &json!({"battersea-mcp":[]}), Path::new("/repo")).is_empty()
+        );
+    }
+
     #[test]
     fn unresolved_publication_values_are_not_strings() {
         for v in [Value::Null, json!(""), json!(false)] {

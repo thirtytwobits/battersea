@@ -1,5 +1,5 @@
 [workspace]
-members = ["crates/battersea-derive", "crates/battersea-telemetry", "crates/battersea-pianola", "crates/battersea-flow", "crates/battersea-runtime", "crates/battersea-model", "crates/battersea-tools", "crates/battersea-providers", "crates/battersea-config", "crates/battersea-nodes", "crates/battersea-guard", "tools/xtask", "examples/*"]
+members = ["crates/battersea-derive", "crates/battersea-telemetry", "crates/battersea-pianola", "crates/battersea-flow", "crates/battersea-runtime", "crates/battersea-model", "crates/battersea-tools", "crates/battersea-mcp", "crates/battersea-providers", "crates/battersea-config", "crates/battersea-nodes", "crates/battersea-guard", "tools/xtask", "examples/*"]
 resolver = "2"
 
 [workspace.package]
