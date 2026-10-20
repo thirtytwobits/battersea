@@ -1,5 +1,5 @@
 /** Copyright (c) Scott A Dixon */
-import assert from "node:assert/strict";
+import { moveConnectionPointer } from "./connection-gesture.mjs";
 
 export async function testNodeMeasurementRecovery(page, origin) {
   await page.addInitScript(() => {
@@ -28,13 +28,11 @@ export async function testNodeMeasurementRecovery(page, origin) {
   }
   const source = page.locator('.react-flow__node[data-id="source"] .react-flow__handle[data-handleid="output-0"]');
   const target = page.locator('.react-flow__node[data-id="branch"] .react-flow__handle[data-handleid="input-0"]');
-  await source.hover();
-  const to = await target.boundingBox();
-  assert.ok(to);
-  await page.mouse.down();
-  await page.mouse.move(to.x + to.width / 2, to.y + to.height / 2, { steps: 12 });
-  await page.waitForFunction(() =>
-    document.querySelector('.react-flow__node[data-id="branch"] .react-flow__handle[data-handleid="input-0"]')?.classList.contains("valid"));
-  await page.mouse.up();
+  try {
+    await moveConnectionPointer(page, source, target);
+    await target.and(page.locator(".valid")).waitFor();
+  } finally {
+    await page.mouse.up();
+  }
   await page.waitForFunction(() => document.querySelectorAll(".react-flow__edge").length === 2);
 }
