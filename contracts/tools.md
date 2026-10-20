@@ -100,5 +100,52 @@ The host supplies a distinct scope for each tool conversation and includes all s
 bindings and credential scopes in its binding revision. It retains the executor
 for the conversation's lifetime. Reconstructing an executor starts another reservation set;
 interrupted runs require host reconciliation before replacement. Pending approval stops before
-dispatch. Durable decision persistence and explicit provider continuation are tracked in
+dispatch.
+
+
+## Durable approval
+
+`DurableToolExecutor` records pending calls in a host-owned `ToolApprovalStore`. Each journal
+belongs to one conversation: its scope pins the run, binding revision and absolute Unix expiry.
+The binding revision includes selected tool bindings, credentials and authorisation context.
+Each request digest binds that scope, the complete tool definition and the canonical call.
+Opening requires the same scope and never extends expiry. In-process deadlines are monotonic;
+the host supplies a trusted wall clock across restarts. Clock regression behind the journal's
+last update rejects mutation.
+
+The host store provides bounded reads and atomic, durable compare-and-exchange across processes.
+Successful writes survive restart. Errors, timeouts and cancelled writes may have committed;
+inspect storage before issuing another command. Loading validates the journal without repairing
+or upgrading it. Unsupported versions, changed identities and invalid state are refused.
+Journal revision, call count and encoded byte limits are finite. Definitions, arguments, results,
+host metadata and reconciliation evidence all count towards retention.
+
+The command sequence is explicit:
+
+1. `call` or `submit` validates and persists a pending request. `call` returns
+   `tool_approval_pending` with `not_dispatched` evidence and stops the provider loop.
+2. The host authenticates an actor and calls `decide` with the request digest and expected journal
+   revision. Allow, deny and cancel decisions are durable before acknowledgement. Cancellation
+   also accepts an approved call that has not acquired a dispatch intent.
+3. `resume` requires an approved call and the expected journal revision. It revalidates the pinned
+   definition and arguments, persists an intent, checks expiry, then invokes the executor.
+4. A known result or failure is persisted before returning it. Explicit resumption of a published
+   outcome returns the retained outcome, including host metadata, without another dispatch.
+
+Existing call IDs cannot be replaced. Stale commands fail with `tool_approval_conflict`.
+Repeating the same decision by the same actor at the current revision is idempotent. Pending,
+denied, cancelled and expired calls never dispatch. Completed results remain readable after expiry.
+One journal dispatches one call at a time; an outstanding intent blocks other call mutations.
+Separate journals require distinct conversation identities.
+
+Cancellation, uncertain execution or failed result publication may leave an intent. `resume`
+refuses that intent as `tool_approval_unresolved`. Before `reconcile`, the host fences the original
+executor and inspects the effect at its destination. Reconciliation records an actor and evidence:
+confirmed not-applied restores approval, completed retains a validated host-supplied result, and
+abandon terminates the call. Expiry still forbids dispatch after not-applied reconciliation.
+A journal revision fences writes; execution ownership requires host fencing.
+
+Explicit tool resumption returns the retained result to the host. Resuming the provider conversation
+requires a persisted provider transcript or provider-supported continuation. Resubmitting generation
+cannot reconstruct an interrupted conversation. Provider transcript continuation remains part of
 [#7](https://github.com/thirtytwobits/battersea/issues/7).
