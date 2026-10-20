@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs/promises";
 import { chromium, webkit } from "playwright";
 import { testNodeMeasurementRecovery } from "./tests/node-measurement-recovery.mjs";
+import { moveConnectionPointer, testConnectionGesture } from "./tests/connection-gesture.mjs";
 const origin = process.env.EDITOR_URL ?? "http://127.0.0.1:18181";
 const out = process.env.EDITOR_ARTIFACTS ?? "test-artifacts";
 await fs.mkdir(out, { recursive: true });
@@ -62,6 +63,8 @@ for (const [name, engine] of Object.entries({ chromium, webkit })) {
     expectedGraph = { nodes: ["source", "target", "branch"], edges: ["existing"] };
     await testNodeMeasurementRecovery(page, origin);
     console.log(`${name}: restored node dimensions retain edges and connectable handles`);
+    await testConnectionGesture(page, origin);
+    console.log(`${name}: connection gesture follows a moving target handle`);
     expectedGraph = null;
     await page.goto(origin);
     const fixture = await read(page);
@@ -227,15 +230,8 @@ for (const [name, engine] of Object.entries({ chromium, webkit })) {
     expectedGraph = null;
     const outputHandle = page.locator('.react-flow__node[data-id="text"] .react-flow__handle[data-handleid="output-0"]');
     const inputHandle = page.locator(`.react-flow__node[data-id="${branchNode}"] .react-flow__handle[data-handleid="input-0"]`);
-    // Locator actions wait for fit-view animation to finish before hit testing.
-    await outputHandle.hover();
-    await inputHandle.hover();
-    await outputHandle.hover();
-    const to = await inputHandle.boundingBox();
-    assert.ok(to);
-    await page.mouse.down();
-    await page.mouse.move(to.x + to.width / 2, to.y + to.height / 2, { steps: 12 });
     try {
+      await moveConnectionPointer(page, outputHandle, inputHandle);
       await page.waitForFunction(id => document.querySelector(`.react-flow__node[data-id="${id}"] .react-flow__handle[data-handleid="input-0"]`)?.classList.contains("valid"), branchNode);
     } catch (error) {
       // Record what the connection saw, then fail.
@@ -250,7 +246,7 @@ for (const [name, engine] of Object.entries({ chromium, webkit })) {
           box: handle.getBoundingClientRect().toJSON()
         }))
       }));
-      await fs.writeFile(`${out}/${name}-fanout-unconnected.json`, JSON.stringify({ pointer: to, ...scene }, null, 2));
+      await fs.writeFile(`${out}/${name}-fanout-unconnected.json`, JSON.stringify(scene, null, 2));
       await page.screenshot({ path: `${out}/${name}-fanout-unconnected.png` });
       throw error;
     }
