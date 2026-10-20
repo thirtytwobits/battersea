@@ -31,5 +31,9 @@
   ],
   "battersea-derive": [
     "battersea-flow"
+  ],
+  "battersea-mcp": [
+    "battersea-model",
+    "battersea-tools"
   ]
 }

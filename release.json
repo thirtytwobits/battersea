@@ -87,6 +87,13 @@
       "README.md",
       "LICENSE",
       "NOTICE"
+    ],
+    "battersea-mcp": [
+      "Cargo.toml",
+      "src/lib.rs",
+      "README.md",
+      "LICENSE",
+      "NOTICE"
     ]
   },
   "npm": {
