@@ -69,13 +69,36 @@ evidence identifying its first call. The whole batch is refused before execution
 Completion evidence remains available until the following provider turn succeeds. A failed
 or timed-out continuation retains the latest completed call's evidence; each call's completion
 event retains its own evidence.
+Stream idle and request-deadline watchdogs retain the latest observed tool evidence; a started
+call without a completion event remains uncertain.
 
 Evidence about a tool survives classification of the enclosing provider request. Completion
 does not prove durable publication or authorise replay; journal intents and host reconciliation
 govern recovery. Dropping a stream cancels pending execution and may leave a started call
 without a completion event.
 
-The host-controlled approval boundary belongs between argument validation and executor
-dispatch. Run identity, definition and binding revisions, approval decisions and durable
-continuation belong to that shared boundary. Tool outcome evidence describes execution;
-it does not grant authority to execute.
+## Host approval
+
+`ApprovedToolExecutor` pins a profile-filtered registry, host policy, run identity, binding
+revision and absolute deadline. Validation precedes policy evaluation. The policy receives
+the complete tool record and canonical call, including validated arguments. The request
+revision binds the run, host binding revision, record and call. Retained host decisions must
+match that revision. Tool effect annotations remain author claims; the host determines trust.
+
+The policy returns an available `Allow`, `Deny` or `Pending` decision without waiting for user
+interaction. Denied, pending and expired calls stop the provider conversation with typed tool
+codes and `not_dispatched` evidence. Allowed calls enter the registered executor and retain
+the registry's result validation. A deadline during execution reports uncertainty.
+
+Every validated call ID reserves capacity before policy evaluation. Clones share reservations;
+duplicate IDs, including altered calls, are refused. Denial, pending, cancellation and completion
+retain the reservation. Capacity is finite and reservations are never evicted. Approval request
+payloads use the shared 64 MiB limit. Provider continuation retries reuse the recorded result
+without consulting approval or invoking the executor again.
+
+The host supplies a distinct scope for each tool conversation and includes all selected tool
+bindings and credential scopes in its binding revision. It retains the executor
+for the conversation's lifetime. Reconstructing an executor starts another reservation set;
+interrupted runs require host reconciliation before replacement. Pending approval stops before
+dispatch. Durable decision persistence and explicit provider continuation are tracked in
+[#7](https://github.com/thirtytwobits/battersea/issues/7).

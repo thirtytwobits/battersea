@@ -360,29 +360,33 @@ impl EngineAdapter for AdmittedAdapter {
         );
         let stream = validated;
         Ok(Box::pin(futures_util::stream::unfold(
-            Some((stream, deadline, provider)),
+            Some((stream, deadline, provider, None)),
             |state| async move {
                 use futures_util::StreamExt;
-                let (mut stream, deadline, provider) = state?;
+                let (mut stream, deadline, provider, mut tool_call) = state?;
                 let next = match deadline {
                     Some(deadline) => {
                         match tokio::time::timeout_at(deadline, stream.next()).await {
                             Ok(next) => next,
                             Err(_) => {
-                                return Some((
-                                    Err(EngineAdapterRequestError::new(
-                                        provider,
-                                        "Request deadline exceeded.",
-                                        ErrorKind::Timeout,
-                                    )),
-                                    None,
-                                ))
+                                let mut error = EngineAdapterRequestError::new(
+                                    provider,
+                                    "Request deadline exceeded.",
+                                    ErrorKind::Timeout,
+                                );
+                                error.tool_call = tool_call.map(Box::new);
+                                return Some((Err(error), None));
                             }
                         }
                     }
                     None => stream.next().await,
                 };
-                next.map(|event| (event, Some((stream, deadline, provider))))
+                next.map(|event| {
+                    if let Ok(event) = &event {
+                        super::adapter::retain_tool_evidence(&mut tool_call, event);
+                    }
+                    (event, Some((stream, deadline, provider, tool_call)))
+                })
             },
         )))
     }

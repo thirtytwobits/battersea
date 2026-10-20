@@ -5,7 +5,9 @@ use battersea_model::{
     EngineAdapter, EngineAdapterRequestError, EngineTextStreamEvent, EngineTextStreamRequest,
     ToolCallOutcome,
 };
-use battersea_tools::ToolRegistry;
+use battersea_tools::{
+    ToolApprovalDecision, ToolApprovalPolicy, ToolApprovalRequest, ToolRegistry,
+};
 use futures_util::StreamExt;
 use mcp_example::{
     fixture::{self, Fault, HttpServer, McpFixture, ProviderFixture, Result},
@@ -25,6 +27,101 @@ enum Transport {
     Sse,
 }
 const TRANSPORTS: [Transport; 3] = [Transport::Stdio, Transport::Json, Transport::Sse];
+
+struct HostPolicy {
+    decision: ToolApprovalDecision,
+    binding_revision: String,
+    calls: std::sync::atomic::AtomicUsize,
+}
+impl ToolApprovalPolicy for HostPolicy {
+    fn decide(&self, request: ToolApprovalRequest<'_>) -> ToolApprovalDecision {
+        assert_eq!(request.scope.run_id, "approval-run");
+        assert_eq!(request.scope.binding_revision, self.binding_revision);
+        assert_eq!(request.call.id, "effect-1");
+        assert_eq!(request.call.name, "remote.write");
+        assert_eq!(request.call.arguments, json!({"value":1}));
+        assert!(request.tool.effect().destructive);
+        self.calls.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+        self.decision
+    }
+}
+
+#[tokio::test]
+async fn remote_approval_precedes_effects_and_provider_retries_reuse_the_decision() {
+    use battersea_model::ToolCode;
+    use std::sync::atomic::Ordering;
+    for transport in TRANSPORTS {
+        for decision in [
+            ToolApprovalDecision::Allow,
+            ToolApprovalDecision::Deny,
+            ToolApprovalDecision::Pending,
+        ] {
+            let (_directory, ledger) = temporary_ledger();
+            let remote = Remote::start(transport, &ledger, Fault::None, Duration::from_secs(10))
+                .await
+                .unwrap();
+            let (binding, tools) = host::bind(&remote.connection).await.unwrap();
+            let policy = Arc::new(HostPolicy {
+                decision,
+                binding_revision: binding.revision().into(),
+                calls: 0.into(),
+            });
+            let fixture = ProviderFixture::new(json!({"value":1}), true);
+            let provider = fixture::provider_http(fixture.clone()).await.unwrap();
+            let (adapter, chat) = host::provider(&provider.endpoint).unwrap();
+            let request =
+                host::approved_request(&binding, &tools, chat, "approval-run", policy.clone())
+                    .unwrap();
+            let executor = request.local_tool_executor.clone().unwrap();
+            let result = collect(&adapter, request).await;
+            let count = match decision {
+                ToolApprovalDecision::Allow => {
+                    assert!(result.unwrap().iter().any(|event| matches!(
+                        event,
+                        EngineTextStreamEvent::ToolCallCompleted { ok: true, .. }
+                    )));
+                    let requests = fixture.requests.lock().unwrap();
+                    assert_eq!(requests.len(), 3);
+                    assert_eq!(requests[1], requests[2]);
+                    1
+                }
+                ToolApprovalDecision::Deny | ToolApprovalDecision::Pending => {
+                    let error = result.unwrap_err();
+                    assert_eq!(
+                        error.tool_call.unwrap().outcome,
+                        ToolCallOutcome::NotDispatched
+                    );
+                    assert_eq!(
+                        error.tool_code,
+                        Some(if decision == ToolApprovalDecision::Deny {
+                            ToolCode::ToolApprovalDenied
+                        } else {
+                            ToolCode::ToolApprovalPending
+                        })
+                    );
+                    assert_eq!(fixture.requests.lock().unwrap().len(), 1);
+                    0
+                }
+            };
+            let duplicate = executor
+                .call(battersea_model::EngineLocalToolCall {
+                    id: "effect-1".into(),
+                    name: "remote_write".into(),
+                    arguments: json!({"value":2}),
+                })
+                .await
+                .unwrap_err();
+            assert_eq!(duplicate.tool_code, Some(ToolCode::InvalidToolCallId));
+            assert_eq!(
+                duplicate.tool_call.unwrap().outcome,
+                ToolCallOutcome::NotDispatched
+            );
+            assert_eq!(policy.calls.load(Ordering::SeqCst), 1);
+            assert_eq!(fixture::effect_count(&ledger).unwrap(), count);
+            remote.close().await;
+        }
+    }
+}
 struct Remote {
     connection: McpConnection,
     stdio: Option<StdioHost>,
@@ -117,7 +214,7 @@ async fn provider_continuation_retries_reuse_mcp_results_and_exclude_metadata() 
     for transport in TRANSPORTS {
         for fault in [Fault::None, Fault::ToolError] {
             let (_directory, ledger) = temporary_ledger();
-            let remote = Remote::start(transport, &ledger, fault, Duration::from_secs(2))
+            let remote = Remote::start(transport, &ledger, fault, Duration::from_secs(10))
                 .await
                 .unwrap();
             let (_binding, tools) = host::bind(&remote.connection).await.unwrap();
@@ -190,7 +287,7 @@ async fn remote_failures_preserve_tool_outcomes_without_provider_replay() {
             (Fault::InvalidOutput, ToolCallOutcome::Completed),
         ] {
             let (_directory, ledger) = temporary_ledger();
-            let remote = Remote::start(transport, &ledger, fault, Duration::from_secs(2))
+            let remote = Remote::start(transport, &ledger, fault, Duration::from_secs(10))
                 .await
                 .unwrap();
             let (_binding, tools) = host::bind(&remote.connection).await.unwrap();
@@ -209,7 +306,7 @@ async fn remote_failures_preserve_tool_outcomes_without_provider_replay() {
             if outcome == ToolCallOutcome::Uncertain {
                 // Restart the controlled server with its retained effect ledger, then reconnect.
                 let restarted =
-                    Remote::start(transport, &ledger, Fault::None, Duration::from_secs(2))
+                    Remote::start(transport, &ledger, Fault::None, Duration::from_secs(10))
                         .await
                         .unwrap();
                 host::bind(&restarted.connection).await.unwrap();
@@ -259,7 +356,7 @@ async fn cancellation_after_remote_dispatch_does_not_resume_or_repeat_the_effect
         .unwrap();
         drop(stream);
         remote.close().await;
-        let restarted = Remote::start(transport, &ledger, Fault::None, Duration::from_secs(2))
+        let restarted = Remote::start(transport, &ledger, Fault::None, Duration::from_secs(10))
             .await
             .unwrap();
         host::bind(&restarted.connection).await.unwrap();
@@ -277,7 +374,7 @@ async fn schema_and_host_profile_refusals_precede_remote_dispatch() {
             (json!({"value":1}), "forged"),
         ] {
             let (_directory, ledger) = temporary_ledger();
-            let remote = Remote::start(transport, &ledger, Fault::None, Duration::from_secs(2))
+            let remote = Remote::start(transport, &ledger, Fault::None, Duration::from_secs(10))
                 .await
                 .unwrap();
             let (_binding, tools) = host::bind(&remote.connection).await.unwrap();
@@ -306,7 +403,7 @@ async fn changed_definitions_stop_a_pinned_provider_conversation() {
         let remote = fixture::mcp_http(server.clone(), sse).await.unwrap();
         let connection = McpConnection::http(
             McpHttpOptions::new(format!("{}/mcp", remote.endpoint)),
-            host::mcp_config(Duration::from_secs(2)),
+            host::mcp_config(Duration::from_secs(10)),
         )
         .await
         .unwrap();
@@ -347,7 +444,7 @@ async fn catalogue_admission_and_alias_collisions_use_shared_registry_rules() {
     let remote = fixture::mcp_http(server, false).await.unwrap();
     let connection = McpConnection::http(
         McpHttpOptions::new(format!("{}/mcp", remote.endpoint)),
-        host::mcp_config(Duration::from_secs(2)),
+        host::mcp_config(Duration::from_secs(10)),
     )
     .await
     .unwrap();

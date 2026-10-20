@@ -2,13 +2,26 @@
 //! Run controlled MCP tools through a configured provider on both supported transports.
 use battersea_mcp::{McpConnection, McpHttpOptions};
 use battersea_model::{EngineTextStreamEvent, ToolCallOutcome};
+use battersea_tools::{ToolApprovalDecision, ToolApprovalPolicy, ToolApprovalRequest};
 use clap::{Parser, Subcommand};
 use futures_util::StreamExt;
 use mcp_example::{
     fixture::{self, Fault, Result},
     host,
 };
-use std::{path::PathBuf, time::Duration};
+use std::{path::PathBuf, sync::Arc, time::Duration};
+
+struct FixturePolicy;
+impl ToolApprovalPolicy for FixturePolicy {
+    fn decide(&self, request: ToolApprovalRequest<'_>) -> ToolApprovalDecision {
+        // The application created this controlled server and permits its write operation.
+        if request.tool.name == "remote.write" {
+            ToolApprovalDecision::Allow
+        } else {
+            ToolApprovalDecision::Deny
+        }
+    }
+}
 
 #[derive(Parser)]
 #[command(
@@ -29,14 +42,20 @@ enum Command {
     },
 }
 
-async fn conversation(connection: &McpConnection) -> Result<()> {
+async fn conversation(connection: &McpConnection, run_id: &str) -> Result<()> {
     let (binding, registry) = host::bind(connection).await?;
     let fixture = fixture::ProviderFixture::new(serde_json::json!({"value":1}), true);
     let provider = fixture::provider_http(fixture).await?;
     let (adapter, chat) = host::provider(&provider.endpoint)?;
     println!("MCP binding {}", binding.revision());
     let mut stream = adapter
-        .stream_text(host::request(&registry, "operator", chat))
+        .stream_text(host::approved_request(
+            &binding,
+            &registry,
+            chat,
+            run_id,
+            Arc::new(FixturePolicy),
+        )?)
         .await?;
     let mut completed = false;
     while let Some(event) = stream.next().await {
@@ -64,10 +83,10 @@ async fn main() -> Result<()> {
         &std::env::current_exe()?,
         &ledger,
         Fault::None,
-        host::mcp_config(Duration::from_secs(2)),
+        host::mcp_config(Duration::from_secs(10)),
     )
     .await?;
-    conversation(&stdio.connection).await?;
+    conversation(&stdio.connection, "stdio-conversation").await?;
     stdio.close().await?;
     assert_eq!(fixture::effect_count(&ledger)?, 1);
     for sse in [false, true] {
@@ -75,10 +94,18 @@ async fn main() -> Result<()> {
             fixture::mcp_http(fixture::McpFixture::new(ledger.clone(), Fault::None), sse).await?;
         let connection = McpConnection::http(
             McpHttpOptions::new(format!("{}/mcp", server.endpoint)),
-            host::mcp_config(Duration::from_secs(2)),
+            host::mcp_config(Duration::from_secs(10)),
         )
         .await?;
-        conversation(&connection).await?;
+        conversation(
+            &connection,
+            if sse {
+                "sse-conversation"
+            } else {
+                "json-conversation"
+            },
+        )
+        .await?;
         connection.close();
     }
     assert_eq!(fixture::effect_count(&ledger)?, 3);

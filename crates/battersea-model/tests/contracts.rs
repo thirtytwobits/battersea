@@ -210,6 +210,116 @@ async fn idle_watchdog_reports_one_typed_timeout_then_ends() {
         .expect("terminal stream")
         .is_none());
 }
+
+struct ToolEvents(Vec<EngineTextStreamEvent>);
+#[async_trait]
+impl EngineAdapter for ToolEvents {
+    fn describe_debug_context(&self) -> EngineAdapterDebugContext {
+        Transport(Default::default()).describe_debug_context()
+    }
+    async fn count_text_stream_input_tokens(
+        &self,
+        _: EngineTextStreamRequest,
+    ) -> Result<u64, EngineAdapterRequestError> {
+        Ok(0)
+    }
+    async fn stream_text(
+        &self,
+        _: EngineTextStreamRequest,
+    ) -> Result<EngineTextStream, EngineAdapterRequestError> {
+        Ok(Box::pin(
+            stream::iter(self.0.clone().into_iter().map(Ok)).chain(stream::pending()),
+        ))
+    }
+}
+
+#[tokio::test]
+async fn stream_watchdogs_retain_started_and_completed_tool_evidence() {
+    for completion in [
+        None,
+        Some(ToolCallOutcome::Completed),
+        Some(ToolCallOutcome::NotDispatched),
+    ] {
+        let mut events = vec![EngineTextStreamEvent::ToolCallStarted {
+            id: "effect-1".into(),
+            name: "remote.write".into(),
+            arguments: json!({}),
+            started_at: String::new(),
+        }];
+        if let Some(outcome) = completion {
+            events.push(EngineTextStreamEvent::ToolCallCompleted {
+                id: "effect-1".into(),
+                name: "remote.write".into(),
+                ok: outcome == ToolCallOutcome::Completed,
+                result: json!(null),
+                error_message: None,
+                error_classification: None,
+                tool_result: None,
+                tool_call: Some(ToolCallEvidence {
+                    call_id: "effect-1".into(),
+                    tool_name: "remote.write".into(),
+                    outcome,
+                    request_id: Some("remote-request".into()),
+                }),
+                finished_at: String::new(),
+            });
+        }
+        for idle in [true, false] {
+            let mut stream = if idle {
+                with_stream_idle_watchdog(
+                    ToolEvents(events.clone())
+                        .stream_text(request(&backend()))
+                        .await
+                        .unwrap(),
+                    Duration::from_millis(10),
+                    "external",
+                )
+            } else {
+                let mut registry = ProviderRegistry::default();
+                let events = events.clone();
+                registry
+                    .register_chat(
+                        "external",
+                        ChatProvider {
+                            content: ContentCapabilities::text(),
+                            background_modes: vec![],
+                            parameters: backend().capabilities.supported_chat_parameters,
+                            factory: Arc::new(move |_, _| Ok(Arc::new(ToolEvents(events.clone())))),
+                        },
+                    )
+                    .unwrap();
+                let mut backend = backend();
+                backend.options.timeout_ms = Some(100);
+                registry
+                    .create_chat(backend.clone(), None)
+                    .unwrap()
+                    .stream_text(request(&backend))
+                    .await
+                    .unwrap()
+            };
+            for expected in &events {
+                assert_eq!(&stream.next().await.unwrap().unwrap(), expected);
+            }
+            let error = tokio::time::timeout(Duration::from_secs(3), stream.next())
+                .await
+                .unwrap()
+                .unwrap()
+                .unwrap_err();
+            assert_eq!(error.classification, ErrorKind::Timeout);
+            let evidence = error.tool_call.unwrap();
+            assert_eq!(evidence.call_id, "effect-1");
+            assert_eq!(
+                evidence.outcome,
+                completion.unwrap_or(ToolCallOutcome::Uncertain)
+            );
+            assert_eq!(
+                evidence.request_id,
+                completion.map(|_| "remote-request".into())
+            );
+            assert!(stream.next().await.is_none());
+        }
+    }
+}
 struct PendingJob(Arc<AtomicUsize>);
 #[async_trait]
 impl MediaJob for PendingJob {
