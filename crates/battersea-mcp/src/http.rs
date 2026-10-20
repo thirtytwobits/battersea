@@ -49,6 +49,10 @@ fn media_type(response: &reqwest::Response, expected: &str) -> bool {
         .is_some_and(|value| value.trim().eq_ignore_ascii_case(expected))
 }
 impl BoundedHttp {
+    fn fail(&self, fault: McpError) -> HttpError {
+        self.state.fail(fault.clone());
+        error(fault)
+    }
     fn new(config: &McpConfig, state: Arc<State>) -> Result<Self, McpError> {
         let client = reqwest::Client::builder()
             .redirect(reqwest::redirect::Policy::none())
@@ -175,7 +179,7 @@ impl StreamableHttpClient for BoundedHttp {
             .get("mcp-session-id")
             .map(|h| h.to_str().map(str::to_owned))
             .transpose()
-            .map_err(|_| error(McpError::Protocol))?;
+            .map_err(|_| self.fail(McpError::Protocol))?;
         if media_type(&response, "text/event-stream") {
             return Ok(StreamableHttpPostResponse::Sse(
                 self.stream(response),
@@ -183,7 +187,7 @@ impl StreamableHttpClient for BoundedHttp {
             ));
         }
         if !media_type(&response, "application/json") {
-            return Err(error(McpError::Protocol));
+            return Err(self.fail(McpError::Protocol));
         }
         let mut bytes = Vec::new();
         let mut stream = response.bytes_stream();
@@ -195,7 +199,7 @@ impl StreamableHttpClient for BoundedHttp {
             }
             bytes.extend_from_slice(&chunk);
         }
-        let message = wire::decode(&bytes).map_err(error)?;
+        let message = wire::decode(&bytes).map_err(|fault| self.fail(fault))?;
         if let Err(fault) = self.state.observe_bytes(&message, bytes.len()) {
             self.state.fail(fault.clone());
             return Err(error(fault));
@@ -242,7 +246,7 @@ impl StreamableHttpClient for BoundedHttp {
             return Err(error(McpError::Transport));
         }
         if !media_type(&response, "text/event-stream") {
-            return Err(error(McpError::Protocol));
+            return Err(self.fail(McpError::Protocol));
         }
         Ok(self.stream(response))
     }

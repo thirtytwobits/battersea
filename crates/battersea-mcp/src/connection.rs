@@ -17,9 +17,12 @@ use std::{
 use tokio::sync::Semaphore;
 use tokio_util::sync::CancellationToken;
 
+pub(crate) const REQUEST_ENVELOPE_RESERVE: usize = 4096;
+
 /// Resource bounds applied before transport buffering and catalogue retention.
 #[derive(Clone, Debug)]
 pub struct McpLimits {
+    /// Maximum frame or response body size, from 8 KiB to 8 MiB.
     pub message_bytes: usize,
     pub catalogue_bytes: usize,
     pub schema_bytes: usize,
@@ -75,7 +78,7 @@ impl McpConfig {
             || self.credential_scope_revision.len() > 256
             || self.operation_timeout.is_zero()
             || self.operation_timeout > Duration::from_secs(3600)
-            || l.message_bytes == 0
+            || l.message_bytes < 2 * REQUEST_ENVELOPE_RESERVE
             || l.catalogue_bytes == 0
             || l.schema_bytes == 0
             || l.message_bytes > 8 * 1024 * 1024
@@ -277,10 +280,14 @@ impl McpConnection {
         let service = match service {
             Ok(Ok(service)) => service,
             result => {
-                let error = state.check().err().unwrap_or(if result.is_err() {
-                    McpError::Timeout
-                } else {
-                    McpError::Protocol
+                let error = state.check().err().unwrap_or(match result {
+                    Err(_) => McpError::Timeout,
+                    Ok(Err(
+                        rmcp::service::ClientInitializeError::TransportError { .. }
+                        | rmcp::service::ClientInitializeError::ConnectionClosed(_)
+                        | rmcp::service::ClientInitializeError::Cancelled,
+                    )) => McpError::Transport,
+                    _ => McpError::Protocol,
                 });
                 state.fail(error.clone());
                 return Err(error);

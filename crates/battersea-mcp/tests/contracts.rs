@@ -210,7 +210,14 @@ async fn invalid_tools_and_normalised_alias_collisions_are_refused() {
     ];
     let (connection, _tx, _) = connect(server, config()).await;
     let catalogue = connection.discover().await.unwrap();
-    assert_eq!(catalogue.diagnostics().len(), 2);
+    assert_eq!(
+        catalogue
+            .diagnostics()
+            .iter()
+            .map(|d| d.index)
+            .collect::<Vec<_>>(),
+        vec![2, 3, 4]
+    );
     for name in ["invalid", "duplicate"] {
         assert!(catalogue
             .bind(
@@ -581,4 +588,58 @@ async fn padded_notifications_exhaust_the_received_byte_budget() {
     .await
     .unwrap();
     assert!(matches!(connection.discover().await, Err(McpError::Limit)));
+}
+
+#[tokio::test]
+async fn message_limits_require_room_for_metadata_and_calls() {
+    for bytes in [1, 4096, 8191] {
+        let (client, _remote) = tokio::io::duplex(8192);
+        let (read, write) = tokio::io::split(client);
+        let mut config = config();
+        config.limits.message_bytes = bytes;
+        config.limits.schema_bytes = bytes;
+        assert!(matches!(
+            McpConnection::stdio(read, write, CancellationToken::new(), config).await,
+            Err(McpError::Configuration)
+        ));
+    }
+    let server = server();
+    let mut config = config();
+    config.limits.message_bytes = 8192;
+    config.limits.schema_bytes = 4096;
+    let (connection, _tx, _) = connect(server.clone(), config).await;
+    binding(&connection)
+        .await
+        .executor()
+        .call(call())
+        .await
+        .unwrap();
+    assert_eq!(server.calls.load(Ordering::SeqCst), 1);
+}
+
+#[tokio::test]
+async fn every_duplicate_record_has_one_source_diagnostic() {
+    let server = server();
+    let mut invalid = tool("duplicate");
+    invalid["inputSchema"] =
+        json!({"type":"object","properties":{"x":{"$ref":"https://invalid.example/schema"}}});
+    let (connection, _tx, _) = connect(server.clone(), config()).await;
+    for first in [tool("duplicate"), invalid] {
+        *server.tools.lock().unwrap() =
+            vec![first, tool("other"), tool("duplicate"), tool("duplicate")];
+        let catalogue = connection.discover().await.unwrap();
+        assert_eq!(catalogue.remote_names().collect::<Vec<_>>(), vec!["other"]);
+        assert_eq!(
+            catalogue
+                .diagnostics()
+                .iter()
+                .map(|d| (d.index, d.name.as_deref()))
+                .collect::<Vec<_>>(),
+            vec![
+                (0, Some("duplicate")),
+                (2, Some("duplicate")),
+                (3, Some("duplicate"))
+            ]
+        );
+    }
 }

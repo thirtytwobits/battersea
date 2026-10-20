@@ -58,6 +58,7 @@ reconciliation.
 ## Bounds
 
 `McpLimits` bounds each stdio frame and the complete body of each HTTP response, including SSE.
+The message limit ranges from 8 KiB to 8 MiB; 4 KiB is reserved for request metadata and framing.
 Oversized frames fail the connection explicitly. Limits also bound catalogue retention,
 concurrent operations, waiting operations and incoming requests/notifications over the
 connection's lifetime. Incoming request and notification payloads share a 64 MiB lifetime budget,

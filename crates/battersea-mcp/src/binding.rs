@@ -78,7 +78,7 @@ impl McpCatalogue {
             let mut cursors = BTreeSet::new();
             let mut records = BTreeMap::new();
             let mut admitted = BTreeMap::new();
-            let mut duplicates = BTreeSet::new();
+            let mut first_indices = BTreeMap::new();
             let mut diagnostics = Vec::new();
             let mut bytes = 0usize;
             let mut count = 0;
@@ -116,13 +116,16 @@ impl McpCatalogue {
                     let admission = (|| {
                         let name = name.as_ref().ok_or(McpError::Selection)?;
                         if records.insert(name.clone(), raw.clone()).is_some() {
-                            duplicates.insert(name.clone());
-                            admitted.remove(name);
+                            if admitted.remove(name).is_some() {
+                                diagnostics.push(McpDiagnostic {
+                                    index: first_indices[name],
+                                    name: Some(name.clone()),
+                                    error: McpError::Selection,
+                                });
+                            }
                             return Err(McpError::Selection);
                         }
-                        if duplicates.contains(name) {
-                            return Err(McpError::Selection);
-                        }
+                        first_indices.insert(name.clone(), count - 1);
                         let mut exposed = raw.clone();
                         if let Some(meta) = exposed.get_mut("_meta").and_then(Value::as_object_mut)
                         {
@@ -173,6 +176,7 @@ impl McpCatalogue {
                     .map(|(name, record)| (name.clone(), record.clone()))
                     .collect(),
             });
+            diagnostics.sort_by_key(|diagnostic| diagnostic.index);
             let revision = connection.0.revision.fetch_add(1, Ordering::SeqCst) + 1;
             Ok(Self {
                 connection: connection.clone(),
@@ -415,7 +419,7 @@ impl EngineLocalToolExecutor for Remote {
                 .config
                 .limits
                 .message_bytes
-                .saturating_sub(4096),
+                .saturating_sub(crate::connection::REQUEST_ENVELOPE_RESERVE),
         )
         .map_err(refused)?;
         let _ticket = self

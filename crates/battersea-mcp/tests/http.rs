@@ -162,3 +162,41 @@ fn http_debug_excludes_endpoint_and_credentials() {
     options.bearer_token = Some("secret".into());
     assert!(!format!("{options:?}").contains("secret"));
 }
+
+#[tokio::test]
+async fn startup_distinguishes_unavailable_endpoints_from_invalid_responses() {
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let endpoint = format!("http://{}/mcp", listener.local_addr().unwrap());
+    drop(listener);
+    assert!(matches!(
+        McpConnection::http(
+            McpHttpOptions::new(endpoint),
+            McpConfig::new("remote", "scope")
+        )
+        .await,
+        Err(McpError::Transport)
+    ));
+    for body in [
+        "not JSON",
+        r#"{"jsonrpc":"2.0","id":0,"result":{"tools":[]}}"#,
+    ] {
+        let app = Router::new().route(
+            "/mcp",
+            post(move || async move { ([("content-type", "application/json")], body) }),
+        );
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let endpoint = format!("http://{}/mcp", listener.local_addr().unwrap());
+        let task = tokio::spawn(async {
+            axum::serve(listener, app).await.unwrap();
+        });
+        assert!(matches!(
+            McpConnection::http(
+                McpHttpOptions::new(endpoint),
+                McpConfig::new("remote", "scope")
+            )
+            .await,
+            Err(McpError::Protocol)
+        ));
+        task.abort();
+    }
+}
