@@ -3,7 +3,8 @@ use crate::Tool;
 use async_trait::async_trait;
 use battersea_model::{
     local_tool_name, EngineAdapterRequestError, EngineLocalToolCall, EngineLocalToolDefinition,
-    EngineLocalToolExecutor, EngineLocalToolResult, ErrorKind, ToolCode,
+    EngineLocalToolExecutor, EngineLocalToolResult, ErrorKind, ToolCallEvidence, ToolCallOutcome,
+    ToolCode,
 };
 use serde_json::Value;
 use std::{collections::BTreeMap, sync::Arc};
@@ -24,7 +25,7 @@ struct RegisteredTool {
 /// A provider is offered each tool under its provider-facing name, [`local_tool_name`] of its
 /// own. A call is validated against the tool's input schema before its executor runs, and the
 /// executor receives it under the tool's own name. Where the tool declares an output schema,
-/// its result is validated against that before it is returned.
+/// successful JSON or structured output is validated before it is returned.
 #[derive(Clone, Default)]
 pub struct ToolRegistry {
     tools: BTreeMap<String, Arc<RegisteredTool>>,
@@ -168,12 +169,18 @@ impl ToolRegistry {
 #[async_trait]
 impl EngineLocalToolExecutor for ToolRegistry {
     /// Runs `call` with the executor of the tool it names, under either the tool's own name or
-    /// its provider-facing one. A result outside the tool's declared output schema is refused
-    /// as [`ToolCode::InvalidToolResult`].
+    /// its provider-facing one. Missing or invalid successful output is refused as
+    /// [`ToolCode::InvalidToolResult`]. Tool-reported errors bypass the success schema.
     async fn call(
         &self,
         mut call: EngineLocalToolCall,
     ) -> Result<EngineLocalToolResult, EngineAdapterRequestError> {
+        let mut evidence = ToolCallEvidence {
+            call_id: call.id.clone(),
+            tool_name: call.name.clone(),
+            outcome: ToolCallOutcome::NotDispatched,
+            request_id: None,
+        };
         let registered = self
             .tools
             .get(&local_tool_name(&call.name))
@@ -182,23 +189,48 @@ impl EngineLocalToolExecutor for ToolRegistry {
                     format!("Tool \"{}\" is not registered.", call.name),
                     ToolCode::UnregisteredTool,
                 )
+                .with_tool_call(evidence.clone())
             })?;
+        evidence.tool_name.clone_from(&registered.tool.name);
         registered
             .validator
             .validate(&call.arguments)
-            .map_err(|error| refusal(error.to_string(), ToolCode::InvalidToolArguments))?;
-        call.name.clone_from(&registered.tool.name);
-        let result = registered.executor.call(call).await?;
-        if let Some(output) = &registered.output_validator {
-            output.validate(&result.content).map_err(|error| {
-                refusal(
-                    format!(
-                        "Tool \"{}\" returned a result outside its output schema: {error}",
-                        registered.tool.name
-                    ),
-                    ToolCode::InvalidToolResult,
-                )
+            .map_err(|error| {
+                refusal(error.to_string(), ToolCode::InvalidToolArguments)
+                    .with_tool_call(evidence.clone())
             })?;
+        call.name.clone_from(&registered.tool.name);
+        evidence.outcome = ToolCallOutcome::Uncertain;
+        let result = registered.executor.call(call).await.map_err(|mut error| {
+            if error.tool_call.is_none() {
+                error.tool_call = Some(Box::new(evidence.clone()));
+            }
+            error
+        })?;
+        evidence.outcome = ToolCallOutcome::Completed;
+        if !result.is_error() {
+            if let Some(output) = &registered.output_validator {
+                let value = result.structured_output().ok_or_else(|| {
+                    refusal(
+                        format!(
+                            "Tool \"{}\" omitted its structured output.",
+                            registered.tool.name
+                        ),
+                        ToolCode::InvalidToolResult,
+                    )
+                    .with_tool_call(evidence.clone())
+                })?;
+                output.validate(value).map_err(|error| {
+                    refusal(
+                        format!(
+                            "Tool \"{}\" returned a result outside its output schema: {error}",
+                            registered.tool.name
+                        ),
+                        ToolCode::InvalidToolResult,
+                    )
+                    .with_tool_call(evidence.clone())
+                })?;
+            }
         }
         Ok(result)
     }

@@ -423,11 +423,8 @@ pub struct EngineLocalToolCall {
     pub arguments: Value,
 }
 
-/// Represents the JSON result returned to a provider after a local tool invocation.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub struct EngineLocalToolResult {
-    pub content: Value,
-}
+mod tool_result;
+pub use tool_result::*;
 
 // async-trait adds must_use to boxed futures, which already carry it.
 #[allow(clippy::double_must_use)]
@@ -528,12 +525,9 @@ pub enum EngineTextStreamEvent {
         arguments: Value,
         started_at: String,
     },
-    /// The locally-executed tool round has finished. `ok = false`
-    /// indicates the executor returned an error. `result` carries the
-    /// executor's return JSON on success (and the empty value on
-    /// failure); `error_message` / `error_classification` carry the
-    /// failure details so the chronicle can surface them without
-    /// scraping the logger event stream.
+    /// The tool call has finished. `ok` reports tool success, including tool-reported errors.
+    /// `result` is its provider projection; `tool_result` retains admitted host content.
+    /// `tool_call` records the tool's outcome independently from the provider request.
     ToolCallCompleted {
         id: String,
         name: String,
@@ -544,6 +538,10 @@ pub enum EngineTextStreamEvent {
         error_message: Option<String>,
         #[serde(default, skip_serializing_if = "Option::is_none")]
         error_classification: Option<String>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        tool_result: Option<Box<EngineLocalToolResult>>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        tool_call: Option<error::ToolCallEvidence>,
         finished_at: String,
     },
     TokenUsage {
@@ -796,7 +794,7 @@ pub async fn emit_error(
                 detail: EngineAdapterErrorInfo {
                     message: error.message.to_string(),
                     status_code: error.status_code,
-                    request_id: error.request_id.clone(),
+                    request_id: error.request_id.as_deref().map(str::to_owned),
                     classification: error.classification.to_string(),
                 },
             })

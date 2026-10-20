@@ -25,7 +25,10 @@ use std::{
 };
 
 #[derive(Default)]
-struct RecordingExecutor(Mutex<Vec<EngineLocalToolCall>>);
+struct RecordingExecutor(
+    Mutex<Vec<EngineLocalToolCall>>,
+    Option<EngineLocalToolResult>,
+);
 #[async_trait]
 impl EngineLocalToolExecutor for RecordingExecutor {
     async fn call(
@@ -33,9 +36,10 @@ impl EngineLocalToolExecutor for RecordingExecutor {
         call: EngineLocalToolCall,
     ) -> Result<EngineLocalToolResult, EngineAdapterRequestError> {
         self.0.lock().unwrap().push(call.clone());
-        Ok(EngineLocalToolResult {
-            content: json!({"found": call.arguments}),
-        })
+        Ok(self
+            .1
+            .clone()
+            .unwrap_or_else(|| EngineLocalToolResult::json(json!({"found": call.arguments}))))
     }
 }
 
@@ -231,6 +235,11 @@ fn sse(response: &Value, terminal: bool) -> String {
 }
 
 async fn round_trip(provider: &str, mode: &str) {
+    round_trip_result(provider, mode, None).await;
+}
+
+async fn round_trip_result(provider: &str, mode: &str, result: Option<EngineLocalToolResult>) {
+    let is_error = result.as_ref().is_some_and(EngineLocalToolResult::is_error);
     let arguments = json!({"key":"active-session"});
     let (first, last) = match provider {
         "anthropic" => (
@@ -271,7 +280,7 @@ async fn round_trip(provider: &str, mode: &str) {
     };
     let (url, state, server) = server(replies).await;
     let backend = backend(provider, &url, mode);
-    let executor = Arc::new(RecordingExecutor::default());
+    let executor = Arc::new(RecordingExecutor(Mutex::new(Vec::new()), result.clone()));
     let mut request = request(&backend, executor.clone());
     let history = [
         (battersea_model::Role::User, "Earlier user turn"),
@@ -310,7 +319,7 @@ async fn round_trip(provider: &str, mode: &str) {
             .iter()
             .filter(|event| matches!(
                 event,
-                EngineTextStreamEvent::ToolCallCompleted { ok: true, .. }
+                EngineTextStreamEvent::ToolCallCompleted { ok, .. } if *ok != is_error
             ))
             .count(),
         calls.len()
@@ -344,7 +353,12 @@ async fn round_trip(provider: &str, mode: &str) {
         );
         assert_eq!(actual, &requests[1][key][index]);
     }
-    let expected_result = json!({"found": arguments});
+    assert!(!serde_json::to_string(&*requests)
+        .unwrap()
+        .contains("private-host-value"));
+    let expected_result = result
+        .map(|result| result.provider_content().unwrap())
+        .unwrap_or_else(|| json!({"found": arguments}));
     match provider {
         "anthropic" => {
             assert_eq!(requests[0]["system"], requests[1]["system"]);
@@ -362,6 +376,10 @@ async fn round_trip(provider: &str, mode: &str) {
                 expected_result.to_string()
             );
             assert_eq!(requests[0]["tool_choice"]["type"], "auto");
+            assert_eq!(
+                requests[1]["messages"][history_len + 1]["content"][0]["is_error"],
+                is_error
+            );
         }
         "google" => {
             assert_eq!(
@@ -1128,4 +1146,21 @@ async fn audio_only_output_rejects_unrequested_text() {
         .iter()
         .any(|event| matches!(event, Ok(EngineTextStreamEvent::TextDelta { .. }))));
     server.abort();
+}
+
+#[tokio::test]
+async fn content_results_and_tool_errors_reach_each_provider_without_host_metadata() {
+    for provider in ["anthropic", "google", "openai"] {
+        for is_error in [false, true] {
+            let result = EngineLocalToolResult::Content(battersea_model::ToolContentResult {
+                content_blocks: vec![battersea_model::ToolContentBlock::Text {
+                    text: "answer".into(),
+                }],
+                structured_content: Some(json!({"answer": 42})),
+                is_error,
+                meta: serde_json::Map::from_iter([("host".into(), json!("private-host-value"))]),
+            });
+            round_trip_result(provider, "stream", Some(result)).await;
+        }
+    }
 }

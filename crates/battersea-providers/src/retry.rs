@@ -126,7 +126,7 @@ pub(crate) async fn send(
                 } else {
                     DispatchState::Unknown
                 });
-                error.request_id = request_id;
+                error.request_id = request_id.map(String::into_boxed_str);
                 error.retry_after_ms = retry_after_ms;
                 if delay_named && error.retry_after_ms.is_none() {
                     // An unreadable provider delay cannot authorise an earlier retry.
@@ -179,7 +179,7 @@ pub(crate) async fn send(
                     delay_ms,
                     dispatch: failure.dispatch,
                     status_code: failure.status_code,
-                    request_id: failure.request_id.clone(),
+                    request_id: failure.request_id.as_deref().map(str::to_owned),
                     resume: retrieval,
                 })
                 .await;

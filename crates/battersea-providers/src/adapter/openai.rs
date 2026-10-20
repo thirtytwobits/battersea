@@ -698,7 +698,7 @@ impl ToolConversation for OpenAiToolConversation {
         events: &ToolEventSender,
     ) -> Result<Vec<EngineLocalToolCall>, EngineAdapterRequestError> {
         self.input.extend(results.into_iter().map(|item| json!({
-            "type": "function_call_output", "call_id": item.call.id, "output": item.result.content.to_string()
+            "type": "function_call_output", "call_id": item.call.id, "output": item.provider_content.to_string()
         })));
         let body = build_local_tool_body(&self.backend, request, Value::Array(self.input.clone()));
         let body = match self.transport {
@@ -955,30 +955,28 @@ struct BackgroundResponseGuard {
 
 impl BackgroundResponseGuard {
     async fn cancel(&mut self) {
-        if let Some(id) = self.id.take() {
-            cancel_background_response(
-                &self.client,
-                &self.base_url,
-                &self.headers,
-                &self.backend,
-                &id,
-            )
-            .await;
+        if let Some(cleanup) = self.start_cancellation() {
+            let _ = cleanup.await;
         }
+    }
+
+    fn start_cancellation(&mut self) -> Option<tokio::task::JoinHandle<()>> {
+        self.id.take().map(|id| {
+            let client = self.client.clone();
+            let base_url = self.base_url.clone();
+            let headers = self.headers.clone();
+            let backend = self.backend.clone();
+            // The cleanup owns the response ID even if its caller is cancelled while awaiting it.
+            tokio::spawn(async move {
+                cancel_background_response(&client, &base_url, &headers, &backend, &id).await;
+            })
+        })
     }
 }
 
 impl Drop for BackgroundResponseGuard {
     fn drop(&mut self) {
-        if let Some(id) = self.id.take() {
-            let client = self.client.clone();
-            let base_url = self.base_url.clone();
-            let headers = self.headers.clone();
-            let backend = self.backend.clone();
-            tokio::spawn(async move {
-                cancel_background_response(&client, &base_url, &headers, &backend, &id).await;
-            });
-        }
+        let _ = self.start_cancellation();
     }
 }
 
@@ -1965,6 +1963,54 @@ mod tests {
     use std::thread;
 
     const SAMPLE_MODEL: &str = "synthetic-openai-model";
+
+    #[tokio::test]
+    async fn dropping_an_explicit_cancellation_still_sends_one_cleanup_request() {
+        use axum::{routing::post, Router};
+        use std::sync::{
+            atomic::{AtomicUsize, Ordering},
+            Arc,
+        };
+
+        let requests = Arc::new(AtomicUsize::new(0));
+        let received = Arc::new(tokio::sync::Notify::new());
+        let count = requests.clone();
+        let signal = received.clone();
+        let app = Router::new().route(
+            "/responses/response-1/cancel",
+            post(move || {
+                let count = count.clone();
+                let signal = signal.clone();
+                async move {
+                    count.fetch_add(1, Ordering::SeqCst);
+                    signal.notify_one();
+                    axum::Json(json!({"status": "cancelled"}))
+                }
+            }),
+        );
+        let listener = tokio::net::TcpListener::bind(crate::test_endpoints::TEST_BIND_ADDRESS)
+            .await
+            .unwrap();
+        let base_url = format!("http://{}", listener.local_addr().unwrap());
+        let server = tokio::spawn(async move { axum::serve(listener, app).await.unwrap() });
+        let mut guard = super::BackgroundResponseGuard {
+            client: reqwest::Client::new(),
+            base_url,
+            headers: Default::default(),
+            backend: sample_backend(),
+            id: Some("response-1".into()),
+        };
+        {
+            let mut cancellation = Box::pin(guard.cancel());
+            assert!(futures_util::poll!(&mut cancellation).is_pending());
+        }
+        drop(guard);
+        tokio::time::timeout(std::time::Duration::from_secs(2), received.notified())
+            .await
+            .expect("cleanup survives cancellation of its caller");
+        assert_eq!(requests.load(Ordering::SeqCst), 1);
+        server.abort();
+    }
 
     fn openai_capabilities(
         temperature_dispatch: EngineTemperatureDispatch,

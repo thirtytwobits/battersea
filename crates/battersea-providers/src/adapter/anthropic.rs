@@ -304,9 +304,12 @@ impl ToolConversation for AnthropicToolConversation {
         events: &ToolEventSender,
     ) -> Result<Vec<EngineLocalToolCall>, EngineAdapterRequestError> {
         if !results.is_empty() {
-            self.messages.push(json!({"role": "user", "content": results.into_iter().map(|item| json!({
-                "type": "tool_result", "tool_use_id": item.call.id, "content": item.result.content.to_string()
-            })).collect::<Vec<_>>()}));
+            self.messages.push(
+                json!({"role": "user", "content": results.into_iter().map(|item| json!({
+                "type": "tool_result", "tool_use_id": item.call.id,
+                "content": item.provider_content.to_string(), "is_error": item.result.is_error()
+            })).collect::<Vec<_>>()}),
+            );
         }
         let body = build_local_tool_body(&self.backend, request, self.messages.clone())?;
         battersea_model::adapter::payload::check_payload(&body, "anthropic")?;

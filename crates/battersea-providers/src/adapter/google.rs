@@ -380,7 +380,7 @@ impl ToolConversation for GoogleToolConversation {
             let parts = results
                 .into_iter()
                 .map(|item| {
-                    let response = match item.result.content {
+                    let response = match item.provider_content {
                         value @ Value::Object(_) => value,
                         value => json!({"result": value}),
                     };
