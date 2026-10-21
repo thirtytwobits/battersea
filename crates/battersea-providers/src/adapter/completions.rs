@@ -67,6 +67,197 @@ struct Completions {
 }
 #[async_trait]
 impl EngineAdapter for Completions {
+    fn validate_conversation(
+        &self,
+        request: &ConversationRequest,
+        state: Option<&Value>,
+    ) -> Result<ConversationBinding, EngineAdapterRequestError> {
+        validate_chat_request(&self.backend, &request.to_request())?;
+        if request.shared.chat.context_overflow != EngineContextOverflow::Error {
+            return Err(invalid(
+                &self.backend.provider,
+                "Durable continuation requires contextOverflow=error.",
+            ));
+        }
+        let binding = ConversationBinding {
+            origin: self
+                .backend
+                .binding
+                .as_ref()
+                .ok_or_else(|| invalid(&self.backend.provider, "Missing binding."))?
+                .origin(),
+            configuration_revision: configuration_digest(
+                &serde_json::to_value(&self.backend).expect("safe backend"),
+            ),
+            timeout_ms: self
+                .backend
+                .options
+                .timeout_ms
+                .ok_or_else(|| invalid(&self.backend.provider, "Missing timeout."))?,
+        };
+        let original = messages(&self.backend.provider, &request.shared.messages)?;
+        if let Some(state) = state {
+            let checkpoint: CompletionCheckpoint = serde_json::from_value(state.clone())
+                .map_err(|_| invalid(&self.backend.provider, "Invalid completion checkpoint."))?;
+            if checkpoint.version != 1
+                || checkpoint.binding != binding
+                || checkpoint.request_revision
+                    != configuration_digest(&serde_json::to_value(request).expect("request"))
+                || !checkpoint.messages.starts_with(&original)
+                || checkpoint.messages.len() <= original.len()
+                || checkpoint
+                    .messages
+                    .last()
+                    .is_none_or(|m| m["role"] != "assistant")
+            {
+                return Err(invalid(
+                    &self.backend.provider,
+                    "Completion checkpoint does not match its request and binding.",
+                ));
+            }
+            let mut pending = Vec::new();
+            let mut terminal = false;
+            for message in &checkpoint.messages[original.len()..] {
+                match message["role"].as_str() {
+                    Some("assistant") if pending.is_empty() && !terminal => {
+                        if !message["content"].is_null() && !message["content"].is_string() {
+                            return Err(invalid(
+                                &self.backend.provider,
+                                "Invalid retained completion content.",
+                            ));
+                        }
+                        let calls = completion_calls(&self.backend.provider, message)?;
+                        validate_tool_calls(&self.backend.provider, &request.to_request(), &calls)?;
+                        terminal = calls.is_empty();
+                        pending = calls.into_iter().map(|c| c.id).collect();
+                    }
+                    Some("tool") if !pending.is_empty() => {
+                        if message["tool_call_id"] != pending.remove(0)
+                            || !message["content"].is_string()
+                        {
+                            return Err(invalid(
+                                &self.backend.provider,
+                                "Invalid retained tool result.",
+                            ));
+                        }
+                    }
+                    _ => {
+                        return Err(invalid(
+                            &self.backend.provider,
+                            "Invalid completion transcript order.",
+                        ))
+                    }
+                }
+            }
+        }
+        Ok(binding)
+    }
+    async fn conversation_turn(
+        &self,
+        request: ConversationRequest,
+        state: Option<Value>,
+        results: Vec<ConversationToolResult>,
+    ) -> Result<ConversationTurn, EngineAdapterRequestError> {
+        let binding = self.validate_conversation(&request, state.as_ref())?;
+        let messages = match state {
+            Some(state) => {
+                serde_json::from_value::<CompletionCheckpoint>(state)
+                    .map_err(|_| invalid(&self.backend.provider, "Invalid completion checkpoint."))?
+                    .messages
+            }
+            None => messages(&self.backend.provider, &request.shared.messages)?,
+        };
+        let expected = if let Some(last) = messages.last().filter(|m| m["role"] == "assistant") {
+            completion_calls(&self.backend.provider, last)?
+        } else {
+            vec![]
+        };
+        if expected.len() != results.len()
+            || expected.iter().zip(&results).any(|(a, b)| {
+                a.id != b.call.id
+                    || a.name != local_tool_name(&b.call.name)
+                    || a.arguments != b.call.arguments
+            })
+        {
+            return Err(invalid(
+                &self.backend.provider,
+                "Continuation results do not match the retained call batch.",
+            ));
+        }
+        let results = results
+            .into_iter()
+            .map(|r| {
+                let provider_content = r.result.provider_content()?;
+                Ok(ExecutedToolCall {
+                    call: r.call,
+                    result: r.result,
+                    provider_content,
+                })
+            })
+            .collect::<Result<Vec<_>, EngineAdapterRequestError>>()?;
+        let context = self.describe_debug_context();
+        let mut conversation = Conversation {
+            backend: self.backend.clone(),
+            logger: self.logger.clone(),
+            client: self.client.clone(),
+            messages,
+            context,
+        };
+        let runtime = request.to_request();
+        let (tx, mut rx) = tokio::sync::mpsc::channel(1);
+        let mut events = vec![EngineTextStreamEvent::MessageStart { turn_index: 0 }];
+        let mut retained = payload::check_payload(&events, &self.backend.provider)?;
+        let idle = std::time::Duration::from_millis(
+            self.backend
+                .options
+                .stream_idle_timeout_ms
+                .unwrap_or(binding.timeout_ms),
+        );
+        let calls = {
+            let work = conversation.next_turn(&runtime, results, &tx);
+            tokio::pin!(work);
+            let timer = tokio::time::sleep(idle);
+            tokio::pin!(timer);
+            loop {
+                tokio::select! {
+                    result=&mut work=> {
+                        rx.close();
+                        while let Some(event)=rx.recv().await { retain_event(&self.backend.provider,&mut events,&mut retained,event?)?; }
+                        break result?;
+                    },
+                    Some(event)=rx.recv()=> {
+                        retain_event(&self.backend.provider,&mut events,&mut retained,event?)?;
+                        timer.as_mut().reset(tokio::time::Instant::now()+idle);
+                    },
+                    _=&mut timer=>return Err(EngineAdapterRequestError::new(&self.backend.provider,"Durable provider turn exceeded its idle timeout.",ErrorKind::Timeout)),
+                }
+            }
+        };
+        events.push(EngineTextStreamEvent::MessageStop {
+            reason: if calls.is_empty() {
+                StopReason::Complete
+            } else {
+                StopReason::ToolUse
+            },
+        });
+        let state = serde_json::to_value(CompletionCheckpoint {
+            version: 1,
+            binding,
+            request_revision: configuration_digest(
+                &serde_json::to_value(&request).expect("request"),
+            ),
+            messages: conversation.messages,
+        })
+        .expect("checkpoint");
+        let turn = ConversationTurn {
+            state,
+            calls,
+            events,
+        };
+        payload::check_payload(&turn, &self.backend.provider)?;
+        Ok(turn)
+    }
+
     fn describe_debug_context(&self) -> EngineAdapterDebugContext {
         EngineAdapterDebugContext {
             provider: self.backend.provider.clone(),
@@ -286,26 +477,7 @@ impl ToolConversation for Conversation {
                 "Completion was refused, incomplete or malformed.",
             ));
         }
-        let mut calls = Vec::new();
-        if !message["tool_calls"].is_null() && !message["tool_calls"].is_array() {
-            return Err(invalid(provider, "Malformed completion tool calls."));
-        }
-        if let Some(items) = message["tool_calls"].as_array() {
-            for call in items {
-                if call["type"] != "function" {
-                    return Err(invalid(provider, "Unsupported completion tool type."));
-                }
-                let arguments = call["function"]["arguments"]
-                    .as_str()
-                    .and_then(|s| serde_json::from_str(s).ok());
-                calls.push(decode_tool_call(
-                    provider,
-                    call.get("id"),
-                    call["function"].get("name"),
-                    arguments,
-                )?);
-            }
-        }
+        let calls = completion_calls(provider, &message)?;
         if (finish == "tool_calls") == calls.is_empty() {
             return Err(invalid(
                 provider,
@@ -553,6 +725,57 @@ async fn decode_stream(
         message["tool_calls"] = json!(buffer.tools.into_values().collect::<Vec<_>>());
     }
     Ok((message, finish, usage))
+}
+
+#[derive(serde::Serialize, serde::Deserialize)]
+#[serde(deny_unknown_fields)]
+struct CompletionCheckpoint {
+    version: u32,
+    binding: ConversationBinding,
+    request_revision: String,
+    messages: Vec<Value>,
+}
+fn completion_calls(
+    provider: &str,
+    message: &Value,
+) -> Result<Vec<EngineLocalToolCall>, EngineAdapterRequestError> {
+    let mut calls = Vec::new();
+    if !message["tool_calls"].is_null() && !message["tool_calls"].is_array() {
+        return Err(invalid(provider, "Malformed completion tool calls."));
+    }
+    if let Some(items) = message["tool_calls"].as_array() {
+        for call in items {
+            if call["type"] != "function" {
+                return Err(invalid(provider, "Unsupported completion tool type."));
+            }
+            let arguments = call["function"]["arguments"]
+                .as_str()
+                .and_then(|s| serde_json::from_str(s).ok());
+            calls.push(decode_tool_call(
+                provider,
+                call.get("id"),
+                call["function"].get("name"),
+                arguments,
+            )?);
+        }
+    }
+    Ok(calls)
+}
+fn retain_event(
+    provider: &str,
+    events: &mut Vec<EngineTextStreamEvent>,
+    retained: &mut usize,
+    event: EngineTextStreamEvent,
+) -> Result<(), EngineAdapterRequestError> {
+    *retained = retained.saturating_add(payload::check_payload(&event, provider)?);
+    if *retained > payload::PROVIDER_PAYLOAD_BYTES {
+        return Err(invalid(
+            provider,
+            "Durable event buffer exceeds its byte limit.",
+        ));
+    }
+    events.push(event);
+    Ok(())
 }
 
 #[cfg(test)]

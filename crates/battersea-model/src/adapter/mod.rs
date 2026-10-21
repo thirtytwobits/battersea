@@ -8,7 +8,9 @@ pub mod error;
 pub mod output;
 pub mod payload;
 pub use output::StopReason;
+mod continuation;
 pub mod tool_loop;
+pub use continuation::*;
 
 pub use crate::engine::EngineToolExecutionMode;
 use crate::engine::{EngineBackendCapabilities, EngineChatParameters};
@@ -396,7 +398,8 @@ pub trait EngineAdapterLogger: Send + Sync {
 }
 
 /// A conversation after application-owned prompt assembly.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(deny_unknown_fields)]
 pub struct EngineAdapterRequest {
     pub operation: EngineOperation,
     pub messages: Vec<crate::Message>,
@@ -738,6 +741,25 @@ pub fn validate_chat_request(
 #[allow(clippy::double_must_use)]
 #[async_trait]
 pub trait EngineAdapter: Send + Sync {
+    /// Validate a durable request and codec state without provider I/O.
+    fn validate_conversation(
+        &self,
+        _request: &ConversationRequest,
+        _state: Option<&Value>,
+    ) -> Result<ConversationBinding, EngineAdapterRequestError> {
+        Err(continuation::unsupported())
+    }
+
+    /// Generate one turn. The caller persists its dispatch intent before invoking this method.
+    async fn conversation_turn(
+        &self,
+        _request: ConversationRequest,
+        _state: Option<Value>,
+        _results: Vec<ConversationToolResult>,
+    ) -> Result<ConversationTurn, EngineAdapterRequestError> {
+        Err(continuation::unsupported())
+    }
+
     fn describe_debug_context(&self) -> EngineAdapterDebugContext;
 
     async fn count_text_stream_input_tokens(

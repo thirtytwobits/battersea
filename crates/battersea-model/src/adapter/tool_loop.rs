@@ -213,98 +213,7 @@ async fn drive_tool_loop(
             .await?;
             return Ok(());
         }
-        if request.shared.chat.tool_choice.mode == crate::engine::EngineChatToolChoiceMode::None {
-            return Err(EngineAdapterRequestError::invalid_response(
-                &context.provider,
-                "Provider requested tools when tool use was disabled.",
-            )
-            .with_tool_code(crate::ToolCode::ToolUseDisabled)
-            .with_tool_call(crate::ToolCallEvidence {
-                call_id: calls[0].id.clone(),
-                tool_name: calls[0].name.clone(),
-                outcome: crate::ToolCallOutcome::NotDispatched,
-                request_id: None,
-            }));
-        }
-        // Validate the complete batch before permitting any effects.
-        let mut ids = HashSet::new();
-        for call in &calls {
-            let validation = (|| {
-                if call.id.is_empty() || !ids.insert(&call.id) {
-                    return Err(EngineAdapterRequestError::invalid_response(
-                        &context.provider,
-                        "Provider returned missing or duplicate tool call identifiers.",
-                    )
-                    .with_tool_code(crate::ToolCode::InvalidToolCallId));
-                }
-                if !request
-                    .local_tools
-                    .iter()
-                    .any(|tool| super::local_tool_name(&tool.name) == call.name)
-                {
-                    return Err(EngineAdapterRequestError::invalid_response(
-                        &context.provider,
-                        format!("Provider requested an unoffered tool: {}.", call.name),
-                    )
-                    .with_tool_code(crate::ToolCode::UnofferedTool));
-                }
-                if request.shared.chat.tool_choice.mode
-                    == crate::engine::EngineChatToolChoiceMode::Tool
-                    && request
-                        .shared
-                        .chat
-                        .tool_choice
-                        .tool_name
-                        .as_deref()
-                        .map(super::local_tool_name)
-                        .as_deref()
-                        != Some(call.name.as_str())
-                {
-                    return Err(EngineAdapterRequestError::invalid_response(
-                        &context.provider,
-                        "Provider requested a tool outside the named tool choice.",
-                    )
-                    .with_tool_code(crate::ToolCode::ToolOutsideChoice));
-                }
-                if !call.arguments.is_object() {
-                    return Err(EngineAdapterRequestError::invalid_response(
-                        &context.provider,
-                        format!("Tool arguments must be an object: {}.", call.name),
-                    )
-                    .with_tool_code(crate::ToolCode::InvalidToolArguments));
-                }
-                let definition = request
-                    .local_tools
-                    .iter()
-                    .find(|tool| super::local_tool_name(&tool.name) == call.name)
-                    .expect("offered tool");
-                let validator =
-                    jsonschema::validator_for(&definition.input_schema).map_err(|error| {
-                        EngineAdapterRequestError::new(
-                            &context.provider,
-                            error.to_string(),
-                            super::error::ErrorKind::InvalidRequest,
-                        )
-                        .with_tool_code(crate::ToolCode::InvalidToolSchema)
-                    })?;
-                validator.validate(&call.arguments).map_err(|error| {
-                    EngineAdapterRequestError::invalid_response(
-                        &context.provider,
-                        error.to_string(),
-                    )
-                    .with_tool_code(crate::ToolCode::InvalidToolArguments)
-                })?;
-                Ok(())
-            })();
-            validation.map_err(|error: EngineAdapterRequestError| {
-                after_provider_turn(error.with_tool_call(crate::ToolCallEvidence {
-                    call_id: call.id.clone(),
-                    tool_name: call.name.clone(),
-                    outcome: crate::ToolCallOutcome::NotDispatched,
-                    request_id: None,
-                }))
-            })?;
-        }
+        validate_tool_calls(&context.provider, request, &calls)?;
         results = Vec::with_capacity(calls.len());
         // Tools may share application state. Execute in provider order.
         for call in calls {
@@ -434,6 +343,106 @@ async fn drive_tool_loop(
         "request",
     )
     .with_tool_code(crate::ToolCode::ToolRoundsExceeded))
+}
+
+/// Admit the complete provider batch before exposing any call for execution.
+pub fn validate_tool_calls(
+    provider: &str,
+    request: &EngineTextStreamRequest,
+    calls: &[EngineLocalToolCall],
+) -> Result<(), EngineAdapterRequestError> {
+    if calls.is_empty() {
+        return Ok(());
+    }
+    if request.shared.chat.tool_choice.mode == crate::engine::EngineChatToolChoiceMode::None {
+        return Err(EngineAdapterRequestError::invalid_response(
+            provider,
+            "Provider requested tools when tool use was disabled.",
+        )
+        .with_tool_code(crate::ToolCode::ToolUseDisabled)
+        .with_tool_call(crate::ToolCallEvidence {
+            call_id: calls[0].id.clone(),
+            tool_name: calls[0].name.clone(),
+            outcome: crate::ToolCallOutcome::NotDispatched,
+            request_id: None,
+        }));
+    }
+    // Validate the complete batch before permitting any effects.
+    let mut ids = HashSet::new();
+    for call in calls {
+        let validation = (|| {
+            if call.id.is_empty() || !ids.insert(&call.id) {
+                return Err(EngineAdapterRequestError::invalid_response(
+                    provider,
+                    "Provider returned missing or duplicate tool call identifiers.",
+                )
+                .with_tool_code(crate::ToolCode::InvalidToolCallId));
+            }
+            if !request
+                .local_tools
+                .iter()
+                .any(|tool| super::local_tool_name(&tool.name) == call.name)
+            {
+                return Err(EngineAdapterRequestError::invalid_response(
+                    provider,
+                    format!("Provider requested an unoffered tool: {}.", call.name),
+                )
+                .with_tool_code(crate::ToolCode::UnofferedTool));
+            }
+            if request.shared.chat.tool_choice.mode == crate::engine::EngineChatToolChoiceMode::Tool
+                && request
+                    .shared
+                    .chat
+                    .tool_choice
+                    .tool_name
+                    .as_deref()
+                    .map(super::local_tool_name)
+                    .as_deref()
+                    != Some(call.name.as_str())
+            {
+                return Err(EngineAdapterRequestError::invalid_response(
+                    provider,
+                    "Provider requested a tool outside the named tool choice.",
+                )
+                .with_tool_code(crate::ToolCode::ToolOutsideChoice));
+            }
+            if !call.arguments.is_object() {
+                return Err(EngineAdapterRequestError::invalid_response(
+                    provider,
+                    format!("Tool arguments must be an object: {}.", call.name),
+                )
+                .with_tool_code(crate::ToolCode::InvalidToolArguments));
+            }
+            let definition = request
+                .local_tools
+                .iter()
+                .find(|tool| super::local_tool_name(&tool.name) == call.name)
+                .expect("offered tool");
+            let validator =
+                jsonschema::validator_for(&definition.input_schema).map_err(|error| {
+                    EngineAdapterRequestError::new(
+                        provider,
+                        error.to_string(),
+                        super::error::ErrorKind::InvalidRequest,
+                    )
+                    .with_tool_code(crate::ToolCode::InvalidToolSchema)
+                })?;
+            validator.validate(&call.arguments).map_err(|error| {
+                EngineAdapterRequestError::invalid_response(provider, error.to_string())
+                    .with_tool_code(crate::ToolCode::InvalidToolArguments)
+            })?;
+            Ok(())
+        })();
+        validation.map_err(|error: EngineAdapterRequestError| {
+            after_provider_turn(error.with_tool_call(crate::ToolCallEvidence {
+                call_id: call.id.clone(),
+                tool_name: call.name.clone(),
+                outcome: crate::ToolCallOutcome::NotDispatched,
+                request_id: None,
+            }))
+        })?;
+    }
+    Ok(())
 }
 
 #[cfg(test)]

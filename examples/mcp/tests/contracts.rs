@@ -664,3 +664,340 @@ async fn file_approval_store_fences_competing_handles_and_bounds_read_only_loads
         2
     );
 }
+
+#[tokio::test]
+async fn durable_provider_continuation_reopens_both_journals_and_retries_the_saved_transcript() {
+    use battersea_model::{
+        ConversationPhase, ConversationRequest, ConversationScope, ConversationToolResult,
+        DurableConversation,
+    };
+    use battersea_tools::{
+        DurableToolApprovalScope, DurableToolExecutor, ToolApprovalAction,
+        ToolApprovalJournalLimits,
+    };
+    use mcp_example::{conversation_journal::FileConversationStore, journal::FileApprovalStore};
+    use std::time::{SystemTime, UNIX_EPOCH};
+    for (transport, streaming) in TRANSPORTS
+        .into_iter()
+        .flat_map(|t| [false, true].map(|s| (t, s)))
+    {
+        let (directory, ledger) = temporary_ledger();
+        let remote = Remote::start(transport, &ledger, Fault::None, Duration::from_secs(10))
+            .await
+            .unwrap();
+        let (binding, tools) = host::bind(&remote.connection).await.unwrap();
+        let fixture = ProviderFixture::new(json!({"value":1}), true);
+        let provider = fixture::provider_http(fixture.clone()).await.unwrap();
+        let (adapter, chat) = host::provider(&provider.endpoint).unwrap();
+        let mut original = host::request(&tools, "operator", chat);
+        original.shared.chat.stream = streaming;
+        let request = ConversationRequest {
+            shared: original.shared,
+            tools: original.local_tools,
+            max_turns: 2,
+        };
+        let scope = ConversationScope {
+            run_id: "durable-provider".into(),
+            tool_binding_revision: binding.revision().into(),
+            expires_at_unix_ms: SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap()
+                .as_millis() as u64
+                + 4000,
+        };
+        let approval_scope = DurableToolApprovalScope {
+            run_id: scope.run_id.clone(),
+            binding_revision: scope.tool_binding_revision.clone(),
+            expires_at_unix_ms: scope.expires_at_unix_ms,
+        };
+        let store = || Arc::new(FileConversationStore::new(directory.path().into()));
+        let approvals = || Arc::new(FileApprovalStore::new(directory.path().into()));
+        let conversation = DurableConversation::create(
+            store(),
+            adapter,
+            scope.clone(),
+            request.clone(),
+            65536,
+            Duration::from_secs(1),
+        )
+        .await
+        .unwrap();
+        let pending = conversation.resume(1).await.unwrap();
+        assert_eq!(pending.phase, ConversationPhase::AwaitingTools);
+        let gate = DurableToolExecutor::create(
+            approvals(),
+            tools.for_profile("operator"),
+            approval_scope.clone(),
+            ToolApprovalJournalLimits {
+                max_calls: 8,
+                max_bytes: 65536,
+            },
+            Duration::from_secs(1),
+        )
+        .await
+        .unwrap();
+        gate.submit(pending.turns[0].response.calls[0].clone(), 1)
+            .await
+            .unwrap();
+        assert_eq!(fixture.requests.lock().unwrap().len(), 1);
+        assert_eq!(fixture::effect_count(&ledger).unwrap(), 0);
+        drop(gate);
+        drop(conversation);
+
+        let (adapter, _) = host::provider(&provider.endpoint).unwrap();
+        let conversation = DurableConversation::open(
+            store(),
+            adapter,
+            scope.clone(),
+            request.clone(),
+            65536,
+            Duration::from_secs(1),
+        )
+        .await
+        .unwrap();
+        let gate = DurableToolExecutor::open(
+            approvals(),
+            tools.for_profile("operator"),
+            approval_scope.clone(),
+            65536,
+            Duration::from_secs(1),
+        )
+        .await
+        .unwrap();
+        let approval = gate.inspect().await.unwrap();
+        gate.decide(
+            "effect-1",
+            &approval.calls["effect-1"].request_revision,
+            approval.revision,
+            ToolApprovalAction::Allow,
+            "operator",
+        )
+        .await
+        .unwrap();
+        let result = gate.resume("effect-1", 3).await.unwrap();
+        let call = approval.calls["effect-1"].call.clone();
+        let retained = ConversationToolResult { call, result };
+        conversation
+            .record_tool_result(3, retained.clone())
+            .await
+            .unwrap();
+        assert_eq!(fixture::effect_count(&ledger).unwrap(), 1);
+        drop(gate);
+        drop(conversation);
+
+        let (adapter, _) = host::provider(&provider.endpoint).unwrap();
+        let conversation = DurableConversation::open(
+            store(),
+            adapter,
+            scope.clone(),
+            request.clone(),
+            65536,
+            Duration::from_secs(1),
+        )
+        .await
+        .unwrap();
+        assert_eq!(
+            conversation
+                .record_tool_result(4, retained)
+                .await
+                .unwrap()
+                .revision,
+            4
+        );
+        let completed = conversation.resume(4).await.unwrap();
+        assert_eq!(completed.phase, ConversationPhase::Completed);
+        assert!(completed.turns[1].response.events.iter().any(
+            |e| matches!(e,EngineTextStreamEvent::TextDelta{text} if text=="Remote result received")
+        ));
+        assert!(serde_json::to_string(&completed)
+            .unwrap()
+            .contains("private-receipt"));
+        assert!(!format!("{completed:?}").contains("private-receipt"));
+        {
+            let requests = fixture.requests.lock().unwrap();
+            assert_eq!(requests.len(), 3);
+            assert_eq!(requests[1], requests[2]);
+            assert!(!serde_json::to_string(&*requests)
+                .unwrap()
+                .contains("private-receipt"));
+            assert_eq!(
+                requests[1]["messages"][1]["tool_calls"][0]["id"],
+                "effect-1"
+            );
+            assert_eq!(requests[1]["messages"][2]["tool_call_id"], "effect-1");
+            if !streaming {
+                assert_eq!(
+                    requests[1]["messages"][1]["fixture_state"]["token"],
+                    "retained-provider-token"
+                );
+            }
+        }
+        drop(conversation);
+        let (adapter, _) = host::provider(&provider.endpoint).unwrap();
+        let conversation = DurableConversation::open(
+            store(),
+            adapter,
+            scope,
+            request,
+            65536,
+            Duration::from_secs(1),
+        )
+        .await
+        .unwrap();
+        assert_eq!(
+            conversation.resume(completed.revision).await.unwrap(),
+            completed
+        );
+        let gate = DurableToolExecutor::open(
+            approvals(),
+            tools.for_profile("operator"),
+            approval_scope,
+            65536,
+            Duration::from_secs(1),
+        )
+        .await
+        .unwrap();
+        assert_eq!(gate.inspect().await.unwrap().revision, 5);
+        assert_eq!(fixture.requests.lock().unwrap().len(), 3);
+        assert_eq!(fixture::effect_count(&ledger).unwrap(), 1);
+        remote.close().await;
+    }
+}
+
+#[tokio::test]
+async fn interrupted_or_invalid_provider_continuations_keep_the_tool_result_and_block_replay() {
+    use battersea_model::{
+        ConversationPhase, ConversationRequest, ConversationResolution, ConversationScope,
+        ConversationToolResult, DurableConversation, EngineLocalToolExecutor, ToolCode,
+    };
+    use mcp_example::conversation_journal::FileConversationStore;
+    use std::{
+        sync::atomic::Ordering,
+        time::{SystemTime, UNIX_EPOCH},
+    };
+    for failure in 0..3 {
+        let (directory, ledger) = temporary_ledger();
+        let remote = Remote::start(
+            Transport::Json,
+            &ledger,
+            Fault::None,
+            Duration::from_secs(10),
+        )
+        .await
+        .unwrap();
+        let (binding, tools) = host::bind(&remote.connection).await.unwrap();
+        let fixture = ProviderFixture::new(json!({"value":1}), false);
+        fixture
+            .fail_continuation
+            .store(failure == 0, Ordering::SeqCst);
+        fixture
+            .hang_continuation
+            .store(failure == 1, Ordering::SeqCst);
+        let provider = fixture::provider_http(fixture.clone()).await.unwrap();
+        let (adapter, chat) = host::provider(&provider.endpoint).unwrap();
+        let original = host::request(&tools, "operator", chat);
+        let mut request = ConversationRequest {
+            shared: original.shared,
+            tools: original.local_tools,
+            max_turns: 2,
+        };
+        if failure == 2 {
+            request.shared.chat.response_format = Some(battersea_model::ResponseFormat::JsonObject);
+        }
+        let scope = ConversationScope {
+            run_id: "failed-continuation".into(),
+            tool_binding_revision: binding.revision().into(),
+            expires_at_unix_ms: SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap()
+                .as_millis() as u64
+                + 4000,
+        };
+        let store = || Arc::new(FileConversationStore::new(directory.path().into()));
+        let conversation = DurableConversation::create(
+            store(),
+            adapter,
+            scope.clone(),
+            request.clone(),
+            65536,
+            Duration::from_secs(1),
+        )
+        .await
+        .unwrap();
+        let pending = conversation.resume(1).await.unwrap();
+        let call = pending.turns[0].response.calls[0].clone();
+        let result = tools
+            .for_profile("operator")
+            .call(call.clone())
+            .await
+            .unwrap();
+        conversation
+            .record_tool_result(3, ConversationToolResult { call, result })
+            .await
+            .unwrap();
+        if failure == 1 {
+            let task = tokio::spawn(async move { conversation.resume(4).await });
+            tokio::time::timeout(Duration::from_secs(2), async {
+                while fixture.requests.lock().unwrap().len() < 2 {
+                    tokio::task::yield_now().await;
+                }
+            })
+            .await
+            .unwrap();
+            task.abort();
+            assert!(task.await.unwrap_err().is_cancelled());
+        } else {
+            let error = conversation.resume(4).await.unwrap_err();
+            assert_eq!(error.tool_call.unwrap().outcome, ToolCallOutcome::Completed);
+            drop(conversation);
+        }
+        let (adapter, _) = host::provider(&provider.endpoint).unwrap();
+        let conversation = DurableConversation::open(
+            store(),
+            adapter,
+            scope.clone(),
+            request.clone(),
+            65536,
+            Duration::from_secs(1),
+        )
+        .await
+        .unwrap();
+        let intent = conversation.inspect().await.unwrap();
+        assert_eq!(intent.phase, ConversationPhase::ProviderIntent);
+        assert_eq!(intent.turns[0].results.len(), 1);
+        assert_eq!(
+            conversation
+                .resume(intent.revision)
+                .await
+                .unwrap_err()
+                .tool_code,
+            Some(ToolCode::ToolContinuationUnresolved)
+        );
+        let alternate = fixture::provider_http(ProviderFixture::new(json!({"value":1}), false))
+            .await
+            .unwrap();
+        let (changed, _) = host::provider(&alternate.endpoint).unwrap();
+        assert!(DurableConversation::open(
+            store(),
+            changed,
+            scope,
+            request,
+            65536,
+            Duration::from_secs(1)
+        )
+        .await
+        .is_err());
+        conversation
+            .reconcile(
+                intent.revision,
+                ConversationResolution::Abandon,
+                "operator",
+                "Local task fenced; provider completion unavailable",
+            )
+            .await
+            .unwrap();
+        assert_eq!(fixture.requests.lock().unwrap().len(), 2);
+        assert_eq!(fixture::effect_count(&ledger).unwrap(), 1);
+        remote.close().await;
+    }
+}

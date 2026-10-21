@@ -102,6 +102,13 @@ impl EngineAdapterRequestError {
 #[serde(rename_all = "snake_case")]
 #[non_exhaustive]
 pub enum ToolCode {
+    InvalidToolContinuation,
+    ToolContinuationConflict,
+    ToolContinuationStorage,
+    ToolContinuationUnresolved,
+    ToolContinuationExpired,
+    UnsupportedToolContinuation,
+
     /// The durable approval journal or request revision changed.
     ToolApprovalConflict,
     /// An approval storage operation requires inspection before continuing.
@@ -158,6 +165,12 @@ pub enum ToolCode {
 impl ToolCode {
     /// Every tool runner refusal.
     pub const ALL: &[Self] = &[
+        Self::InvalidToolContinuation,
+        Self::ToolContinuationConflict,
+        Self::ToolContinuationStorage,
+        Self::ToolContinuationUnresolved,
+        Self::ToolContinuationExpired,
+        Self::UnsupportedToolContinuation,
         Self::ToolApprovalConflict,
         Self::ToolApprovalStorage,
         Self::ToolApprovalUnresolved,
@@ -186,6 +199,13 @@ impl ToolCode {
     /// The stable snake_case code.
     pub fn as_str(self) -> &'static str {
         match self {
+            Self::InvalidToolContinuation => "invalid_tool_continuation",
+            Self::ToolContinuationConflict => "tool_continuation_conflict",
+            Self::ToolContinuationStorage => "tool_continuation_storage",
+            Self::ToolContinuationUnresolved => "tool_continuation_unresolved",
+            Self::ToolContinuationExpired => "tool_continuation_expired",
+            Self::UnsupportedToolContinuation => "unsupported_tool_continuation",
+
             Self::ToolApprovalConflict => "tool_approval_conflict",
             Self::ToolApprovalStorage => "tool_approval_storage",
             Self::ToolApprovalUnresolved => "tool_approval_unresolved",
