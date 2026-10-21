@@ -68,3 +68,12 @@ The [tool approval journal](tools.md#durable-approval) persists pending requests
 dispatch intents and results through application-owned storage. Each conversation has its own
 revision-fenced scope and expiry. A recovered tool result can satisfy the host's retained
 continuation; the enclosing driver intent still requires its own checkpoint and publication.
+
+
+## Provider conversations
+
+The [provider conversation checkpoint](providers.md#durable-tool-conversations) retains the
+accepted request, completed provider turns, tool batches and copied results. Provider dispatch
+has its own persisted intent. An unresolved provider intent requires reconciliation even when
+all preceding tool effects have published results. Completing a provider conversation supplies
+the enclosing driver with retained output; the driver still publishes its own checkpoint.

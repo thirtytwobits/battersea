@@ -1,6 +1,7 @@
 //! Explicit provider registration. Construction and admission perform no provider I/O.
 use crate::{adapter::*, media::*, EngineAdapterRequestError, ErrorKind};
 use async_trait::async_trait;
+use serde_json::Value;
 use std::{collections::BTreeMap, sync::Arc};
 
 type ChatFactory = dyn Fn(
@@ -291,6 +292,71 @@ struct AdmittedAdapter {
 }
 #[async_trait]
 impl EngineAdapter for AdmittedAdapter {
+    fn validate_conversation(
+        &self,
+        request: &crate::ConversationRequest,
+        state: Option<&Value>,
+    ) -> Result<crate::ConversationBinding, EngineAdapterRequestError> {
+        validate_chat_request(&self.backend, &request.to_request())?;
+        self.inner.validate_conversation(request, state)
+    }
+    fn validate_conversation_turn(
+        &self,
+        request: &crate::ConversationRequest,
+        previous: Option<&Value>,
+        results: &[crate::ConversationToolResult],
+        turn: &crate::ConversationTurn,
+    ) -> Result<crate::ConversationBinding, EngineAdapterRequestError> {
+        validate_chat_request(&self.backend, &request.to_request())?;
+        self.inner
+            .validate_conversation_turn(request, previous, results, turn)
+    }
+    async fn conversation_turn(
+        &self,
+        request: crate::ConversationRequest,
+        state: Option<Value>,
+        results: Vec<crate::ConversationToolResult>,
+    ) -> Result<crate::ConversationTurn, EngineAdapterRequestError> {
+        self.validate_conversation(&request, state.as_ref())?;
+        let format = request.shared.chat.response_format.clone();
+        let modalities = request
+            .shared
+            .chat
+            .output_modalities
+            .clone()
+            .unwrap_or_else(|| vec![crate::Modality::Text]);
+        let call = self.inner.conversation_turn(request, state, results);
+        let mut turn = match self.backend.options.timeout_ms {
+            Some(ms) => tokio::time::timeout(std::time::Duration::from_millis(ms), call)
+                .await
+                .map_err(|_| {
+                    EngineAdapterRequestError::new(
+                        &self.backend.provider,
+                        "Provider turn deadline exceeded.",
+                        ErrorKind::Timeout,
+                    )
+                })??,
+            None => call.await?,
+        };
+        if turn.calls.is_empty() {
+            use futures_util::StreamExt;
+            let stream = Box::pin(futures_util::stream::iter(turn.events.into_iter().map(Ok)));
+            let mut validated = crate::adapter::output::validate_output(
+                stream,
+                self.backend.provider.clone(),
+                format,
+                modalities,
+            );
+            let mut events = Vec::new();
+            while let Some(event) = validated.next().await {
+                events.push(event?);
+            }
+            turn.events = events;
+        }
+        crate::adapter::payload::check_payload(&turn, &self.backend.provider)?;
+        Ok(turn)
+    }
+
     fn describe_debug_context(&self) -> EngineAdapterDebugContext {
         self.inner.describe_debug_context()
     }

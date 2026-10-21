@@ -62,5 +62,19 @@ another reopen. An outstanding intent requires effect inspection and explicit re
 
 The consumer tests reopen file storage between pending, approval and completion over all three
 transports. The effect occurs once and its private metadata survives storage. The provider receives
-one generation request: provider transcript restoration is a separate continuation boundary governed
-by the [recovery contract](contracts/recovery.md).
+one generation request while testing the tool approval boundary.
+
+
+## Provider continuation
+
+The Chat Completions consumer also persists a `DurableConversation` through an application-owned
+`FileConversationStore`. Its completed provider turn exposes the pending tool batch. The host
+records approval, resumes the tool, copies the published result into the conversation checkpoint,
+and explicitly requests the next provider turn. Each boundary can be reopened using fresh store
+handles and the original configured binding.
+
+The consumer exercises ordinary and streaming responses over all three MCP transports. A rejected
+continuation reuses the saved transcript, the tool effect occurs once, and private tool metadata
+stays out of provider requests. Failed, cancelled and invalid provider continuations retain an
+unresolved intent and the preceding tool result. The host fences the original task before resolving
+that intent. See the [provider contract](contracts/providers.md#durable-tool-conversations).

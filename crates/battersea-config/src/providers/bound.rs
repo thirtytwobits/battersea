@@ -134,6 +134,72 @@ struct Chat {
 }
 #[async_trait]
 impl EngineAdapter for Chat {
+    fn validate_conversation(
+        &self,
+        request: &ConversationRequest,
+        state: Option<&serde_json::Value>,
+    ) -> Result<ConversationBinding, EngineAdapterRequestError> {
+        let mut runtime = request.to_request();
+        self.context.admit(&mut runtime)?;
+        let mut admitted = request.clone();
+        admitted.shared = runtime.shared;
+        let binding = self
+            .inner
+            .validate_conversation(&admitted, state)
+            .map_err(|e| self.context.error(e))?;
+        if binding.origin != self.context.binding.origin() {
+            return Err(self
+                .context
+                .invalid("Conversation belongs to another binding."));
+        }
+        Ok(binding)
+    }
+    fn validate_conversation_turn(
+        &self,
+        request: &ConversationRequest,
+        previous: Option<&serde_json::Value>,
+        results: &[ConversationToolResult],
+        turn: &ConversationTurn,
+    ) -> Result<ConversationBinding, EngineAdapterRequestError> {
+        let mut runtime = request.to_request();
+        self.context.admit(&mut runtime)?;
+        let mut admitted = request.clone();
+        admitted.shared = runtime.shared;
+        let binding = self
+            .inner
+            .validate_conversation_turn(&admitted, previous, results, turn)
+            .map_err(|e| self.context.error(e))?;
+        if binding.origin != self.context.binding.origin() {
+            return Err(self
+                .context
+                .invalid("Conversation belongs to another binding."));
+        }
+        Ok(binding)
+    }
+    async fn conversation_turn(
+        &self,
+        mut request: ConversationRequest,
+        state: Option<serde_json::Value>,
+        results: Vec<ConversationToolResult>,
+    ) -> Result<ConversationTurn, EngineAdapterRequestError> {
+        self.validate_conversation(&request, state.as_ref())?;
+        let mut runtime = request.to_request();
+        self.context.admit(&mut runtime)?;
+        request.shared = runtime.shared;
+        let mut turn = self
+            .inner
+            .conversation_turn(request, state, results)
+            .await
+            .map_err(|e| self.context.error(e))?;
+        turn.events = turn
+            .events
+            .into_iter()
+            .map(|e| self.context.event(e))
+            .collect::<Result<_, _>>()
+            .map_err(|e| self.context.error(e))?;
+        Ok(turn)
+    }
+
     fn describe_debug_context(&self) -> EngineAdapterDebugContext {
         let mut result = self.inner.describe_debug_context();
         self.context.debug(&mut result);

@@ -164,6 +164,9 @@ pub struct ProviderFixture {
     pub requests: Mutex<Vec<Value>>,
     pub arguments: Value,
     pub reject_continuation_once: bool,
+    pub final_text: String,
+    pub fail_continuation: std::sync::atomic::AtomicBool,
+    pub hang_continuation: std::sync::atomic::AtomicBool,
 }
 impl ProviderFixture {
     pub fn new(arguments: Value, reject_continuation_once: bool) -> Arc<Self> {
@@ -171,6 +174,9 @@ impl ProviderFixture {
             requests: Mutex::new(Vec::new()),
             arguments,
             reject_continuation_once,
+            final_text: "Remote result received".into(),
+            fail_continuation: false.into(),
+            hang_continuation: false.into(),
         })
     }
 }
@@ -179,6 +185,7 @@ pub async fn provider_http(fixture: Arc<ProviderFixture>) -> Result<HttpServer> 
         State(fixture): State<Arc<ProviderFixture>>,
         Json(request): Json<Value>,
     ) -> Response {
+        let streaming = request["stream"] == true;
         let turn = {
             let mut requests = fixture.requests.lock().unwrap();
             requests.push(request);
@@ -187,11 +194,45 @@ pub async fn provider_http(fixture: Arc<ProviderFixture>) -> Result<HttpServer> 
         if turn == 2 && fixture.reject_continuation_once {
             return (StatusCode::TOO_MANY_REQUESTS, Json(json!({}))).into_response();
         }
-        let message = if turn == 1 {
+        if turn > 1
+            && fixture
+                .fail_continuation
+                .load(std::sync::atomic::Ordering::SeqCst)
+        {
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error":"uncertain continuation"})),
+            )
+                .into_response();
+        }
+        if turn > 1
+            && fixture
+                .hang_continuation
+                .load(std::sync::atomic::Ordering::SeqCst)
+        {
+            std::future::pending::<()>().await;
+        }
+        let mut message = if turn == 1 {
             json!({"role":"assistant","content":null,"tool_calls":[{"id":"effect-1","type":"function","function":{"name":"remote_write","arguments":fixture.arguments.to_string()}}]})
         } else {
-            json!({"role":"assistant","content":"Remote result received"})
+            json!({"role":"assistant","content":fixture.final_text})
         };
+        if turn == 1 && !streaming {
+            message["fixture_state"] = json!({"token":"retained-provider-token"});
+        }
+        if streaming {
+            if let Some(calls) = message["tool_calls"].as_array_mut() {
+                for (i, call) in calls.iter_mut().enumerate() {
+                    call["index"] = json!(i);
+                }
+            }
+            let event = json!({"choices":[{"index":0,"delta":message,"finish_reason":if turn==1 {"tool_calls"} else {"stop"}}],"usage":{"prompt_tokens":2,"completion_tokens":2,"total_tokens":4}});
+            return (
+                [("content-type", "text/event-stream")],
+                format!("data: {event}\n\ndata: [DONE]\n\n"),
+            )
+                .into_response();
+        }
         Json(json!({"choices":[{"message":message,"finish_reason":if turn == 1 { "tool_calls" } else { "stop" }}],"usage":{"prompt_tokens":2,"completion_tokens":2,"total_tokens":4}})).into_response()
     }
     listen(
