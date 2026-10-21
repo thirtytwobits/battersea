@@ -648,5 +648,47 @@ async fn recovered_turns_obey_final_output_admission() {
         .await
         .is_err());
     assert_eq!(d.inspect().await.unwrap().revision, 6);
+    let mut valid = provider.retained.lock().unwrap().clone().unwrap();
+    for event in &mut valid.events {
+        if let EngineTextStreamEvent::TextDelta { text } = event {
+            *text = "{}".into();
+        }
+    }
+    for count in [0, 2] {
+        let mut changed = valid.clone();
+        for _ in 0..count {
+            changed.events.insert(
+                1,
+                EngineTextStreamEvent::StructuredOutput { value: json!({}) },
+            );
+        }
+        assert!(
+            d.reconcile(
+                6,
+                ConversationResolution::Completed { turn: changed },
+                "operator",
+                "Retained reply from the fenced provider task"
+            )
+            .await
+            .is_err(),
+            "structured event count {count}"
+        );
+        assert_eq!(d.inspect().await.unwrap().revision, 6);
+    }
+    valid.events.insert(
+        1,
+        EngineTextStreamEvent::StructuredOutput { value: json!({}) },
+    );
+    let completed = d
+        .reconcile(
+            6,
+            ConversationResolution::Completed { turn: valid },
+            "operator",
+            "Retained reply from the fenced provider task",
+        )
+        .await
+        .unwrap();
+    assert_eq!(completed.phase, ConversationPhase::Completed);
+    assert_eq!(d.inspect().await.unwrap(), completed);
     assert_eq!(provider.calls.load(Ordering::SeqCst), 2);
 }

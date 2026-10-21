@@ -1045,7 +1045,10 @@ async fn reconciled_and_reopened_calls_must_match_the_provider_transcript() {
             self.inner.compare_exchange(run, expected, next).await
         }
     }
-    for streaming in [false, true] {
+    for (streaming, schema) in [false, true]
+        .into_iter()
+        .flat_map(|s| [false, true].map(|f| (s, f)))
+    {
         let (directory, ledger) = temporary_ledger();
         let remote = Remote::start(
             Transport::Json,
@@ -1062,7 +1065,14 @@ async fn reconciled_and_reopened_calls_must_match_the_provider_transcript() {
         let (adapter, chat) = host::provider(&provider.endpoint).unwrap();
         let mut original = host::request(&tools, "operator", chat);
         original.shared.chat.stream = streaming;
-        original.shared.chat.response_format = Some(ResponseFormat::JsonObject);
+        original.shared.chat.response_format = Some(if schema {
+            ResponseFormat::JsonSchema {
+                name: "receipt".into(),
+                schema: json!({"type":"object","required":["received"],"properties":{"received":{"type":"boolean"}},"additionalProperties":false}),
+            }
+        } else {
+            ResponseFormat::JsonObject
+        });
         let mut request = ConversationRequest {
             shared: original.shared,
             tools: original.local_tools,
@@ -1199,7 +1209,7 @@ async fn reconciled_and_reopened_calls_must_match_the_provider_transcript() {
         assert!(conversation.resume(4).await.is_err());
         let retained = store.retained.lock().unwrap().clone().unwrap();
         let final_turn = retained.turns[1].response.clone();
-        for mutation in 0..9 {
+        for mutation in 0..11 {
             let mut changed = final_turn.clone();
             match mutation {
                 0 => {
@@ -1264,7 +1274,19 @@ async fn reconciled_and_reopened_calls_must_match_the_provider_transcript() {
                         .clone();
                     changed.events.insert(1, event);
                 }
-                _ => changed.state["version"] = json!(1),
+                8 => changed.state["version"] = json!(1),
+                9 => changed
+                    .events
+                    .retain(|e| !matches!(e, EngineTextStreamEvent::StructuredOutput { .. })),
+                _ => {
+                    let event = changed
+                        .events
+                        .iter()
+                        .find(|e| matches!(e, EngineTextStreamEvent::StructuredOutput { .. }))
+                        .unwrap()
+                        .clone();
+                    changed.events.insert(1, event);
+                }
             }
             assert!(
                 conversation
@@ -1286,14 +1308,18 @@ async fn reconciled_and_reopened_calls_must_match_the_provider_transcript() {
             assert_eq!(unchanged.turns.len(), 1);
             assert_eq!(unchanged.turns[0].results, retained.turns[0].results);
 
-            // Reopening validates the same evidence even when shared integrity checks pass.
+            // Reopening validates the same evidence with a recomputed checksum.
             let mut stored = retained.clone();
             stored.turns[1].response = changed;
             let mut stored = serde_json::to_value(stored).unwrap();
             stored.as_object_mut().unwrap().remove("checksum");
             stored["checksum"] = json!(configuration_digest(&stored));
             let stored: ConversationCheckpoint = serde_json::from_value(stored).unwrap();
-            stored.validate().unwrap();
+            if mutation >= 9 {
+                assert!(stored.validate().is_err());
+            } else {
+                stored.validate().unwrap();
+            }
             std::fs::write(
                 directory.path().join("conversation.json"),
                 serde_json::to_vec(&stored).unwrap(),

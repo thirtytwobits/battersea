@@ -862,20 +862,19 @@ fn validate_completion_events(
             "Completion events differ from the retained response.",
         ));
     }
-    if let Some(value) = structured {
-        let format = request
-            .shared
-            .chat
-            .response_format
-            .as_ref()
-            .ok_or_else(|| invalid(provider, "Unexpected structured completion output."))?;
-        if !completion_calls(provider, message)?.is_empty()
-            || &format.parse(provider, &text)? != value
-        {
+    let format = if completion_calls(provider, message)?.is_empty() {
+        request.shared.chat.response_format.as_ref()
+    } else {
+        None
+    };
+    match (format, structured) {
+        (Some(format), Some(value)) if &format.parse(provider, &text)? == value => (),
+        (None, None) => (),
+        _ => {
             return Err(invalid(
                 provider,
-                "Structured event differs from the retained response.",
-            ));
+                "Structured event is missing or differs from the retained response.",
+            ))
         }
     }
     Ok(())

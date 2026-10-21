@@ -256,12 +256,12 @@ fn validate_turn_events(
     if turn.calls.is_empty() {
         if let Some(format) = &request.shared.chat.response_format {
             let value = format.parse("conversation", &text)?;
-            for event in &turn.events {
-                if let EngineTextStreamEvent::StructuredOutput { value: stored } = event {
-                    if stored != &value {
-                        return Err(invalid());
-                    }
-                }
+            let mut structured = turn.events.iter().filter_map(|event| match event {
+                EngineTextStreamEvent::StructuredOutput { value } => Some(value),
+                _ => None,
+            });
+            if structured.next() != Some(&value) || structured.next().is_some() {
+                return Err(invalid());
             }
         }
     }

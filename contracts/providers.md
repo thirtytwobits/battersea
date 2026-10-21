@@ -126,6 +126,7 @@ Chat Completions retains its native assistant envelopes and appends each tool re
 HTTP 429 retry sends the same prepared request. Reopening after a tool decision or result copy
 uses the retained assistant turn; it never regenerates the request that selected the tools.
 Final output receives the same modality and structured-output validation as an ordinary response.
+A final turn with a requested response format retains exactly one matching `StructuredOutput` event.
 Completed conversations return their retained checkpoint, including after expiry.
 
 An interrupted provider task, ambiguous response or failed turn publication can leave an intent.
