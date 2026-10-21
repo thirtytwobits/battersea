@@ -671,12 +671,31 @@ async fn durable_provider_continuation_reopens_both_journals_and_retries_the_sav
         ConversationPhase, ConversationRequest, ConversationScope, ConversationToolResult,
         DurableConversation,
     };
+    use battersea_model::{EngineAdapterLogger, EngineAdapterRequestLog, EngineAdapterResponseLog};
     use battersea_tools::{
         DurableToolApprovalScope, DurableToolExecutor, ToolApprovalAction,
         ToolApprovalJournalLimits,
     };
     use mcp_example::{conversation_journal::FileConversationStore, journal::FileApprovalStore};
-    use std::time::{SystemTime, UNIX_EPOCH};
+    use std::{
+        sync::Mutex,
+        time::{SystemTime, UNIX_EPOCH},
+    };
+
+    #[derive(Default)]
+    struct Logs {
+        requests: Mutex<Vec<EngineAdapterRequestLog>>,
+        responses: Mutex<Vec<EngineAdapterResponseLog>>,
+    }
+    #[async_trait::async_trait]
+    impl EngineAdapterLogger for Logs {
+        async fn on_request(&self, entry: EngineAdapterRequestLog) {
+            self.requests.lock().unwrap().push(entry);
+        }
+        async fn on_response(&self, entry: EngineAdapterResponseLog) {
+            self.responses.lock().unwrap().push(entry);
+        }
+    }
     for (transport, streaming, responses) in TRANSPORTS
         .into_iter()
         .flat_map(|t| [(false, false), (true, false), (true, true)].map(|(s, r)| (t, s, r)))
@@ -686,16 +705,20 @@ async fn durable_provider_continuation_reopens_both_journals_and_retries_the_sav
             .await
             .unwrap();
         let (binding, tools) = host::bind(&remote.connection).await.unwrap();
-        let fixture = ProviderFixture::new(json!({"value":1}), true);
+        let mut fixture = ProviderFixture::new(json!({"value":1}), true);
+        if responses {
+            Arc::get_mut(&mut fixture).unwrap().final_text = "  Résultat reçu ✓  ".into();
+        }
         let provider = if responses {
             fixture::responses_http(fixture.clone()).await
         } else {
             fixture::provider_http(fixture.clone()).await
         }
         .unwrap();
+        let logs = Arc::new(Logs::default());
         let connect = || {
             if responses {
-                host::responses_provider(&provider.endpoint)
+                host::responses_provider_with_logger(&provider.endpoint, logs.clone())
             } else {
                 host::provider(&provider.endpoint)
             }
@@ -819,7 +842,7 @@ async fn durable_provider_continuation_reopens_both_journals_and_retries_the_sav
         let completed = conversation.resume(4).await.unwrap();
         assert_eq!(completed.phase, ConversationPhase::Completed);
         assert!(completed.turns[1].response.events.iter().any(
-            |e| matches!(e,EngineTextStreamEvent::TextDelta{text} if text=="Remote result received")
+            |e| matches!(e,EngineTextStreamEvent::TextDelta{text} if text==&fixture.final_text)
         ));
         assert!(serde_json::to_string(&completed)
             .unwrap()
@@ -890,6 +913,41 @@ async fn durable_provider_continuation_reopens_both_journals_and_retries_the_sav
         assert_eq!(gate.inspect().await.unwrap().revision, 5);
         assert_eq!(fixture.requests.lock().unwrap().len(), 3);
         assert_eq!(fixture::effect_count(&ledger).unwrap(), 1);
+        if responses {
+            // Reopening and retrying a rejected HTTP request do not duplicate completed logs.
+            let requests = logs.requests.lock().unwrap();
+            let responses = logs.responses.lock().unwrap();
+            assert_eq!(requests.len(), 2);
+            assert_eq!(responses.len(), 2);
+            for (index, response) in responses.iter().enumerate() {
+                let turn = &completed.turns[index].response;
+                let native = &turn.state["response"];
+                assert_eq!(response.context, requests[index].context);
+                assert_eq!(response.operation, requests[index].operation);
+                assert_eq!(response.status, 200);
+                assert!(response.detail.ok);
+                assert_eq!(response.detail.streaming, Some(true));
+                assert_eq!(
+                    response.detail.response_id.as_deref(),
+                    native["id"].as_str()
+                );
+                assert_eq!(response.detail.usage.as_ref(), native.get("usage"));
+                assert_eq!(
+                    response.detail.output_chars,
+                    Some(if index == 0 {
+                        0
+                    } else {
+                        fixture.final_text.chars().count()
+                    })
+                );
+            }
+            assert!(!serde_json::to_string(&*requests)
+                .unwrap()
+                .contains("private-receipt"));
+            assert!(!serde_json::to_string(&*responses)
+                .unwrap()
+                .contains("private-receipt"));
+        }
         remote.close().await;
     }
 }

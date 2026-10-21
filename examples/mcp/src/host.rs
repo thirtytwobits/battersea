@@ -81,19 +81,27 @@ pub async fn bind(connection: &McpConnection) -> Result<(McpToolBinding, ToolReg
 }
 
 pub fn provider(endpoint: &str) -> Result<(Arc<dyn EngineAdapter>, EngineChatParameters)> {
-    configured_provider(endpoint, "openai-chat-completions", false)
+    configured_provider(endpoint, "openai-chat-completions", false, None)
 }
 
 pub fn responses_provider(
     endpoint: &str,
 ) -> Result<(Arc<dyn EngineAdapter>, EngineChatParameters)> {
-    configured_provider(endpoint, "openai-responses", true)
+    configured_provider(endpoint, "openai-responses", true, None)
+}
+
+pub fn responses_provider_with_logger(
+    endpoint: &str,
+    logger: Arc<dyn EngineAdapterLogger>,
+) -> Result<(Arc<dyn EngineAdapter>, EngineChatParameters)> {
+    configured_provider(endpoint, "openai-responses", true, Some(logger))
 }
 
 fn configured_provider(
     endpoint: &str,
     adapter: &str,
     stream: bool,
+    logger: Option<Arc<dyn EngineAdapterLogger>>,
 ) -> Result<(Arc<dyn EngineAdapter>, EngineChatParameters)> {
     let mut protocols = ProtocolRegistry::default();
     battersea_providers::register_builtin_adapters(&mut protocols)?;
@@ -118,7 +126,7 @@ fn configured_provider(
         &EnvironmentCredentials {
             scope_revision: "example-account-1".into(),
         },
-        None,
+        logger,
     )?;
     Ok((configured.chat("chat").unwrap().clone(), parameters))
 }

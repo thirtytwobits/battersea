@@ -252,6 +252,30 @@ impl OpenAiEngineAdapter {
         // remain diagnostics and cannot disagree with restored output.
         let events = response_events(&self.backend.provider, &request, &response, false)?;
         let calls = collect_openai_function_calls(&response)?;
+        emit_response(
+            self.logger.as_ref(),
+            &self.context,
+            request.shared.operation,
+            200,
+            EngineAdapterResponseDetail {
+                ok: true,
+                request_id: None,
+                response_id: response["id"].as_str().map(ToOwned::to_owned),
+                output_chars: Some(
+                    events
+                        .iter()
+                        .filter_map(|event| match event {
+                            EngineTextStreamEvent::TextDelta { text } => Some(text.chars().count()),
+                            _ => None,
+                        })
+                        .sum(),
+                ),
+                usage: response.get("usage").cloned(),
+                streaming: Some(true),
+                stop_reason: None,
+            },
+        )
+        .await;
         let checkpoint = Checkpoint {
             version: 1,
             binding,
