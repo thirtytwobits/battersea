@@ -804,7 +804,9 @@ impl DurableConversation {
         }
         if !matches!(
             record.phase,
-            ConversationPhase::ProviderPending | ConversationPhase::ProviderCancelling
+            ConversationPhase::ProviderPending
+                | ConversationPhase::ProviderCancelling
+                | ConversationPhase::Abandoned
         ) {
             return Err(invalid());
         }

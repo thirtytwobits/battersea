@@ -34,6 +34,7 @@ pub(crate) fn create_openai_adapter(
     logger: Option<Arc<dyn EngineAdapterLogger>>,
 ) -> Result<Arc<dyn EngineAdapter>, EngineAdapterRequestError> {
     crate::retry::validate(&backend)?;
+    validate_stream_mode(&backend, backend.chat.stream)?;
     let timeout_ms = backend
         .options
         .timeout_ms
@@ -141,6 +142,23 @@ pub(crate) fn create_openai_adapter(
             max_retries: Some(max_retries),
         },
     }))
+}
+
+fn validate_stream_mode(
+    backend: &EngineBackendConfig,
+    stream: bool,
+) -> Result<(), EngineAdapterRequestError> {
+    if !stream
+        && !(backend.options.background == Some(true)
+            && backend.options.background_mode.as_deref() == Some("poll"))
+    {
+        return Err(EngineAdapterRequestError::new(
+            &backend.provider,
+            "Non-streaming Responses requests require background polling.",
+            battersea_model::ErrorKind::InvalidRequest,
+        ));
+    }
+    Ok(())
 }
 
 struct OpenAiEngineAdapter {
@@ -285,6 +303,7 @@ impl EngineAdapter for OpenAiEngineAdapter {
         request: EngineTextStreamRequest,
     ) -> Result<EngineTextStream, EngineAdapterRequestError> {
         super::validate_chat_request(&self.backend, &request)?;
+        validate_stream_mode(&self.backend, request.shared.chat.stream)?;
         if !request.local_tools.is_empty() {
             return self.stream_text_with_local_tools(request).await;
         }
@@ -431,6 +450,7 @@ impl EngineAdapter for OpenAiEngineAdapter {
         request: EngineTextStreamRequest,
     ) -> Result<u64, EngineAdapterRequestError> {
         super::validate_chat_request(&self.backend, &request)?;
+        validate_stream_mode(&self.backend, request.shared.chat.stream)?;
         let body = build_input_token_count_body(&self.backend, &request)?;
         let response = crate::retry::send(
             self.http_client

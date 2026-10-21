@@ -702,6 +702,7 @@ async fn durable_provider_continuation_reopens_both_journals_and_retries_the_sav
             (true, false, false),
             (true, true, false),
             (true, true, true),
+            (false, true, true),
         ]
         .map(|(s, r, b)| (t, s, r, b))
     }) {
@@ -726,7 +727,11 @@ async fn durable_provider_continuation_reopens_both_journals_and_retries_the_sav
         let logs = Arc::new(Logs::default());
         let connect = || {
             if background {
-                host::background_responses_provider(&provider.endpoint, Some(logs.clone()))
+                host::background_responses_provider(
+                    &provider.endpoint,
+                    streaming,
+                    Some(logs.clone()),
+                )
             } else if responses {
                 host::responses_provider_with_logger(&provider.endpoint, logs.clone())
             } else {
@@ -1634,7 +1639,8 @@ async fn background_retrieval_failures_preserve_identity_and_cancellation_is_exp
     let (directory, _) = temporary_ledger();
     let fixture = BackgroundFixture::new(ProviderFixture::new(json!({"value":1}), false));
     let server = background_fixture::serve(fixture.clone()).await.unwrap();
-    let (adapter, chat) = host::background_responses_provider(&server.endpoint, None).unwrap();
+    let (adapter, chat) =
+        host::background_responses_provider(&server.endpoint, false, None).unwrap();
     let original = host::request(&ToolRegistry::default(), "operator", chat);
     let request = ConversationRequest {
         shared: original.shared,
@@ -1667,7 +1673,7 @@ async fn background_retrieval_failures_preserve_identity_and_cancellation_is_exp
     let path = directory.path().join("conversation.json");
     let pending_bytes = std::fs::read(&path).unwrap();
     assert_eq!(*fixture.operations.lock().unwrap(), ["create"]);
-    let (adapter, _) = host::background_responses_provider(&server.endpoint, None).unwrap();
+    let (adapter, _) = host::background_responses_provider(&server.endpoint, false, None).unwrap();
     let conversation = DurableConversation::open(
         store(),
         adapter,
@@ -1696,7 +1702,7 @@ async fn background_retrieval_failures_preserve_identity_and_cancellation_is_exp
     assert!(conversation.resume(8).await.is_err());
     drop(conversation);
     fixture.fail_cancel.store(false, Ordering::SeqCst);
-    let (adapter, _) = host::background_responses_provider(&server.endpoint, None).unwrap();
+    let (adapter, _) = host::background_responses_provider(&server.endpoint, false, None).unwrap();
     let conversation = DurableConversation::open(
         store(),
         adapter,
@@ -1736,7 +1742,8 @@ async fn background_retrieval_failures_preserve_identity_and_cancellation_is_exp
         value.as_object_mut().unwrap().remove("checksum");
         value["checksum"] = json!(battersea_model::configuration_digest(&value));
         std::fs::write(&path, serde_json::to_vec(&value).unwrap()).unwrap();
-        let (adapter, _) = host::background_responses_provider(&server.endpoint, None).unwrap();
+        let (adapter, _) =
+            host::background_responses_provider(&server.endpoint, false, None).unwrap();
         assert!(DurableConversation::open(
             store(),
             adapter,
@@ -1766,7 +1773,8 @@ async fn background_retrieval_failures_preserve_identity_and_cancellation_is_exp
         value["checksum"] = json!(battersea_model::configuration_digest(&value));
         let changed = serde_json::to_vec(&value).unwrap();
         std::fs::write(&path, &changed).unwrap();
-        let (adapter, _) = host::background_responses_provider(&server.endpoint, None).unwrap();
+        let (adapter, _) =
+            host::background_responses_provider(&server.endpoint, false, None).unwrap();
         assert!(
             DurableConversation::open(
                 store(),
@@ -1783,5 +1791,13 @@ async fn background_retrieval_failures_preserve_identity_and_cancellation_is_exp
         assert_eq!(std::fs::read(&path).unwrap(), changed);
     }
     std::fs::write(&path, bytes).unwrap();
+    let (foreground, mut chat) = host::responses_provider(&server.endpoint).unwrap();
+    chat.stream = false;
+    let unsupported = host::request(&ToolRegistry::default(), "operator", chat);
+    assert!(foreground.stream_text(unsupported.clone()).await.is_err());
+    assert!(foreground
+        .count_text_stream_input_tokens(unsupported)
+        .await
+        .is_err());
     assert_eq!(fixture.operations.lock().unwrap().len(), 6);
 }

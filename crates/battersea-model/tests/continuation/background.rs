@@ -392,3 +392,43 @@ async fn competing_poll_and_cancel_commands_dispatch_only_the_revision_winner() 
         1
     );
 }
+
+#[tokio::test]
+async fn abandoned_remote_work_can_be_cancelled_after_expiry_and_reopened() {
+    let store = Arc::new(Store::default());
+    let provider = Arc::new(Remote::default());
+    let mut scope = scope();
+    scope.expires_at_unix_ms -= 3800;
+    let d = remote(store.clone(), provider.clone(), scope.clone(), false).await;
+    let pending = d.resume(1).await.unwrap();
+    let abandoned = d
+        .reconcile(
+            pending.revision,
+            ConversationResolution::Abandon,
+            "operator",
+            "Original provider task fenced",
+        )
+        .await
+        .unwrap();
+    assert_eq!(abandoned.pending, pending.pending);
+    assert!(d.resume(abandoned.revision).await.is_err());
+    tokio::time::sleep(Duration::from_millis(250)).await;
+    let d = remote(store.clone(), provider.clone(), scope.clone(), true).await;
+    *store.fault.lock().unwrap() = Some((6, false));
+    assert!(d.cancel(abandoned.revision).await.is_err());
+    *store.fault.lock().unwrap() = None;
+    assert_eq!(provider.cancels.load(Ordering::SeqCst), 1);
+    let d = remote(store.clone(), provider.clone(), scope.clone(), true).await;
+    let cancelling = d.inspect().await.unwrap();
+    assert_eq!(cancelling.phase, ConversationPhase::ProviderCancelling);
+    assert!(d.resume(cancelling.revision).await.is_err());
+    let cancelled = d.cancel(cancelling.revision).await.unwrap();
+    assert_eq!(cancelled.phase, ConversationPhase::Abandoned);
+    assert_eq!(cancelled.pending, pending.pending);
+    assert_eq!(cancelled.resolutions.len(), 1);
+    let d = remote(store, provider.clone(), scope, true).await;
+    assert_eq!(d.cancel(cancelled.revision).await.unwrap(), cancelled);
+    assert_eq!(provider.creates.load(Ordering::SeqCst), 1);
+    assert_eq!(provider.polls.load(Ordering::SeqCst), 0);
+    assert_eq!(provider.cancels.load(Ordering::SeqCst), 2);
+}

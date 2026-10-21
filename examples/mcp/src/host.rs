@@ -99,9 +99,10 @@ pub fn responses_provider_with_logger(
 
 pub fn background_responses_provider(
     endpoint: &str,
+    stream: bool,
     logger: Option<Arc<dyn EngineAdapterLogger>>,
 ) -> Result<(Arc<dyn EngineAdapter>, EngineChatParameters)> {
-    configured_provider(endpoint, "openai-responses", true, true, logger)
+    configured_provider(endpoint, "openai-responses", stream, true, logger)
 }
 
 fn configured_provider(

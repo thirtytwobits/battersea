@@ -36,7 +36,9 @@ impl OpenAiEngineAdapter {
         state: Option<&Value>,
     ) -> Result<ConversationBinding, EngineAdapterRequestError> {
         super::super::validate_chat_request(&self.backend, &request.to_request())?;
-        if (self.background && self.background_mode != "poll") || !request.shared.chat.stream {
+        if (self.background && self.background_mode != "poll")
+            || (!self.background && !request.shared.chat.stream)
+        {
             return Err(EngineAdapterRequestError::new(
                 &self.backend.provider,
                 "Durable Responses continuation requires foreground streaming or background polling.",

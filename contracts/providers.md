@@ -158,6 +158,7 @@ returns pending state, a completed turn or terminal cancellation evidence. Adapt
 transition against the original request, preceding transcript and ordered tool results. The default
 adapter implementation supports completed generation through `conversation_turn`.
 
+Background polling accepts either value of `chat.stream` and sends non-streaming HTTP requests.
 A queued or in-progress Responses create publishes `ProviderPending` with an immutable native
 response identity. Reopening retains that identity and the exact submitted input. Each subsequent
 `resume` retrieves the same response after the configured poll interval. A pending retrieval
@@ -171,8 +172,9 @@ retrieval remain blocked until cancellation returns a matching terminal response
 receipt is published with `Abandoned`; repeating that command returns the saved receipt. Interrupted
 cancellation can be retried against the same remote identity. Cancellation is bounded by the
 configured timeout and remains available after conversation expiry. The host owns remote cleanup:
-dropping a conversation leaves the remote job running, and host abandonment preserves its handle.
-The host also coordinates outstanding tool approval work.
+dropping a conversation leaves the remote job running. Host abandonment preserves its handle,
+which remains available to `cancel` after reopen and expiry. Cleanup retains the abandonment
+record and publishes a terminal receipt. The host also coordinates outstanding tool approval work.
 
 Background expiry must fit both the backend operation timeout and background wait limit.
 Retrieval preserves absolute expiry and consumes no provider-attempt capacity. Remote retention

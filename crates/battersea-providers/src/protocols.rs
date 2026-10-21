@@ -72,7 +72,11 @@ pub fn register_builtin_adapters(
         registry.register(ProtocolAdapter {
             id: id.into(),
             contract_version: 1,
-            chat_streaming: vec![true],
+            chat_streaming: if id == "openai-responses" {
+                vec![true, false]
+            } else {
+                vec![true]
+            },
             context_overflow: if id == "openai-responses" {
                 vec![
                     battersea_model::engine::EngineContextOverflow::Error,
