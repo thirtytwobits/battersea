@@ -193,6 +193,7 @@ pub battersea_model::adapter::error::ToolCode::DuplicateTool
 pub battersea_model::adapter::error::ToolCode::InvalidToolApproval
 pub battersea_model::adapter::error::ToolCode::InvalidToolArguments
 pub battersea_model::adapter::error::ToolCode::InvalidToolCallId
+pub battersea_model::adapter::error::ToolCode::InvalidToolContinuation
 pub battersea_model::adapter::error::ToolCode::InvalidToolDefinition
 pub battersea_model::adapter::error::ToolCode::InvalidToolResult
 pub battersea_model::adapter::error::ToolCode::InvalidToolRounds
@@ -205,6 +206,10 @@ pub battersea_model::adapter::error::ToolCode::ToolApprovalExpired
 pub battersea_model::adapter::error::ToolCode::ToolApprovalPending
 pub battersea_model::adapter::error::ToolCode::ToolApprovalStorage
 pub battersea_model::adapter::error::ToolCode::ToolApprovalUnresolved
+pub battersea_model::adapter::error::ToolCode::ToolContinuationConflict
+pub battersea_model::adapter::error::ToolCode::ToolContinuationExpired
+pub battersea_model::adapter::error::ToolCode::ToolContinuationStorage
+pub battersea_model::adapter::error::ToolCode::ToolContinuationUnresolved
 pub battersea_model::adapter::error::ToolCode::ToolOutsideChoice
 pub battersea_model::adapter::error::ToolCode::ToolRoundsExceeded
 pub battersea_model::adapter::error::ToolCode::ToolTranscriptTooLarge
@@ -213,6 +218,7 @@ pub battersea_model::adapter::error::ToolCode::UnofferedTool
 pub battersea_model::adapter::error::ToolCode::UnofferedToolChoice
 pub battersea_model::adapter::error::ToolCode::UnregisteredTool
 pub battersea_model::adapter::error::ToolCode::UnsupportedToolContent
+pub battersea_model::adapter::error::ToolCode::UnsupportedToolContinuation
 impl battersea_model::ToolCode
 pub const battersea_model::ToolCode::ALL: &[Self]
 pub fn battersea_model::ToolCode::as_str(self) -> &'static str
@@ -540,7 +546,164 @@ pub fn battersea_model::adapter::tool_loop::ToolConversation::next_turn<'life0, 
 pub fn battersea_model::adapter::tool_loop::decode_tool_call(provider: &str, id: core::option::Option<&serde_json::value::Value>, name: core::option::Option<&serde_json::value::Value>, arguments: core::option::Option<serde_json::value::Value>) -> core::result::Result<battersea_model::EngineLocalToolCall, battersea_model::EngineAdapterRequestError>
 pub async fn battersea_model::adapter::tool_loop::run_tool_loop(conversation: impl battersea_model::tool_loop::ToolConversation, request: battersea_model::EngineTextStreamRequest, executor: alloc::sync::Arc<dyn battersea_model::EngineLocalToolExecutor>, logger: core::option::Option<alloc::sync::Arc<dyn battersea_model::EngineAdapterLogger>>, context: battersea_model::EngineAdapterDebugContext, events: battersea_model::tool_loop::ToolEventSender)
 pub async fn battersea_model::adapter::tool_loop::send_event(events: &battersea_model::tool_loop::ToolEventSender, event: battersea_model::EngineTextStreamEvent) -> core::result::Result<(), battersea_model::EngineAdapterRequestError>
+pub fn battersea_model::adapter::tool_loop::validate_tool_calls(provider: &str, request: &battersea_model::EngineTextStreamRequest, calls: &[battersea_model::EngineLocalToolCall]) -> core::result::Result<(), battersea_model::EngineAdapterRequestError>
 pub type battersea_model::adapter::tool_loop::ToolEventSender = tokio::sync::mpsc::bounded::Sender<core::result::Result<battersea_model::EngineTextStreamEvent, battersea_model::EngineAdapterRequestError>>
+pub enum battersea_model::adapter::ConversationPhase
+pub battersea_model::adapter::ConversationPhase::Abandoned
+pub battersea_model::adapter::ConversationPhase::AwaitingTools
+pub battersea_model::adapter::ConversationPhase::Completed
+pub battersea_model::adapter::ConversationPhase::ProviderIntent
+pub battersea_model::adapter::ConversationPhase::Ready
+impl core::clone::Clone for battersea_model::ConversationPhase
+pub fn battersea_model::ConversationPhase::clone(&self) -> battersea_model::ConversationPhase
+impl core::cmp::Eq for battersea_model::ConversationPhase
+impl core::cmp::PartialEq for battersea_model::ConversationPhase
+pub fn battersea_model::ConversationPhase::eq(&self, other: &battersea_model::ConversationPhase) -> bool
+impl core::fmt::Debug for battersea_model::ConversationPhase
+pub fn battersea_model::ConversationPhase::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for battersea_model::ConversationPhase
+impl core::marker::StructuralPartialEq for battersea_model::ConversationPhase
+impl serde_core::ser::Serialize for battersea_model::ConversationPhase
+pub fn battersea_model::ConversationPhase::serialize<__S>(&self, __serializer: __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for battersea_model::ConversationPhase
+pub fn battersea_model::ConversationPhase::deserialize<__D>(__deserializer: __D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for battersea_model::ConversationPhase
+impl core::marker::Send for battersea_model::ConversationPhase
+impl core::marker::Sync for battersea_model::ConversationPhase
+impl core::marker::Unpin for battersea_model::ConversationPhase
+impl core::panic::unwind_safe::RefUnwindSafe for battersea_model::ConversationPhase
+impl core::panic::unwind_safe::UnwindSafe for battersea_model::ConversationPhase
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_model::ConversationPhase where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_model::ConversationPhase where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<T, U> core::convert::Into<U> for battersea_model::ConversationPhase where U: core::convert::From<T>
+pub fn battersea_model::ConversationPhase::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_model::ConversationPhase where U: core::convert::Into<T>
+pub type battersea_model::ConversationPhase::Error = core::convert::Infallible
+pub fn battersea_model::ConversationPhase::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for battersea_model::ConversationPhase where U: core::convert::TryFrom<T>
+pub type battersea_model::ConversationPhase::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_model::ConversationPhase::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for battersea_model::ConversationPhase where T: core::clone::Clone
+pub type battersea_model::ConversationPhase::Owned = T
+pub fn battersea_model::ConversationPhase::clone_into(&self, target: &mut T)
+pub fn battersea_model::ConversationPhase::to_owned(&self) -> T
+impl<T> core::any::Any for battersea_model::ConversationPhase where T: 'static + ?core::marker::Sized
+pub fn battersea_model::ConversationPhase::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_model::ConversationPhase where T: ?core::marker::Sized
+pub fn battersea_model::ConversationPhase::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_model::ConversationPhase where T: ?core::marker::Sized
+pub fn battersea_model::ConversationPhase::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for battersea_model::ConversationPhase where T: core::clone::Clone
+pub unsafe fn battersea_model::ConversationPhase::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for battersea_model::ConversationPhase
+pub fn battersea_model::ConversationPhase::from(t: T) -> T
+impl<T> dyn_clone::DynClone for battersea_model::ConversationPhase where T: core::clone::Clone
+pub fn battersea_model::ConversationPhase::__clone_box(&self, _: dyn_clone::sealed::Private) -> *mut ()
+impl<T> outref::AsOut<T> for battersea_model::ConversationPhase where T: core::marker::Copy
+pub fn battersea_model::ConversationPhase::as_out(&mut self) -> outref::Out<'_, T>
+impl<T> serde_core::de::DeserializeOwned for battersea_model::ConversationPhase where T: for<'de> serde_core::de::Deserialize<'de>
+impl<T> typenum::type_operators::Same for battersea_model::ConversationPhase
+pub type battersea_model::ConversationPhase::Output = T
+impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_model::ConversationPhase where T: ?core::marker::Sized
+pub enum battersea_model::adapter::ConversationResolution
+pub battersea_model::adapter::ConversationResolution::Abandon
+pub battersea_model::adapter::ConversationResolution::Completed
+pub battersea_model::adapter::ConversationResolution::Completed::turn: battersea_model::ConversationTurn
+pub battersea_model::adapter::ConversationResolution::NotDispatched
+impl core::clone::Clone for battersea_model::ConversationResolution
+pub fn battersea_model::ConversationResolution::clone(&self) -> battersea_model::ConversationResolution
+impl core::cmp::PartialEq for battersea_model::ConversationResolution
+pub fn battersea_model::ConversationResolution::eq(&self, other: &battersea_model::ConversationResolution) -> bool
+impl core::marker::StructuralPartialEq for battersea_model::ConversationResolution
+impl serde_core::ser::Serialize for battersea_model::ConversationResolution
+pub fn battersea_model::ConversationResolution::serialize<__S>(&self, __serializer: __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for battersea_model::ConversationResolution
+pub fn battersea_model::ConversationResolution::deserialize<__D>(__deserializer: __D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for battersea_model::ConversationResolution
+impl core::marker::Send for battersea_model::ConversationResolution
+impl core::marker::Sync for battersea_model::ConversationResolution
+impl core::marker::Unpin for battersea_model::ConversationResolution
+impl core::panic::unwind_safe::RefUnwindSafe for battersea_model::ConversationResolution
+impl core::panic::unwind_safe::UnwindSafe for battersea_model::ConversationResolution
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_model::ConversationResolution where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_model::ConversationResolution where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<T, U> core::convert::Into<U> for battersea_model::ConversationResolution where U: core::convert::From<T>
+pub fn battersea_model::ConversationResolution::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_model::ConversationResolution where U: core::convert::Into<T>
+pub type battersea_model::ConversationResolution::Error = core::convert::Infallible
+pub fn battersea_model::ConversationResolution::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for battersea_model::ConversationResolution where U: core::convert::TryFrom<T>
+pub type battersea_model::ConversationResolution::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_model::ConversationResolution::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for battersea_model::ConversationResolution where T: core::clone::Clone
+pub type battersea_model::ConversationResolution::Owned = T
+pub fn battersea_model::ConversationResolution::clone_into(&self, target: &mut T)
+pub fn battersea_model::ConversationResolution::to_owned(&self) -> T
+impl<T> core::any::Any for battersea_model::ConversationResolution where T: 'static + ?core::marker::Sized
+pub fn battersea_model::ConversationResolution::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_model::ConversationResolution where T: ?core::marker::Sized
+pub fn battersea_model::ConversationResolution::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_model::ConversationResolution where T: ?core::marker::Sized
+pub fn battersea_model::ConversationResolution::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for battersea_model::ConversationResolution where T: core::clone::Clone
+pub unsafe fn battersea_model::ConversationResolution::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for battersea_model::ConversationResolution
+pub fn battersea_model::ConversationResolution::from(t: T) -> T
+impl<T> dyn_clone::DynClone for battersea_model::ConversationResolution where T: core::clone::Clone
+pub fn battersea_model::ConversationResolution::__clone_box(&self, _: dyn_clone::sealed::Private) -> *mut ()
+impl<T> serde_core::de::DeserializeOwned for battersea_model::ConversationResolution where T: for<'de> serde_core::de::Deserialize<'de>
+impl<T> typenum::type_operators::Same for battersea_model::ConversationResolution
+pub type battersea_model::ConversationResolution::Output = T
+impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_model::ConversationResolution where T: ?core::marker::Sized
+pub enum battersea_model::adapter::ConversationStoreError
+pub battersea_model::adapter::ConversationStoreError::Conflict
+pub battersea_model::adapter::ConversationStoreError::Unavailable
+impl core::clone::Clone for battersea_model::ConversationStoreError
+pub fn battersea_model::ConversationStoreError::clone(&self) -> battersea_model::ConversationStoreError
+impl core::cmp::Eq for battersea_model::ConversationStoreError
+impl core::cmp::PartialEq for battersea_model::ConversationStoreError
+pub fn battersea_model::ConversationStoreError::eq(&self, other: &battersea_model::ConversationStoreError) -> bool
+impl core::fmt::Debug for battersea_model::ConversationStoreError
+pub fn battersea_model::ConversationStoreError::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for battersea_model::ConversationStoreError
+impl core::marker::StructuralPartialEq for battersea_model::ConversationStoreError
+impl core::marker::Freeze for battersea_model::ConversationStoreError
+impl core::marker::Send for battersea_model::ConversationStoreError
+impl core::marker::Sync for battersea_model::ConversationStoreError
+impl core::marker::Unpin for battersea_model::ConversationStoreError
+impl core::panic::unwind_safe::RefUnwindSafe for battersea_model::ConversationStoreError
+impl core::panic::unwind_safe::UnwindSafe for battersea_model::ConversationStoreError
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_model::ConversationStoreError where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_model::ConversationStoreError where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<T, U> core::convert::Into<U> for battersea_model::ConversationStoreError where U: core::convert::From<T>
+pub fn battersea_model::ConversationStoreError::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_model::ConversationStoreError where U: core::convert::Into<T>
+pub type battersea_model::ConversationStoreError::Error = core::convert::Infallible
+pub fn battersea_model::ConversationStoreError::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for battersea_model::ConversationStoreError where U: core::convert::TryFrom<T>
+pub type battersea_model::ConversationStoreError::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_model::ConversationStoreError::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for battersea_model::ConversationStoreError where T: core::clone::Clone
+pub type battersea_model::ConversationStoreError::Owned = T
+pub fn battersea_model::ConversationStoreError::clone_into(&self, target: &mut T)
+pub fn battersea_model::ConversationStoreError::to_owned(&self) -> T
+impl<T> core::any::Any for battersea_model::ConversationStoreError where T: 'static + ?core::marker::Sized
+pub fn battersea_model::ConversationStoreError::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_model::ConversationStoreError where T: ?core::marker::Sized
+pub fn battersea_model::ConversationStoreError::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_model::ConversationStoreError where T: ?core::marker::Sized
+pub fn battersea_model::ConversationStoreError::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for battersea_model::ConversationStoreError where T: core::clone::Clone
+pub unsafe fn battersea_model::ConversationStoreError::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for battersea_model::ConversationStoreError
+pub fn battersea_model::ConversationStoreError::from(t: T) -> T
+impl<T> dyn_clone::DynClone for battersea_model::ConversationStoreError where T: core::clone::Clone
+pub fn battersea_model::ConversationStoreError::__clone_box(&self, _: dyn_clone::sealed::Private) -> *mut ()
+impl<T> outref::AsOut<T> for battersea_model::ConversationStoreError where T: core::marker::Copy
+pub fn battersea_model::ConversationStoreError::as_out(&mut self) -> outref::Out<'_, T>
+impl<T> typenum::type_operators::Same for battersea_model::ConversationStoreError
+pub type battersea_model::ConversationStoreError::Output = T
+impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_model::ConversationStoreError where T: ?core::marker::Sized
 pub enum battersea_model::adapter::EngineLocalToolResult
 pub battersea_model::adapter::EngineLocalToolResult::Content(battersea_model::ToolContentResult)
 pub battersea_model::adapter::EngineLocalToolResult::Json
@@ -961,6 +1124,369 @@ impl<T> serde_core::de::DeserializeOwned for battersea_model::ToolResourceConten
 impl<T> typenum::type_operators::Same for battersea_model::ToolResourceContents
 pub type battersea_model::ToolResourceContents::Output = T
 impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_model::ToolResourceContents where T: ?core::marker::Sized
+pub struct battersea_model::adapter::ConversationBinding
+pub battersea_model::adapter::ConversationBinding::configuration_revision: alloc::string::String
+pub battersea_model::adapter::ConversationBinding::origin: battersea_model::ProviderContentOrigin
+pub battersea_model::adapter::ConversationBinding::timeout_ms: u64
+impl core::clone::Clone for battersea_model::ConversationBinding
+pub fn battersea_model::ConversationBinding::clone(&self) -> battersea_model::ConversationBinding
+impl core::cmp::Eq for battersea_model::ConversationBinding
+impl core::cmp::PartialEq for battersea_model::ConversationBinding
+pub fn battersea_model::ConversationBinding::eq(&self, other: &battersea_model::ConversationBinding) -> bool
+impl core::fmt::Debug for battersea_model::ConversationBinding
+pub fn battersea_model::ConversationBinding::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for battersea_model::ConversationBinding
+impl serde_core::ser::Serialize for battersea_model::ConversationBinding
+pub fn battersea_model::ConversationBinding::serialize<__S>(&self, __serializer: __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for battersea_model::ConversationBinding
+pub fn battersea_model::ConversationBinding::deserialize<__D>(__deserializer: __D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for battersea_model::ConversationBinding
+impl core::marker::Send for battersea_model::ConversationBinding
+impl core::marker::Sync for battersea_model::ConversationBinding
+impl core::marker::Unpin for battersea_model::ConversationBinding
+impl core::panic::unwind_safe::RefUnwindSafe for battersea_model::ConversationBinding
+impl core::panic::unwind_safe::UnwindSafe for battersea_model::ConversationBinding
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_model::ConversationBinding where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_model::ConversationBinding where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<T, U> core::convert::Into<U> for battersea_model::ConversationBinding where U: core::convert::From<T>
+pub fn battersea_model::ConversationBinding::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_model::ConversationBinding where U: core::convert::Into<T>
+pub type battersea_model::ConversationBinding::Error = core::convert::Infallible
+pub fn battersea_model::ConversationBinding::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for battersea_model::ConversationBinding where U: core::convert::TryFrom<T>
+pub type battersea_model::ConversationBinding::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_model::ConversationBinding::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for battersea_model::ConversationBinding where T: core::clone::Clone
+pub type battersea_model::ConversationBinding::Owned = T
+pub fn battersea_model::ConversationBinding::clone_into(&self, target: &mut T)
+pub fn battersea_model::ConversationBinding::to_owned(&self) -> T
+impl<T> core::any::Any for battersea_model::ConversationBinding where T: 'static + ?core::marker::Sized
+pub fn battersea_model::ConversationBinding::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_model::ConversationBinding where T: ?core::marker::Sized
+pub fn battersea_model::ConversationBinding::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_model::ConversationBinding where T: ?core::marker::Sized
+pub fn battersea_model::ConversationBinding::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for battersea_model::ConversationBinding where T: core::clone::Clone
+pub unsafe fn battersea_model::ConversationBinding::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for battersea_model::ConversationBinding
+pub fn battersea_model::ConversationBinding::from(t: T) -> T
+impl<T> dyn_clone::DynClone for battersea_model::ConversationBinding where T: core::clone::Clone
+pub fn battersea_model::ConversationBinding::__clone_box(&self, _: dyn_clone::sealed::Private) -> *mut ()
+impl<T> serde_core::de::DeserializeOwned for battersea_model::ConversationBinding where T: for<'de> serde_core::de::Deserialize<'de>
+impl<T> typenum::type_operators::Same for battersea_model::ConversationBinding
+pub type battersea_model::ConversationBinding::Output = T
+impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_model::ConversationBinding where T: ?core::marker::Sized
+pub struct battersea_model::adapter::ConversationCheckpoint
+pub battersea_model::adapter::ConversationCheckpoint::attempts: u32
+pub battersea_model::adapter::ConversationCheckpoint::binding: battersea_model::ConversationBinding
+pub battersea_model::adapter::ConversationCheckpoint::checksum: alloc::string::String
+pub battersea_model::adapter::ConversationCheckpoint::max_bytes: usize
+pub battersea_model::adapter::ConversationCheckpoint::phase: battersea_model::ConversationPhase
+pub battersea_model::adapter::ConversationCheckpoint::request: battersea_model::ConversationRequest
+pub battersea_model::adapter::ConversationCheckpoint::resolutions: alloc::vec::Vec<battersea_model::StoredConversationResolution>
+pub battersea_model::adapter::ConversationCheckpoint::revision: u64
+pub battersea_model::adapter::ConversationCheckpoint::scope: battersea_model::ConversationScope
+pub battersea_model::adapter::ConversationCheckpoint::turns: alloc::vec::Vec<battersea_model::StoredConversationTurn>
+pub battersea_model::adapter::ConversationCheckpoint::updated_at_unix_ms: u64
+pub battersea_model::adapter::ConversationCheckpoint::version: u32
+impl battersea_model::ConversationCheckpoint
+pub fn battersea_model::ConversationCheckpoint::validate(&self) -> core::result::Result<(), battersea_model::EngineAdapterRequestError>
+impl core::clone::Clone for battersea_model::ConversationCheckpoint
+pub fn battersea_model::ConversationCheckpoint::clone(&self) -> battersea_model::ConversationCheckpoint
+impl core::cmp::PartialEq for battersea_model::ConversationCheckpoint
+pub fn battersea_model::ConversationCheckpoint::eq(&self, other: &battersea_model::ConversationCheckpoint) -> bool
+impl core::fmt::Debug for battersea_model::ConversationCheckpoint
+pub fn battersea_model::ConversationCheckpoint::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for battersea_model::ConversationCheckpoint
+impl serde_core::ser::Serialize for battersea_model::ConversationCheckpoint
+pub fn battersea_model::ConversationCheckpoint::serialize<__S>(&self, __serializer: __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for battersea_model::ConversationCheckpoint
+pub fn battersea_model::ConversationCheckpoint::deserialize<__D>(__deserializer: __D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for battersea_model::ConversationCheckpoint
+impl core::marker::Send for battersea_model::ConversationCheckpoint
+impl core::marker::Sync for battersea_model::ConversationCheckpoint
+impl core::marker::Unpin for battersea_model::ConversationCheckpoint
+impl core::panic::unwind_safe::RefUnwindSafe for battersea_model::ConversationCheckpoint
+impl core::panic::unwind_safe::UnwindSafe for battersea_model::ConversationCheckpoint
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_model::ConversationCheckpoint where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_model::ConversationCheckpoint where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<T, U> core::convert::Into<U> for battersea_model::ConversationCheckpoint where U: core::convert::From<T>
+pub fn battersea_model::ConversationCheckpoint::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_model::ConversationCheckpoint where U: core::convert::Into<T>
+pub type battersea_model::ConversationCheckpoint::Error = core::convert::Infallible
+pub fn battersea_model::ConversationCheckpoint::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for battersea_model::ConversationCheckpoint where U: core::convert::TryFrom<T>
+pub type battersea_model::ConversationCheckpoint::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_model::ConversationCheckpoint::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for battersea_model::ConversationCheckpoint where T: core::clone::Clone
+pub type battersea_model::ConversationCheckpoint::Owned = T
+pub fn battersea_model::ConversationCheckpoint::clone_into(&self, target: &mut T)
+pub fn battersea_model::ConversationCheckpoint::to_owned(&self) -> T
+impl<T> core::any::Any for battersea_model::ConversationCheckpoint where T: 'static + ?core::marker::Sized
+pub fn battersea_model::ConversationCheckpoint::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_model::ConversationCheckpoint where T: ?core::marker::Sized
+pub fn battersea_model::ConversationCheckpoint::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_model::ConversationCheckpoint where T: ?core::marker::Sized
+pub fn battersea_model::ConversationCheckpoint::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for battersea_model::ConversationCheckpoint where T: core::clone::Clone
+pub unsafe fn battersea_model::ConversationCheckpoint::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for battersea_model::ConversationCheckpoint
+pub fn battersea_model::ConversationCheckpoint::from(t: T) -> T
+impl<T> dyn_clone::DynClone for battersea_model::ConversationCheckpoint where T: core::clone::Clone
+pub fn battersea_model::ConversationCheckpoint::__clone_box(&self, _: dyn_clone::sealed::Private) -> *mut ()
+impl<T> serde_core::de::DeserializeOwned for battersea_model::ConversationCheckpoint where T: for<'de> serde_core::de::Deserialize<'de>
+impl<T> typenum::type_operators::Same for battersea_model::ConversationCheckpoint
+pub type battersea_model::ConversationCheckpoint::Output = T
+impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_model::ConversationCheckpoint where T: ?core::marker::Sized
+pub struct battersea_model::adapter::ConversationRequest
+pub battersea_model::adapter::ConversationRequest::max_turns: u32
+pub battersea_model::adapter::ConversationRequest::shared: battersea_model::EngineAdapterRequest
+pub battersea_model::adapter::ConversationRequest::tools: alloc::vec::Vec<battersea_model::EngineLocalToolDefinition>
+impl battersea_model::ConversationRequest
+pub fn battersea_model::ConversationRequest::to_request(&self) -> battersea_model::EngineTextStreamRequest
+impl core::clone::Clone for battersea_model::ConversationRequest
+pub fn battersea_model::ConversationRequest::clone(&self) -> battersea_model::ConversationRequest
+impl core::cmp::PartialEq for battersea_model::ConversationRequest
+pub fn battersea_model::ConversationRequest::eq(&self, other: &battersea_model::ConversationRequest) -> bool
+impl core::fmt::Debug for battersea_model::ConversationRequest
+pub fn battersea_model::ConversationRequest::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for battersea_model::ConversationRequest
+impl serde_core::ser::Serialize for battersea_model::ConversationRequest
+pub fn battersea_model::ConversationRequest::serialize<__S>(&self, __serializer: __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for battersea_model::ConversationRequest
+pub fn battersea_model::ConversationRequest::deserialize<__D>(__deserializer: __D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for battersea_model::ConversationRequest
+impl core::marker::Send for battersea_model::ConversationRequest
+impl core::marker::Sync for battersea_model::ConversationRequest
+impl core::marker::Unpin for battersea_model::ConversationRequest
+impl core::panic::unwind_safe::RefUnwindSafe for battersea_model::ConversationRequest
+impl core::panic::unwind_safe::UnwindSafe for battersea_model::ConversationRequest
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_model::ConversationRequest where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_model::ConversationRequest where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<T, U> core::convert::Into<U> for battersea_model::ConversationRequest where U: core::convert::From<T>
+pub fn battersea_model::ConversationRequest::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_model::ConversationRequest where U: core::convert::Into<T>
+pub type battersea_model::ConversationRequest::Error = core::convert::Infallible
+pub fn battersea_model::ConversationRequest::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for battersea_model::ConversationRequest where U: core::convert::TryFrom<T>
+pub type battersea_model::ConversationRequest::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_model::ConversationRequest::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for battersea_model::ConversationRequest where T: core::clone::Clone
+pub type battersea_model::ConversationRequest::Owned = T
+pub fn battersea_model::ConversationRequest::clone_into(&self, target: &mut T)
+pub fn battersea_model::ConversationRequest::to_owned(&self) -> T
+impl<T> core::any::Any for battersea_model::ConversationRequest where T: 'static + ?core::marker::Sized
+pub fn battersea_model::ConversationRequest::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_model::ConversationRequest where T: ?core::marker::Sized
+pub fn battersea_model::ConversationRequest::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_model::ConversationRequest where T: ?core::marker::Sized
+pub fn battersea_model::ConversationRequest::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for battersea_model::ConversationRequest where T: core::clone::Clone
+pub unsafe fn battersea_model::ConversationRequest::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for battersea_model::ConversationRequest
+pub fn battersea_model::ConversationRequest::from(t: T) -> T
+impl<T> dyn_clone::DynClone for battersea_model::ConversationRequest where T: core::clone::Clone
+pub fn battersea_model::ConversationRequest::__clone_box(&self, _: dyn_clone::sealed::Private) -> *mut ()
+impl<T> serde_core::de::DeserializeOwned for battersea_model::ConversationRequest where T: for<'de> serde_core::de::Deserialize<'de>
+impl<T> typenum::type_operators::Same for battersea_model::ConversationRequest
+pub type battersea_model::ConversationRequest::Output = T
+impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_model::ConversationRequest where T: ?core::marker::Sized
+pub struct battersea_model::adapter::ConversationScope
+pub battersea_model::adapter::ConversationScope::expires_at_unix_ms: u64
+pub battersea_model::adapter::ConversationScope::run_id: alloc::string::String
+pub battersea_model::adapter::ConversationScope::tool_binding_revision: alloc::string::String
+impl core::clone::Clone for battersea_model::ConversationScope
+pub fn battersea_model::ConversationScope::clone(&self) -> battersea_model::ConversationScope
+impl core::cmp::Eq for battersea_model::ConversationScope
+impl core::cmp::PartialEq for battersea_model::ConversationScope
+pub fn battersea_model::ConversationScope::eq(&self, other: &battersea_model::ConversationScope) -> bool
+impl core::fmt::Debug for battersea_model::ConversationScope
+pub fn battersea_model::ConversationScope::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for battersea_model::ConversationScope
+impl serde_core::ser::Serialize for battersea_model::ConversationScope
+pub fn battersea_model::ConversationScope::serialize<__S>(&self, __serializer: __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for battersea_model::ConversationScope
+pub fn battersea_model::ConversationScope::deserialize<__D>(__deserializer: __D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for battersea_model::ConversationScope
+impl core::marker::Send for battersea_model::ConversationScope
+impl core::marker::Sync for battersea_model::ConversationScope
+impl core::marker::Unpin for battersea_model::ConversationScope
+impl core::panic::unwind_safe::RefUnwindSafe for battersea_model::ConversationScope
+impl core::panic::unwind_safe::UnwindSafe for battersea_model::ConversationScope
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_model::ConversationScope where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_model::ConversationScope where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<T, U> core::convert::Into<U> for battersea_model::ConversationScope where U: core::convert::From<T>
+pub fn battersea_model::ConversationScope::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_model::ConversationScope where U: core::convert::Into<T>
+pub type battersea_model::ConversationScope::Error = core::convert::Infallible
+pub fn battersea_model::ConversationScope::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for battersea_model::ConversationScope where U: core::convert::TryFrom<T>
+pub type battersea_model::ConversationScope::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_model::ConversationScope::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for battersea_model::ConversationScope where T: core::clone::Clone
+pub type battersea_model::ConversationScope::Owned = T
+pub fn battersea_model::ConversationScope::clone_into(&self, target: &mut T)
+pub fn battersea_model::ConversationScope::to_owned(&self) -> T
+impl<T> core::any::Any for battersea_model::ConversationScope where T: 'static + ?core::marker::Sized
+pub fn battersea_model::ConversationScope::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_model::ConversationScope where T: ?core::marker::Sized
+pub fn battersea_model::ConversationScope::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_model::ConversationScope where T: ?core::marker::Sized
+pub fn battersea_model::ConversationScope::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for battersea_model::ConversationScope where T: core::clone::Clone
+pub unsafe fn battersea_model::ConversationScope::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for battersea_model::ConversationScope
+pub fn battersea_model::ConversationScope::from(t: T) -> T
+impl<T> dyn_clone::DynClone for battersea_model::ConversationScope where T: core::clone::Clone
+pub fn battersea_model::ConversationScope::__clone_box(&self, _: dyn_clone::sealed::Private) -> *mut ()
+impl<T> serde_core::de::DeserializeOwned for battersea_model::ConversationScope where T: for<'de> serde_core::de::Deserialize<'de>
+impl<T> typenum::type_operators::Same for battersea_model::ConversationScope
+pub type battersea_model::ConversationScope::Output = T
+impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_model::ConversationScope where T: ?core::marker::Sized
+pub struct battersea_model::adapter::ConversationToolResult
+pub battersea_model::adapter::ConversationToolResult::call: battersea_model::EngineLocalToolCall
+pub battersea_model::adapter::ConversationToolResult::result: battersea_model::EngineLocalToolResult
+impl core::clone::Clone for battersea_model::ConversationToolResult
+pub fn battersea_model::ConversationToolResult::clone(&self) -> battersea_model::ConversationToolResult
+impl core::cmp::PartialEq for battersea_model::ConversationToolResult
+pub fn battersea_model::ConversationToolResult::eq(&self, other: &battersea_model::ConversationToolResult) -> bool
+impl core::fmt::Debug for battersea_model::ConversationToolResult
+pub fn battersea_model::ConversationToolResult::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for battersea_model::ConversationToolResult
+impl serde_core::ser::Serialize for battersea_model::ConversationToolResult
+pub fn battersea_model::ConversationToolResult::serialize<__S>(&self, __serializer: __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for battersea_model::ConversationToolResult
+pub fn battersea_model::ConversationToolResult::deserialize<__D>(__deserializer: __D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for battersea_model::ConversationToolResult
+impl core::marker::Send for battersea_model::ConversationToolResult
+impl core::marker::Sync for battersea_model::ConversationToolResult
+impl core::marker::Unpin for battersea_model::ConversationToolResult
+impl core::panic::unwind_safe::RefUnwindSafe for battersea_model::ConversationToolResult
+impl core::panic::unwind_safe::UnwindSafe for battersea_model::ConversationToolResult
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_model::ConversationToolResult where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_model::ConversationToolResult where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<T, U> core::convert::Into<U> for battersea_model::ConversationToolResult where U: core::convert::From<T>
+pub fn battersea_model::ConversationToolResult::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_model::ConversationToolResult where U: core::convert::Into<T>
+pub type battersea_model::ConversationToolResult::Error = core::convert::Infallible
+pub fn battersea_model::ConversationToolResult::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for battersea_model::ConversationToolResult where U: core::convert::TryFrom<T>
+pub type battersea_model::ConversationToolResult::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_model::ConversationToolResult::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for battersea_model::ConversationToolResult where T: core::clone::Clone
+pub type battersea_model::ConversationToolResult::Owned = T
+pub fn battersea_model::ConversationToolResult::clone_into(&self, target: &mut T)
+pub fn battersea_model::ConversationToolResult::to_owned(&self) -> T
+impl<T> core::any::Any for battersea_model::ConversationToolResult where T: 'static + ?core::marker::Sized
+pub fn battersea_model::ConversationToolResult::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_model::ConversationToolResult where T: ?core::marker::Sized
+pub fn battersea_model::ConversationToolResult::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_model::ConversationToolResult where T: ?core::marker::Sized
+pub fn battersea_model::ConversationToolResult::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for battersea_model::ConversationToolResult where T: core::clone::Clone
+pub unsafe fn battersea_model::ConversationToolResult::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for battersea_model::ConversationToolResult
+pub fn battersea_model::ConversationToolResult::from(t: T) -> T
+impl<T> dyn_clone::DynClone for battersea_model::ConversationToolResult where T: core::clone::Clone
+pub fn battersea_model::ConversationToolResult::__clone_box(&self, _: dyn_clone::sealed::Private) -> *mut ()
+impl<T> serde_core::de::DeserializeOwned for battersea_model::ConversationToolResult where T: for<'de> serde_core::de::Deserialize<'de>
+impl<T> typenum::type_operators::Same for battersea_model::ConversationToolResult
+pub type battersea_model::ConversationToolResult::Output = T
+impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_model::ConversationToolResult where T: ?core::marker::Sized
+pub struct battersea_model::adapter::ConversationTurn
+pub battersea_model::adapter::ConversationTurn::calls: alloc::vec::Vec<battersea_model::EngineLocalToolCall>
+pub battersea_model::adapter::ConversationTurn::events: alloc::vec::Vec<battersea_model::EngineTextStreamEvent>
+pub battersea_model::adapter::ConversationTurn::state: serde_json::value::Value
+impl core::clone::Clone for battersea_model::ConversationTurn
+pub fn battersea_model::ConversationTurn::clone(&self) -> battersea_model::ConversationTurn
+impl core::cmp::PartialEq for battersea_model::ConversationTurn
+pub fn battersea_model::ConversationTurn::eq(&self, other: &battersea_model::ConversationTurn) -> bool
+impl core::marker::StructuralPartialEq for battersea_model::ConversationTurn
+impl serde_core::ser::Serialize for battersea_model::ConversationTurn
+pub fn battersea_model::ConversationTurn::serialize<__S>(&self, __serializer: __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for battersea_model::ConversationTurn
+pub fn battersea_model::ConversationTurn::deserialize<__D>(__deserializer: __D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for battersea_model::ConversationTurn
+impl core::marker::Send for battersea_model::ConversationTurn
+impl core::marker::Sync for battersea_model::ConversationTurn
+impl core::marker::Unpin for battersea_model::ConversationTurn
+impl core::panic::unwind_safe::RefUnwindSafe for battersea_model::ConversationTurn
+impl core::panic::unwind_safe::UnwindSafe for battersea_model::ConversationTurn
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_model::ConversationTurn where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_model::ConversationTurn where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<T, U> core::convert::Into<U> for battersea_model::ConversationTurn where U: core::convert::From<T>
+pub fn battersea_model::ConversationTurn::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_model::ConversationTurn where U: core::convert::Into<T>
+pub type battersea_model::ConversationTurn::Error = core::convert::Infallible
+pub fn battersea_model::ConversationTurn::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for battersea_model::ConversationTurn where U: core::convert::TryFrom<T>
+pub type battersea_model::ConversationTurn::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_model::ConversationTurn::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for battersea_model::ConversationTurn where T: core::clone::Clone
+pub type battersea_model::ConversationTurn::Owned = T
+pub fn battersea_model::ConversationTurn::clone_into(&self, target: &mut T)
+pub fn battersea_model::ConversationTurn::to_owned(&self) -> T
+impl<T> core::any::Any for battersea_model::ConversationTurn where T: 'static + ?core::marker::Sized
+pub fn battersea_model::ConversationTurn::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_model::ConversationTurn where T: ?core::marker::Sized
+pub fn battersea_model::ConversationTurn::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_model::ConversationTurn where T: ?core::marker::Sized
+pub fn battersea_model::ConversationTurn::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for battersea_model::ConversationTurn where T: core::clone::Clone
+pub unsafe fn battersea_model::ConversationTurn::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for battersea_model::ConversationTurn
+pub fn battersea_model::ConversationTurn::from(t: T) -> T
+impl<T> dyn_clone::DynClone for battersea_model::ConversationTurn where T: core::clone::Clone
+pub fn battersea_model::ConversationTurn::__clone_box(&self, _: dyn_clone::sealed::Private) -> *mut ()
+impl<T> serde_core::de::DeserializeOwned for battersea_model::ConversationTurn where T: for<'de> serde_core::de::Deserialize<'de>
+impl<T> typenum::type_operators::Same for battersea_model::ConversationTurn
+pub type battersea_model::ConversationTurn::Output = T
+impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_model::ConversationTurn where T: ?core::marker::Sized
+pub struct battersea_model::adapter::DurableConversation
+impl battersea_model::DurableConversation
+pub async fn battersea_model::DurableConversation::create(store: alloc::sync::Arc<dyn battersea_model::ConversationStore>, adapter: alloc::sync::Arc<dyn battersea_model::EngineAdapter>, scope: battersea_model::ConversationScope, request: battersea_model::ConversationRequest, max_bytes: usize, store_timeout: core::time::Duration) -> core::result::Result<Self, battersea_model::EngineAdapterRequestError>
+pub async fn battersea_model::DurableConversation::inspect(&self) -> core::result::Result<battersea_model::ConversationCheckpoint, battersea_model::EngineAdapterRequestError>
+pub async fn battersea_model::DurableConversation::open(store: alloc::sync::Arc<dyn battersea_model::ConversationStore>, adapter: alloc::sync::Arc<dyn battersea_model::EngineAdapter>, scope: battersea_model::ConversationScope, request: battersea_model::ConversationRequest, max_bytes: usize, store_timeout: core::time::Duration) -> core::result::Result<Self, battersea_model::EngineAdapterRequestError>
+pub async fn battersea_model::DurableConversation::reconcile(&self, expected_revision: u64, resolution: battersea_model::ConversationResolution, actor: &str, evidence: &str) -> core::result::Result<battersea_model::ConversationCheckpoint, battersea_model::EngineAdapterRequestError>
+pub async fn battersea_model::DurableConversation::record_tool_result(&self, expected_revision: u64, result: battersea_model::ConversationToolResult) -> core::result::Result<battersea_model::ConversationCheckpoint, battersea_model::EngineAdapterRequestError>
+pub async fn battersea_model::DurableConversation::resume(&self, expected_revision: u64) -> core::result::Result<battersea_model::ConversationCheckpoint, battersea_model::EngineAdapterRequestError>
+impl core::clone::Clone for battersea_model::DurableConversation
+pub fn battersea_model::DurableConversation::clone(&self) -> battersea_model::DurableConversation
+impl core::marker::Freeze for battersea_model::DurableConversation
+impl core::marker::Send for battersea_model::DurableConversation
+impl core::marker::Sync for battersea_model::DurableConversation
+impl core::marker::Unpin for battersea_model::DurableConversation
+impl !core::panic::unwind_safe::RefUnwindSafe for battersea_model::DurableConversation
+impl !core::panic::unwind_safe::UnwindSafe for battersea_model::DurableConversation
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_model::DurableConversation where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_model::DurableConversation where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<T, U> core::convert::Into<U> for battersea_model::DurableConversation where U: core::convert::From<T>
+pub fn battersea_model::DurableConversation::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_model::DurableConversation where U: core::convert::Into<T>
+pub type battersea_model::DurableConversation::Error = core::convert::Infallible
+pub fn battersea_model::DurableConversation::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for battersea_model::DurableConversation where U: core::convert::TryFrom<T>
+pub type battersea_model::DurableConversation::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_model::DurableConversation::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for battersea_model::DurableConversation where T: core::clone::Clone
+pub type battersea_model::DurableConversation::Owned = T
+pub fn battersea_model::DurableConversation::clone_into(&self, target: &mut T)
+pub fn battersea_model::DurableConversation::to_owned(&self) -> T
+impl<T> core::any::Any for battersea_model::DurableConversation where T: 'static + ?core::marker::Sized
+pub fn battersea_model::DurableConversation::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_model::DurableConversation where T: ?core::marker::Sized
+pub fn battersea_model::DurableConversation::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_model::DurableConversation where T: ?core::marker::Sized
+pub fn battersea_model::DurableConversation::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for battersea_model::DurableConversation where T: core::clone::Clone
+pub unsafe fn battersea_model::DurableConversation::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for battersea_model::DurableConversation
+pub fn battersea_model::DurableConversation::from(t: T) -> T
+impl<T> dyn_clone::DynClone for battersea_model::DurableConversation where T: core::clone::Clone
+pub fn battersea_model::DurableConversation::__clone_box(&self, _: dyn_clone::sealed::Private) -> *mut ()
+impl<T> typenum::type_operators::Same for battersea_model::DurableConversation
+pub type battersea_model::DurableConversation::Output = T
+impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_model::DurableConversation where T: ?core::marker::Sized
 pub struct battersea_model::adapter::EngineAdapterDebugContext
 pub battersea_model::adapter::EngineAdapterDebugContext::backend: alloc::string::String
 pub battersea_model::adapter::EngineAdapterDebugContext::base_url: core::option::Option<alloc::string::String>
@@ -1128,8 +1654,15 @@ impl battersea_model::EngineAdapterRequest
 pub fn battersea_model::EngineAdapterRequest::text_for_role(&self, role: battersea_model::Role) -> alloc::string::String
 impl core::clone::Clone for battersea_model::EngineAdapterRequest
 pub fn battersea_model::EngineAdapterRequest::clone(&self) -> battersea_model::EngineAdapterRequest
+impl core::cmp::PartialEq for battersea_model::EngineAdapterRequest
+pub fn battersea_model::EngineAdapterRequest::eq(&self, other: &battersea_model::EngineAdapterRequest) -> bool
 impl core::fmt::Debug for battersea_model::EngineAdapterRequest
 pub fn battersea_model::EngineAdapterRequest::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for battersea_model::EngineAdapterRequest
+impl serde_core::ser::Serialize for battersea_model::EngineAdapterRequest
+pub fn battersea_model::EngineAdapterRequest::serialize<__S>(&self, __serializer: __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for battersea_model::EngineAdapterRequest
+pub fn battersea_model::EngineAdapterRequest::deserialize<__D>(__deserializer: __D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
 impl core::marker::Freeze for battersea_model::EngineAdapterRequest
 impl core::marker::Send for battersea_model::EngineAdapterRequest
 impl core::marker::Sync for battersea_model::EngineAdapterRequest
@@ -1162,6 +1695,7 @@ impl<T> core::convert::From<T> for battersea_model::EngineAdapterRequest
 pub fn battersea_model::EngineAdapterRequest::from(t: T) -> T
 impl<T> dyn_clone::DynClone for battersea_model::EngineAdapterRequest where T: core::clone::Clone
 pub fn battersea_model::EngineAdapterRequest::__clone_box(&self, _: dyn_clone::sealed::Private) -> *mut ()
+impl<T> serde_core::de::DeserializeOwned for battersea_model::EngineAdapterRequest where T: for<'de> serde_core::de::Deserialize<'de>
 impl<T> typenum::type_operators::Same for battersea_model::EngineAdapterRequest
 pub type battersea_model::EngineAdapterRequest::Output = T
 impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_model::EngineAdapterRequest where T: ?core::marker::Sized
@@ -2021,6 +2555,105 @@ pub fn battersea_model::NoLocalTools::from(t: T) -> T
 impl<T> typenum::type_operators::Same for battersea_model::NoLocalTools
 pub type battersea_model::NoLocalTools::Output = T
 impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_model::NoLocalTools where T: ?core::marker::Sized
+pub struct battersea_model::adapter::StoredConversationResolution
+pub battersea_model::adapter::StoredConversationResolution::actor: alloc::string::String
+pub battersea_model::adapter::StoredConversationResolution::attempt: u32
+pub battersea_model::adapter::StoredConversationResolution::evidence: alloc::string::String
+pub battersea_model::adapter::StoredConversationResolution::resolution: battersea_model::ConversationResolution
+impl core::clone::Clone for battersea_model::StoredConversationResolution
+pub fn battersea_model::StoredConversationResolution::clone(&self) -> battersea_model::StoredConversationResolution
+impl core::cmp::PartialEq for battersea_model::StoredConversationResolution
+pub fn battersea_model::StoredConversationResolution::eq(&self, other: &battersea_model::StoredConversationResolution) -> bool
+impl core::marker::StructuralPartialEq for battersea_model::StoredConversationResolution
+impl serde_core::ser::Serialize for battersea_model::StoredConversationResolution
+pub fn battersea_model::StoredConversationResolution::serialize<__S>(&self, __serializer: __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for battersea_model::StoredConversationResolution
+pub fn battersea_model::StoredConversationResolution::deserialize<__D>(__deserializer: __D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for battersea_model::StoredConversationResolution
+impl core::marker::Send for battersea_model::StoredConversationResolution
+impl core::marker::Sync for battersea_model::StoredConversationResolution
+impl core::marker::Unpin for battersea_model::StoredConversationResolution
+impl core::panic::unwind_safe::RefUnwindSafe for battersea_model::StoredConversationResolution
+impl core::panic::unwind_safe::UnwindSafe for battersea_model::StoredConversationResolution
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_model::StoredConversationResolution where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_model::StoredConversationResolution where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<T, U> core::convert::Into<U> for battersea_model::StoredConversationResolution where U: core::convert::From<T>
+pub fn battersea_model::StoredConversationResolution::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_model::StoredConversationResolution where U: core::convert::Into<T>
+pub type battersea_model::StoredConversationResolution::Error = core::convert::Infallible
+pub fn battersea_model::StoredConversationResolution::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for battersea_model::StoredConversationResolution where U: core::convert::TryFrom<T>
+pub type battersea_model::StoredConversationResolution::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_model::StoredConversationResolution::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for battersea_model::StoredConversationResolution where T: core::clone::Clone
+pub type battersea_model::StoredConversationResolution::Owned = T
+pub fn battersea_model::StoredConversationResolution::clone_into(&self, target: &mut T)
+pub fn battersea_model::StoredConversationResolution::to_owned(&self) -> T
+impl<T> core::any::Any for battersea_model::StoredConversationResolution where T: 'static + ?core::marker::Sized
+pub fn battersea_model::StoredConversationResolution::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_model::StoredConversationResolution where T: ?core::marker::Sized
+pub fn battersea_model::StoredConversationResolution::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_model::StoredConversationResolution where T: ?core::marker::Sized
+pub fn battersea_model::StoredConversationResolution::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for battersea_model::StoredConversationResolution where T: core::clone::Clone
+pub unsafe fn battersea_model::StoredConversationResolution::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for battersea_model::StoredConversationResolution
+pub fn battersea_model::StoredConversationResolution::from(t: T) -> T
+impl<T> dyn_clone::DynClone for battersea_model::StoredConversationResolution where T: core::clone::Clone
+pub fn battersea_model::StoredConversationResolution::__clone_box(&self, _: dyn_clone::sealed::Private) -> *mut ()
+impl<T> serde_core::de::DeserializeOwned for battersea_model::StoredConversationResolution where T: for<'de> serde_core::de::Deserialize<'de>
+impl<T> typenum::type_operators::Same for battersea_model::StoredConversationResolution
+pub type battersea_model::StoredConversationResolution::Output = T
+impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_model::StoredConversationResolution where T: ?core::marker::Sized
+pub struct battersea_model::adapter::StoredConversationTurn
+pub battersea_model::adapter::StoredConversationTurn::attempt: u32
+pub battersea_model::adapter::StoredConversationTurn::response: battersea_model::ConversationTurn
+pub battersea_model::adapter::StoredConversationTurn::results: alloc::collections::btree::map::BTreeMap<alloc::string::String, battersea_model::ConversationToolResult>
+impl core::clone::Clone for battersea_model::StoredConversationTurn
+pub fn battersea_model::StoredConversationTurn::clone(&self) -> battersea_model::StoredConversationTurn
+impl core::cmp::PartialEq for battersea_model::StoredConversationTurn
+pub fn battersea_model::StoredConversationTurn::eq(&self, other: &battersea_model::StoredConversationTurn) -> bool
+impl core::marker::StructuralPartialEq for battersea_model::StoredConversationTurn
+impl serde_core::ser::Serialize for battersea_model::StoredConversationTurn
+pub fn battersea_model::StoredConversationTurn::serialize<__S>(&self, __serializer: __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for battersea_model::StoredConversationTurn
+pub fn battersea_model::StoredConversationTurn::deserialize<__D>(__deserializer: __D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for battersea_model::StoredConversationTurn
+impl core::marker::Send for battersea_model::StoredConversationTurn
+impl core::marker::Sync for battersea_model::StoredConversationTurn
+impl core::marker::Unpin for battersea_model::StoredConversationTurn
+impl core::panic::unwind_safe::RefUnwindSafe for battersea_model::StoredConversationTurn
+impl core::panic::unwind_safe::UnwindSafe for battersea_model::StoredConversationTurn
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_model::StoredConversationTurn where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_model::StoredConversationTurn where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<T, U> core::convert::Into<U> for battersea_model::StoredConversationTurn where U: core::convert::From<T>
+pub fn battersea_model::StoredConversationTurn::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_model::StoredConversationTurn where U: core::convert::Into<T>
+pub type battersea_model::StoredConversationTurn::Error = core::convert::Infallible
+pub fn battersea_model::StoredConversationTurn::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for battersea_model::StoredConversationTurn where U: core::convert::TryFrom<T>
+pub type battersea_model::StoredConversationTurn::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_model::StoredConversationTurn::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for battersea_model::StoredConversationTurn where T: core::clone::Clone
+pub type battersea_model::StoredConversationTurn::Owned = T
+pub fn battersea_model::StoredConversationTurn::clone_into(&self, target: &mut T)
+pub fn battersea_model::StoredConversationTurn::to_owned(&self) -> T
+impl<T> core::any::Any for battersea_model::StoredConversationTurn where T: 'static + ?core::marker::Sized
+pub fn battersea_model::StoredConversationTurn::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_model::StoredConversationTurn where T: ?core::marker::Sized
+pub fn battersea_model::StoredConversationTurn::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_model::StoredConversationTurn where T: ?core::marker::Sized
+pub fn battersea_model::StoredConversationTurn::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for battersea_model::StoredConversationTurn where T: core::clone::Clone
+pub unsafe fn battersea_model::StoredConversationTurn::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for battersea_model::StoredConversationTurn
+pub fn battersea_model::StoredConversationTurn::from(t: T) -> T
+impl<T> dyn_clone::DynClone for battersea_model::StoredConversationTurn where T: core::clone::Clone
+pub fn battersea_model::StoredConversationTurn::__clone_box(&self, _: dyn_clone::sealed::Private) -> *mut ()
+impl<T> serde_core::de::DeserializeOwned for battersea_model::StoredConversationTurn where T: for<'de> serde_core::de::Deserialize<'de>
+impl<T> typenum::type_operators::Same for battersea_model::StoredConversationTurn
+pub type battersea_model::StoredConversationTurn::Output = T
+impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_model::StoredConversationTurn where T: ?core::marker::Sized
 pub struct battersea_model::adapter::ToolContentResult
 pub battersea_model::adapter::ToolContentResult::content_blocks: alloc::vec::Vec<battersea_model::ToolContentBlock>
 pub battersea_model::adapter::ToolContentResult::is_error: bool
@@ -2074,10 +2707,17 @@ impl<T> serde_core::de::DeserializeOwned for battersea_model::ToolContentResult 
 impl<T> typenum::type_operators::Same for battersea_model::ToolContentResult
 pub type battersea_model::ToolContentResult::Output = T
 impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_model::ToolContentResult where T: ?core::marker::Sized
+pub const battersea_model::adapter::CONVERSATION_CHECKPOINT_VERSION: u32
+pub trait battersea_model::adapter::ConversationStore: core::marker::Send + core::marker::Sync
+pub fn battersea_model::adapter::ConversationStore::compare_exchange<'life0, 'life1, 'life2, 'async_trait>(&'life0 self, run_id: &'life1 str, expected_revision: core::option::Option<u64>, next: &'life2 battersea_model::ConversationCheckpoint) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<(), battersea_model::ConversationStoreError>> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait, 'life1: 'async_trait, 'life2: 'async_trait
+pub fn battersea_model::adapter::ConversationStore::load<'life0, 'life1, 'async_trait>(&'life0 self, run_id: &'life1 str, max_bytes: usize) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<core::option::Option<battersea_model::ConversationCheckpoint>, battersea_model::ConversationStoreError>> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait, 'life1: 'async_trait
 pub trait battersea_model::adapter::EngineAdapter: core::marker::Send + core::marker::Sync
+pub fn battersea_model::adapter::EngineAdapter::conversation_turn<'life0, 'async_trait>(&'life0 self, _request: battersea_model::ConversationRequest, _state: core::option::Option<serde_json::value::Value>, _results: alloc::vec::Vec<battersea_model::ConversationToolResult>) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<battersea_model::ConversationTurn, battersea_model::EngineAdapterRequestError>> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait
 pub fn battersea_model::adapter::EngineAdapter::count_text_stream_input_tokens<'life0, 'async_trait>(&'life0 self, request: battersea_model::EngineTextStreamRequest) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<u64, battersea_model::EngineAdapterRequestError>> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait
 pub fn battersea_model::adapter::EngineAdapter::describe_debug_context(&self) -> battersea_model::EngineAdapterDebugContext
 pub fn battersea_model::adapter::EngineAdapter::stream_text<'life0, 'async_trait>(&'life0 self, request: battersea_model::EngineTextStreamRequest) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<battersea_model::EngineTextStream, battersea_model::EngineAdapterRequestError>> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait
+pub fn battersea_model::adapter::EngineAdapter::validate_conversation(&self, _request: &battersea_model::ConversationRequest, _state: core::option::Option<&serde_json::value::Value>) -> core::result::Result<battersea_model::ConversationBinding, battersea_model::EngineAdapterRequestError>
+pub fn battersea_model::adapter::EngineAdapter::validate_conversation_turn(&self, _request: &battersea_model::ConversationRequest, _previous: core::option::Option<&serde_json::value::Value>, _results: &[battersea_model::ConversationToolResult], _turn: &battersea_model::ConversationTurn) -> core::result::Result<battersea_model::ConversationBinding, battersea_model::EngineAdapterRequestError>
 pub trait battersea_model::adapter::EngineAdapterLogger: core::marker::Send + core::marker::Sync
 pub fn battersea_model::adapter::EngineAdapterLogger::on_error<'life0, 'async_trait>(&'life0 self, _entry: battersea_model::EngineAdapterErrorLog) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = ()> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait
 pub fn battersea_model::adapter::EngineAdapterLogger::on_request<'life0, 'async_trait>(&'life0 self, _entry: battersea_model::EngineAdapterRequestLog) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = ()> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait
@@ -3472,6 +4112,7 @@ pub battersea_model::error::ToolCode::DuplicateTool
 pub battersea_model::error::ToolCode::InvalidToolApproval
 pub battersea_model::error::ToolCode::InvalidToolArguments
 pub battersea_model::error::ToolCode::InvalidToolCallId
+pub battersea_model::error::ToolCode::InvalidToolContinuation
 pub battersea_model::error::ToolCode::InvalidToolDefinition
 pub battersea_model::error::ToolCode::InvalidToolResult
 pub battersea_model::error::ToolCode::InvalidToolRounds
@@ -3484,6 +4125,10 @@ pub battersea_model::error::ToolCode::ToolApprovalExpired
 pub battersea_model::error::ToolCode::ToolApprovalPending
 pub battersea_model::error::ToolCode::ToolApprovalStorage
 pub battersea_model::error::ToolCode::ToolApprovalUnresolved
+pub battersea_model::error::ToolCode::ToolContinuationConflict
+pub battersea_model::error::ToolCode::ToolContinuationExpired
+pub battersea_model::error::ToolCode::ToolContinuationStorage
+pub battersea_model::error::ToolCode::ToolContinuationUnresolved
 pub battersea_model::error::ToolCode::ToolOutsideChoice
 pub battersea_model::error::ToolCode::ToolRoundsExceeded
 pub battersea_model::error::ToolCode::ToolTranscriptTooLarge
@@ -3492,6 +4137,7 @@ pub battersea_model::error::ToolCode::UnofferedTool
 pub battersea_model::error::ToolCode::UnofferedToolChoice
 pub battersea_model::error::ToolCode::UnregisteredTool
 pub battersea_model::error::ToolCode::UnsupportedToolContent
+pub battersea_model::error::ToolCode::UnsupportedToolContinuation
 impl battersea_model::ToolCode
 pub const battersea_model::ToolCode::ALL: &[Self]
 pub fn battersea_model::ToolCode::as_str(self) -> &'static str
@@ -6294,6 +6940,7 @@ pub fn battersea_model::tool_loop::ToolConversation::next_turn<'life0, 'life1, '
 pub fn battersea_model::tool_loop::decode_tool_call(provider: &str, id: core::option::Option<&serde_json::value::Value>, name: core::option::Option<&serde_json::value::Value>, arguments: core::option::Option<serde_json::value::Value>) -> core::result::Result<battersea_model::EngineLocalToolCall, battersea_model::EngineAdapterRequestError>
 pub async fn battersea_model::tool_loop::run_tool_loop(conversation: impl battersea_model::tool_loop::ToolConversation, request: battersea_model::EngineTextStreamRequest, executor: alloc::sync::Arc<dyn battersea_model::EngineLocalToolExecutor>, logger: core::option::Option<alloc::sync::Arc<dyn battersea_model::EngineAdapterLogger>>, context: battersea_model::EngineAdapterDebugContext, events: battersea_model::tool_loop::ToolEventSender)
 pub async fn battersea_model::tool_loop::send_event(events: &battersea_model::tool_loop::ToolEventSender, event: battersea_model::EngineTextStreamEvent) -> core::result::Result<(), battersea_model::EngineAdapterRequestError>
+pub fn battersea_model::tool_loop::validate_tool_calls(provider: &str, request: &battersea_model::EngineTextStreamRequest, calls: &[battersea_model::EngineLocalToolCall]) -> core::result::Result<(), battersea_model::EngineAdapterRequestError>
 pub type battersea_model::tool_loop::ToolEventSender = tokio::sync::mpsc::bounded::Sender<core::result::Result<battersea_model::EngineTextStreamEvent, battersea_model::EngineAdapterRequestError>>
 pub enum battersea_model::Authentication
 pub battersea_model::Authentication::Bearer
@@ -6445,6 +7092,162 @@ impl<T> serde_core::de::DeserializeOwned for battersea_model::ContentBlock where
 impl<T> typenum::type_operators::Same for battersea_model::ContentBlock
 pub type battersea_model::ContentBlock::Output = T
 impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_model::ContentBlock where T: ?core::marker::Sized
+pub enum battersea_model::ConversationPhase
+pub battersea_model::ConversationPhase::Abandoned
+pub battersea_model::ConversationPhase::AwaitingTools
+pub battersea_model::ConversationPhase::Completed
+pub battersea_model::ConversationPhase::ProviderIntent
+pub battersea_model::ConversationPhase::Ready
+impl core::clone::Clone for battersea_model::ConversationPhase
+pub fn battersea_model::ConversationPhase::clone(&self) -> battersea_model::ConversationPhase
+impl core::cmp::Eq for battersea_model::ConversationPhase
+impl core::cmp::PartialEq for battersea_model::ConversationPhase
+pub fn battersea_model::ConversationPhase::eq(&self, other: &battersea_model::ConversationPhase) -> bool
+impl core::fmt::Debug for battersea_model::ConversationPhase
+pub fn battersea_model::ConversationPhase::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for battersea_model::ConversationPhase
+impl core::marker::StructuralPartialEq for battersea_model::ConversationPhase
+impl serde_core::ser::Serialize for battersea_model::ConversationPhase
+pub fn battersea_model::ConversationPhase::serialize<__S>(&self, __serializer: __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for battersea_model::ConversationPhase
+pub fn battersea_model::ConversationPhase::deserialize<__D>(__deserializer: __D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for battersea_model::ConversationPhase
+impl core::marker::Send for battersea_model::ConversationPhase
+impl core::marker::Sync for battersea_model::ConversationPhase
+impl core::marker::Unpin for battersea_model::ConversationPhase
+impl core::panic::unwind_safe::RefUnwindSafe for battersea_model::ConversationPhase
+impl core::panic::unwind_safe::UnwindSafe for battersea_model::ConversationPhase
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_model::ConversationPhase where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_model::ConversationPhase where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<T, U> core::convert::Into<U> for battersea_model::ConversationPhase where U: core::convert::From<T>
+pub fn battersea_model::ConversationPhase::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_model::ConversationPhase where U: core::convert::Into<T>
+pub type battersea_model::ConversationPhase::Error = core::convert::Infallible
+pub fn battersea_model::ConversationPhase::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for battersea_model::ConversationPhase where U: core::convert::TryFrom<T>
+pub type battersea_model::ConversationPhase::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_model::ConversationPhase::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for battersea_model::ConversationPhase where T: core::clone::Clone
+pub type battersea_model::ConversationPhase::Owned = T
+pub fn battersea_model::ConversationPhase::clone_into(&self, target: &mut T)
+pub fn battersea_model::ConversationPhase::to_owned(&self) -> T
+impl<T> core::any::Any for battersea_model::ConversationPhase where T: 'static + ?core::marker::Sized
+pub fn battersea_model::ConversationPhase::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_model::ConversationPhase where T: ?core::marker::Sized
+pub fn battersea_model::ConversationPhase::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_model::ConversationPhase where T: ?core::marker::Sized
+pub fn battersea_model::ConversationPhase::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for battersea_model::ConversationPhase where T: core::clone::Clone
+pub unsafe fn battersea_model::ConversationPhase::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for battersea_model::ConversationPhase
+pub fn battersea_model::ConversationPhase::from(t: T) -> T
+impl<T> dyn_clone::DynClone for battersea_model::ConversationPhase where T: core::clone::Clone
+pub fn battersea_model::ConversationPhase::__clone_box(&self, _: dyn_clone::sealed::Private) -> *mut ()
+impl<T> outref::AsOut<T> for battersea_model::ConversationPhase where T: core::marker::Copy
+pub fn battersea_model::ConversationPhase::as_out(&mut self) -> outref::Out<'_, T>
+impl<T> serde_core::de::DeserializeOwned for battersea_model::ConversationPhase where T: for<'de> serde_core::de::Deserialize<'de>
+impl<T> typenum::type_operators::Same for battersea_model::ConversationPhase
+pub type battersea_model::ConversationPhase::Output = T
+impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_model::ConversationPhase where T: ?core::marker::Sized
+pub enum battersea_model::ConversationResolution
+pub battersea_model::ConversationResolution::Abandon
+pub battersea_model::ConversationResolution::Completed
+pub battersea_model::ConversationResolution::Completed::turn: battersea_model::ConversationTurn
+pub battersea_model::ConversationResolution::NotDispatched
+impl core::clone::Clone for battersea_model::ConversationResolution
+pub fn battersea_model::ConversationResolution::clone(&self) -> battersea_model::ConversationResolution
+impl core::cmp::PartialEq for battersea_model::ConversationResolution
+pub fn battersea_model::ConversationResolution::eq(&self, other: &battersea_model::ConversationResolution) -> bool
+impl core::marker::StructuralPartialEq for battersea_model::ConversationResolution
+impl serde_core::ser::Serialize for battersea_model::ConversationResolution
+pub fn battersea_model::ConversationResolution::serialize<__S>(&self, __serializer: __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for battersea_model::ConversationResolution
+pub fn battersea_model::ConversationResolution::deserialize<__D>(__deserializer: __D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for battersea_model::ConversationResolution
+impl core::marker::Send for battersea_model::ConversationResolution
+impl core::marker::Sync for battersea_model::ConversationResolution
+impl core::marker::Unpin for battersea_model::ConversationResolution
+impl core::panic::unwind_safe::RefUnwindSafe for battersea_model::ConversationResolution
+impl core::panic::unwind_safe::UnwindSafe for battersea_model::ConversationResolution
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_model::ConversationResolution where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_model::ConversationResolution where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<T, U> core::convert::Into<U> for battersea_model::ConversationResolution where U: core::convert::From<T>
+pub fn battersea_model::ConversationResolution::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_model::ConversationResolution where U: core::convert::Into<T>
+pub type battersea_model::ConversationResolution::Error = core::convert::Infallible
+pub fn battersea_model::ConversationResolution::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for battersea_model::ConversationResolution where U: core::convert::TryFrom<T>
+pub type battersea_model::ConversationResolution::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_model::ConversationResolution::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for battersea_model::ConversationResolution where T: core::clone::Clone
+pub type battersea_model::ConversationResolution::Owned = T
+pub fn battersea_model::ConversationResolution::clone_into(&self, target: &mut T)
+pub fn battersea_model::ConversationResolution::to_owned(&self) -> T
+impl<T> core::any::Any for battersea_model::ConversationResolution where T: 'static + ?core::marker::Sized
+pub fn battersea_model::ConversationResolution::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_model::ConversationResolution where T: ?core::marker::Sized
+pub fn battersea_model::ConversationResolution::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_model::ConversationResolution where T: ?core::marker::Sized
+pub fn battersea_model::ConversationResolution::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for battersea_model::ConversationResolution where T: core::clone::Clone
+pub unsafe fn battersea_model::ConversationResolution::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for battersea_model::ConversationResolution
+pub fn battersea_model::ConversationResolution::from(t: T) -> T
+impl<T> dyn_clone::DynClone for battersea_model::ConversationResolution where T: core::clone::Clone
+pub fn battersea_model::ConversationResolution::__clone_box(&self, _: dyn_clone::sealed::Private) -> *mut ()
+impl<T> serde_core::de::DeserializeOwned for battersea_model::ConversationResolution where T: for<'de> serde_core::de::Deserialize<'de>
+impl<T> typenum::type_operators::Same for battersea_model::ConversationResolution
+pub type battersea_model::ConversationResolution::Output = T
+impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_model::ConversationResolution where T: ?core::marker::Sized
+pub enum battersea_model::ConversationStoreError
+pub battersea_model::ConversationStoreError::Conflict
+pub battersea_model::ConversationStoreError::Unavailable
+impl core::clone::Clone for battersea_model::ConversationStoreError
+pub fn battersea_model::ConversationStoreError::clone(&self) -> battersea_model::ConversationStoreError
+impl core::cmp::Eq for battersea_model::ConversationStoreError
+impl core::cmp::PartialEq for battersea_model::ConversationStoreError
+pub fn battersea_model::ConversationStoreError::eq(&self, other: &battersea_model::ConversationStoreError) -> bool
+impl core::fmt::Debug for battersea_model::ConversationStoreError
+pub fn battersea_model::ConversationStoreError::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for battersea_model::ConversationStoreError
+impl core::marker::StructuralPartialEq for battersea_model::ConversationStoreError
+impl core::marker::Freeze for battersea_model::ConversationStoreError
+impl core::marker::Send for battersea_model::ConversationStoreError
+impl core::marker::Sync for battersea_model::ConversationStoreError
+impl core::marker::Unpin for battersea_model::ConversationStoreError
+impl core::panic::unwind_safe::RefUnwindSafe for battersea_model::ConversationStoreError
+impl core::panic::unwind_safe::UnwindSafe for battersea_model::ConversationStoreError
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_model::ConversationStoreError where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_model::ConversationStoreError where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<T, U> core::convert::Into<U> for battersea_model::ConversationStoreError where U: core::convert::From<T>
+pub fn battersea_model::ConversationStoreError::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_model::ConversationStoreError where U: core::convert::Into<T>
+pub type battersea_model::ConversationStoreError::Error = core::convert::Infallible
+pub fn battersea_model::ConversationStoreError::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for battersea_model::ConversationStoreError where U: core::convert::TryFrom<T>
+pub type battersea_model::ConversationStoreError::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_model::ConversationStoreError::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for battersea_model::ConversationStoreError where T: core::clone::Clone
+pub type battersea_model::ConversationStoreError::Owned = T
+pub fn battersea_model::ConversationStoreError::clone_into(&self, target: &mut T)
+pub fn battersea_model::ConversationStoreError::to_owned(&self) -> T
+impl<T> core::any::Any for battersea_model::ConversationStoreError where T: 'static + ?core::marker::Sized
+pub fn battersea_model::ConversationStoreError::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_model::ConversationStoreError where T: ?core::marker::Sized
+pub fn battersea_model::ConversationStoreError::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_model::ConversationStoreError where T: ?core::marker::Sized
+pub fn battersea_model::ConversationStoreError::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for battersea_model::ConversationStoreError where T: core::clone::Clone
+pub unsafe fn battersea_model::ConversationStoreError::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for battersea_model::ConversationStoreError
+pub fn battersea_model::ConversationStoreError::from(t: T) -> T
+impl<T> dyn_clone::DynClone for battersea_model::ConversationStoreError where T: core::clone::Clone
+pub fn battersea_model::ConversationStoreError::__clone_box(&self, _: dyn_clone::sealed::Private) -> *mut ()
+impl<T> outref::AsOut<T> for battersea_model::ConversationStoreError where T: core::marker::Copy
+pub fn battersea_model::ConversationStoreError::as_out(&mut self) -> outref::Out<'_, T>
+impl<T> typenum::type_operators::Same for battersea_model::ConversationStoreError
+pub type battersea_model::ConversationStoreError::Output = T
+impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_model::ConversationStoreError where T: ?core::marker::Sized
 pub enum battersea_model::CredentialReference
 pub battersea_model::CredentialReference::Env(alloc::string::String)
 pub battersea_model::CredentialReference::Host(alloc::string::String)
@@ -7356,6 +8159,7 @@ pub battersea_model::ToolCode::DuplicateTool
 pub battersea_model::ToolCode::InvalidToolApproval
 pub battersea_model::ToolCode::InvalidToolArguments
 pub battersea_model::ToolCode::InvalidToolCallId
+pub battersea_model::ToolCode::InvalidToolContinuation
 pub battersea_model::ToolCode::InvalidToolDefinition
 pub battersea_model::ToolCode::InvalidToolResult
 pub battersea_model::ToolCode::InvalidToolRounds
@@ -7368,6 +8172,10 @@ pub battersea_model::ToolCode::ToolApprovalExpired
 pub battersea_model::ToolCode::ToolApprovalPending
 pub battersea_model::ToolCode::ToolApprovalStorage
 pub battersea_model::ToolCode::ToolApprovalUnresolved
+pub battersea_model::ToolCode::ToolContinuationConflict
+pub battersea_model::ToolCode::ToolContinuationExpired
+pub battersea_model::ToolCode::ToolContinuationStorage
+pub battersea_model::ToolCode::ToolContinuationUnresolved
 pub battersea_model::ToolCode::ToolOutsideChoice
 pub battersea_model::ToolCode::ToolRoundsExceeded
 pub battersea_model::ToolCode::ToolTranscriptTooLarge
@@ -7376,6 +8184,7 @@ pub battersea_model::ToolCode::UnofferedTool
 pub battersea_model::ToolCode::UnofferedToolChoice
 pub battersea_model::ToolCode::UnregisteredTool
 pub battersea_model::ToolCode::UnsupportedToolContent
+pub battersea_model::ToolCode::UnsupportedToolContinuation
 impl battersea_model::ToolCode
 pub const battersea_model::ToolCode::ALL: &[Self]
 pub fn battersea_model::ToolCode::as_str(self) -> &'static str
@@ -7656,6 +8465,369 @@ impl<T> serde_core::de::DeserializeOwned for battersea_model::ContentCapabilitie
 impl<T> typenum::type_operators::Same for battersea_model::ContentCapabilities
 pub type battersea_model::ContentCapabilities::Output = T
 impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_model::ContentCapabilities where T: ?core::marker::Sized
+pub struct battersea_model::ConversationBinding
+pub battersea_model::ConversationBinding::configuration_revision: alloc::string::String
+pub battersea_model::ConversationBinding::origin: battersea_model::ProviderContentOrigin
+pub battersea_model::ConversationBinding::timeout_ms: u64
+impl core::clone::Clone for battersea_model::ConversationBinding
+pub fn battersea_model::ConversationBinding::clone(&self) -> battersea_model::ConversationBinding
+impl core::cmp::Eq for battersea_model::ConversationBinding
+impl core::cmp::PartialEq for battersea_model::ConversationBinding
+pub fn battersea_model::ConversationBinding::eq(&self, other: &battersea_model::ConversationBinding) -> bool
+impl core::fmt::Debug for battersea_model::ConversationBinding
+pub fn battersea_model::ConversationBinding::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for battersea_model::ConversationBinding
+impl serde_core::ser::Serialize for battersea_model::ConversationBinding
+pub fn battersea_model::ConversationBinding::serialize<__S>(&self, __serializer: __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for battersea_model::ConversationBinding
+pub fn battersea_model::ConversationBinding::deserialize<__D>(__deserializer: __D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for battersea_model::ConversationBinding
+impl core::marker::Send for battersea_model::ConversationBinding
+impl core::marker::Sync for battersea_model::ConversationBinding
+impl core::marker::Unpin for battersea_model::ConversationBinding
+impl core::panic::unwind_safe::RefUnwindSafe for battersea_model::ConversationBinding
+impl core::panic::unwind_safe::UnwindSafe for battersea_model::ConversationBinding
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_model::ConversationBinding where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_model::ConversationBinding where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<T, U> core::convert::Into<U> for battersea_model::ConversationBinding where U: core::convert::From<T>
+pub fn battersea_model::ConversationBinding::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_model::ConversationBinding where U: core::convert::Into<T>
+pub type battersea_model::ConversationBinding::Error = core::convert::Infallible
+pub fn battersea_model::ConversationBinding::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for battersea_model::ConversationBinding where U: core::convert::TryFrom<T>
+pub type battersea_model::ConversationBinding::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_model::ConversationBinding::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for battersea_model::ConversationBinding where T: core::clone::Clone
+pub type battersea_model::ConversationBinding::Owned = T
+pub fn battersea_model::ConversationBinding::clone_into(&self, target: &mut T)
+pub fn battersea_model::ConversationBinding::to_owned(&self) -> T
+impl<T> core::any::Any for battersea_model::ConversationBinding where T: 'static + ?core::marker::Sized
+pub fn battersea_model::ConversationBinding::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_model::ConversationBinding where T: ?core::marker::Sized
+pub fn battersea_model::ConversationBinding::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_model::ConversationBinding where T: ?core::marker::Sized
+pub fn battersea_model::ConversationBinding::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for battersea_model::ConversationBinding where T: core::clone::Clone
+pub unsafe fn battersea_model::ConversationBinding::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for battersea_model::ConversationBinding
+pub fn battersea_model::ConversationBinding::from(t: T) -> T
+impl<T> dyn_clone::DynClone for battersea_model::ConversationBinding where T: core::clone::Clone
+pub fn battersea_model::ConversationBinding::__clone_box(&self, _: dyn_clone::sealed::Private) -> *mut ()
+impl<T> serde_core::de::DeserializeOwned for battersea_model::ConversationBinding where T: for<'de> serde_core::de::Deserialize<'de>
+impl<T> typenum::type_operators::Same for battersea_model::ConversationBinding
+pub type battersea_model::ConversationBinding::Output = T
+impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_model::ConversationBinding where T: ?core::marker::Sized
+pub struct battersea_model::ConversationCheckpoint
+pub battersea_model::ConversationCheckpoint::attempts: u32
+pub battersea_model::ConversationCheckpoint::binding: battersea_model::ConversationBinding
+pub battersea_model::ConversationCheckpoint::checksum: alloc::string::String
+pub battersea_model::ConversationCheckpoint::max_bytes: usize
+pub battersea_model::ConversationCheckpoint::phase: battersea_model::ConversationPhase
+pub battersea_model::ConversationCheckpoint::request: battersea_model::ConversationRequest
+pub battersea_model::ConversationCheckpoint::resolutions: alloc::vec::Vec<battersea_model::StoredConversationResolution>
+pub battersea_model::ConversationCheckpoint::revision: u64
+pub battersea_model::ConversationCheckpoint::scope: battersea_model::ConversationScope
+pub battersea_model::ConversationCheckpoint::turns: alloc::vec::Vec<battersea_model::StoredConversationTurn>
+pub battersea_model::ConversationCheckpoint::updated_at_unix_ms: u64
+pub battersea_model::ConversationCheckpoint::version: u32
+impl battersea_model::ConversationCheckpoint
+pub fn battersea_model::ConversationCheckpoint::validate(&self) -> core::result::Result<(), battersea_model::EngineAdapterRequestError>
+impl core::clone::Clone for battersea_model::ConversationCheckpoint
+pub fn battersea_model::ConversationCheckpoint::clone(&self) -> battersea_model::ConversationCheckpoint
+impl core::cmp::PartialEq for battersea_model::ConversationCheckpoint
+pub fn battersea_model::ConversationCheckpoint::eq(&self, other: &battersea_model::ConversationCheckpoint) -> bool
+impl core::fmt::Debug for battersea_model::ConversationCheckpoint
+pub fn battersea_model::ConversationCheckpoint::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for battersea_model::ConversationCheckpoint
+impl serde_core::ser::Serialize for battersea_model::ConversationCheckpoint
+pub fn battersea_model::ConversationCheckpoint::serialize<__S>(&self, __serializer: __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for battersea_model::ConversationCheckpoint
+pub fn battersea_model::ConversationCheckpoint::deserialize<__D>(__deserializer: __D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for battersea_model::ConversationCheckpoint
+impl core::marker::Send for battersea_model::ConversationCheckpoint
+impl core::marker::Sync for battersea_model::ConversationCheckpoint
+impl core::marker::Unpin for battersea_model::ConversationCheckpoint
+impl core::panic::unwind_safe::RefUnwindSafe for battersea_model::ConversationCheckpoint
+impl core::panic::unwind_safe::UnwindSafe for battersea_model::ConversationCheckpoint
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_model::ConversationCheckpoint where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_model::ConversationCheckpoint where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<T, U> core::convert::Into<U> for battersea_model::ConversationCheckpoint where U: core::convert::From<T>
+pub fn battersea_model::ConversationCheckpoint::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_model::ConversationCheckpoint where U: core::convert::Into<T>
+pub type battersea_model::ConversationCheckpoint::Error = core::convert::Infallible
+pub fn battersea_model::ConversationCheckpoint::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for battersea_model::ConversationCheckpoint where U: core::convert::TryFrom<T>
+pub type battersea_model::ConversationCheckpoint::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_model::ConversationCheckpoint::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for battersea_model::ConversationCheckpoint where T: core::clone::Clone
+pub type battersea_model::ConversationCheckpoint::Owned = T
+pub fn battersea_model::ConversationCheckpoint::clone_into(&self, target: &mut T)
+pub fn battersea_model::ConversationCheckpoint::to_owned(&self) -> T
+impl<T> core::any::Any for battersea_model::ConversationCheckpoint where T: 'static + ?core::marker::Sized
+pub fn battersea_model::ConversationCheckpoint::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_model::ConversationCheckpoint where T: ?core::marker::Sized
+pub fn battersea_model::ConversationCheckpoint::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_model::ConversationCheckpoint where T: ?core::marker::Sized
+pub fn battersea_model::ConversationCheckpoint::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for battersea_model::ConversationCheckpoint where T: core::clone::Clone
+pub unsafe fn battersea_model::ConversationCheckpoint::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for battersea_model::ConversationCheckpoint
+pub fn battersea_model::ConversationCheckpoint::from(t: T) -> T
+impl<T> dyn_clone::DynClone for battersea_model::ConversationCheckpoint where T: core::clone::Clone
+pub fn battersea_model::ConversationCheckpoint::__clone_box(&self, _: dyn_clone::sealed::Private) -> *mut ()
+impl<T> serde_core::de::DeserializeOwned for battersea_model::ConversationCheckpoint where T: for<'de> serde_core::de::Deserialize<'de>
+impl<T> typenum::type_operators::Same for battersea_model::ConversationCheckpoint
+pub type battersea_model::ConversationCheckpoint::Output = T
+impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_model::ConversationCheckpoint where T: ?core::marker::Sized
+pub struct battersea_model::ConversationRequest
+pub battersea_model::ConversationRequest::max_turns: u32
+pub battersea_model::ConversationRequest::shared: battersea_model::EngineAdapterRequest
+pub battersea_model::ConversationRequest::tools: alloc::vec::Vec<battersea_model::EngineLocalToolDefinition>
+impl battersea_model::ConversationRequest
+pub fn battersea_model::ConversationRequest::to_request(&self) -> battersea_model::EngineTextStreamRequest
+impl core::clone::Clone for battersea_model::ConversationRequest
+pub fn battersea_model::ConversationRequest::clone(&self) -> battersea_model::ConversationRequest
+impl core::cmp::PartialEq for battersea_model::ConversationRequest
+pub fn battersea_model::ConversationRequest::eq(&self, other: &battersea_model::ConversationRequest) -> bool
+impl core::fmt::Debug for battersea_model::ConversationRequest
+pub fn battersea_model::ConversationRequest::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for battersea_model::ConversationRequest
+impl serde_core::ser::Serialize for battersea_model::ConversationRequest
+pub fn battersea_model::ConversationRequest::serialize<__S>(&self, __serializer: __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for battersea_model::ConversationRequest
+pub fn battersea_model::ConversationRequest::deserialize<__D>(__deserializer: __D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for battersea_model::ConversationRequest
+impl core::marker::Send for battersea_model::ConversationRequest
+impl core::marker::Sync for battersea_model::ConversationRequest
+impl core::marker::Unpin for battersea_model::ConversationRequest
+impl core::panic::unwind_safe::RefUnwindSafe for battersea_model::ConversationRequest
+impl core::panic::unwind_safe::UnwindSafe for battersea_model::ConversationRequest
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_model::ConversationRequest where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_model::ConversationRequest where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<T, U> core::convert::Into<U> for battersea_model::ConversationRequest where U: core::convert::From<T>
+pub fn battersea_model::ConversationRequest::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_model::ConversationRequest where U: core::convert::Into<T>
+pub type battersea_model::ConversationRequest::Error = core::convert::Infallible
+pub fn battersea_model::ConversationRequest::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for battersea_model::ConversationRequest where U: core::convert::TryFrom<T>
+pub type battersea_model::ConversationRequest::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_model::ConversationRequest::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for battersea_model::ConversationRequest where T: core::clone::Clone
+pub type battersea_model::ConversationRequest::Owned = T
+pub fn battersea_model::ConversationRequest::clone_into(&self, target: &mut T)
+pub fn battersea_model::ConversationRequest::to_owned(&self) -> T
+impl<T> core::any::Any for battersea_model::ConversationRequest where T: 'static + ?core::marker::Sized
+pub fn battersea_model::ConversationRequest::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_model::ConversationRequest where T: ?core::marker::Sized
+pub fn battersea_model::ConversationRequest::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_model::ConversationRequest where T: ?core::marker::Sized
+pub fn battersea_model::ConversationRequest::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for battersea_model::ConversationRequest where T: core::clone::Clone
+pub unsafe fn battersea_model::ConversationRequest::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for battersea_model::ConversationRequest
+pub fn battersea_model::ConversationRequest::from(t: T) -> T
+impl<T> dyn_clone::DynClone for battersea_model::ConversationRequest where T: core::clone::Clone
+pub fn battersea_model::ConversationRequest::__clone_box(&self, _: dyn_clone::sealed::Private) -> *mut ()
+impl<T> serde_core::de::DeserializeOwned for battersea_model::ConversationRequest where T: for<'de> serde_core::de::Deserialize<'de>
+impl<T> typenum::type_operators::Same for battersea_model::ConversationRequest
+pub type battersea_model::ConversationRequest::Output = T
+impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_model::ConversationRequest where T: ?core::marker::Sized
+pub struct battersea_model::ConversationScope
+pub battersea_model::ConversationScope::expires_at_unix_ms: u64
+pub battersea_model::ConversationScope::run_id: alloc::string::String
+pub battersea_model::ConversationScope::tool_binding_revision: alloc::string::String
+impl core::clone::Clone for battersea_model::ConversationScope
+pub fn battersea_model::ConversationScope::clone(&self) -> battersea_model::ConversationScope
+impl core::cmp::Eq for battersea_model::ConversationScope
+impl core::cmp::PartialEq for battersea_model::ConversationScope
+pub fn battersea_model::ConversationScope::eq(&self, other: &battersea_model::ConversationScope) -> bool
+impl core::fmt::Debug for battersea_model::ConversationScope
+pub fn battersea_model::ConversationScope::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for battersea_model::ConversationScope
+impl serde_core::ser::Serialize for battersea_model::ConversationScope
+pub fn battersea_model::ConversationScope::serialize<__S>(&self, __serializer: __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for battersea_model::ConversationScope
+pub fn battersea_model::ConversationScope::deserialize<__D>(__deserializer: __D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for battersea_model::ConversationScope
+impl core::marker::Send for battersea_model::ConversationScope
+impl core::marker::Sync for battersea_model::ConversationScope
+impl core::marker::Unpin for battersea_model::ConversationScope
+impl core::panic::unwind_safe::RefUnwindSafe for battersea_model::ConversationScope
+impl core::panic::unwind_safe::UnwindSafe for battersea_model::ConversationScope
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_model::ConversationScope where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_model::ConversationScope where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<T, U> core::convert::Into<U> for battersea_model::ConversationScope where U: core::convert::From<T>
+pub fn battersea_model::ConversationScope::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_model::ConversationScope where U: core::convert::Into<T>
+pub type battersea_model::ConversationScope::Error = core::convert::Infallible
+pub fn battersea_model::ConversationScope::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for battersea_model::ConversationScope where U: core::convert::TryFrom<T>
+pub type battersea_model::ConversationScope::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_model::ConversationScope::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for battersea_model::ConversationScope where T: core::clone::Clone
+pub type battersea_model::ConversationScope::Owned = T
+pub fn battersea_model::ConversationScope::clone_into(&self, target: &mut T)
+pub fn battersea_model::ConversationScope::to_owned(&self) -> T
+impl<T> core::any::Any for battersea_model::ConversationScope where T: 'static + ?core::marker::Sized
+pub fn battersea_model::ConversationScope::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_model::ConversationScope where T: ?core::marker::Sized
+pub fn battersea_model::ConversationScope::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_model::ConversationScope where T: ?core::marker::Sized
+pub fn battersea_model::ConversationScope::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for battersea_model::ConversationScope where T: core::clone::Clone
+pub unsafe fn battersea_model::ConversationScope::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for battersea_model::ConversationScope
+pub fn battersea_model::ConversationScope::from(t: T) -> T
+impl<T> dyn_clone::DynClone for battersea_model::ConversationScope where T: core::clone::Clone
+pub fn battersea_model::ConversationScope::__clone_box(&self, _: dyn_clone::sealed::Private) -> *mut ()
+impl<T> serde_core::de::DeserializeOwned for battersea_model::ConversationScope where T: for<'de> serde_core::de::Deserialize<'de>
+impl<T> typenum::type_operators::Same for battersea_model::ConversationScope
+pub type battersea_model::ConversationScope::Output = T
+impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_model::ConversationScope where T: ?core::marker::Sized
+pub struct battersea_model::ConversationToolResult
+pub battersea_model::ConversationToolResult::call: battersea_model::EngineLocalToolCall
+pub battersea_model::ConversationToolResult::result: battersea_model::EngineLocalToolResult
+impl core::clone::Clone for battersea_model::ConversationToolResult
+pub fn battersea_model::ConversationToolResult::clone(&self) -> battersea_model::ConversationToolResult
+impl core::cmp::PartialEq for battersea_model::ConversationToolResult
+pub fn battersea_model::ConversationToolResult::eq(&self, other: &battersea_model::ConversationToolResult) -> bool
+impl core::fmt::Debug for battersea_model::ConversationToolResult
+pub fn battersea_model::ConversationToolResult::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for battersea_model::ConversationToolResult
+impl serde_core::ser::Serialize for battersea_model::ConversationToolResult
+pub fn battersea_model::ConversationToolResult::serialize<__S>(&self, __serializer: __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for battersea_model::ConversationToolResult
+pub fn battersea_model::ConversationToolResult::deserialize<__D>(__deserializer: __D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for battersea_model::ConversationToolResult
+impl core::marker::Send for battersea_model::ConversationToolResult
+impl core::marker::Sync for battersea_model::ConversationToolResult
+impl core::marker::Unpin for battersea_model::ConversationToolResult
+impl core::panic::unwind_safe::RefUnwindSafe for battersea_model::ConversationToolResult
+impl core::panic::unwind_safe::UnwindSafe for battersea_model::ConversationToolResult
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_model::ConversationToolResult where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_model::ConversationToolResult where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<T, U> core::convert::Into<U> for battersea_model::ConversationToolResult where U: core::convert::From<T>
+pub fn battersea_model::ConversationToolResult::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_model::ConversationToolResult where U: core::convert::Into<T>
+pub type battersea_model::ConversationToolResult::Error = core::convert::Infallible
+pub fn battersea_model::ConversationToolResult::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for battersea_model::ConversationToolResult where U: core::convert::TryFrom<T>
+pub type battersea_model::ConversationToolResult::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_model::ConversationToolResult::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for battersea_model::ConversationToolResult where T: core::clone::Clone
+pub type battersea_model::ConversationToolResult::Owned = T
+pub fn battersea_model::ConversationToolResult::clone_into(&self, target: &mut T)
+pub fn battersea_model::ConversationToolResult::to_owned(&self) -> T
+impl<T> core::any::Any for battersea_model::ConversationToolResult where T: 'static + ?core::marker::Sized
+pub fn battersea_model::ConversationToolResult::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_model::ConversationToolResult where T: ?core::marker::Sized
+pub fn battersea_model::ConversationToolResult::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_model::ConversationToolResult where T: ?core::marker::Sized
+pub fn battersea_model::ConversationToolResult::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for battersea_model::ConversationToolResult where T: core::clone::Clone
+pub unsafe fn battersea_model::ConversationToolResult::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for battersea_model::ConversationToolResult
+pub fn battersea_model::ConversationToolResult::from(t: T) -> T
+impl<T> dyn_clone::DynClone for battersea_model::ConversationToolResult where T: core::clone::Clone
+pub fn battersea_model::ConversationToolResult::__clone_box(&self, _: dyn_clone::sealed::Private) -> *mut ()
+impl<T> serde_core::de::DeserializeOwned for battersea_model::ConversationToolResult where T: for<'de> serde_core::de::Deserialize<'de>
+impl<T> typenum::type_operators::Same for battersea_model::ConversationToolResult
+pub type battersea_model::ConversationToolResult::Output = T
+impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_model::ConversationToolResult where T: ?core::marker::Sized
+pub struct battersea_model::ConversationTurn
+pub battersea_model::ConversationTurn::calls: alloc::vec::Vec<battersea_model::EngineLocalToolCall>
+pub battersea_model::ConversationTurn::events: alloc::vec::Vec<battersea_model::EngineTextStreamEvent>
+pub battersea_model::ConversationTurn::state: serde_json::value::Value
+impl core::clone::Clone for battersea_model::ConversationTurn
+pub fn battersea_model::ConversationTurn::clone(&self) -> battersea_model::ConversationTurn
+impl core::cmp::PartialEq for battersea_model::ConversationTurn
+pub fn battersea_model::ConversationTurn::eq(&self, other: &battersea_model::ConversationTurn) -> bool
+impl core::marker::StructuralPartialEq for battersea_model::ConversationTurn
+impl serde_core::ser::Serialize for battersea_model::ConversationTurn
+pub fn battersea_model::ConversationTurn::serialize<__S>(&self, __serializer: __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for battersea_model::ConversationTurn
+pub fn battersea_model::ConversationTurn::deserialize<__D>(__deserializer: __D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for battersea_model::ConversationTurn
+impl core::marker::Send for battersea_model::ConversationTurn
+impl core::marker::Sync for battersea_model::ConversationTurn
+impl core::marker::Unpin for battersea_model::ConversationTurn
+impl core::panic::unwind_safe::RefUnwindSafe for battersea_model::ConversationTurn
+impl core::panic::unwind_safe::UnwindSafe for battersea_model::ConversationTurn
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_model::ConversationTurn where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_model::ConversationTurn where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<T, U> core::convert::Into<U> for battersea_model::ConversationTurn where U: core::convert::From<T>
+pub fn battersea_model::ConversationTurn::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_model::ConversationTurn where U: core::convert::Into<T>
+pub type battersea_model::ConversationTurn::Error = core::convert::Infallible
+pub fn battersea_model::ConversationTurn::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for battersea_model::ConversationTurn where U: core::convert::TryFrom<T>
+pub type battersea_model::ConversationTurn::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_model::ConversationTurn::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for battersea_model::ConversationTurn where T: core::clone::Clone
+pub type battersea_model::ConversationTurn::Owned = T
+pub fn battersea_model::ConversationTurn::clone_into(&self, target: &mut T)
+pub fn battersea_model::ConversationTurn::to_owned(&self) -> T
+impl<T> core::any::Any for battersea_model::ConversationTurn where T: 'static + ?core::marker::Sized
+pub fn battersea_model::ConversationTurn::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_model::ConversationTurn where T: ?core::marker::Sized
+pub fn battersea_model::ConversationTurn::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_model::ConversationTurn where T: ?core::marker::Sized
+pub fn battersea_model::ConversationTurn::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for battersea_model::ConversationTurn where T: core::clone::Clone
+pub unsafe fn battersea_model::ConversationTurn::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for battersea_model::ConversationTurn
+pub fn battersea_model::ConversationTurn::from(t: T) -> T
+impl<T> dyn_clone::DynClone for battersea_model::ConversationTurn where T: core::clone::Clone
+pub fn battersea_model::ConversationTurn::__clone_box(&self, _: dyn_clone::sealed::Private) -> *mut ()
+impl<T> serde_core::de::DeserializeOwned for battersea_model::ConversationTurn where T: for<'de> serde_core::de::Deserialize<'de>
+impl<T> typenum::type_operators::Same for battersea_model::ConversationTurn
+pub type battersea_model::ConversationTurn::Output = T
+impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_model::ConversationTurn where T: ?core::marker::Sized
+pub struct battersea_model::DurableConversation
+impl battersea_model::DurableConversation
+pub async fn battersea_model::DurableConversation::create(store: alloc::sync::Arc<dyn battersea_model::ConversationStore>, adapter: alloc::sync::Arc<dyn battersea_model::EngineAdapter>, scope: battersea_model::ConversationScope, request: battersea_model::ConversationRequest, max_bytes: usize, store_timeout: core::time::Duration) -> core::result::Result<Self, battersea_model::EngineAdapterRequestError>
+pub async fn battersea_model::DurableConversation::inspect(&self) -> core::result::Result<battersea_model::ConversationCheckpoint, battersea_model::EngineAdapterRequestError>
+pub async fn battersea_model::DurableConversation::open(store: alloc::sync::Arc<dyn battersea_model::ConversationStore>, adapter: alloc::sync::Arc<dyn battersea_model::EngineAdapter>, scope: battersea_model::ConversationScope, request: battersea_model::ConversationRequest, max_bytes: usize, store_timeout: core::time::Duration) -> core::result::Result<Self, battersea_model::EngineAdapterRequestError>
+pub async fn battersea_model::DurableConversation::reconcile(&self, expected_revision: u64, resolution: battersea_model::ConversationResolution, actor: &str, evidence: &str) -> core::result::Result<battersea_model::ConversationCheckpoint, battersea_model::EngineAdapterRequestError>
+pub async fn battersea_model::DurableConversation::record_tool_result(&self, expected_revision: u64, result: battersea_model::ConversationToolResult) -> core::result::Result<battersea_model::ConversationCheckpoint, battersea_model::EngineAdapterRequestError>
+pub async fn battersea_model::DurableConversation::resume(&self, expected_revision: u64) -> core::result::Result<battersea_model::ConversationCheckpoint, battersea_model::EngineAdapterRequestError>
+impl core::clone::Clone for battersea_model::DurableConversation
+pub fn battersea_model::DurableConversation::clone(&self) -> battersea_model::DurableConversation
+impl core::marker::Freeze for battersea_model::DurableConversation
+impl core::marker::Send for battersea_model::DurableConversation
+impl core::marker::Sync for battersea_model::DurableConversation
+impl core::marker::Unpin for battersea_model::DurableConversation
+impl !core::panic::unwind_safe::RefUnwindSafe for battersea_model::DurableConversation
+impl !core::panic::unwind_safe::UnwindSafe for battersea_model::DurableConversation
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_model::DurableConversation where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_model::DurableConversation where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<T, U> core::convert::Into<U> for battersea_model::DurableConversation where U: core::convert::From<T>
+pub fn battersea_model::DurableConversation::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_model::DurableConversation where U: core::convert::Into<T>
+pub type battersea_model::DurableConversation::Error = core::convert::Infallible
+pub fn battersea_model::DurableConversation::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for battersea_model::DurableConversation where U: core::convert::TryFrom<T>
+pub type battersea_model::DurableConversation::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_model::DurableConversation::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for battersea_model::DurableConversation where T: core::clone::Clone
+pub type battersea_model::DurableConversation::Owned = T
+pub fn battersea_model::DurableConversation::clone_into(&self, target: &mut T)
+pub fn battersea_model::DurableConversation::to_owned(&self) -> T
+impl<T> core::any::Any for battersea_model::DurableConversation where T: 'static + ?core::marker::Sized
+pub fn battersea_model::DurableConversation::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_model::DurableConversation where T: ?core::marker::Sized
+pub fn battersea_model::DurableConversation::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_model::DurableConversation where T: ?core::marker::Sized
+pub fn battersea_model::DurableConversation::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for battersea_model::DurableConversation where T: core::clone::Clone
+pub unsafe fn battersea_model::DurableConversation::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for battersea_model::DurableConversation
+pub fn battersea_model::DurableConversation::from(t: T) -> T
+impl<T> dyn_clone::DynClone for battersea_model::DurableConversation where T: core::clone::Clone
+pub fn battersea_model::DurableConversation::__clone_box(&self, _: dyn_clone::sealed::Private) -> *mut ()
+impl<T> typenum::type_operators::Same for battersea_model::DurableConversation
+pub type battersea_model::DurableConversation::Output = T
+impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_model::DurableConversation where T: ?core::marker::Sized
 pub struct battersea_model::EngineAdapterDebugContext
 pub battersea_model::EngineAdapterDebugContext::backend: alloc::string::String
 pub battersea_model::EngineAdapterDebugContext::base_url: core::option::Option<alloc::string::String>
@@ -7823,8 +8995,15 @@ impl battersea_model::EngineAdapterRequest
 pub fn battersea_model::EngineAdapterRequest::text_for_role(&self, role: battersea_model::Role) -> alloc::string::String
 impl core::clone::Clone for battersea_model::EngineAdapterRequest
 pub fn battersea_model::EngineAdapterRequest::clone(&self) -> battersea_model::EngineAdapterRequest
+impl core::cmp::PartialEq for battersea_model::EngineAdapterRequest
+pub fn battersea_model::EngineAdapterRequest::eq(&self, other: &battersea_model::EngineAdapterRequest) -> bool
 impl core::fmt::Debug for battersea_model::EngineAdapterRequest
 pub fn battersea_model::EngineAdapterRequest::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for battersea_model::EngineAdapterRequest
+impl serde_core::ser::Serialize for battersea_model::EngineAdapterRequest
+pub fn battersea_model::EngineAdapterRequest::serialize<__S>(&self, __serializer: __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for battersea_model::EngineAdapterRequest
+pub fn battersea_model::EngineAdapterRequest::deserialize<__D>(__deserializer: __D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
 impl core::marker::Freeze for battersea_model::EngineAdapterRequest
 impl core::marker::Send for battersea_model::EngineAdapterRequest
 impl core::marker::Sync for battersea_model::EngineAdapterRequest
@@ -7857,6 +9036,7 @@ impl<T> core::convert::From<T> for battersea_model::EngineAdapterRequest
 pub fn battersea_model::EngineAdapterRequest::from(t: T) -> T
 impl<T> dyn_clone::DynClone for battersea_model::EngineAdapterRequest where T: core::clone::Clone
 pub fn battersea_model::EngineAdapterRequest::__clone_box(&self, _: dyn_clone::sealed::Private) -> *mut ()
+impl<T> serde_core::de::DeserializeOwned for battersea_model::EngineAdapterRequest where T: for<'de> serde_core::de::Deserialize<'de>
 impl<T> typenum::type_operators::Same for battersea_model::EngineAdapterRequest
 pub type battersea_model::EngineAdapterRequest::Output = T
 impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_model::EngineAdapterRequest where T: ?core::marker::Sized
@@ -9434,6 +10614,105 @@ impl<T> serde_core::de::DeserializeOwned for battersea_model::SecretString where
 impl<T> typenum::type_operators::Same for battersea_model::SecretString
 pub type battersea_model::SecretString::Output = T
 impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_model::SecretString where T: ?core::marker::Sized
+pub struct battersea_model::StoredConversationResolution
+pub battersea_model::StoredConversationResolution::actor: alloc::string::String
+pub battersea_model::StoredConversationResolution::attempt: u32
+pub battersea_model::StoredConversationResolution::evidence: alloc::string::String
+pub battersea_model::StoredConversationResolution::resolution: battersea_model::ConversationResolution
+impl core::clone::Clone for battersea_model::StoredConversationResolution
+pub fn battersea_model::StoredConversationResolution::clone(&self) -> battersea_model::StoredConversationResolution
+impl core::cmp::PartialEq for battersea_model::StoredConversationResolution
+pub fn battersea_model::StoredConversationResolution::eq(&self, other: &battersea_model::StoredConversationResolution) -> bool
+impl core::marker::StructuralPartialEq for battersea_model::StoredConversationResolution
+impl serde_core::ser::Serialize for battersea_model::StoredConversationResolution
+pub fn battersea_model::StoredConversationResolution::serialize<__S>(&self, __serializer: __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for battersea_model::StoredConversationResolution
+pub fn battersea_model::StoredConversationResolution::deserialize<__D>(__deserializer: __D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for battersea_model::StoredConversationResolution
+impl core::marker::Send for battersea_model::StoredConversationResolution
+impl core::marker::Sync for battersea_model::StoredConversationResolution
+impl core::marker::Unpin for battersea_model::StoredConversationResolution
+impl core::panic::unwind_safe::RefUnwindSafe for battersea_model::StoredConversationResolution
+impl core::panic::unwind_safe::UnwindSafe for battersea_model::StoredConversationResolution
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_model::StoredConversationResolution where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_model::StoredConversationResolution where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<T, U> core::convert::Into<U> for battersea_model::StoredConversationResolution where U: core::convert::From<T>
+pub fn battersea_model::StoredConversationResolution::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_model::StoredConversationResolution where U: core::convert::Into<T>
+pub type battersea_model::StoredConversationResolution::Error = core::convert::Infallible
+pub fn battersea_model::StoredConversationResolution::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for battersea_model::StoredConversationResolution where U: core::convert::TryFrom<T>
+pub type battersea_model::StoredConversationResolution::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_model::StoredConversationResolution::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for battersea_model::StoredConversationResolution where T: core::clone::Clone
+pub type battersea_model::StoredConversationResolution::Owned = T
+pub fn battersea_model::StoredConversationResolution::clone_into(&self, target: &mut T)
+pub fn battersea_model::StoredConversationResolution::to_owned(&self) -> T
+impl<T> core::any::Any for battersea_model::StoredConversationResolution where T: 'static + ?core::marker::Sized
+pub fn battersea_model::StoredConversationResolution::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_model::StoredConversationResolution where T: ?core::marker::Sized
+pub fn battersea_model::StoredConversationResolution::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_model::StoredConversationResolution where T: ?core::marker::Sized
+pub fn battersea_model::StoredConversationResolution::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for battersea_model::StoredConversationResolution where T: core::clone::Clone
+pub unsafe fn battersea_model::StoredConversationResolution::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for battersea_model::StoredConversationResolution
+pub fn battersea_model::StoredConversationResolution::from(t: T) -> T
+impl<T> dyn_clone::DynClone for battersea_model::StoredConversationResolution where T: core::clone::Clone
+pub fn battersea_model::StoredConversationResolution::__clone_box(&self, _: dyn_clone::sealed::Private) -> *mut ()
+impl<T> serde_core::de::DeserializeOwned for battersea_model::StoredConversationResolution where T: for<'de> serde_core::de::Deserialize<'de>
+impl<T> typenum::type_operators::Same for battersea_model::StoredConversationResolution
+pub type battersea_model::StoredConversationResolution::Output = T
+impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_model::StoredConversationResolution where T: ?core::marker::Sized
+pub struct battersea_model::StoredConversationTurn
+pub battersea_model::StoredConversationTurn::attempt: u32
+pub battersea_model::StoredConversationTurn::response: battersea_model::ConversationTurn
+pub battersea_model::StoredConversationTurn::results: alloc::collections::btree::map::BTreeMap<alloc::string::String, battersea_model::ConversationToolResult>
+impl core::clone::Clone for battersea_model::StoredConversationTurn
+pub fn battersea_model::StoredConversationTurn::clone(&self) -> battersea_model::StoredConversationTurn
+impl core::cmp::PartialEq for battersea_model::StoredConversationTurn
+pub fn battersea_model::StoredConversationTurn::eq(&self, other: &battersea_model::StoredConversationTurn) -> bool
+impl core::marker::StructuralPartialEq for battersea_model::StoredConversationTurn
+impl serde_core::ser::Serialize for battersea_model::StoredConversationTurn
+pub fn battersea_model::StoredConversationTurn::serialize<__S>(&self, __serializer: __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for battersea_model::StoredConversationTurn
+pub fn battersea_model::StoredConversationTurn::deserialize<__D>(__deserializer: __D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for battersea_model::StoredConversationTurn
+impl core::marker::Send for battersea_model::StoredConversationTurn
+impl core::marker::Sync for battersea_model::StoredConversationTurn
+impl core::marker::Unpin for battersea_model::StoredConversationTurn
+impl core::panic::unwind_safe::RefUnwindSafe for battersea_model::StoredConversationTurn
+impl core::panic::unwind_safe::UnwindSafe for battersea_model::StoredConversationTurn
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_model::StoredConversationTurn where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_model::StoredConversationTurn where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<T, U> core::convert::Into<U> for battersea_model::StoredConversationTurn where U: core::convert::From<T>
+pub fn battersea_model::StoredConversationTurn::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_model::StoredConversationTurn where U: core::convert::Into<T>
+pub type battersea_model::StoredConversationTurn::Error = core::convert::Infallible
+pub fn battersea_model::StoredConversationTurn::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for battersea_model::StoredConversationTurn where U: core::convert::TryFrom<T>
+pub type battersea_model::StoredConversationTurn::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_model::StoredConversationTurn::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for battersea_model::StoredConversationTurn where T: core::clone::Clone
+pub type battersea_model::StoredConversationTurn::Owned = T
+pub fn battersea_model::StoredConversationTurn::clone_into(&self, target: &mut T)
+pub fn battersea_model::StoredConversationTurn::to_owned(&self) -> T
+impl<T> core::any::Any for battersea_model::StoredConversationTurn where T: 'static + ?core::marker::Sized
+pub fn battersea_model::StoredConversationTurn::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_model::StoredConversationTurn where T: ?core::marker::Sized
+pub fn battersea_model::StoredConversationTurn::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_model::StoredConversationTurn where T: ?core::marker::Sized
+pub fn battersea_model::StoredConversationTurn::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for battersea_model::StoredConversationTurn where T: core::clone::Clone
+pub unsafe fn battersea_model::StoredConversationTurn::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for battersea_model::StoredConversationTurn
+pub fn battersea_model::StoredConversationTurn::from(t: T) -> T
+impl<T> dyn_clone::DynClone for battersea_model::StoredConversationTurn where T: core::clone::Clone
+pub fn battersea_model::StoredConversationTurn::__clone_box(&self, _: dyn_clone::sealed::Private) -> *mut ()
+impl<T> serde_core::de::DeserializeOwned for battersea_model::StoredConversationTurn where T: for<'de> serde_core::de::Deserialize<'de>
+impl<T> typenum::type_operators::Same for battersea_model::StoredConversationTurn
+pub type battersea_model::StoredConversationTurn::Output = T
+impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_model::StoredConversationTurn where T: ?core::marker::Sized
 pub struct battersea_model::ToolCallEvidence
 pub battersea_model::ToolCallEvidence::call_id: alloc::string::String
 pub battersea_model::ToolCallEvidence::outcome: battersea_model::ToolCallOutcome
@@ -9586,14 +10865,21 @@ impl<T> serde_core::de::DeserializeOwned for battersea_model::WatchdogFailure wh
 impl<T> typenum::type_operators::Same for battersea_model::WatchdogFailure
 pub type battersea_model::WatchdogFailure::Output = T
 impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_model::WatchdogFailure where T: ?core::marker::Sized
+pub const battersea_model::CONVERSATION_CHECKPOINT_VERSION: u32
+pub trait battersea_model::ConversationStore: core::marker::Send + core::marker::Sync
+pub fn battersea_model::ConversationStore::compare_exchange<'life0, 'life1, 'life2, 'async_trait>(&'life0 self, run_id: &'life1 str, expected_revision: core::option::Option<u64>, next: &'life2 battersea_model::ConversationCheckpoint) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<(), battersea_model::ConversationStoreError>> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait, 'life1: 'async_trait, 'life2: 'async_trait
+pub fn battersea_model::ConversationStore::load<'life0, 'life1, 'async_trait>(&'life0 self, run_id: &'life1 str, max_bytes: usize) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<core::option::Option<battersea_model::ConversationCheckpoint>, battersea_model::ConversationStoreError>> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait, 'life1: 'async_trait
 pub trait battersea_model::CredentialResolver: core::marker::Send + core::marker::Sync
 pub fn battersea_model::CredentialResolver::resolve(&self, reference: &battersea_model::CredentialReference) -> core::result::Result<battersea_model::ResolvedCredential, battersea_model::ProviderConfigurationError>
 impl battersea_model::CredentialResolver for battersea_model::EnvironmentCredentials
 pub fn battersea_model::EnvironmentCredentials::resolve(&self, reference: &battersea_model::CredentialReference) -> core::result::Result<battersea_model::ResolvedCredential, battersea_model::ProviderConfigurationError>
 pub trait battersea_model::EngineAdapter: core::marker::Send + core::marker::Sync
+pub fn battersea_model::EngineAdapter::conversation_turn<'life0, 'async_trait>(&'life0 self, _request: battersea_model::ConversationRequest, _state: core::option::Option<serde_json::value::Value>, _results: alloc::vec::Vec<battersea_model::ConversationToolResult>) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<battersea_model::ConversationTurn, battersea_model::EngineAdapterRequestError>> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait
 pub fn battersea_model::EngineAdapter::count_text_stream_input_tokens<'life0, 'async_trait>(&'life0 self, request: battersea_model::EngineTextStreamRequest) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<u64, battersea_model::EngineAdapterRequestError>> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait
 pub fn battersea_model::EngineAdapter::describe_debug_context(&self) -> battersea_model::EngineAdapterDebugContext
 pub fn battersea_model::EngineAdapter::stream_text<'life0, 'async_trait>(&'life0 self, request: battersea_model::EngineTextStreamRequest) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<battersea_model::EngineTextStream, battersea_model::EngineAdapterRequestError>> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait
+pub fn battersea_model::EngineAdapter::validate_conversation(&self, _request: &battersea_model::ConversationRequest, _state: core::option::Option<&serde_json::value::Value>) -> core::result::Result<battersea_model::ConversationBinding, battersea_model::EngineAdapterRequestError>
+pub fn battersea_model::EngineAdapter::validate_conversation_turn(&self, _request: &battersea_model::ConversationRequest, _previous: core::option::Option<&serde_json::value::Value>, _results: &[battersea_model::ConversationToolResult], _turn: &battersea_model::ConversationTurn) -> core::result::Result<battersea_model::ConversationBinding, battersea_model::EngineAdapterRequestError>
 pub trait battersea_model::EngineAdapterLogger: core::marker::Send + core::marker::Sync
 pub fn battersea_model::EngineAdapterLogger::on_error<'life0, 'async_trait>(&'life0 self, _entry: battersea_model::EngineAdapterErrorLog) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = ()> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait
 pub fn battersea_model::EngineAdapterLogger::on_request<'life0, 'async_trait>(&'life0 self, _entry: battersea_model::EngineAdapterRequestLog) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = ()> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait

@@ -84,3 +84,62 @@ text cannot contaminate the final result. Buffers obey the shared payload bound.
 requires an application-authored prompt and is not a fallback for unsupported native output.
 
 [Media jobs](media-jobs.md) cover asynchronous generation. Document format upgrades require explicit commands.
+
+
+## Durable tool conversations
+
+`DurableConversation` checkpoints completed provider turns through a host-owned
+`ConversationStore`. Chat Completions supports this interface for ordinary and streaming
+responses. Other adapters return `unsupported_tool_continuation` from the default interface.
+
+Acceptance pins the original request, tool definitions, provider binding, safe backend
+configuration digest, tool binding revision and absolute expiry. The host includes credential
+and authorisation context in the tool binding revision. Expiry must fit the configured backend
+operation timeout. Reopening requires the same request, scope and binding; remaining time and
+provider-attempt capacity survive restart. Expiry before dispatch returns `ErrorKind::Expired`
+with `DispatchState::NotSent`. The host supplies a trusted wall clock across restarts.
+
+The host store bounds reads before decoding and atomically compares journal revisions across
+processes. Successful writes are durable. Failed or cancelled writes may have committed, so the
+next command inspects storage. Reads validate version, integrity, payload limits and transcript
+compatibility without upgrading stored values. The checksum detects accidental modification;
+the host owns storage integrity and access control.
+
+Each `resume` command performs at most one provider turn. A dispatch intent is persisted before
+provider I/O. A completed turn, its adapter-owned transcript, complete validated call batch and
+buffered events are then published together. The adapter verifies that the ordered call batch
+and output events match its retained provider response before publication, including reconciliation,
+and when reopening retained turns. Each transcript must extend the preceding durable transcript
+with the exact ordered provider projections of its recorded tool results and one assistant response.
+Chat Completions checkpoint codec version 2 retains native token usage with that response.
+Pending calls become visible after publication.
+Provider diagnostics can precede publication; checkpoint events carry the durable observations.
+Identify checkpoint events by run, provider attempt and event index when consuming them after reopen.
+
+The host submits pending calls to its approval journal, explicitly resumes approved calls, then
+copies each completed outcome with `record_tool_result`. Call identity, name and arguments must
+match the saved batch. Repeating an identical result at the current revision is idempotent;
+a changed result is refused. Results may arrive separately and are supplied to the provider in
+its original call order. Host metadata remains in the checkpoint and is excluded from provider
+projections. `resume` waits for the complete batch before sending its continuation.
+
+Chat Completions retains its native assistant envelopes and appends each tool result once. An
+HTTP 429 retry sends the same prepared request. Reopening after a tool decision or result copy
+uses the retained assistant turn; it never regenerates the request that selected the tools.
+Retained assistant responses must have an absent or null refusal field.
+Final output receives the same modality and structured-output validation as an ordinary response.
+A final turn with a requested response format retains exactly one matching `StructuredOutput` event.
+Completed conversations return their retained checkpoint, including after expiry.
+
+An interrupted provider task, ambiguous response or failed turn publication can leave an intent.
+`resume` refuses that intent as `tool_continuation_unresolved`. After fencing the original task,
+the host can reconcile a retained completed turn, confirm that dispatch did not occur, or abandon
+the conversation. The host coordinates cancellation of approval work when abandoning a conversation.
+Reconciliation records an actor and evidence and preserves expiry and consumed
+attempts. A timeout or missing reply does not establish that dispatch did not occur.
+
+Provider intents, including explicitly reconciled attempts, consume the request's finite turn
+budget. The complete checkpoint, including native transcripts, events, results, metadata and
+reconciliation evidence, counts towards its byte limit. The shared batch limit is 256 calls per
+durable turn. Stale revisions, changed bindings, incompatible codecs and corrupt state stop
+before provider I/O. A durable provider turn never invokes a tool executor.

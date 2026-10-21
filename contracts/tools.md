@@ -145,7 +145,8 @@ confirmed not-applied restores approval, completed retains a validated host-supp
 abandon terminates the call. Expiry still forbids dispatch after not-applied reconciliation.
 A journal revision fences writes; execution ownership requires host fencing.
 
-Explicit tool resumption returns the retained result to the host. Resuming the provider conversation
-requires a persisted provider transcript or provider-supported continuation. Resubmitting generation
-cannot reconstruct an interrupted conversation. Provider transcript continuation remains part of
-[#7](https://github.com/thirtytwobits/battersea/issues/7).
+Explicit tool resumption returns the retained result to the host. The host copies that exact call
+and result into its [durable provider conversation](providers.md#durable-tool-conversations), then
+explicitly resumes the provider turn. The approval and conversation stores have independent
+revisions; a restart between result publication and copying retrieves the published tool result.
+Resubmitting generation cannot reconstruct an interrupted conversation.
