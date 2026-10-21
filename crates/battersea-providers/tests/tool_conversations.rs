@@ -177,6 +177,38 @@ fn openai_response(output: Value) -> Value {
 }
 
 #[tokio::test]
+async fn durable_responses_reject_unsupported_modes_before_dispatch() {
+    use battersea_model::{ConversationRequest, ErrorKind, ToolCode};
+    let (url, state, server) = server(vec![]).await;
+    for (mode, streaming) in [
+        ("poll", true),
+        ("background-stream", true),
+        ("stream", false),
+    ] {
+        let backend = backend("openai", &url, mode);
+        let mut request = request(&backend, Arc::new(RecordingExecutor::default()));
+        request.shared.chat.stream = streaming;
+        let request = ConversationRequest {
+            shared: request.shared,
+            tools: request.local_tools,
+            max_turns: 2,
+        };
+        let adapter = adapter(backend);
+        let error = adapter.validate_conversation(&request, None).unwrap_err();
+        assert_eq!(error.classification, ErrorKind::InvalidRequest);
+        if streaming {
+            assert_eq!(error.tool_code, Some(ToolCode::UnsupportedToolContinuation));
+        }
+        assert!(adapter
+            .conversation_turn(request, None, vec![])
+            .await
+            .is_err());
+        assert!(state.requests.lock().unwrap().is_empty());
+    }
+    server.abort();
+}
+
+#[tokio::test]
 async fn mock_stream_reports_cumulative_usage_as_text_arrives() {
     let mut backend = backend("mock", "", "stream");
     backend.options.background_mode = None;
