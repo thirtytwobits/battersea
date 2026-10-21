@@ -233,9 +233,7 @@ pub trait ExecutionHost: Sized + Send + Sync {
             };
             if matches!(
                 definition.kind,
-                battersea_flow::FlowNodeClass::Inline
-                    | battersea_flow::FlowNodeClass::Hybrid
-                    | battersea_flow::FlowNodeClass::Instrument
+                battersea_flow::FlowNodeClass::Inline | battersea_flow::FlowNodeClass::Hybrid
             ) && self.inline_node_ready(runtime, &target_node_id)
             {
                 runtime.ready_inline_nodes.push_back(target_node_id);
@@ -823,7 +821,7 @@ pub trait ExecutionHost: Sized + Send + Sync {
                 };
                 if !matches!(
                     definition.kind,
-                    FlowNodeClass::Inline | FlowNodeClass::Hybrid | FlowNodeClass::Instrument
+                    FlowNodeClass::Inline | FlowNodeClass::Hybrid
                 ) || runtime.started_nodes.contains(&node.id)
                     || runtime.executed_nodes.contains(&node.id)
                 {
@@ -879,12 +877,7 @@ pub trait ExecutionHost: Sized + Send + Sync {
                 .iter()
                 .filter(|node| {
                     node_definition(&runtime.definitions, node).is_some_and(|d| {
-                        matches!(
-                            d.kind,
-                            FlowNodeClass::Inline
-                                | FlowNodeClass::Hybrid
-                                | FlowNodeClass::Instrument
-                        )
+                        matches!(d.kind, FlowNodeClass::Inline | FlowNodeClass::Hybrid)
                     }) && !runtime.executed_nodes.contains(&node.id)
                 })
                 .map(|node| node.id.clone())
@@ -1385,7 +1378,7 @@ pub trait ExecutionHost: Sized + Send + Sync {
                 node_definition(&runtime.definitions, node).is_some_and(|definition| {
                     matches!(
                         definition.kind,
-                        FlowNodeClass::Inline | FlowNodeClass::Hybrid | FlowNodeClass::Instrument
+                        FlowNodeClass::Inline | FlowNodeClass::Hybrid
                     )
                 }) && !runtime.started_nodes.contains(&node.id)
                     && !runtime.executed_nodes.contains(&node.id)
