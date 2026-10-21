@@ -516,10 +516,14 @@ async fn expiry_and_attempt_budgets_survive_reopen_and_reconciliation() {
     let d = open(store, provider.clone(), scope).await;
     d.record_tool_result(3, result("a")).await.unwrap();
     d.record_tool_result(4, result("b")).await.unwrap();
-    code(
-        d.resume(5).await.unwrap_err(),
-        ToolCode::ToolContinuationExpired,
+    let expired = d.resume(5).await.unwrap_err();
+    assert_eq!(expired.classification, ErrorKind::Expired);
+    assert_eq!(expired.dispatch, DispatchState::NotSent);
+    assert_eq!(
+        expired.tool_call.as_ref().unwrap().outcome,
+        ToolCallOutcome::Completed
     );
+    code(expired, ToolCode::ToolContinuationExpired);
     assert_eq!(provider.calls.load(Ordering::SeqCst), 1);
     let store = Arc::new(Store::default());
     let provider = Arc::new(Provider::default());

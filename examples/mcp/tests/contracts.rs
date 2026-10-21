@@ -1108,7 +1108,7 @@ async fn reconciled_and_reopened_calls_must_match_the_provider_transcript() {
         let turn = store.retained.lock().unwrap().as_ref().unwrap().turns[0]
             .response
             .clone();
-        for mutation in 0..8 {
+        for mutation in 0..9 {
             let mut changed = turn.clone();
             match mutation {
                 0 => changed.calls[0].id = "different-id".into(),
@@ -1128,13 +1128,25 @@ async fn reconciled_and_reopened_calls_must_match_the_provider_transcript() {
                         value: json!({"invented":true}),
                     },
                 ),
-                _ => {
+                7 => {
                     for event in &mut changed.events {
                         if let EngineTextStreamEvent::ContentBlock {
                             block: ContentBlock::NativeV2 { payload, .. },
                         } = event
                         {
                             payload["content"] = json!("invented");
+                        }
+                    }
+                }
+                _ => {
+                    let messages = changed.state["messages"].as_array_mut().unwrap();
+                    messages.last_mut().unwrap()["refusal"] = json!("refused");
+                    for event in &mut changed.events {
+                        if let EngineTextStreamEvent::ContentBlock {
+                            block: ContentBlock::NativeV2 { payload, .. },
+                        } = event
+                        {
+                            payload["refusal"] = json!("refused");
                         }
                     }
                 }
@@ -1209,7 +1221,7 @@ async fn reconciled_and_reopened_calls_must_match_the_provider_transcript() {
         assert!(conversation.resume(4).await.is_err());
         let retained = store.retained.lock().unwrap().clone().unwrap();
         let final_turn = retained.turns[1].response.clone();
-        for mutation in 0..11 {
+        for mutation in 0..13 {
             let mut changed = final_turn.clone();
             match mutation {
                 0 => {
@@ -1278,7 +1290,7 @@ async fn reconciled_and_reopened_calls_must_match_the_provider_transcript() {
                 9 => changed
                     .events
                     .retain(|e| !matches!(e, EngineTextStreamEvent::StructuredOutput { .. })),
-                _ => {
+                10 => {
                     let event = changed
                         .events
                         .iter()
@@ -1286,6 +1298,31 @@ async fn reconciled_and_reopened_calls_must_match_the_provider_transcript() {
                         .unwrap()
                         .clone();
                     changed.events.insert(1, event);
+                }
+                _ => {
+                    let messages = changed.state["messages"].as_array_mut().unwrap();
+                    let index = if mutation == 11 {
+                        messages.len() - 1
+                    } else {
+                        1
+                    };
+                    messages[index]["refusal"] = json!("refused");
+                    if mutation == 11 {
+                        for event in &mut changed.events {
+                            if let EngineTextStreamEvent::ContentBlock {
+                                block: ContentBlock::NativeV2 { payload, .. },
+                            } = event
+                            {
+                                payload["refusal"] = json!("refused");
+                            }
+                        }
+                    }
+                    assert!(
+                        adapter
+                            .validate_conversation(&request, Some(&changed.state))
+                            .is_err(),
+                        "refusal in assistant message {index}"
+                    );
                 }
             }
             assert!(
@@ -1315,7 +1352,7 @@ async fn reconciled_and_reopened_calls_must_match_the_provider_transcript() {
             stored.as_object_mut().unwrap().remove("checksum");
             stored["checksum"] = json!(configuration_digest(&stored));
             let stored: ConversationCheckpoint = serde_json::from_value(stored).unwrap();
-            if mutation >= 9 {
+            if (9..=10).contains(&mutation) {
                 assert!(stored.validate().is_err());
             } else {
                 stored.validate().unwrap();

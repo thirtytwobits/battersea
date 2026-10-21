@@ -120,6 +120,12 @@ impl EngineAdapter for Completions {
             for message in &checkpoint.messages[original.len()..] {
                 match message["role"].as_str() {
                     Some("assistant") if pending.is_empty() && !terminal => {
+                        if !message["refusal"].is_null() {
+                            return Err(invalid(
+                                &self.backend.provider,
+                                "Retained completion was refused.",
+                            ));
+                        }
                         if !message["content"].is_null() && !message["content"].is_string() {
                             return Err(invalid(
                                 &self.backend.provider,

@@ -533,10 +533,13 @@ impl DurableConversation {
             return Err(invalid());
         }
         if now >= self.scope.expires_at_unix_ms || Instant::now() >= self.deadline {
-            return Err(error(
-                ToolCode::ToolContinuationExpired,
+            return Err(EngineAdapterRequestError::new(
+                "conversation",
                 "Conversation expired.",
-            ));
+                ErrorKind::Expired,
+            )
+            .with_tool_code(ToolCode::ToolContinuationExpired)
+            .with_dispatch(crate::DispatchState::NotSent));
         }
         Ok(())
     }

@@ -96,7 +96,8 @@ Acceptance pins the original request, tool definitions, provider binding, safe b
 configuration digest, tool binding revision and absolute expiry. The host includes credential
 and authorisation context in the tool binding revision. Expiry must fit the configured backend
 operation timeout. Reopening requires the same request, scope and binding; remaining time and
-provider-attempt capacity survive restart. The host supplies a trusted wall clock across restarts.
+provider-attempt capacity survive restart. Expiry before dispatch returns `ErrorKind::Expired`
+with `DispatchState::NotSent`. The host supplies a trusted wall clock across restarts.
 
 The host store bounds reads before decoding and atomically compares journal revisions across
 processes. Successful writes are durable. Failed or cancelled writes may have committed, so the
@@ -125,6 +126,7 @@ projections. `resume` waits for the complete batch before sending its continuati
 Chat Completions retains its native assistant envelopes and appends each tool result once. An
 HTTP 429 retry sends the same prepared request. Reopening after a tool decision or result copy
 uses the retained assistant turn; it never regenerates the request that selected the tools.
+Retained assistant responses must have an absent or null refusal field.
 Final output receives the same modality and structured-output validation as an ordinary response.
 A final turn with a requested response format retains exactly one matching `StructuredOutput` event.
 Completed conversations return their retained checkpoint, including after expiry.
