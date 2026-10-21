@@ -711,17 +711,6 @@ impl DurableConversation {
         mut turn: ConversationTurn,
     ) -> Result<(), EngineAdapterRequestError> {
         bounded(&turn, self.max_bytes)?;
-        let previous = r.turns.last();
-        let results = ordered_results(previous);
-        if self.adapter.validate_conversation_turn(
-            &r.request,
-            previous.map(|t| &t.response.state),
-            &results,
-            &turn,
-        )? != self.binding
-        {
-            return Err(invalid());
-        }
         tool_loop::validate_tool_calls("conversation", &r.request.to_request(), &turn.calls)?;
         for event in &mut turn.events {
             match event {
@@ -834,10 +823,13 @@ impl DurableConversation {
                 ErrorKind::Timeout,
             )
         })??;
-        self.retain_step(&mut record, &command, step)?;
+        self.retain_step(&mut record, &command, step)
+            .map_err(|e| e.with_dispatch(crate::DispatchState::Unknown))?;
         let intent_revision = record.revision;
-        Self::advance(&mut record)?;
-        self.write(Some(intent_revision), &mut record).await?;
+        Self::advance(&mut record).map_err(|e| e.with_dispatch(crate::DispatchState::Unknown))?;
+        self.write(Some(intent_revision), &mut record)
+            .await
+            .map_err(|e| e.with_dispatch(crate::DispatchState::Unknown))?;
         Ok(record)
     }
 

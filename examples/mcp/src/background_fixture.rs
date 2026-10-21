@@ -2,7 +2,7 @@
 //! Controlled background jobs with explicit retrieval and cancellation.
 use crate::fixture::{listen, HttpServer, ProviderFixture, Result};
 use axum::{
-    extract::{Path, State},
+    extract::{Path, Query, State},
     http::StatusCode,
     response::{IntoResponse, Response},
     routing::{get, post},
@@ -17,6 +17,7 @@ use std::sync::{
 pub struct BackgroundFixture {
     pub provider: Arc<ProviderFixture>,
     pub operations: Mutex<Vec<String>>,
+    pub retrievals: Mutex<Vec<Vec<String>>>,
     pub pending: AtomicBool,
     pub wrong_identity: AtomicBool,
     pub fail_poll: AtomicBool,
@@ -27,6 +28,7 @@ impl BackgroundFixture {
         Arc::new(Self {
             provider,
             operations: Mutex::new(vec![]),
+            retrievals: Mutex::new(vec![]),
             pending: false.into(),
             wrong_identity: false.into(),
             fail_poll: false.into(),
@@ -60,7 +62,16 @@ pub async fn serve(fixture: Arc<BackgroundFixture>) -> Result<HttpServer> {
         }
         Json(f.response(&format!("job-{count}"), "queued")).into_response()
     }
-    async fn poll(State(f): State<Arc<BackgroundFixture>>, Path(id): Path<String>) -> Response {
+    async fn poll(
+        State(f): State<Arc<BackgroundFixture>>,
+        Path(id): Path<String>,
+        Query(query): Query<Vec<(String, String)>>,
+    ) -> Response {
+        let includes: Vec<_> = query
+            .into_iter()
+            .filter_map(|(key, value)| (key == "include[]").then_some(value))
+            .collect();
+        f.retrievals.lock().unwrap().push(includes.clone());
         f.operations.lock().unwrap().push(format!("poll:{id}"));
         if f.fail_poll.load(Ordering::SeqCst) {
             return StatusCode::BAD_REQUEST.into_response();
@@ -70,15 +81,28 @@ pub async fn serve(fixture: Arc<BackgroundFixture>) -> Result<HttpServer> {
         } else {
             "completed"
         };
-        Json(f.response(
+        let mut response = f.response(
             if f.wrong_identity.load(Ordering::SeqCst) {
                 "wrong-job"
             } else {
                 &id
             },
             status,
-        ))
-        .into_response()
+        );
+        for output in response["output"].as_array_mut().unwrap() {
+            if output["type"] == "reasoning"
+                && !includes.iter().any(|v| v == "reasoning.encrypted_content")
+            {
+                output.as_object_mut().unwrap().remove("encrypted_content");
+            }
+            if output["type"] == "message"
+                && includes.iter().any(|v| v == "message.output_text.logprobs")
+            {
+                output["content"][0]["logprobs"] =
+                    json!([{"token":"ok","logprob":-0.1,"bytes":[111,107],"top_logprobs":[]}]);
+            }
+        }
+        Json(response).into_response()
     }
     async fn cancel(State(f): State<Arc<BackgroundFixture>>, Path(id): Path<String>) -> Response {
         f.operations.lock().unwrap().push(format!("cancel:{id}"));

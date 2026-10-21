@@ -14,6 +14,7 @@ use std::{
 struct Store {
     bytes: Mutex<Option<Vec<u8>>>,
     fault: Mutex<Option<(u64, bool)>>,
+    conflict: AtomicUsize,
 }
 #[async_trait]
 impl ConversationStore for Store {
@@ -48,6 +49,9 @@ impl ConversationStore for Store {
                 .revision
         });
         if revision != expected {
+            return Err(ConversationStoreError::Conflict);
+        }
+        if self.conflict.load(Ordering::SeqCst) == next.revision as usize {
             return Err(ConversationStoreError::Conflict);
         }
         let fault = *self.fault.lock().unwrap();

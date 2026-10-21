@@ -741,6 +741,13 @@ async fn durable_provider_continuation_reopens_both_journals_and_retries_the_sav
         let (adapter, chat) = connect().unwrap();
         let mut original = host::request(&tools, "operator", chat);
         original.shared.chat.stream = streaming;
+        if background {
+            if streaming {
+                original.shared.chat.logprobs = Some(true);
+            } else {
+                original.shared.chat.top_logprobs = Some(1);
+            }
+        }
         let request = ConversationRequest {
             shared: original.shared,
             tools: original.local_tools,
@@ -891,6 +898,21 @@ async fn durable_provider_continuation_reopens_both_journals_and_retries_the_sav
                 ["create", "poll:job-1", "create", "create", "poll:job-3"]
             );
             assert_eq!(completed.attempts, 2);
+            assert_eq!(
+                *jobs.retrievals.lock().unwrap(),
+                vec![
+                    vec![
+                        "reasoning.encrypted_content",
+                        "message.output_text.logprobs"
+                    ];
+                    2
+                ]
+            );
+            assert_eq!(
+                completed.turns[1].response.state["response"]["output"][0]["content"][0]
+                    ["logprobs"][0]["token"],
+                "ok"
+            );
         }
         assert_eq!(completed.phase, ConversationPhase::Completed);
         assert!(completed.turns[1].response.events.iter().any(
@@ -1727,6 +1749,7 @@ async fn background_retrieval_failures_preserve_identity_and_cancellation_is_exp
             "poll:job-1",
             "poll:job-1",
             "cancel:job-1",
+            "poll:job-1",
             "cancel:job-1"
         ]
     );
@@ -1799,5 +1822,105 @@ async fn background_retrieval_failures_preserve_identity_and_cancellation_is_exp
         .count_text_stream_input_tokens(unsupported)
         .await
         .is_err());
-    assert_eq!(fixture.operations.lock().unwrap().len(), 6);
+    assert_eq!(fixture.operations.lock().unwrap().len(), 7);
+}
+
+#[tokio::test]
+async fn cancellation_recovers_a_matching_terminal_response_after_rejection() {
+    use battersea_model::{
+        ConversationPhase, ConversationRequest, ConversationScope, DurableConversation,
+    };
+    use mcp_example::{
+        background_fixture::{self, BackgroundFixture},
+        conversation_journal::FileConversationStore,
+    };
+    use std::{
+        sync::atomic::Ordering,
+        time::{SystemTime, UNIX_EPOCH},
+    };
+    for failure in 0..4 {
+        let (directory, _) = temporary_ledger();
+        let fixture = BackgroundFixture::new(ProviderFixture::new(json!({"value":1}), false));
+        let server = background_fixture::serve(fixture.clone()).await.unwrap();
+        let (adapter, chat) =
+            host::background_responses_provider(&server.endpoint, false, None).unwrap();
+        let original = host::request(&ToolRegistry::default(), "operator", chat);
+        let request = ConversationRequest {
+            shared: original.shared,
+            tools: vec![],
+            max_turns: 1,
+        };
+        let scope = ConversationScope {
+            run_id: "cancel-race".into(),
+            tool_binding_revision: "empty".into(),
+            expires_at_unix_ms: SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap()
+                .as_millis() as u64
+                + 4000,
+        };
+        let store = || Arc::new(FileConversationStore::new(directory.path().into()));
+        let conversation = DurableConversation::create(
+            store(),
+            adapter,
+            scope.clone(),
+            request.clone(),
+            65536,
+            Duration::from_secs(1),
+        )
+        .await
+        .unwrap();
+        let pending = conversation.resume(1).await.unwrap();
+        fixture.fail_cancel.store(true, Ordering::SeqCst);
+        fixture.pending.store(failure == 1, Ordering::SeqCst);
+        fixture.wrong_identity.store(failure == 2, Ordering::SeqCst);
+        fixture.fail_poll.store(failure == 3, Ordering::SeqCst);
+        let result = conversation.cancel(pending.revision).await;
+        if failure == 0 {
+            assert_eq!(result.unwrap().phase, ConversationPhase::Abandoned);
+        } else {
+            assert!(result.is_err());
+            let retained = conversation.inspect().await.unwrap();
+            assert_eq!(retained.phase, ConversationPhase::ProviderCancelling);
+            assert_eq!(retained.pending, pending.pending);
+            assert!(retained.cancellation.is_none());
+        }
+        drop(conversation);
+        fixture.pending.store(false, Ordering::SeqCst);
+        fixture.wrong_identity.store(false, Ordering::SeqCst);
+        fixture.fail_poll.store(false, Ordering::SeqCst);
+        let (adapter, _) =
+            host::background_responses_provider(&server.endpoint, false, None).unwrap();
+        let conversation = DurableConversation::open(
+            store(),
+            adapter,
+            scope,
+            request,
+            65536,
+            Duration::from_secs(1),
+        )
+        .await
+        .unwrap();
+        let revision = conversation.inspect().await.unwrap().revision;
+        let terminal = conversation.cancel(revision).await.unwrap();
+        assert_eq!(terminal.phase, ConversationPhase::Abandoned);
+        assert_eq!(terminal.cancellation.as_ref().unwrap()["id"], "job-1");
+        assert_eq!(
+            terminal.cancellation.as_ref().unwrap()["status"],
+            "completed"
+        );
+        assert!(terminal.turns.is_empty());
+        assert_eq!(terminal.attempts, 1);
+        assert_eq!(
+            conversation.cancel(terminal.revision).await.unwrap(),
+            terminal
+        );
+        let attempts = if failure == 0 { 1 } else { 2 };
+        assert_eq!(fixture.operations.lock().unwrap().len(), 1 + 2 * attempts);
+        assert_eq!(
+            *fixture.retrievals.lock().unwrap(),
+            vec![vec!["reasoning.encrypted_content"]; attempts]
+        );
+        assert_eq!(fixture.provider.requests.lock().unwrap().len(), 1);
+    }
 }

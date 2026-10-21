@@ -20,6 +20,14 @@ struct Checkpoint {
     response: Value,
 }
 
+fn durable_includes(request: &ConversationRequest) -> Vec<&'static str> {
+    let mut include = vec!["reasoning.encrypted_content"];
+    if request.shared.chat.logprobs == Some(true) || request.shared.chat.top_logprobs.is_some() {
+        include.push("message.output_text.logprobs");
+    }
+    include
+}
+
 fn invalid(message: &str) -> EngineAdapterRequestError {
     EngineAdapterRequestError::invalid_response("openai", message)
 }
@@ -223,14 +231,7 @@ impl OpenAiEngineAdapter {
         let input = self.continuation_input(&request, state.as_ref(), &results)?;
         let runtime = request.to_request();
         let mut body = build_local_tool_body(&self.backend, &runtime, json!(input));
-        // Retain opaque reasoning for replay with the host-owned transcript.
-        body.as_object_mut()
-            .expect("request object")
-            .entry("include")
-            .or_insert_with(|| json!([]))
-            .as_array_mut()
-            .expect("include array")
-            .push(json!("reasoning.encrypted_content"));
+        body["include"] = json!(durable_includes(&request));
         check_payload(&body, "openai")?;
         emit_request(
             self.logger.as_ref(),

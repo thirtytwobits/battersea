@@ -155,28 +155,32 @@ attempts. A timeout or missing reply does not establish that dispatch did not oc
 
 `ConversationCommand` distinguishes generation, retrieval and cancellation. `ConversationStep`
 returns pending state, a completed turn or terminal cancellation evidence. Adapters validate each
-transition against the original request, preceding transcript and ordered tool results. The default
-adapter implementation supports completed generation through `conversation_turn`.
+transition through `validate_conversation_step` against the original request, preceding transcript
+and ordered tool results. The default adapter implementation supports completed generation through
+`conversation_turn`.
 
 Background polling accepts either value of `chat.stream` and sends non-streaming HTTP requests.
 A queued or in-progress Responses create publishes `ProviderPending` with an immutable native
 response identity. Reopening retains that identity and the exact submitted input. Each subsequent
-`resume` retrieves the same response after the configured poll interval. A pending retrieval
-preserves the original handle; a completed retrieval publishes the validated turn and retains its
+`resume` retrieves the same response after the configured poll interval, requesting encrypted
+reasoning and any configured log probabilities. A pending retrieval preserves the original handle; a completed retrieval publishes the validated turn and retains its
 handle alongside the transcript. Failed or interrupted retrieval can be retried at the stored
 revision. Retrieval never authorises a new generation. Failure before the create result is published
 leaves `ProviderIntent` and requires host reconciliation.
 
 `cancel` publishes `ProviderCancelling` before requesting remote cancellation. Generation and
-retrieval remain blocked until cancellation returns a matching terminal response. The terminal
-receipt is published with `Abandoned`; repeating that command returns the saved receipt. Interrupted
-cancellation can be retried against the same remote identity. Cancellation is bounded by the
+retrieval through `resume` remain blocked until cancellation confirms a matching terminal response.
+An HTTP 400 or 409 cancellation rejection triggers retrieval of the retained response ID; only a
+matching terminal response confirms cleanup. The terminal receipt is published with `Abandoned`; repeating that command returns the saved receipt. Interrupted
+cancellation can be retried against the same remote identity. Validation or publication failures
+after the remote cancellation call report `DispatchState::Unknown`. Cancellation is bounded by the
 configured timeout and remains available after conversation expiry. The host owns remote cleanup:
 dropping a conversation leaves the remote job running. Host abandonment preserves its handle,
 which remains available to `cancel` after reopen and expiry. Cleanup retains the abandonment
 record and publishes a terminal receipt. The host also coordinates outstanding tool approval work.
 
 Background expiry must fit both the backend operation timeout and background wait limit.
+The poll interval must be shorter than both limits.
 Retrieval preserves absolute expiry and consumes no provider-attempt capacity. Remote retention
 and `storeResponse` remain provider and host policy; an unavailable response causes a retrieval
 error. Recovery does not replace an unavailable response with a new generation.

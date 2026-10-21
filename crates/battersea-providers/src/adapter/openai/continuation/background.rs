@@ -18,6 +18,20 @@ fn native_response(response: &Value) -> Result<(), EngineAdapterRequestError> {
 }
 
 impl OpenAiEngineAdapter {
+    fn retrieve_durable_response(
+        &self,
+        request: &ConversationRequest,
+        id: &str,
+    ) -> reqwest::RequestBuilder {
+        let query: Vec<_> = durable_includes(request)
+            .into_iter()
+            .map(|field| ("include[]", field))
+            .collect();
+        self.http_client
+            .get(format!("{}/responses/{id}", self.base_url))
+            .query(&query)
+    }
+
     fn pending_checkpoint(
         &self,
         request: &ConversationRequest,
@@ -132,13 +146,7 @@ impl OpenAiEngineAdapter {
                     &request.to_request(),
                     json!(input),
                 ));
-                body.as_object_mut()
-                    .expect("body")
-                    .entry("include")
-                    .or_insert_with(|| json!([]))
-                    .as_array_mut()
-                    .expect("include")
-                    .push(json!("reasoning.encrypted_content"));
+                body["include"] = json!(durable_includes(&request));
                 check_payload(&body, "openai")?;
                 emit_request(
                     self.logger.as_ref(),
@@ -169,7 +177,7 @@ impl OpenAiEngineAdapter {
                         self.background_poll_interval_ms,
                     ))
                     .await;
-                    self.http_client.get(url)
+                    self.retrieve_durable_response(&request, &id)
                 };
                 emit_request(
                     self.logger.as_ref(),
@@ -182,11 +190,41 @@ impl OpenAiEngineAdapter {
                 (http.headers(headers), Some(pending))
             }
         };
-        let response: Value = crate::retry::send(http, &self.backend, self.logger.as_ref())
-            .await?
-            .bounded_json()
-            .await
-            .map_err(|_| invalid("Invalid background response payload."))?;
+        let sent = crate::retry::send(http, &self.backend, self.logger.as_ref()).await;
+        let response: Value = match sent {
+            Ok(response) => response
+                .bounded_json()
+                .await
+                .map_err(|_| invalid("Invalid background response payload."))?,
+            Err(error)
+                if matches!(command, ConversationCommand::Cancel { .. })
+                    && matches!(error.status_code, Some(400 | 409)) =>
+            {
+                // A response can finish between the last retrieval and cancellation.
+                let id = crate::connection::segment(
+                    pending.as_ref().expect("cancel handle").response["id"]
+                        .as_str()
+                        .expect("identity"),
+                );
+                let response: Value = crate::retry::send(
+                    self.retrieve_durable_response(&request, &id)
+                        .headers(build_openai_headers(&self.backend)?),
+                    &self.backend,
+                    self.logger.as_ref(),
+                )
+                .await?
+                .bounded_json()
+                .await
+                .map_err(|_| invalid("Invalid background response payload."))?;
+                let step = ConversationStep::Cancelled {
+                    state: response.clone(),
+                };
+                self.validate_durable_step(&request, previous.as_ref(), &results, &command, &step)
+                    .map_err(|_| error)?;
+                response
+            }
+            Err(error) => return Err(error),
+        };
         native_response(&response)?;
         if pending
             .as_ref()

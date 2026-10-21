@@ -25,16 +25,6 @@ impl EngineAdapter for Remote {
     ) -> Result<ConversationBinding, EngineAdapterRequestError> {
         self.provider.validate_conversation(request, state)
     }
-    fn validate_conversation_turn(
-        &self,
-        request: &ConversationRequest,
-        previous: Option<&Value>,
-        results: &[ConversationToolResult],
-        turn: &ConversationTurn,
-    ) -> Result<ConversationBinding, EngineAdapterRequestError> {
-        self.provider
-            .validate_conversation_turn(request, previous, results, turn)
-    }
     async fn count_text_stream_input_tokens(
         &self,
         _: EngineTextStreamRequest,
@@ -80,7 +70,8 @@ impl EngineAdapter for Remote {
                 if turn.state["remote_id"] != state["id"] {
                     return Err(invalid());
                 }
-                self.validate_conversation_turn(request, previous, results, turn)?;
+                self.provider
+                    .validate_conversation_turn(request, previous, results, turn)?;
             }
             (
                 ConversationCommand::Cancel { state },
@@ -172,7 +163,7 @@ async fn remote(
 }
 
 #[tokio::test]
-async fn polling_reopens_without_spending_turns_or_repeating_generation() {
+async fn step_only_adapter_reopens_without_spending_turns_or_repeating_generation() {
     let store = Arc::new(Store::default());
     let provider = Arc::new(Remote::default());
     let scope = scope();
@@ -431,4 +422,29 @@ async fn abandoned_remote_work_can_be_cancelled_after_expiry_and_reopened() {
     assert_eq!(provider.creates.load(Ordering::SeqCst), 1);
     assert_eq!(provider.polls.load(Ordering::SeqCst), 0);
     assert_eq!(provider.cancels.load(Ordering::SeqCst), 2);
+}
+
+#[tokio::test]
+async fn cancellation_conflicts_report_dispatch_certainty_at_the_publication_boundary() {
+    for revision in [4, 5] {
+        let store = Arc::new(Store::default());
+        let provider = Arc::new(Remote::default());
+        let d = remote(store.clone(), provider.clone(), scope(), false).await;
+        d.resume(1).await.unwrap();
+        store.conflict.store(revision, Ordering::SeqCst);
+        let error = d.cancel(3).await.unwrap_err();
+        assert_eq!(error.tool_code, Some(ToolCode::ToolContinuationConflict));
+        assert_eq!(
+            error.dispatch,
+            if revision == 4 {
+                DispatchState::NotSent
+            } else {
+                DispatchState::Unknown
+            }
+        );
+        assert_eq!(
+            provider.cancels.load(Ordering::SeqCst),
+            usize::from(revision == 5)
+        );
+    }
 }
