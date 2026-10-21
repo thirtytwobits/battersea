@@ -148,17 +148,17 @@ fn validate_stream_mode(
     backend: &EngineBackendConfig,
     stream: bool,
 ) -> Result<(), EngineAdapterRequestError> {
-    if !stream
-        && !(backend.options.background == Some(true)
+    if stream
+        || (backend.options.background == Some(true)
             && backend.options.background_mode.as_deref() == Some("poll"))
     {
-        return Err(EngineAdapterRequestError::new(
-            &backend.provider,
-            "Non-streaming Responses requests require background polling.",
-            battersea_model::ErrorKind::InvalidRequest,
-        ));
+        return Ok(());
     }
-    Ok(())
+    Err(EngineAdapterRequestError::new(
+        &backend.provider,
+        "Non-streaming Responses requests require background polling.",
+        battersea_model::ErrorKind::InvalidRequest,
+    ))
 }
 
 struct OpenAiEngineAdapter {
