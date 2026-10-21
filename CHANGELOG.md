@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.15.1 — 2026-10-21
+
+- The scheduler runs an instrument only when a signal reaches one of its action ports. It ran
+  instruments as inline nodes, which failed any activation that kept one in its flow.
+
 ## 0.15.0 — 2026-10-19
 
 - Add `battersea-tools`. `Tool` is the Model Context Protocol 2026-07-28 tool record, and a tool

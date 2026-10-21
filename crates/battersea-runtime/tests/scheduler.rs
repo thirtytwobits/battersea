@@ -166,6 +166,12 @@ impl NodeHandler<Host> for Handler {
         cancel: &CancellationToken,
     ) -> Result<(), Error> {
         run.calls.push(node.id.clone());
+        if def.kind == FlowNodeClass::Instrument {
+            return Err(Error::invalid_request(
+                "instrument_executed",
+                "An instrument runs only through its action ports.",
+            ));
+        }
         if let Some(expected) = node.parameter_values.get("require_input") {
             let received = host.take_flow_input_token(run, &node.id, "in")?;
             assert_eq!(
@@ -501,6 +507,7 @@ fn definitions(mode: &str) -> HashMap<String, FlowNodeDefinition> {
         json!({"class_name":"Sink","kind":"sink","short_description":"sink","long_description":"sink","handler_id":"test.node","input_ports":[{"name":"in","kind":"input","token_type":"text","mode":mode,"phase":"execution"}],"action_ports":[{"name":"go"},{"name":"back"}],"signal_ports":[{"name":"done"}]}),
         json!({"class_name":"Join","kind":"inline","short_description":"join","long_description":"join","handler_id":"test.node","output_ports":[{"name":"out","kind":"output","token_type":"text","mode":mode,"phase":"execution"}],"signal_ports":[{"name":"done"},{"name":"post_activate"}],"input_ports":[{"name":"in","kind":"input","token_type":"text","mode":mode,"phase":"execution"},{"name":"unused","kind":"input","token_type":"text","mode":"final_value","phase":"execution"}]}),
         json!({"class_name":"Action","kind":"control","short_description":"action","long_description":"action","handler_id":"test.node","action_ports":[{"name":"go"},{"name":"back"}],"signal_ports":[{"name":"done"}]}),
+        json!({"class_name":"Tap","kind":"instrument","short_description":"tap","long_description":"tap","handler_id":"test.node","action_ports":[{"name":"go"}],"signal_ports":[{"name":"done"}]}),
     ].into_iter().map(|v| {let d:FlowNodeDefinition=serde_json::from_value(v).unwrap();(d.class_name.clone(),d)}).collect()
 }
 fn document(nodes: Vec<Value>, edges: Vec<Value>) -> FlowDocument {
@@ -973,6 +980,38 @@ async fn cancellation_preempts_a_blocked_consumer_and_stops_a_full_provider_mail
     assert!(polls < 4);
     assert_eq!(state.retention.usage(), retention::Usage::default());
 }
+#[tokio::test]
+async fn an_instrument_relays_its_signal_and_is_never_run_as_a_node() {
+    let (host, mut state) = fixture(
+        vec![
+            node(
+                "source",
+                "Source",
+                json!({"values":["first"],"signal":true}),
+            ),
+            node("sink", "Sink", json!({})),
+            node("tap", "Tap", json!({"forward":true})),
+            node("action", "Action", json!({})),
+        ],
+        vec![
+            edge("data", "source", "sink", 0, "final_value"),
+            signal("into-tap", "source", "tap", "go"),
+            signal("out-of-tap", "tap", "action", "go"),
+        ],
+        "final_value",
+    );
+    run(&host, &mut state).await.unwrap();
+    assert_eq!(
+        state.calls.iter().filter(|id| *id == "tap").count(),
+        1,
+        "the tap runs once, for the signal on its action port"
+    );
+    assert!(
+        state.calls.iter().any(|id| id == "action"),
+        "the tap relays its signal"
+    );
+}
+
 #[tokio::test]
 async fn queued_signals_follow_data_and_signal_cycles_are_refused() {
     let (host, mut state) = fixture(
