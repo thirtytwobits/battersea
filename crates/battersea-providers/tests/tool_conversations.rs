@@ -180,11 +180,7 @@ fn openai_response(output: Value) -> Value {
 async fn durable_responses_reject_unsupported_modes_before_dispatch() {
     use battersea_model::{ConversationRequest, ErrorKind, ToolCode};
     let (url, state, server) = server(vec![]).await;
-    for (mode, streaming) in [
-        ("poll", true),
-        ("background-stream", true),
-        ("stream", false),
-    ] {
+    for (mode, streaming) in [("background-stream", true), ("stream", false)] {
         let backend = backend("openai", &url, mode);
         let mut request = request(&backend, Arc::new(RecordingExecutor::default()));
         request.shared.chat.stream = streaming;

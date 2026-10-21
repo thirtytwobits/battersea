@@ -256,6 +256,26 @@ impl EngineAdapter for OpenAiEngineAdapter {
         self.durable_turn(request, state, results).await
     }
 
+    fn validate_conversation_step(
+        &self,
+        request: &battersea_model::ConversationRequest,
+        previous: Option<&Value>,
+        results: &[battersea_model::ConversationToolResult],
+        command: &battersea_model::ConversationCommand,
+        step: &battersea_model::ConversationStep,
+    ) -> Result<battersea_model::ConversationBinding, EngineAdapterRequestError> {
+        self.validate_durable_step(request, previous, results, command, step)
+    }
+    async fn conversation_step(
+        &self,
+        request: battersea_model::ConversationRequest,
+        previous: Option<Value>,
+        results: Vec<battersea_model::ConversationToolResult>,
+        command: battersea_model::ConversationCommand,
+    ) -> Result<battersea_model::ConversationStep, EngineAdapterRequestError> {
+        self.durable_step(request, previous, results, command).await
+    }
+
     fn describe_debug_context(&self) -> EngineAdapterDebugContext {
         self.context.clone()
     }

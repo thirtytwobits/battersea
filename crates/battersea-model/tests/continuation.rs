@@ -696,3 +696,6 @@ async fn recovered_turns_obey_final_output_admission() {
     assert_eq!(d.inspect().await.unwrap(), completed);
     assert_eq!(provider.calls.load(Ordering::SeqCst), 2);
 }
+
+#[path = "continuation/background.rs"]
+mod background;

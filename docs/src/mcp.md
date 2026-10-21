@@ -73,10 +73,14 @@ records approval, resumes the tool, copies the published result into the convers
 and explicitly requests the next provider turn. Each boundary can be reopened using fresh store
 handles and the original configured binding.
 
-The consumer exercises ordinary and streaming Chat Completions and foreground streaming Responses
-over all three MCP transports. Responses retains native reasoning and function-call items across
+The consumer exercises ordinary and streaming Chat Completions, foreground streaming Responses
+and background polling Responses over all three MCP transports. Responses retains native reasoning and function-call items across
 reopen, including their opaque fields. A rejected
 continuation reuses the saved transcript, the tool effect occurs once, and private tool metadata
 stays out of provider requests. Failed, cancelled and invalid provider continuations retain an
 unresolved intent and the preceding tool result. The host fences the original task before resolving
 that intent. See the [provider contract](contracts/providers.md#durable-tool-conversations).
+
+Background polling reopens the saved response identity before retrieving the tool batch and the
+final response. Failed reads preserve the identity; explicit cancellation retains a terminal
+receipt. The consumer verifies that dropping a pending conversation leaves cleanup to the host.

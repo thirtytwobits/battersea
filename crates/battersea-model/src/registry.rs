@@ -290,6 +290,41 @@ struct AdmittedAdapter {
     backend: EngineBackendConfig,
     inner: Arc<dyn EngineAdapter>,
 }
+impl AdmittedAdapter {
+    async fn validate_conversation_output(
+        &self,
+        request: &crate::ConversationRequest,
+        turn: &mut crate::ConversationTurn,
+    ) -> Result<(), EngineAdapterRequestError> {
+        let format = request.shared.chat.response_format.clone();
+        let modalities = request
+            .shared
+            .chat
+            .output_modalities
+            .clone()
+            .unwrap_or_else(|| vec![crate::Modality::Text]);
+        if turn.calls.is_empty() {
+            use futures_util::StreamExt;
+            let stream = Box::pin(futures_util::stream::iter(
+                std::mem::take(&mut turn.events).into_iter().map(Ok),
+            ));
+            let mut validated = crate::adapter::output::validate_output(
+                stream,
+                self.backend.provider.clone(),
+                format,
+                modalities,
+            );
+            let mut events = Vec::new();
+            while let Some(event) = validated.next().await {
+                events.push(event?);
+            }
+            turn.events = events;
+        }
+        crate::adapter::payload::check_payload(turn, &self.backend.provider)?;
+        Ok(())
+    }
+}
+
 #[async_trait]
 impl EngineAdapter for AdmittedAdapter {
     fn validate_conversation(
@@ -311,6 +346,47 @@ impl EngineAdapter for AdmittedAdapter {
         self.inner
             .validate_conversation_turn(request, previous, results, turn)
     }
+    fn validate_conversation_step(
+        &self,
+        request: &crate::ConversationRequest,
+        previous: Option<&Value>,
+        results: &[crate::ConversationToolResult],
+        command: &crate::ConversationCommand,
+        step: &crate::ConversationStep,
+    ) -> Result<crate::ConversationBinding, EngineAdapterRequestError> {
+        validate_chat_request(&self.backend, &request.to_request())?;
+        self.inner
+            .validate_conversation_step(request, previous, results, command, step)
+    }
+    async fn conversation_step(
+        &self,
+        request: crate::ConversationRequest,
+        previous: Option<Value>,
+        results: Vec<crate::ConversationToolResult>,
+        command: crate::ConversationCommand,
+    ) -> Result<crate::ConversationStep, EngineAdapterRequestError> {
+        self.validate_conversation(&request, previous.as_ref())?;
+        let call = self
+            .inner
+            .conversation_step(request.clone(), previous, results, command);
+        let mut step = match self.backend.options.timeout_ms {
+            Some(ms) => tokio::time::timeout(std::time::Duration::from_millis(ms), call)
+                .await
+                .map_err(|_| {
+                    EngineAdapterRequestError::new(
+                        &self.backend.provider,
+                        "Provider operation deadline exceeded.",
+                        ErrorKind::Timeout,
+                    )
+                })??,
+            None => call.await?,
+        };
+        if let crate::ConversationStep::Completed { turn } = &mut step {
+            self.validate_conversation_output(&request, turn).await?;
+        }
+        crate::adapter::payload::check_payload(&step, &self.backend.provider)?;
+        Ok(step)
+    }
     async fn conversation_turn(
         &self,
         request: crate::ConversationRequest,
@@ -318,13 +394,7 @@ impl EngineAdapter for AdmittedAdapter {
         results: Vec<crate::ConversationToolResult>,
     ) -> Result<crate::ConversationTurn, EngineAdapterRequestError> {
         self.validate_conversation(&request, state.as_ref())?;
-        let format = request.shared.chat.response_format.clone();
-        let modalities = request
-            .shared
-            .chat
-            .output_modalities
-            .clone()
-            .unwrap_or_else(|| vec![crate::Modality::Text]);
+        let request_for_output = request.clone();
         let call = self.inner.conversation_turn(request, state, results);
         let mut turn = match self.backend.options.timeout_ms {
             Some(ms) => tokio::time::timeout(std::time::Duration::from_millis(ms), call)
@@ -338,22 +408,8 @@ impl EngineAdapter for AdmittedAdapter {
                 })??,
             None => call.await?,
         };
-        if turn.calls.is_empty() {
-            use futures_util::StreamExt;
-            let stream = Box::pin(futures_util::stream::iter(turn.events.into_iter().map(Ok)));
-            let mut validated = crate::adapter::output::validate_output(
-                stream,
-                self.backend.provider.clone(),
-                format,
-                modalities,
-            );
-            let mut events = Vec::new();
-            while let Some(event) = validated.next().await {
-                events.push(event?);
-            }
-            turn.events = events;
-        }
-        crate::adapter::payload::check_payload(&turn, &self.backend.provider)?;
+        self.validate_conversation_output(&request_for_output, &mut turn)
+            .await?;
         Ok(turn)
     }
 

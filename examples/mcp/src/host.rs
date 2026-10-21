@@ -81,26 +81,34 @@ pub async fn bind(connection: &McpConnection) -> Result<(McpToolBinding, ToolReg
 }
 
 pub fn provider(endpoint: &str) -> Result<(Arc<dyn EngineAdapter>, EngineChatParameters)> {
-    configured_provider(endpoint, "openai-chat-completions", false, None)
+    configured_provider(endpoint, "openai-chat-completions", false, false, None)
 }
 
 pub fn responses_provider(
     endpoint: &str,
 ) -> Result<(Arc<dyn EngineAdapter>, EngineChatParameters)> {
-    configured_provider(endpoint, "openai-responses", true, None)
+    configured_provider(endpoint, "openai-responses", true, false, None)
 }
 
 pub fn responses_provider_with_logger(
     endpoint: &str,
     logger: Arc<dyn EngineAdapterLogger>,
 ) -> Result<(Arc<dyn EngineAdapter>, EngineChatParameters)> {
-    configured_provider(endpoint, "openai-responses", true, Some(logger))
+    configured_provider(endpoint, "openai-responses", true, false, Some(logger))
+}
+
+pub fn background_responses_provider(
+    endpoint: &str,
+    logger: Option<Arc<dyn EngineAdapterLogger>>,
+) -> Result<(Arc<dyn EngineAdapter>, EngineChatParameters)> {
+    configured_provider(endpoint, "openai-responses", true, true, logger)
 }
 
 fn configured_provider(
     endpoint: &str,
     adapter: &str,
     stream: bool,
+    background: bool,
     logger: Option<Arc<dyn EngineAdapterLogger>>,
 ) -> Result<(Arc<dyn EngineAdapter>, EngineChatParameters)> {
     let mut protocols = ProtocolRegistry::default();
@@ -110,13 +118,17 @@ fn configured_provider(
     let mut capabilities = EngineBackendCapabilities::mock();
     capabilities.content = chat.content.clone();
     capabilities.supported_chat_parameters = chat.parameters.clone();
+    let mut options = serde_json::json!({"timeoutMs":5000,"streamIdleTimeoutMs":3000,"maxRetries":1,"retryInitialDelayMs":1,"retryMaxDelayMs":20});
+    if background {
+        options.as_object_mut().unwrap().extend(serde_json::json!({"background":true,"backgroundMode":"poll","backgroundPollIntervalMs":1,"backgroundMaxWaitMs":5000}).as_object().unwrap().clone());
+    }
     let config: battersea_config::ProviderConfiguration = serde_json::from_value(
         serde_json::json!({
             "version":1,
             "providers":{"controlled":{"chat":{"adapter":adapter,"baseUrl":format!("{endpoint}/v1/"),"auth":{"type":"none"}}}},
             "backends":{"chat":{"provider":"controlled","model":"fixture","contextWindowTokens":8192,"capabilities":capabilities,
                 "properties":{"stream":stream,"maxOutputTokens":1024,"temperature":0.7,"stopSequences":[],"toolExecution":"engine-orchestrated","maxToolRounds":2,"toolChoice":{"mode":"auto"},"contextOverflow":"error"},
-                "options":{"timeoutMs":5000,"streamIdleTimeoutMs":3000,"maxRetries":1,"retryInitialDelayMs":1,"retryMaxDelayMs":20}}}
+                "options":options}}
         }),
     )?;
     let parameters = battersea_config::resolve_chat_parameters(
