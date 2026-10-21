@@ -677,9 +677,9 @@ async fn durable_provider_continuation_reopens_both_journals_and_retries_the_sav
     };
     use mcp_example::{conversation_journal::FileConversationStore, journal::FileApprovalStore};
     use std::time::{SystemTime, UNIX_EPOCH};
-    for (transport, streaming) in TRANSPORTS
+    for (transport, streaming, responses) in TRANSPORTS
         .into_iter()
-        .flat_map(|t| [false, true].map(|s| (t, s)))
+        .flat_map(|t| [(false, false), (true, false), (true, true)].map(|(s, r)| (t, s, r)))
     {
         let (directory, ledger) = temporary_ledger();
         let remote = Remote::start(transport, &ledger, Fault::None, Duration::from_secs(10))
@@ -687,8 +687,20 @@ async fn durable_provider_continuation_reopens_both_journals_and_retries_the_sav
             .unwrap();
         let (binding, tools) = host::bind(&remote.connection).await.unwrap();
         let fixture = ProviderFixture::new(json!({"value":1}), true);
-        let provider = fixture::provider_http(fixture.clone()).await.unwrap();
-        let (adapter, chat) = host::provider(&provider.endpoint).unwrap();
+        let provider = if responses {
+            fixture::responses_http(fixture.clone()).await
+        } else {
+            fixture::provider_http(fixture.clone()).await
+        }
+        .unwrap();
+        let connect = || {
+            if responses {
+                host::responses_provider(&provider.endpoint)
+            } else {
+                host::provider(&provider.endpoint)
+            }
+        };
+        let (adapter, chat) = connect().unwrap();
         let mut original = host::request(&tools, "operator", chat);
         original.shared.chat.stream = streaming;
         let request = ConversationRequest {
@@ -744,7 +756,7 @@ async fn durable_provider_continuation_reopens_both_journals_and_retries_the_sav
         drop(gate);
         drop(conversation);
 
-        let (adapter, _) = host::provider(&provider.endpoint).unwrap();
+        let (adapter, _) = connect().unwrap();
         let conversation = DurableConversation::open(
             store(),
             adapter,
@@ -785,7 +797,7 @@ async fn durable_provider_continuation_reopens_both_journals_and_retries_the_sav
         drop(gate);
         drop(conversation);
 
-        let (adapter, _) = host::provider(&provider.endpoint).unwrap();
+        let (adapter, _) = connect().unwrap();
         let conversation = DurableConversation::open(
             store(),
             adapter,
@@ -820,20 +832,38 @@ async fn durable_provider_continuation_reopens_both_journals_and_retries_the_sav
             assert!(!serde_json::to_string(&*requests)
                 .unwrap()
                 .contains("private-receipt"));
-            assert_eq!(
-                requests[1]["messages"][1]["tool_calls"][0]["id"],
-                "effect-1"
-            );
-            assert_eq!(requests[1]["messages"][2]["tool_call_id"], "effect-1");
-            if !streaming {
+            if responses {
                 assert_eq!(
-                    requests[1]["messages"][1]["fixture_state"]["token"],
-                    "retained-provider-token"
+                    requests[1]["input"][1]["encrypted_content"],
+                    "opaque-reasoning"
                 );
+                assert_eq!(
+                    requests[1]["input"][2]["vendor"]["signature"],
+                    "retained-call"
+                );
+                assert_eq!(requests[1]["input"][3]["type"], "function_call_output");
+                assert_eq!(requests[1]["input"][3]["call_id"], "effect-1");
+                assert!(requests[1]["include"]
+                    .as_array()
+                    .unwrap()
+                    .contains(&json!("reasoning.encrypted_content")));
+                assert!(requests[1].get("previous_response_id").is_none());
+            } else {
+                assert_eq!(
+                    requests[1]["messages"][1]["tool_calls"][0]["id"],
+                    "effect-1"
+                );
+                assert_eq!(requests[1]["messages"][2]["tool_call_id"], "effect-1");
+                if !streaming {
+                    assert_eq!(
+                        requests[1]["messages"][1]["fixture_state"]["token"],
+                        "retained-provider-token"
+                    );
+                }
             }
         }
         drop(conversation);
-        let (adapter, _) = host::provider(&provider.endpoint).unwrap();
+        let (adapter, _) = connect().unwrap();
         let conversation = DurableConversation::open(
             store(),
             adapter,
@@ -875,7 +905,10 @@ async fn interrupted_or_invalid_provider_continuations_keep_the_tool_result_and_
         sync::atomic::Ordering,
         time::{SystemTime, UNIX_EPOCH},
     };
-    for failure in 0..3 {
+    for (responses, failure) in [false, true]
+        .into_iter()
+        .flat_map(|r| (0..3).map(move |f| (r, f)))
+    {
         let (directory, ledger) = temporary_ledger();
         let remote = Remote::start(
             Transport::Json,
@@ -893,8 +926,20 @@ async fn interrupted_or_invalid_provider_continuations_keep_the_tool_result_and_
         fixture
             .hang_continuation
             .store(failure == 1, Ordering::SeqCst);
-        let provider = fixture::provider_http(fixture.clone()).await.unwrap();
-        let (adapter, chat) = host::provider(&provider.endpoint).unwrap();
+        let provider = if responses {
+            fixture::responses_http(fixture.clone()).await
+        } else {
+            fixture::provider_http(fixture.clone()).await
+        }
+        .unwrap();
+        let connect = |endpoint: &str| {
+            if responses {
+                host::responses_provider(endpoint)
+            } else {
+                host::provider(endpoint)
+            }
+        };
+        let (adapter, chat) = connect(&provider.endpoint).unwrap();
         let original = host::request(&tools, "operator", chat);
         let mut request = ConversationRequest {
             shared: original.shared,
@@ -951,7 +996,7 @@ async fn interrupted_or_invalid_provider_continuations_keep_the_tool_result_and_
             assert_eq!(error.tool_call.unwrap().outcome, ToolCallOutcome::Completed);
             drop(conversation);
         }
-        let (adapter, _) = host::provider(&provider.endpoint).unwrap();
+        let (adapter, _) = connect(&provider.endpoint).unwrap();
         let conversation = DurableConversation::open(
             store(),
             adapter,
@@ -976,7 +1021,7 @@ async fn interrupted_or_invalid_provider_continuations_keep_the_tool_result_and_
         let alternate = fixture::provider_http(ProviderFixture::new(json!({"value":1}), false))
             .await
             .unwrap();
-        let (changed, _) = host::provider(&alternate.endpoint).unwrap();
+        let (changed, _) = connect(&alternate.endpoint).unwrap();
         assert!(DurableConversation::open(
             store(),
             changed,
@@ -1045,9 +1090,9 @@ async fn reconciled_and_reopened_calls_must_match_the_provider_transcript() {
             self.inner.compare_exchange(run, expected, next).await
         }
     }
-    for (streaming, schema) in [false, true]
+    for (responses, streaming, schema) in [(false, false), (false, true), (true, true)]
         .into_iter()
-        .flat_map(|s| [false, true].map(|f| (s, f)))
+        .flat_map(|(r, s)| [false, true].map(move |f| (r, s, f)))
     {
         let (directory, ledger) = temporary_ledger();
         let remote = Remote::start(
@@ -1061,8 +1106,18 @@ async fn reconciled_and_reopened_calls_must_match_the_provider_transcript() {
         let (binding, tools) = host::bind(&remote.connection).await.unwrap();
         let mut fixture = ProviderFixture::new(json!({"value":1}), false);
         Arc::get_mut(&mut fixture).unwrap().final_text = r#"{"received":true}"#.into();
-        let provider = fixture::provider_http(fixture.clone()).await.unwrap();
-        let (adapter, chat) = host::provider(&provider.endpoint).unwrap();
+        let provider = if responses {
+            fixture::responses_http(fixture.clone()).await
+        } else {
+            fixture::provider_http(fixture.clone()).await
+        }
+        .unwrap();
+        let (adapter, chat) = if responses {
+            host::responses_provider(&provider.endpoint)
+        } else {
+            host::provider(&provider.endpoint)
+        }
+        .unwrap();
         let mut original = host::request(&tools, "operator", chat);
         original.shared.chat.stream = streaming;
         original.shared.chat.response_format = Some(if schema {
@@ -1137,6 +1192,9 @@ async fn reconciled_and_reopened_calls_must_match_the_provider_transcript() {
                             payload["content"] = json!("invented");
                         }
                     }
+                }
+                _ if responses => {
+                    changed.state["response"]["output"][0]["status"] = json!("incomplete");
                 }
                 _ => {
                     let messages = changed.state["messages"].as_array_mut().unwrap();
@@ -1221,7 +1279,7 @@ async fn reconciled_and_reopened_calls_must_match_the_provider_transcript() {
         assert!(conversation.resume(4).await.is_err());
         let retained = store.retained.lock().unwrap().clone().unwrap();
         let final_turn = retained.turns[1].response.clone();
-        for mutation in 0..13 {
+        for mutation in 0..if responses { 24 } else { 13 } {
             let mut changed = final_turn.clone();
             match mutation {
                 0 => {
@@ -1258,10 +1316,16 @@ async fn reconciled_and_reopened_calls_must_match_the_provider_transcript() {
                 3 => changed
                     .events
                     .retain(|e| !matches!(e, EngineTextStreamEvent::ContentBlock { .. })),
+                4 if responses => {
+                    changed.state["input"][3]["output"] = json!("different result");
+                }
                 4 => {
                     let messages = changed.state["messages"].as_array_mut().unwrap();
                     let tool = messages.iter_mut().find(|m| m["role"] == "tool").unwrap();
                     tool["content"] = json!("{\"different_result\":true}");
+                }
+                5 if responses => {
+                    changed.state["input"][1]["encrypted_content"] = json!("different reasoning");
                 }
                 5 => {
                     let messages = changed.state["messages"].as_array_mut().unwrap();
@@ -1270,6 +1334,9 @@ async fn reconciled_and_reopened_calls_must_match_the_provider_transcript() {
                         .find(|m| m["role"] == "assistant")
                         .unwrap();
                     assistant["content"] = json!("different preceding response");
+                }
+                6 if responses => {
+                    changed.state["input"].as_array_mut().unwrap().remove(2);
                 }
                 6 => {
                     let messages = changed.state["messages"].as_array_mut().unwrap();
@@ -1286,7 +1353,7 @@ async fn reconciled_and_reopened_calls_must_match_the_provider_transcript() {
                         .clone();
                     changed.events.insert(1, event);
                 }
-                8 => changed.state["version"] = json!(1),
+                8 => changed.state["version"] = json!(0),
                 9 => changed
                     .events
                     .retain(|e| !matches!(e, EngineTextStreamEvent::StructuredOutput { .. })),
@@ -1299,6 +1366,37 @@ async fn reconciled_and_reopened_calls_must_match_the_provider_transcript() {
                         .clone();
                     changed.events.insert(1, event);
                 }
+                11 if responses => {
+                    changed.state["response"]["output"][0]["content"] =
+                        json!([{"type":"refusal","refusal":"refused"}]);
+                }
+                12 if responses => changed.state["response"]["status"] = json!("incomplete"),
+                13 => changed.state["response"]["error"] = json!({"message":"failed"}),
+                14 => {
+                    changed.state["response"]["incomplete_details"] =
+                        json!({"reason":"max_output_tokens"})
+                }
+                15 => changed.state["response"]["output"][0]["type"] = json!("unknown"),
+                16 => changed.state["response"]["output_text"] = json!("different text"),
+                17 => changed.state["input"][2]["vendor"] = json!({"signature":"different"}),
+                18 => changed.state["request_revision"] = json!("different"),
+                19 => changed.state["binding"]["configuration_revision"] = json!("different"),
+                20 => changed.events.insert(
+                    1,
+                    EngineTextStreamEvent::ReasoningDelta {
+                        text: "invented".into(),
+                    },
+                ),
+                21 => {
+                    changed.state["input"][0] = json!({"role":"user","content":"different request"})
+                }
+                22 => {
+                    changed.state["response"]
+                        .as_object_mut()
+                        .unwrap()
+                        .remove("id");
+                }
+                23 => changed.state["response"]["usage"]["input_tokens"] = json!(-1),
                 _ => {
                     let messages = changed.state["messages"].as_array_mut().unwrap();
                     let index = if mutation == 11 {

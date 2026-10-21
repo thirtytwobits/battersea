@@ -89,8 +89,10 @@ requires an application-authored prompt and is not a fallback for unsupported na
 ## Durable tool conversations
 
 `DurableConversation` checkpoints completed provider turns through a host-owned
-`ConversationStore`. Chat Completions supports this interface for ordinary and streaming
-responses. Other adapters return `unsupported_tool_continuation` from the default interface.
+`ConversationStore`. Chat Completions supports ordinary and streaming responses. OpenAI Responses
+supports foreground streaming with `contextOverflow=error`. Background Responses modes return
+`unsupported_tool_continuation`: their server-side lifecycle requires a separate recovery contract.
+Other adapters return `unsupported_tool_continuation` from the default interface.
 
 Acceptance pins the original request, tool definitions, provider binding, safe backend
 configuration digest, tool binding revision and absolute expiry. The host includes credential
@@ -110,7 +112,7 @@ provider I/O. A completed turn, its adapter-owned transcript, complete validated
 buffered events are then published together. The adapter verifies that the ordered call batch
 and output events match its retained provider response before publication, including reconciliation,
 and when reopening retained turns. Each transcript must extend the preceding durable transcript
-with the exact ordered provider projections of its recorded tool results and one assistant response.
+with the exact ordered provider projections of its recorded tool results and one completed provider response.
 Chat Completions checkpoint codec version 2 retains native token usage with that response.
 Pending calls become visible after publication.
 Provider diagnostics can precede publication; checkpoint events carry the durable observations.
@@ -130,6 +132,13 @@ Retained assistant responses must have an absent or null refusal field.
 Final output receives the same modality and structured-output validation as an ordinary response.
 A final turn with a requested response format retains exactly one matching `StructuredOutput` event.
 Completed conversations return their retained checkpoint, including after expiry.
+
+Responses checkpoint codec version 1 retains the exact input and completed native response.
+Continuation appends every output item, including opaque reasoning and function-call fields,
+then the ordered `function_call_output` projections. Requests include encrypted reasoning for
+host-owned history. Durable text, reasoning, native content and usage events are derived from the
+completed response; partial stream observations remain diagnostics. Refusals, incomplete responses
+and unsupported output items are rejected before publication and on recovery.
 
 An interrupted provider task, ambiguous response or failed turn publication can leave an intent.
 `resume` refuses that intent as `tool_continuation_unresolved`. After fencing the original task,

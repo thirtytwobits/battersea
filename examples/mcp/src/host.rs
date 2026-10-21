@@ -81,9 +81,23 @@ pub async fn bind(connection: &McpConnection) -> Result<(McpToolBinding, ToolReg
 }
 
 pub fn provider(endpoint: &str) -> Result<(Arc<dyn EngineAdapter>, EngineChatParameters)> {
+    configured_provider(endpoint, "openai-chat-completions", false)
+}
+
+pub fn responses_provider(
+    endpoint: &str,
+) -> Result<(Arc<dyn EngineAdapter>, EngineChatParameters)> {
+    configured_provider(endpoint, "openai-responses", true)
+}
+
+fn configured_provider(
+    endpoint: &str,
+    adapter: &str,
+    stream: bool,
+) -> Result<(Arc<dyn EngineAdapter>, EngineChatParameters)> {
     let mut protocols = ProtocolRegistry::default();
     battersea_providers::register_builtin_adapters(&mut protocols)?;
-    let descriptor = protocols.adapter("openai-chat-completions").unwrap();
+    let descriptor = protocols.adapter(adapter).unwrap();
     let chat = descriptor.chat.as_ref().unwrap();
     let mut capabilities = EngineBackendCapabilities::mock();
     capabilities.content = chat.content.clone();
@@ -91,9 +105,9 @@ pub fn provider(endpoint: &str) -> Result<(Arc<dyn EngineAdapter>, EngineChatPar
     let config: battersea_config::ProviderConfiguration = serde_json::from_value(
         serde_json::json!({
             "version":1,
-            "providers":{"controlled":{"chat":{"adapter":"openai-chat-completions","baseUrl":format!("{endpoint}/v1/"),"auth":{"type":"none"}}}},
+            "providers":{"controlled":{"chat":{"adapter":adapter,"baseUrl":format!("{endpoint}/v1/"),"auth":{"type":"none"}}}},
             "backends":{"chat":{"provider":"controlled","model":"fixture","contextWindowTokens":8192,"capabilities":capabilities,
-                "properties":{"stream":false,"maxOutputTokens":1024,"temperature":0.7,"stopSequences":[],"toolExecution":"engine-orchestrated","maxToolRounds":2,"toolChoice":{"mode":"auto"},"contextOverflow":"error"},
+                "properties":{"stream":stream,"maxOutputTokens":1024,"temperature":0.7,"stopSequences":[],"toolExecution":"engine-orchestrated","maxToolRounds":2,"toolChoice":{"mode":"auto"},"contextOverflow":"error"},
                 "options":{"timeoutMs":5000,"streamIdleTimeoutMs":3000,"maxRetries":1,"retryInitialDelayMs":1,"retryMaxDelayMs":20}}}
         }),
     )?;

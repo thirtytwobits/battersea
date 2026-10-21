@@ -180,6 +180,66 @@ impl ProviderFixture {
         })
     }
 }
+/// Controlled Responses stream with opaque reasoning and native call items.
+pub async fn responses_http(fixture: Arc<ProviderFixture>) -> Result<HttpServer> {
+    async fn reply(
+        State(fixture): State<Arc<ProviderFixture>>,
+        Json(request): Json<Value>,
+    ) -> Response {
+        let turn = {
+            let mut requests = fixture.requests.lock().unwrap();
+            requests.push(request);
+            requests.len()
+        };
+        if turn == 2 && fixture.reject_continuation_once {
+            return (StatusCode::TOO_MANY_REQUESTS, Json(json!({}))).into_response();
+        }
+        if turn > 1
+            && fixture
+                .fail_continuation
+                .load(std::sync::atomic::Ordering::SeqCst)
+        {
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error":"uncertain continuation"})),
+            )
+                .into_response();
+        }
+        if turn > 1
+            && fixture
+                .hang_continuation
+                .load(std::sync::atomic::Ordering::SeqCst)
+        {
+            std::future::pending::<()>().await;
+        }
+        let output = if turn == 1 {
+            json!([
+                {"type":"reasoning","id":"reasoning-1","summary":[{"type":"summary_text","text":"Record the effect"}],"encrypted_content":"opaque-reasoning","vendor":{"keep":true}},
+                {"type":"function_call","id":"function-1","call_id":"effect-1","name":"remote_write","arguments":fixture.arguments.to_string(),"status":"completed","vendor":{"signature":"retained-call"}}
+            ])
+        } else {
+            json!([{"type":"message","id":"message-2","role":"assistant","status":"completed","phase":"final_answer","content":[{"type":"output_text","text":fixture.final_text,"annotations":[]}],"vendor":{"keep":true}}])
+        };
+        let response = json!({"id":format!("response-{turn}"),"object":"response","created_at":1,"model":"fixture","status":"completed","output":output,
+            "usage":{"input_tokens":2,"output_tokens":2,"total_tokens":4,"input_tokens_details":{"cached_tokens":1},"output_tokens_details":{"reasoning_tokens":1}}});
+        // Partial observations deliberately differ from completed evidence.
+        let delta = json!({"type":"response.output_text.delta","sequence_number":1,"item_id":"message-2","output_index":0,"content_index":0,"delta":"transient observation","logprobs":[]});
+        let completed =
+            json!({"type":"response.completed","sequence_number":2,"response":response});
+        (
+            [("content-type", "text/event-stream")],
+            format!("data: {delta}\n\ndata: {completed}\n\n"),
+        )
+            .into_response()
+    }
+    listen(
+        Router::new()
+            .route("/v1/responses", post(reply))
+            .with_state(fixture),
+    )
+    .await
+}
+
 pub async fn provider_http(fixture: Arc<ProviderFixture>) -> Result<HttpServer> {
     async fn reply(
         State(fixture): State<Arc<ProviderFixture>>,
