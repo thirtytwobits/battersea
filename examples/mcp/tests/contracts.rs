@@ -1005,9 +1005,10 @@ async fn interrupted_or_invalid_provider_continuations_keep_the_tool_result_and_
 #[tokio::test]
 async fn reconciled_and_reopened_calls_must_match_the_provider_transcript() {
     use battersea_model::{
-        configuration_digest, ConversationCheckpoint, ConversationPhase, ConversationRequest,
-        ConversationResolution, ConversationScope, ConversationStore, ConversationStoreError,
-        DurableConversation,
+        configuration_digest, ContentBlock, ConversationCheckpoint, ConversationPhase,
+        ConversationRequest, ConversationResolution, ConversationScope, ConversationStore,
+        ConversationStoreError, ConversationToolResult, DurableConversation,
+        EngineLocalToolExecutor, ResponseFormat,
     };
     use mcp_example::conversation_journal::FileConversationStore;
     use std::{
@@ -1035,7 +1036,9 @@ async fn reconciled_and_reopened_calls_must_match_the_provider_transcript() {
             expected: Option<u64>,
             next: &ConversationCheckpoint,
         ) -> std::result::Result<(), ConversationStoreError> {
-            if next.revision == 3 && next.resolutions.is_empty() {
+            if (next.revision == 3 && next.resolutions.is_empty())
+                || (next.revision == 6 && next.resolutions.len() == 1)
+            {
                 *self.retained.lock().unwrap() = Some(next.clone());
                 return Err(ConversationStoreError::Unavailable);
             }
@@ -1053,11 +1056,13 @@ async fn reconciled_and_reopened_calls_must_match_the_provider_transcript() {
         .await
         .unwrap();
         let (binding, tools) = host::bind(&remote.connection).await.unwrap();
-        let fixture = ProviderFixture::new(json!({"value":1}), false);
+        let mut fixture = ProviderFixture::new(json!({"value":1}), false);
+        Arc::get_mut(&mut fixture).unwrap().final_text = r#"{"received":true}"#.into();
         let provider = fixture::provider_http(fixture.clone()).await.unwrap();
         let (adapter, chat) = host::provider(&provider.endpoint).unwrap();
         let mut original = host::request(&tools, "operator", chat);
         original.shared.chat.stream = streaming;
+        original.shared.chat.response_format = Some(ResponseFormat::JsonObject);
         let mut request = ConversationRequest {
             shared: original.shared,
             tools: original.local_tools,
@@ -1093,14 +1098,36 @@ async fn reconciled_and_reopened_calls_must_match_the_provider_transcript() {
         let turn = store.retained.lock().unwrap().as_ref().unwrap().turns[0]
             .response
             .clone();
-        for mutation in 0..5 {
+        for mutation in 0..8 {
             let mut changed = turn.clone();
             match mutation {
                 0 => changed.calls[0].id = "different-id".into(),
                 1 => changed.calls[0].name = "alternative".into(),
                 2 => changed.calls[0].arguments = json!({"value":2}),
                 3 => changed.calls.clear(),
-                _ => changed.calls.push(changed.calls[0].clone()),
+                4 => changed.calls.push(changed.calls[0].clone()),
+                5 => changed.events.insert(
+                    1,
+                    EngineTextStreamEvent::TextDelta {
+                        text: "invented".into(),
+                    },
+                ),
+                6 => changed.events.insert(
+                    1,
+                    EngineTextStreamEvent::StructuredOutput {
+                        value: json!({"invented":true}),
+                    },
+                ),
+                _ => {
+                    for event in &mut changed.events {
+                        if let EngineTextStreamEvent::ContentBlock {
+                            block: ContentBlock::NativeV2 { payload, .. },
+                        } = event
+                        {
+                            payload["content"] = json!("invented");
+                        }
+                    }
+                }
             }
             assert!(conversation
                 .reconcile(
@@ -1142,10 +1169,10 @@ async fn reconciled_and_reopened_calls_must_match_the_provider_transcript() {
         )
         .unwrap();
         assert!(DurableConversation::open(
-            store,
-            adapter,
-            scope,
-            request,
+            store.clone(),
+            adapter.clone(),
+            scope.clone(),
+            request.clone(),
             65536,
             Duration::from_secs(1)
         )
@@ -1153,5 +1180,170 @@ async fn reconciled_and_reopened_calls_must_match_the_provider_transcript() {
         .is_err());
         assert_eq!(fixture.requests.lock().unwrap().len(), 1);
         assert_eq!(fixture::effect_count(&ledger).unwrap(), 0);
+
+        std::fs::write(
+            directory.path().join("conversation.json"),
+            serde_json::to_vec(&accepted).unwrap(),
+        )
+        .unwrap();
+        let call = accepted.turns[0].response.calls[0].clone();
+        let result = tools
+            .for_profile("operator")
+            .call(call.clone())
+            .await
+            .unwrap();
+        conversation
+            .record_tool_result(3, ConversationToolResult { call, result })
+            .await
+            .unwrap();
+        assert!(conversation.resume(4).await.is_err());
+        let retained = store.retained.lock().unwrap().clone().unwrap();
+        let final_turn = retained.turns[1].response.clone();
+        for mutation in 0..9 {
+            let mut changed = final_turn.clone();
+            match mutation {
+                0 => {
+                    // Both display projections agree with each other but differ from native evidence.
+                    for event in &mut changed.events {
+                        match event {
+                            EngineTextStreamEvent::TextDelta { text } => {
+                                *text = r#"{"received":false}"#.into()
+                            }
+                            EngineTextStreamEvent::StructuredOutput { value } => {
+                                *value = json!({"received":false})
+                            }
+                            _ => (),
+                        }
+                    }
+                }
+                1 => {
+                    for event in &mut changed.events {
+                        if let EngineTextStreamEvent::ContentBlock {
+                            block: ContentBlock::NativeV2 { payload, .. },
+                        } = event
+                        {
+                            payload["content"] = json!("invented");
+                        }
+                    }
+                }
+                2 => {
+                    for event in &mut changed.events {
+                        if let EngineTextStreamEvent::TokenUsage { usage } = event {
+                            usage.total_tokens = Some(1000);
+                        }
+                    }
+                }
+                3 => changed
+                    .events
+                    .retain(|e| !matches!(e, EngineTextStreamEvent::ContentBlock { .. })),
+                4 => {
+                    let messages = changed.state["messages"].as_array_mut().unwrap();
+                    let tool = messages.iter_mut().find(|m| m["role"] == "tool").unwrap();
+                    tool["content"] = json!("{\"different_result\":true}");
+                }
+                5 => {
+                    let messages = changed.state["messages"].as_array_mut().unwrap();
+                    let assistant = messages
+                        .iter_mut()
+                        .find(|m| m["role"] == "assistant")
+                        .unwrap();
+                    assistant["content"] = json!("different preceding response");
+                }
+                6 => {
+                    let messages = changed.state["messages"].as_array_mut().unwrap();
+                    let last = messages.last().unwrap().clone();
+                    messages.truncate(1);
+                    messages.push(last);
+                }
+                7 => {
+                    let event = changed
+                        .events
+                        .iter()
+                        .find(|e| matches!(e, EngineTextStreamEvent::ContentBlock { .. }))
+                        .unwrap()
+                        .clone();
+                    changed.events.insert(1, event);
+                }
+                _ => changed.state["version"] = json!(1),
+            }
+            assert!(
+                conversation
+                    .reconcile(
+                        5,
+                        ConversationResolution::Completed {
+                            turn: changed.clone()
+                        },
+                        "operator",
+                        "Retained response from fenced task"
+                    )
+                    .await
+                    .is_err(),
+                "mutation {mutation}"
+            );
+            let unchanged = conversation.inspect().await.unwrap();
+            assert_eq!(unchanged.revision, 5);
+            assert_eq!(unchanged.phase, ConversationPhase::ProviderIntent);
+            assert_eq!(unchanged.turns.len(), 1);
+            assert_eq!(unchanged.turns[0].results, retained.turns[0].results);
+
+            // Reopening validates the same evidence even when shared integrity checks pass.
+            let mut stored = retained.clone();
+            stored.turns[1].response = changed;
+            let mut stored = serde_json::to_value(stored).unwrap();
+            stored.as_object_mut().unwrap().remove("checksum");
+            stored["checksum"] = json!(configuration_digest(&stored));
+            let stored: ConversationCheckpoint = serde_json::from_value(stored).unwrap();
+            stored.validate().unwrap();
+            std::fs::write(
+                directory.path().join("conversation.json"),
+                serde_json::to_vec(&stored).unwrap(),
+            )
+            .unwrap();
+            assert!(
+                DurableConversation::open(
+                    store.clone(),
+                    adapter.clone(),
+                    scope.clone(),
+                    request.clone(),
+                    65536,
+                    Duration::from_secs(1)
+                )
+                .await
+                .is_err(),
+                "reopen mutation {mutation}"
+            );
+            std::fs::write(
+                directory.path().join("conversation.json"),
+                serde_json::to_vec(&unchanged).unwrap(),
+            )
+            .unwrap();
+        }
+        let completed = conversation
+            .reconcile(
+                5,
+                ConversationResolution::Completed { turn: final_turn },
+                "operator",
+                "Retained response from fenced task",
+            )
+            .await
+            .unwrap();
+        assert_eq!(completed.phase, ConversationPhase::Completed);
+        let reopened = DurableConversation::open(
+            store,
+            adapter,
+            scope,
+            request,
+            65536,
+            Duration::from_secs(1),
+        )
+        .await
+        .unwrap();
+        assert_eq!(
+            reopened.resume(completed.revision).await.unwrap(),
+            completed
+        );
+        assert_eq!(fixture.requests.lock().unwrap().len(), 2);
+        assert_eq!(fixture::effect_count(&ledger).unwrap(), 1);
+        remote.close().await;
     }
 }

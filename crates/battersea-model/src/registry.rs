@@ -303,10 +303,13 @@ impl EngineAdapter for AdmittedAdapter {
     fn validate_conversation_turn(
         &self,
         request: &crate::ConversationRequest,
+        previous: Option<&Value>,
+        results: &[crate::ConversationToolResult],
         turn: &crate::ConversationTurn,
     ) -> Result<crate::ConversationBinding, EngineAdapterRequestError> {
         validate_chat_request(&self.backend, &request.to_request())?;
-        self.inner.validate_conversation_turn(request, turn)
+        self.inner
+            .validate_conversation_turn(request, previous, results, turn)
     }
     async fn conversation_turn(
         &self,

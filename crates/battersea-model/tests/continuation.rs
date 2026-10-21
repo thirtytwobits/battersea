@@ -118,6 +118,8 @@ impl EngineAdapter for Provider {
     fn validate_conversation_turn(
         &self,
         request: &ConversationRequest,
+        _previous: Option<&Value>,
+        _results: &[ConversationToolResult],
         turn: &ConversationTurn,
     ) -> Result<ConversationBinding, EngineAdapterRequestError> {
         let binding = self.validate_conversation(request, Some(&turn.state))?;

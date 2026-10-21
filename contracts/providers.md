@@ -107,8 +107,11 @@ the host owns storage integrity and access control.
 Each `resume` command performs at most one provider turn. A dispatch intent is persisted before
 provider I/O. A completed turn, its adapter-owned transcript, complete validated call batch and
 buffered events are then published together. The adapter verifies that the ordered call batch
-matches its native transcript before publication, including reconciliation, and when reopening
-retained turns. Pending calls become visible after that publication.
+and output events match its retained provider response before publication, including reconciliation,
+and when reopening retained turns. Each transcript must extend the preceding durable transcript
+with the exact ordered provider projections of its recorded tool results and one assistant response.
+Chat Completions checkpoint codec version 2 retains native token usage with that response.
+Pending calls become visible after publication.
 Provider diagnostics can precede publication; checkpoint events carry the durable observations.
 Identify checkpoint events by run, provider attempt and event index when consuming them after reopen.
 

@@ -177,6 +177,16 @@ fn bounded(value: &impl Serialize, max: usize) -> Result<(), EngineAdapterReques
     }
     Ok(())
 }
+fn ordered_results(turn: Option<&StoredConversationTurn>) -> Vec<ConversationToolResult> {
+    turn.map(|t| {
+        t.response
+            .calls
+            .iter()
+            .filter_map(|c| t.results.get(&c.id).cloned())
+            .collect()
+    })
+    .unwrap_or_default()
+}
 fn same_call(a: &EngineLocalToolCall, b: &EngineLocalToolCall) -> bool {
     a.id == b.id
         && local_tool_name(&a.name) == local_tool_name(&b.name)
@@ -297,6 +307,15 @@ impl ConversationCheckpoint {
             }
             previous = turn.attempt;
             validate_turn_events(&self.request, &turn.response)?;
+            if turn.response.events.iter().any(|event| match event {
+                EngineTextStreamEvent::MessageStart { turn_index } => {
+                    *turn_index != turn.attempt - 1
+                }
+                EngineTextStreamEvent::TokenUsage { usage } => usage.turn_index != turn.attempt - 1,
+                _ => false,
+            }) {
+                return Err(invalid());
+            }
             tool_loop::validate_tool_calls(
                 "conversation",
                 &self.request.to_request(),
@@ -483,11 +502,15 @@ impl DurableConversation {
         {
             return Err(invalid());
         }
-        for turn in &record.turns {
-            if self
-                .adapter
-                .validate_conversation_turn(&record.request, &turn.response)?
-                != self.binding
+        for (index, turn) in record.turns.iter().enumerate() {
+            let previous = index.checked_sub(1).map(|i| &record.turns[i]);
+            let results = ordered_results(previous);
+            if self.adapter.validate_conversation_turn(
+                &record.request,
+                previous.map(|t| &t.response.state),
+                &results,
+                &turn.response,
+            )? != self.binding
             {
                 return Err(invalid());
             }
@@ -582,7 +605,15 @@ impl DurableConversation {
         mut turn: ConversationTurn,
     ) -> Result<(), EngineAdapterRequestError> {
         bounded(&turn, self.max_bytes)?;
-        if self.adapter.validate_conversation_turn(&r.request, &turn)? != self.binding {
+        let previous = r.turns.last();
+        let results = ordered_results(previous);
+        if self.adapter.validate_conversation_turn(
+            &r.request,
+            previous.map(|t| &t.response.state),
+            &results,
+            &turn,
+        )? != self.binding
+        {
             return Err(invalid());
         }
         tool_loop::validate_tool_calls("conversation", &r.request.to_request(), &turn.calls)?;

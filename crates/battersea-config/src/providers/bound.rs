@@ -157,6 +157,8 @@ impl EngineAdapter for Chat {
     fn validate_conversation_turn(
         &self,
         request: &ConversationRequest,
+        previous: Option<&serde_json::Value>,
+        results: &[ConversationToolResult],
         turn: &ConversationTurn,
     ) -> Result<ConversationBinding, EngineAdapterRequestError> {
         let mut runtime = request.to_request();
@@ -165,7 +167,7 @@ impl EngineAdapter for Chat {
         admitted.shared = runtime.shared;
         let binding = self
             .inner
-            .validate_conversation_turn(&admitted, turn)
+            .validate_conversation_turn(&admitted, previous, results, turn)
             .map_err(|e| self.context.error(e))?;
         if binding.origin != self.context.binding.origin() {
             return Err(self

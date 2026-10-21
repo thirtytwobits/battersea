@@ -750,11 +750,14 @@ pub trait EngineAdapter: Send + Sync {
         Err(continuation::unsupported())
     }
 
-    /// Validate a completed turn and bind its ordered call batch to the adapter-owned transcript.
+    /// Validate a completed turn against its predecessor, ordered results and adapter-owned evidence.
+    /// Calls and output events must agree with the retained provider response.
     /// Called before publication and when reopening retained turns, without provider I/O.
     fn validate_conversation_turn(
         &self,
         _request: &ConversationRequest,
+        _previous: Option<&Value>,
+        _results: &[ConversationToolResult],
         _turn: &ConversationTurn,
     ) -> Result<ConversationBinding, EngineAdapterRequestError> {
         Err(continuation::unsupported())

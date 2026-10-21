@@ -99,7 +99,7 @@ impl EngineAdapter for Completions {
         if let Some(state) = state {
             let checkpoint: CompletionCheckpoint = serde_json::from_value(state.clone())
                 .map_err(|_| invalid(&self.backend.provider, "Invalid completion checkpoint."))?;
-            if checkpoint.version != 1
+            if checkpoint.version != 2
                 || checkpoint.binding != binding
                 || checkpoint.request_revision
                     != configuration_digest(&serde_json::to_value(request).expect("request"))
@@ -155,6 +155,8 @@ impl EngineAdapter for Completions {
     fn validate_conversation_turn(
         &self,
         request: &ConversationRequest,
+        previous: Option<&Value>,
+        results: &[ConversationToolResult],
         turn: &ConversationTurn,
     ) -> Result<ConversationBinding, EngineAdapterRequestError> {
         let binding = self.validate_conversation(request, Some(&turn.state))?;
@@ -174,6 +176,46 @@ impl EngineAdapter for Completions {
                 "Retained call batch does not match the completion transcript.",
             ));
         }
+        let mut prefix = if let Some(previous) = previous {
+            self.validate_conversation(request, Some(previous))?;
+            serde_json::from_value::<CompletionCheckpoint>(previous.clone())
+                .map_err(|_| invalid(&self.backend.provider, "Invalid predecessor checkpoint."))?
+                .messages
+        } else {
+            messages(&self.backend.provider, &request.shared.messages)?
+        };
+        let expected = if previous.is_some() {
+            completion_calls(
+                &self.backend.provider,
+                prefix.last().expect("validated transcript"),
+            )?
+        } else {
+            Vec::new()
+        };
+        if expected.len() != results.len()
+            || expected.iter().zip(results).any(|(a, b)| {
+                a.id != b.call.id
+                    || a.name != local_tool_name(&b.call.name)
+                    || a.arguments != b.call.arguments
+            })
+        {
+            return Err(invalid(
+                &self.backend.provider,
+                "Continuation results differ from the preceding call batch.",
+            ));
+        }
+        for result in results {
+            prefix.push(json!({"role":"tool","tool_call_id":result.call.id,"content":result.result.provider_content()?.to_string()}));
+        }
+        if checkpoint.messages.len() != prefix.len() + 1
+            || !checkpoint.messages.starts_with(&prefix)
+        {
+            return Err(invalid(
+                &self.backend.provider,
+                "Completion transcript does not extend the retained state and results.",
+            ));
+        }
+        validate_completion_events(&self.backend.provider, request, &checkpoint, &turn.events)?;
         Ok(binding)
     }
     async fn conversation_turn(
@@ -226,6 +268,7 @@ impl EngineAdapter for Completions {
             client: self.client.clone(),
             messages,
             context,
+            usage: Value::Null,
         };
         let runtime = request.to_request();
         let (tx, mut rx) = tokio::sync::mpsc::channel(1);
@@ -265,12 +308,13 @@ impl EngineAdapter for Completions {
             },
         });
         let state = serde_json::to_value(CompletionCheckpoint {
-            version: 1,
+            version: 2,
             binding,
             request_revision: configuration_digest(
                 &serde_json::to_value(&request).expect("request"),
             ),
             messages: conversation.messages,
+            usage: conversation.usage,
         })
         .expect("checkpoint");
         let turn = ConversationTurn {
@@ -323,6 +367,7 @@ impl EngineAdapter for Completions {
             client: self.client.clone(),
             messages,
             context: context.clone(),
+            usage: Value::Null,
         };
         let executor = request
             .local_tool_executor
@@ -391,6 +436,7 @@ struct Conversation {
     client: reqwest::Client,
     messages: Vec<Value>,
     context: EngineAdapterDebugContext,
+    usage: Value,
 }
 #[async_trait]
 impl ToolConversation for Conversation {
@@ -523,20 +569,7 @@ impl ToolConversation for Conversation {
             send_event(
                 events,
                 EngineTextStreamEvent::TokenUsage {
-                    usage: EngineTokenUsage {
-                        turn_index: 0,
-                        input_tokens: usage["prompt_tokens"].as_u64(),
-                        output_tokens: usage["completion_tokens"].as_u64(),
-                        total_tokens: usage["total_tokens"].as_u64(),
-                        cached_input_tokens: usage["prompt_tokens_details"]["cached_tokens"]
-                            .as_u64(),
-                        cache_write_input_tokens: usage["prompt_tokens_details"]
-                            ["cache_write_tokens"]
-                            .as_u64(),
-                        reasoning_output_tokens: usage["completion_tokens_details"]
-                            ["reasoning_tokens"]
-                            .as_u64(),
-                    },
+                    usage: completion_usage(&usage).expect("object usage"),
                 },
             )
             .await?;
@@ -551,7 +584,7 @@ impl ToolConversation for Conversation {
                 request_id,
                 response_id: None,
                 output_chars: message["content"].as_str().map(str::len),
-                usage: usage.is_object().then_some(usage),
+                usage: usage.is_object().then_some(usage.clone()),
                 streaming: Some(chat.stream),
                 stop_reason: Some(finish),
             },
@@ -568,6 +601,7 @@ impl ToolConversation for Conversation {
         )
         .await?;
         self.messages.push(message);
+        self.usage = usage;
         Ok(calls)
     }
 }
@@ -758,6 +792,93 @@ struct CompletionCheckpoint {
     binding: ConversationBinding,
     request_revision: String,
     messages: Vec<Value>,
+    usage: Value,
+}
+fn completion_usage(usage: &Value) -> Option<EngineTokenUsage> {
+    usage.is_object().then(|| EngineTokenUsage {
+        turn_index: 0,
+        input_tokens: usage["prompt_tokens"].as_u64(),
+        output_tokens: usage["completion_tokens"].as_u64(),
+        total_tokens: usage["total_tokens"].as_u64(),
+        cached_input_tokens: usage["prompt_tokens_details"]["cached_tokens"].as_u64(),
+        cache_write_input_tokens: usage["prompt_tokens_details"]["cache_write_tokens"].as_u64(),
+        reasoning_output_tokens: usage["completion_tokens_details"]["reasoning_tokens"].as_u64(),
+    })
+}
+fn validate_completion_events(
+    provider: &str,
+    request: &ConversationRequest,
+    checkpoint: &CompletionCheckpoint,
+    events: &[EngineTextStreamEvent],
+) -> Result<(), EngineAdapterRequestError> {
+    let message = checkpoint.messages.last().expect("validated transcript");
+    let mut text = String::new();
+    let mut native = 0;
+    let mut usage = None;
+    let mut structured = None;
+    for event in events {
+        match event {
+            EngineTextStreamEvent::MessageStart { .. }
+            | EngineTextStreamEvent::MessageStop { .. } => (),
+            EngineTextStreamEvent::TextDelta { text: part } => text.push_str(part),
+            EngineTextStreamEvent::TokenUsage { usage: value } if usage.is_none() => {
+                let mut value = *value;
+                value.turn_index = 0;
+                usage = Some(value);
+            }
+            EngineTextStreamEvent::StructuredOutput { value } if structured.is_none() => {
+                structured = Some(value)
+            }
+            EngineTextStreamEvent::ContentBlock { block } => {
+                let payload = match block {
+                    ContentBlock::Native {
+                        provider: owner,
+                        payload,
+                    } if owner == provider => payload,
+                    ContentBlock::NativeV2 { origin, payload }
+                        if origin == &checkpoint.binding.origin =>
+                    {
+                        payload
+                    }
+                    _ => return Err(invalid(provider, "Unexpected retained completion content.")),
+                };
+                if payload != message {
+                    return Err(invalid(
+                        provider,
+                        "Native event differs from the retained response.",
+                    ));
+                }
+                native += 1;
+            }
+            _ => return Err(invalid(provider, "Unexpected retained completion event.")),
+        }
+    }
+    if native != 1
+        || text != message["content"].as_str().unwrap_or("")
+        || usage != completion_usage(&checkpoint.usage)
+    {
+        return Err(invalid(
+            provider,
+            "Completion events differ from the retained response.",
+        ));
+    }
+    if let Some(value) = structured {
+        let format = request
+            .shared
+            .chat
+            .response_format
+            .as_ref()
+            .ok_or_else(|| invalid(provider, "Unexpected structured completion output."))?;
+        if !completion_calls(provider, message)?.is_empty()
+            || &format.parse(provider, &text)? != value
+        {
+            return Err(invalid(
+                provider,
+                "Structured event differs from the retained response.",
+            ));
+        }
+    }
+    Ok(())
 }
 fn completion_calls(
     provider: &str,

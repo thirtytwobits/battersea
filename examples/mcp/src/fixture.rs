@@ -164,6 +164,7 @@ pub struct ProviderFixture {
     pub requests: Mutex<Vec<Value>>,
     pub arguments: Value,
     pub reject_continuation_once: bool,
+    pub final_text: String,
     pub fail_continuation: std::sync::atomic::AtomicBool,
     pub hang_continuation: std::sync::atomic::AtomicBool,
 }
@@ -173,6 +174,7 @@ impl ProviderFixture {
             requests: Mutex::new(Vec::new()),
             arguments,
             reject_continuation_once,
+            final_text: "Remote result received".into(),
             fail_continuation: false.into(),
             hang_continuation: false.into(),
         })
@@ -213,7 +215,7 @@ pub async fn provider_http(fixture: Arc<ProviderFixture>) -> Result<HttpServer> 
         let mut message = if turn == 1 {
             json!({"role":"assistant","content":null,"tool_calls":[{"id":"effect-1","type":"function","function":{"name":"remote_write","arguments":fixture.arguments.to_string()}}]})
         } else {
-            json!({"role":"assistant","content":"Remote result received"})
+            json!({"role":"assistant","content":fixture.final_text})
         };
         if turn == 1 && !streaming {
             message["fixture_state"] = json!({"token":"retained-provider-token"});
