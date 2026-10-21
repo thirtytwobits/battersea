@@ -486,7 +486,7 @@ impl DurableConversation {
         for turn in &record.turns {
             if self
                 .adapter
-                .validate_conversation(&record.request, Some(&turn.response.state))?
+                .validate_conversation_turn(&record.request, &turn.response)?
                 != self.binding
             {
                 return Err(invalid());
@@ -582,11 +582,7 @@ impl DurableConversation {
         mut turn: ConversationTurn,
     ) -> Result<(), EngineAdapterRequestError> {
         bounded(&turn, self.max_bytes)?;
-        if self
-            .adapter
-            .validate_conversation(&r.request, Some(&turn.state))?
-            != self.binding
-        {
+        if self.adapter.validate_conversation_turn(&r.request, &turn)? != self.binding {
             return Err(invalid());
         }
         tool_loop::validate_tool_calls("conversation", &r.request.to_request(), &turn.calls)?;

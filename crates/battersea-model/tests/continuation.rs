@@ -115,6 +115,20 @@ impl EngineAdapter for Provider {
             timeout_ms: 5000,
         })
     }
+    fn validate_conversation_turn(
+        &self,
+        request: &ConversationRequest,
+        turn: &ConversationTurn,
+    ) -> Result<ConversationBinding, EngineAdapterRequestError> {
+        let binding = self.validate_conversation(request, Some(&turn.state))?;
+        if serde_json::to_value(&turn.calls).unwrap() != turn.state["calls"] {
+            return Err(EngineAdapterRequestError::invalid_response(
+                "fixture",
+                "Calls differ from transcript",
+            ));
+        }
+        Ok(binding)
+    }
     async fn count_text_stream_input_tokens(
         &self,
         _: EngineTextStreamRequest,
@@ -145,7 +159,7 @@ impl EngineAdapter for Provider {
             vec![]
         };
         let turn = ConversationTurn {
-            state: json!({"version":1,"complete":!first}),
+            state: json!({"version":1,"complete":!first,"calls":calls}),
             calls,
             events: vec![
                 EngineTextStreamEvent::MessageStart { turn_index: 0 },

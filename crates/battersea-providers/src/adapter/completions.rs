@@ -152,6 +152,30 @@ impl EngineAdapter for Completions {
         }
         Ok(binding)
     }
+    fn validate_conversation_turn(
+        &self,
+        request: &ConversationRequest,
+        turn: &ConversationTurn,
+    ) -> Result<ConversationBinding, EngineAdapterRequestError> {
+        let binding = self.validate_conversation(request, Some(&turn.state))?;
+        let checkpoint: CompletionCheckpoint = serde_json::from_value(turn.state.clone())
+            .map_err(|_| invalid(&self.backend.provider, "Invalid completion checkpoint."))?;
+        let calls = completion_calls(
+            &self.backend.provider,
+            checkpoint.messages.last().expect("validated transcript"),
+        )?;
+        if calls.len() != turn.calls.len()
+            || calls.iter().zip(&turn.calls).any(|(a, b)| {
+                a.id != b.id || a.name != local_tool_name(&b.name) || a.arguments != b.arguments
+            })
+        {
+            return Err(invalid(
+                &self.backend.provider,
+                "Retained call batch does not match the completion transcript.",
+            ));
+        }
+        Ok(binding)
+    }
     async fn conversation_turn(
         &self,
         request: ConversationRequest,

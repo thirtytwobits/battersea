@@ -750,6 +750,16 @@ pub trait EngineAdapter: Send + Sync {
         Err(continuation::unsupported())
     }
 
+    /// Validate a completed turn and bind its ordered call batch to the adapter-owned transcript.
+    /// Called before publication and when reopening retained turns, without provider I/O.
+    fn validate_conversation_turn(
+        &self,
+        _request: &ConversationRequest,
+        _turn: &ConversationTurn,
+    ) -> Result<ConversationBinding, EngineAdapterRequestError> {
+        Err(continuation::unsupported())
+    }
+
     /// Generate one turn. The caller persists its dispatch intent before invoking this method.
     async fn conversation_turn(
         &self,

@@ -1001,3 +1001,157 @@ async fn interrupted_or_invalid_provider_continuations_keep_the_tool_result_and_
         remote.close().await;
     }
 }
+
+#[tokio::test]
+async fn reconciled_and_reopened_calls_must_match_the_provider_transcript() {
+    use battersea_model::{
+        configuration_digest, ConversationCheckpoint, ConversationPhase, ConversationRequest,
+        ConversationResolution, ConversationScope, ConversationStore, ConversationStoreError,
+        DurableConversation,
+    };
+    use mcp_example::conversation_journal::FileConversationStore;
+    use std::{
+        sync::Mutex,
+        time::{SystemTime, UNIX_EPOCH},
+    };
+
+    // Retain the provider reply while simulating failure before turn publication.
+    struct InterruptedPublication {
+        inner: FileConversationStore,
+        retained: Mutex<Option<ConversationCheckpoint>>,
+    }
+    #[async_trait::async_trait]
+    impl ConversationStore for InterruptedPublication {
+        async fn load(
+            &self,
+            run: &str,
+            max: usize,
+        ) -> std::result::Result<Option<ConversationCheckpoint>, ConversationStoreError> {
+            self.inner.load(run, max).await
+        }
+        async fn compare_exchange(
+            &self,
+            run: &str,
+            expected: Option<u64>,
+            next: &ConversationCheckpoint,
+        ) -> std::result::Result<(), ConversationStoreError> {
+            if next.revision == 3 && next.resolutions.is_empty() {
+                *self.retained.lock().unwrap() = Some(next.clone());
+                return Err(ConversationStoreError::Unavailable);
+            }
+            self.inner.compare_exchange(run, expected, next).await
+        }
+    }
+    for streaming in [false, true] {
+        let (directory, ledger) = temporary_ledger();
+        let remote = Remote::start(
+            Transport::Json,
+            &ledger,
+            Fault::None,
+            Duration::from_secs(10),
+        )
+        .await
+        .unwrap();
+        let (binding, tools) = host::bind(&remote.connection).await.unwrap();
+        let fixture = ProviderFixture::new(json!({"value":1}), false);
+        let provider = fixture::provider_http(fixture.clone()).await.unwrap();
+        let (adapter, chat) = host::provider(&provider.endpoint).unwrap();
+        let mut original = host::request(&tools, "operator", chat);
+        original.shared.chat.stream = streaming;
+        let mut request = ConversationRequest {
+            shared: original.shared,
+            tools: original.local_tools,
+            max_turns: 2,
+        };
+        let mut alternative = request.tools[0].clone();
+        alternative.name = "alternative".into();
+        request.tools.push(alternative);
+        let scope = ConversationScope {
+            run_id: "recovered-provider".into(),
+            tool_binding_revision: binding.revision().into(),
+            expires_at_unix_ms: SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap()
+                .as_millis() as u64
+                + 4000,
+        };
+        let store = Arc::new(InterruptedPublication {
+            inner: FileConversationStore::new(directory.path().into()),
+            retained: Mutex::new(None),
+        });
+        let conversation = DurableConversation::create(
+            store.clone(),
+            adapter.clone(),
+            scope.clone(),
+            request.clone(),
+            65536,
+            Duration::from_secs(1),
+        )
+        .await
+        .unwrap();
+        assert!(conversation.resume(1).await.is_err());
+        let turn = store.retained.lock().unwrap().as_ref().unwrap().turns[0]
+            .response
+            .clone();
+        for mutation in 0..5 {
+            let mut changed = turn.clone();
+            match mutation {
+                0 => changed.calls[0].id = "different-id".into(),
+                1 => changed.calls[0].name = "alternative".into(),
+                2 => changed.calls[0].arguments = json!({"value":2}),
+                3 => changed.calls.clear(),
+                _ => changed.calls.push(changed.calls[0].clone()),
+            }
+            assert!(conversation
+                .reconcile(
+                    2,
+                    ConversationResolution::Completed { turn: changed },
+                    "operator",
+                    "Retained response from fenced task"
+                )
+                .await
+                .is_err());
+            let unchanged = conversation.inspect().await.unwrap();
+            assert_eq!(unchanged.revision, 2);
+            assert_eq!(unchanged.phase, ConversationPhase::ProviderIntent);
+            assert!(unchanged.turns.is_empty());
+        }
+        let accepted = conversation
+            .reconcile(
+                2,
+                ConversationResolution::Completed { turn },
+                "operator",
+                "Retained response from fenced task",
+            )
+            .await
+            .unwrap();
+        assert_eq!(accepted.phase, ConversationPhase::AwaitingTools);
+        assert_eq!(fixture.requests.lock().unwrap().len(), 1);
+        assert_eq!(fixture::effect_count(&ledger).unwrap(), 0);
+
+        // A valid shared checksum cannot substitute for adapter transcript validation on reopen.
+        let mut changed = serde_json::to_value(&accepted).unwrap();
+        changed["turns"][0]["response"]["calls"][0]["arguments"] = json!({"value":2});
+        changed.as_object_mut().unwrap().remove("checksum");
+        changed["checksum"] = json!(configuration_digest(&changed));
+        let changed: ConversationCheckpoint = serde_json::from_value(changed).unwrap();
+        changed.validate().unwrap();
+        std::fs::write(
+            directory.path().join("conversation.json"),
+            serde_json::to_vec(&changed).unwrap(),
+        )
+        .unwrap();
+        assert!(DurableConversation::open(
+            store,
+            adapter,
+            scope,
+            request,
+            65536,
+            Duration::from_secs(1)
+        )
+        .await
+        .is_err());
+        assert_eq!(fixture.requests.lock().unwrap().len(), 1);
+        assert_eq!(fixture::effect_count(&ledger).unwrap(), 0);
+    }
+}

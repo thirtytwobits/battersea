@@ -154,6 +154,26 @@ impl EngineAdapter for Chat {
         }
         Ok(binding)
     }
+    fn validate_conversation_turn(
+        &self,
+        request: &ConversationRequest,
+        turn: &ConversationTurn,
+    ) -> Result<ConversationBinding, EngineAdapterRequestError> {
+        let mut runtime = request.to_request();
+        self.context.admit(&mut runtime)?;
+        let mut admitted = request.clone();
+        admitted.shared = runtime.shared;
+        let binding = self
+            .inner
+            .validate_conversation_turn(&admitted, turn)
+            .map_err(|e| self.context.error(e))?;
+        if binding.origin != self.context.binding.origin() {
+            return Err(self
+                .context
+                .invalid("Conversation belongs to another binding."));
+        }
+        Ok(binding)
+    }
     async fn conversation_turn(
         &self,
         mut request: ConversationRequest,
