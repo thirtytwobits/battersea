@@ -410,6 +410,7 @@ fn package(root: &Path, core_only: bool) -> Result<()> {
                 "lib.rs",
                 "host.rs",
                 "fixture.rs",
+                "background_fixture.rs",
                 "journal.rs",
                 "conversation_journal.rs",
             ] {

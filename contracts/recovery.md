@@ -77,3 +77,9 @@ accepted request, completed provider turns, tool batches and copied results. Pro
 has its own persisted intent. An unresolved provider intent requires reconciliation even when
 all preceding tool effects have published results. Completing a provider conversation supplies
 the enclosing driver with retained output; the driver still publishes its own checkpoint.
+
+Background provider acceptance retains the remote identity before retrieval. A failed retrieval
+can repeat against that identity; an uncertain create requires reconciliation. Cancellation records
+its own intent and can repeat idempotently until terminal remote evidence is published. The host
+owns remote cleanup and may cancel after conversation expiry. Reopening preserves the response
+identity, original expiry and consumed generation budget.

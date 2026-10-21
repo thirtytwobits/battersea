@@ -773,6 +773,41 @@ pub trait EngineAdapter: Send + Sync {
         Err(continuation::unsupported())
     }
 
+    /// Validate step evidence without I/O, including the retained remote identity for poll/cancel.
+    fn validate_conversation_step(
+        &self,
+        request: &ConversationRequest,
+        previous: Option<&Value>,
+        results: &[ConversationToolResult],
+        command: &ConversationCommand,
+        step: &ConversationStep,
+    ) -> Result<ConversationBinding, EngineAdapterRequestError> {
+        match (command, step) {
+            (ConversationCommand::Start, ConversationStep::Completed { turn }) => {
+                self.validate_conversation_turn(request, previous, results, turn)
+            }
+            _ => Err(continuation::unsupported()),
+        }
+    }
+
+    /// Perform one provider operation. Poll is read-only and Cancel must be idempotent.
+    /// The caller publishes the returned evidence before exposing it or invoking another operation.
+    async fn conversation_step(
+        &self,
+        request: ConversationRequest,
+        previous: Option<Value>,
+        results: Vec<ConversationToolResult>,
+        command: ConversationCommand,
+    ) -> Result<ConversationStep, EngineAdapterRequestError> {
+        match command {
+            ConversationCommand::Start => self
+                .conversation_turn(request, previous, results)
+                .await
+                .map(|turn| ConversationStep::Completed { turn }),
+            _ => Err(continuation::unsupported()),
+        }
+    }
+
     fn describe_debug_context(&self) -> EngineAdapterDebugContext;
 
     async fn count_text_stream_input_tokens(

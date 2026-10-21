@@ -12,14 +12,14 @@ use std::{
 };
 use tokio::time::{timeout, timeout_at, Instant};
 
-pub const CONVERSATION_CHECKPOINT_VERSION: u32 = 1;
+pub const CONVERSATION_CHECKPOINT_VERSION: u32 = 2;
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct ConversationRequest {
     pub shared: EngineAdapterRequest,
     pub tools: Vec<EngineLocalToolDefinition>,
-    /// Maximum persisted provider dispatch intents, including explicitly reconciled attempts.
+    /// Maximum persisted generation intents, including explicitly reconciled attempts.
     pub max_turns: u32,
 }
 impl ConversationRequest {
@@ -63,11 +63,39 @@ pub struct ConversationTurn {
     /// Buffered observations become available only with the durable turn publication.
     pub events: Vec<EngineTextStreamEvent>,
 }
+/// One explicitly requested provider operation. Polling is read-only; cancellation is idempotent.
+#[derive(Clone, PartialEq, Serialize, Deserialize)]
+#[serde(tag = "command", rename_all = "snake_case", deny_unknown_fields)]
+pub enum ConversationCommand {
+    Start,
+    Poll { state: Value },
+    Cancel { state: Value },
+}
+
+/// Provider evidence returned by one operation. Pending state retains an immutable remote identity.
+#[derive(Clone, PartialEq, Serialize, Deserialize)]
+#[serde(tag = "status", rename_all = "snake_case", deny_unknown_fields)]
+pub enum ConversationStep {
+    Pending {
+        state: Value,
+    },
+    Completed {
+        turn: ConversationTurn,
+    },
+    /// Terminal remote evidence after an explicit cancellation command.
+    Cancelled {
+        state: Value,
+    },
+}
+
 #[derive(Clone, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct StoredConversationTurn {
     pub attempt: u32,
     pub response: ConversationTurn,
+    /// The retained remote identity used to retrieve this completed turn.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub pending: Option<Value>,
     pub results: BTreeMap<String, ConversationToolResult>,
 }
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -75,6 +103,8 @@ pub struct StoredConversationTurn {
 pub enum ConversationPhase {
     Ready,
     ProviderIntent,
+    ProviderPending,
+    ProviderCancelling,
     AwaitingTools,
     Completed,
     Abandoned,
@@ -83,6 +113,7 @@ pub enum ConversationPhase {
 #[serde(tag = "outcome", rename_all = "snake_case", deny_unknown_fields)]
 pub enum ConversationResolution {
     NotDispatched,
+    Pending { state: Value },
     Completed { turn: ConversationTurn },
     Abandon,
 }
@@ -106,6 +137,12 @@ pub struct ConversationCheckpoint {
     pub updated_at_unix_ms: u64,
     pub attempts: u32,
     pub phase: ConversationPhase,
+    /// Adapter-owned remote identity, retained through cancellation or host abandonment.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub pending: Option<Value>,
+    /// Terminal remote evidence returned by explicit cancellation.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub cancellation: Option<Value>,
     pub turns: Vec<StoredConversationTurn>,
     pub resolutions: Vec<StoredConversationResolution>,
     /// Integrity check for accidental modification; storage and authority remain host-owned.
@@ -278,7 +315,15 @@ impl ConversationCheckpoint {
     }
     /// Check format, integrity, bounds and shared batch invariants without changing storage.
     pub fn validate(&self) -> Result<(), EngineAdapterRequestError> {
-        if self.version != CONVERSATION_CHECKPOINT_VERSION
+        if ![1, CONVERSATION_CHECKPOINT_VERSION].contains(&self.version)
+            || (self.version == 1
+                && (self.pending.is_some()
+                    || self.cancellation.is_some()
+                    || self.turns.iter().any(|t| t.pending.is_some())
+                    || self
+                        .resolutions
+                        .iter()
+                        .any(|r| matches!(r.resolution, ConversationResolution::Pending { .. }))))
             || self.revision == 0
             || !(1..=payload::PROVIDER_PAYLOAD_BYTES).contains(&self.max_bytes)
             || self.scope.run_id.trim().is_empty()
@@ -352,11 +397,24 @@ impl ConversationCheckpoint {
         let consistent = match self.phase {
             ConversationPhase::Ready => ready,
             ConversationPhase::ProviderIntent => ready && self.attempts > previous,
+            ConversationPhase::ProviderPending | ConversationPhase::ProviderCancelling => {
+                ready && self.attempts > previous && self.pending.is_some()
+            }
             ConversationPhase::AwaitingTools => last.is_some_and(|t| !t.response.calls.is_empty()),
             ConversationPhase::Completed => last.is_some_and(|t| t.response.calls.is_empty()),
             ConversationPhase::Abandoned => true,
         };
-        if !consistent {
+        if !consistent
+            || (self.pending.is_some()
+                && !matches!(
+                    self.phase,
+                    ConversationPhase::ProviderPending
+                        | ConversationPhase::ProviderCancelling
+                        | ConversationPhase::Abandoned
+                ))
+            || (self.cancellation.is_some()
+                && (self.pending.is_none() || self.phase != ConversationPhase::Abandoned))
+        {
             return Err(invalid());
         }
         for resolution in &self.resolutions {
@@ -449,6 +507,8 @@ impl DurableConversation {
             updated_at_unix_ms: now,
             attempts: 0,
             phase: ConversationPhase::Ready,
+            pending: None,
+            cancellation: None,
             turns: vec![],
             resolutions: vec![],
             checksum: String::new(),
@@ -505,14 +565,57 @@ impl DurableConversation {
         for (index, turn) in record.turns.iter().enumerate() {
             let previous = index.checked_sub(1).map(|i| &record.turns[i]);
             let results = ordered_results(previous);
-            if self.adapter.validate_conversation_turn(
+            let command = turn
+                .pending
+                .as_ref()
+                .map(|state| ConversationCommand::Poll {
+                    state: state.clone(),
+                })
+                .unwrap_or(ConversationCommand::Start);
+            if self.adapter.validate_conversation_step(
                 &record.request,
                 previous.map(|t| &t.response.state),
                 &results,
-                &turn.response,
+                &command,
+                &ConversationStep::Completed {
+                    turn: turn.response.clone(),
+                },
             )? != self.binding
             {
                 return Err(invalid());
+            }
+        }
+        if let Some(state) = &record.pending {
+            let previous = record.turns.last();
+            let results = ordered_results(previous);
+            let command = ConversationCommand::Start;
+            if self.adapter.validate_conversation_step(
+                &record.request,
+                previous.map(|t| &t.response.state),
+                &results,
+                &command,
+                &ConversationStep::Pending {
+                    state: state.clone(),
+                },
+            )? != self.binding
+            {
+                return Err(invalid());
+            }
+            if let Some(cancelled) = &record.cancellation {
+                if self.adapter.validate_conversation_step(
+                    &record.request,
+                    previous.map(|t| &t.response.state),
+                    &results,
+                    &ConversationCommand::Cancel {
+                        state: state.clone(),
+                    },
+                    &ConversationStep::Cancelled {
+                        state: cancelled.clone(),
+                    },
+                )? != self.binding
+                {
+                    return Err(invalid());
+                }
             }
         }
         Ok(record)
@@ -608,17 +711,6 @@ impl DurableConversation {
         mut turn: ConversationTurn,
     ) -> Result<(), EngineAdapterRequestError> {
         bounded(&turn, self.max_bytes)?;
-        let previous = r.turns.last();
-        let results = ordered_results(previous);
-        if self.adapter.validate_conversation_turn(
-            &r.request,
-            previous.map(|t| &t.response.state),
-            &results,
-            &turn,
-        )? != self.binding
-        {
-            return Err(invalid());
-        }
         tool_loop::validate_tool_calls("conversation", &r.request.to_request(), &turn.calls)?;
         for event in &mut turn.events {
             match event {
@@ -637,11 +729,111 @@ impl DurableConversation {
         r.turns.push(StoredConversationTurn {
             attempt: r.attempts,
             response: turn,
+            pending: None,
             results: BTreeMap::new(),
         });
         Ok(())
     }
-    /// Dispatch one next turn, or inspect a terminal result. Pending results stop before provider I/O.
+    fn retain_step(
+        &self,
+        record: &mut ConversationCheckpoint,
+        command: &ConversationCommand,
+        step: ConversationStep,
+    ) -> Result<(), EngineAdapterRequestError> {
+        bounded(&step, self.max_bytes)?;
+        let previous = record.turns.last();
+        if self.adapter.validate_conversation_step(
+            &record.request,
+            previous.map(|t| &t.response.state),
+            &ordered_results(previous),
+            command,
+            &step,
+        )? != self.binding
+        {
+            return Err(invalid());
+        }
+        match (command, step) {
+            (
+                ConversationCommand::Start | ConversationCommand::Poll { .. },
+                ConversationStep::Completed { turn },
+            ) => {
+                self.retain(record, turn)?;
+                record.turns.last_mut().expect("retained turn").pending = record.pending.take();
+            }
+            (
+                ConversationCommand::Start | ConversationCommand::Poll { .. },
+                ConversationStep::Pending { state },
+            ) => {
+                if record.version < 2
+                    || record.pending.as_ref().is_some_and(|known| known != &state)
+                {
+                    return Err(invalid());
+                }
+                record.pending = Some(state);
+                record.phase = ConversationPhase::ProviderPending;
+            }
+            (ConversationCommand::Cancel { .. }, ConversationStep::Cancelled { state }) => {
+                record.cancellation = Some(state);
+                record.phase = ConversationPhase::Abandoned;
+            }
+            _ => return Err(invalid()),
+        }
+        Ok(())
+    }
+
+    /// Cancel the retained remote response. Failed or interrupted cancellation may be repeated.
+    /// Cleanup remains available after expiry and never authorises generation or tool execution.
+    pub async fn cancel(
+        &self,
+        expected_revision: u64,
+    ) -> Result<ConversationCheckpoint, EngineAdapterRequestError> {
+        let mut record = self.expected(expected_revision).await?;
+        if record.phase == ConversationPhase::Abandoned && record.cancellation.is_some() {
+            return Ok(record);
+        }
+        if !matches!(
+            record.phase,
+            ConversationPhase::ProviderPending
+                | ConversationPhase::ProviderCancelling
+                | ConversationPhase::Abandoned
+        ) {
+            return Err(invalid());
+        }
+        let command = ConversationCommand::Cancel {
+            state: record.pending.clone().ok_or_else(invalid)?,
+        };
+        record.phase = ConversationPhase::ProviderCancelling;
+        Self::advance(&mut record)?;
+        self.write(Some(expected_revision), &mut record).await?;
+        let previous = record.turns.last();
+        let step = timeout(
+            Duration::from_millis(self.binding.timeout_ms),
+            self.adapter.conversation_step(
+                record.request.clone(),
+                previous.map(|t| t.response.state.clone()),
+                ordered_results(previous),
+                command.clone(),
+            ),
+        )
+        .await
+        .map_err(|_| {
+            EngineAdapterRequestError::new(
+                "conversation",
+                "Provider cancellation deadline exceeded; inspect retained state.",
+                ErrorKind::Timeout,
+            )
+        })??;
+        self.retain_step(&mut record, &command, step)
+            .map_err(|e| e.with_dispatch(crate::DispatchState::Unknown))?;
+        let intent_revision = record.revision;
+        Self::advance(&mut record).map_err(|e| e.with_dispatch(crate::DispatchState::Unknown))?;
+        self.write(Some(intent_revision), &mut record)
+            .await
+            .map_err(|e| e.with_dispatch(crate::DispatchState::Unknown))?;
+        Ok(record)
+    }
+
+    /// Start or retrieve one provider turn, or inspect a terminal result. Pending tools stop before I/O.
     pub async fn resume(
         &self,
         expected_revision: u64,
@@ -680,7 +872,10 @@ impl DurableConversation {
         if r.phase == ConversationPhase::Completed {
             return Ok(r);
         }
-        if r.phase == ConversationPhase::ProviderIntent {
+        if matches!(
+            r.phase,
+            ConversationPhase::ProviderIntent | ConversationPhase::ProviderCancelling
+        ) {
             return Err(error(
                 ToolCode::ToolContinuationUnresolved,
                 "Provider dispatch intent requires host reconciliation.",
@@ -705,7 +900,7 @@ impl DurableConversation {
                 .map(|c| turn.results[&c.id].clone())
                 .collect();
         }
-        if r.attempts == r.request.max_turns {
+        if r.phase != ConversationPhase::ProviderPending && r.attempts == r.request.max_turns {
             return Err(error(
                 ToolCode::ToolRoundsExceeded,
                 "Conversation exhausted its provider turn budget.",
@@ -714,25 +909,32 @@ impl DurableConversation {
         let state = r.turns.last().map(|t| t.response.state.clone());
         self.adapter
             .validate_conversation(&r.request, state.as_ref())?;
-        r.attempts += 1;
-        r.phase = ConversationPhase::ProviderIntent;
+        let command = if let Some(state) = &r.pending {
+            ConversationCommand::Poll {
+                state: state.clone(),
+            }
+        } else {
+            r.attempts += 1;
+            r.phase = ConversationPhase::ProviderIntent;
+            ConversationCommand::Start
+        };
         Self::advance(&mut r)?;
         self.write(Some(expected_revision), &mut r).await?;
         self.live(&r)?;
         let response = timeout_at(
             self.deadline,
             self.adapter
-                .conversation_turn(r.request.clone(), state, results),
+                .conversation_step(r.request.clone(), state, results, command.clone()),
         )
         .await
         .map_err(|_| {
             EngineAdapterRequestError::new(
                 "conversation",
-                "Provider turn deadline expired; intent requires inspection.",
+                "Provider operation deadline expired; inspect retained state.",
                 ErrorKind::Timeout,
             )
         })??;
-        self.retain(&mut r, response)
+        self.retain_step(&mut r, &command, response)
             .map_err(|e| e.with_dispatch(crate::DispatchState::Unknown))?;
         let intent_revision = r.revision;
         Self::advance(&mut r).map_err(|e| e.with_dispatch(crate::DispatchState::Unknown))?;
@@ -768,7 +970,18 @@ impl DurableConversation {
         bounded(&(&resolution, actor, evidence), self.max_bytes)?;
         match &resolution {
             ConversationResolution::NotDispatched => r.phase = ConversationPhase::Ready,
-            ConversationResolution::Completed { turn } => self.retain(&mut r, turn.clone())?,
+            ConversationResolution::Pending { state } => self.retain_step(
+                &mut r,
+                &ConversationCommand::Start,
+                ConversationStep::Pending {
+                    state: state.clone(),
+                },
+            )?,
+            ConversationResolution::Completed { turn } => self.retain_step(
+                &mut r,
+                &ConversationCommand::Start,
+                ConversationStep::Completed { turn: turn.clone() },
+            )?,
             ConversationResolution::Abandon => r.phase = ConversationPhase::Abandoned,
         }
         r.resolutions.push(StoredConversationResolution {

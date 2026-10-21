@@ -696,10 +696,16 @@ async fn durable_provider_continuation_reopens_both_journals_and_retries_the_sav
             self.responses.lock().unwrap().push(entry);
         }
     }
-    for (transport, streaming, responses) in TRANSPORTS
-        .into_iter()
-        .flat_map(|t| [(false, false), (true, false), (true, true)].map(|(s, r)| (t, s, r)))
-    {
+    for (transport, streaming, responses, background) in TRANSPORTS.into_iter().flat_map(|t| {
+        [
+            (false, false, false),
+            (true, false, false),
+            (true, true, false),
+            (true, true, true),
+            (false, true, true),
+        ]
+        .map(|(s, r, b)| (t, s, r, b))
+    }) {
         let (directory, ledger) = temporary_ledger();
         let remote = Remote::start(transport, &ledger, Fault::None, Duration::from_secs(10))
             .await
@@ -709,7 +715,10 @@ async fn durable_provider_continuation_reopens_both_journals_and_retries_the_sav
         if responses {
             Arc::get_mut(&mut fixture).unwrap().final_text = "  Résultat reçu ✓  ".into();
         }
-        let provider = if responses {
+        let jobs = mcp_example::background_fixture::BackgroundFixture::new(fixture.clone());
+        let provider = if background {
+            mcp_example::background_fixture::serve(jobs.clone()).await
+        } else if responses {
             fixture::responses_http(fixture.clone()).await
         } else {
             fixture::provider_http(fixture.clone()).await
@@ -717,7 +726,13 @@ async fn durable_provider_continuation_reopens_both_journals_and_retries_the_sav
         .unwrap();
         let logs = Arc::new(Logs::default());
         let connect = || {
-            if responses {
+            if background {
+                host::background_responses_provider(
+                    &provider.endpoint,
+                    streaming,
+                    Some(logs.clone()),
+                )
+            } else if responses {
                 host::responses_provider_with_logger(&provider.endpoint, logs.clone())
             } else {
                 host::provider(&provider.endpoint)
@@ -726,6 +741,13 @@ async fn durable_provider_continuation_reopens_both_journals_and_retries_the_sav
         let (adapter, chat) = connect().unwrap();
         let mut original = host::request(&tools, "operator", chat);
         original.shared.chat.stream = streaming;
+        if background {
+            if streaming {
+                original.shared.chat.logprobs = Some(true);
+            } else {
+                original.shared.chat.top_logprobs = Some(1);
+            }
+        }
         let request = ConversationRequest {
             shared: original.shared,
             tools: original.local_tools,
@@ -757,7 +779,25 @@ async fn durable_provider_continuation_reopens_both_journals_and_retries_the_sav
         )
         .await
         .unwrap();
-        let pending = conversation.resume(1).await.unwrap();
+        let mut pending = conversation.resume(1).await.unwrap();
+        if background {
+            assert_eq!(pending.phase, ConversationPhase::ProviderPending);
+            drop(conversation);
+            let (adapter, _) = connect().unwrap();
+            let reopened = DurableConversation::open(
+                store(),
+                adapter,
+                scope.clone(),
+                request.clone(),
+                65536,
+                Duration::from_secs(1),
+            )
+            .await
+            .unwrap();
+            pending = reopened.resume(pending.revision).await.unwrap();
+        } else {
+            drop(conversation);
+        }
         assert_eq!(pending.phase, ConversationPhase::AwaitingTools);
         let gate = DurableToolExecutor::create(
             approvals(),
@@ -777,7 +817,6 @@ async fn durable_provider_continuation_reopens_both_journals_and_retries_the_sav
         assert_eq!(fixture.requests.lock().unwrap().len(), 1);
         assert_eq!(fixture::effect_count(&ledger).unwrap(), 0);
         drop(gate);
-        drop(conversation);
 
         let (adapter, _) = connect().unwrap();
         let conversation = DurableConversation::open(
@@ -813,7 +852,7 @@ async fn durable_provider_continuation_reopens_both_journals_and_retries_the_sav
         let call = approval.calls["effect-1"].call.clone();
         let retained = ConversationToolResult { call, result };
         conversation
-            .record_tool_result(3, retained.clone())
+            .record_tool_result(pending.revision, retained.clone())
             .await
             .unwrap();
         assert_eq!(fixture::effect_count(&ledger).unwrap(), 1);
@@ -833,13 +872,48 @@ async fn durable_provider_continuation_reopens_both_journals_and_retries_the_sav
         .unwrap();
         assert_eq!(
             conversation
-                .record_tool_result(4, retained)
+                .record_tool_result(pending.revision + 1, retained)
                 .await
                 .unwrap()
                 .revision,
-            4
+            pending.revision + 1
         );
-        let completed = conversation.resume(4).await.unwrap();
+        let mut completed = conversation.resume(pending.revision + 1).await.unwrap();
+        if background {
+            assert_eq!(completed.phase, ConversationPhase::ProviderPending);
+            let (adapter, _) = connect().unwrap();
+            let reopened = DurableConversation::open(
+                store(),
+                adapter,
+                scope.clone(),
+                request.clone(),
+                65536,
+                Duration::from_secs(1),
+            )
+            .await
+            .unwrap();
+            completed = reopened.resume(completed.revision).await.unwrap();
+            assert_eq!(
+                *jobs.operations.lock().unwrap(),
+                ["create", "poll:job-1", "create", "create", "poll:job-3"]
+            );
+            assert_eq!(completed.attempts, 2);
+            assert_eq!(
+                *jobs.retrievals.lock().unwrap(),
+                vec![
+                    vec![
+                        "reasoning.encrypted_content",
+                        "message.output_text.logprobs"
+                    ];
+                    2
+                ]
+            );
+            assert_eq!(
+                completed.turns[1].response.state["response"]["output"][0]["content"][0]
+                    ["logprobs"][0]["token"],
+                "ok"
+            );
+        }
         assert_eq!(completed.phase, ConversationPhase::Completed);
         assert!(completed.turns[1].response.events.iter().any(
             |e| matches!(e,EngineTextStreamEvent::TextDelta{text} if text==&fixture.final_text)
@@ -917,16 +991,20 @@ async fn durable_provider_continuation_reopens_both_journals_and_retries_the_sav
             // Reopening and retrying a rejected HTTP request do not duplicate completed logs.
             let requests = logs.requests.lock().unwrap();
             let responses = logs.responses.lock().unwrap();
-            assert_eq!(requests.len(), 2);
-            assert_eq!(responses.len(), 2);
-            for (index, response) in responses.iter().enumerate() {
+            assert_eq!(requests.len(), if background { 4 } else { 2 });
+            assert_eq!(responses.len(), if background { 4 } else { 2 });
+            for (index, response) in responses
+                .iter()
+                .filter(|entry| entry.detail.output_chars.is_some())
+                .enumerate()
+            {
                 let turn = &completed.turns[index].response;
                 let native = &turn.state["response"];
                 assert_eq!(response.context, requests[index].context);
                 assert_eq!(response.operation, requests[index].operation);
                 assert_eq!(response.status, 200);
                 assert!(response.detail.ok);
-                assert_eq!(response.detail.streaming, Some(true));
+                assert_eq!(response.detail.streaming, Some(!background));
                 assert_eq!(
                     response.detail.response_id.as_deref(),
                     native["id"].as_str()
@@ -1564,5 +1642,285 @@ async fn reconciled_and_reopened_calls_must_match_the_provider_transcript() {
         assert_eq!(fixture.requests.lock().unwrap().len(), 2);
         assert_eq!(fixture::effect_count(&ledger).unwrap(), 1);
         remote.close().await;
+    }
+}
+
+#[tokio::test]
+async fn background_retrieval_failures_preserve_identity_and_cancellation_is_explicit() {
+    use battersea_model::{
+        ConversationPhase, ConversationRequest, ConversationScope, DurableConversation,
+    };
+    use mcp_example::{
+        background_fixture::{self, BackgroundFixture},
+        conversation_journal::FileConversationStore,
+    };
+    use std::{
+        sync::atomic::Ordering,
+        time::{SystemTime, UNIX_EPOCH},
+    };
+    let (directory, _) = temporary_ledger();
+    let fixture = BackgroundFixture::new(ProviderFixture::new(json!({"value":1}), false));
+    let server = background_fixture::serve(fixture.clone()).await.unwrap();
+    let (adapter, chat) =
+        host::background_responses_provider(&server.endpoint, false, None).unwrap();
+    let original = host::request(&ToolRegistry::default(), "operator", chat);
+    let request = ConversationRequest {
+        shared: original.shared,
+        tools: vec![],
+        max_turns: 1,
+    };
+    let scope = ConversationScope {
+        run_id: "background-failure".into(),
+        tool_binding_revision: "empty".into(),
+        expires_at_unix_ms: SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_millis() as u64
+            + 4000,
+    };
+    let store = || Arc::new(FileConversationStore::new(directory.path().into()));
+    let conversation = DurableConversation::create(
+        store(),
+        adapter,
+        scope.clone(),
+        request.clone(),
+        65536,
+        Duration::from_secs(1),
+    )
+    .await
+    .unwrap();
+    let pending = conversation.resume(1).await.unwrap();
+    assert_eq!(pending.phase, ConversationPhase::ProviderPending);
+    drop(conversation);
+    let path = directory.path().join("conversation.json");
+    let pending_bytes = std::fs::read(&path).unwrap();
+    assert_eq!(*fixture.operations.lock().unwrap(), ["create"]);
+    let (adapter, _) = host::background_responses_provider(&server.endpoint, false, None).unwrap();
+    let conversation = DurableConversation::open(
+        store(),
+        adapter,
+        scope.clone(),
+        request.clone(),
+        65536,
+        Duration::from_secs(1),
+    )
+    .await
+    .unwrap();
+    fixture.pending.store(true, Ordering::SeqCst);
+    let waiting = conversation.resume(3).await.unwrap();
+    assert_eq!(waiting.pending, pending.pending);
+    assert_eq!(waiting.attempts, 1);
+    fixture.fail_poll.store(true, Ordering::SeqCst);
+    assert!(conversation.resume(5).await.is_err());
+    fixture.fail_poll.store(false, Ordering::SeqCst);
+    fixture.wrong_identity.store(true, Ordering::SeqCst);
+    assert!(conversation.resume(6).await.is_err());
+    fixture.wrong_identity.store(false, Ordering::SeqCst);
+    let retained = conversation.inspect().await.unwrap();
+    assert_eq!(retained.pending, pending.pending);
+    assert_eq!(retained.phase, ConversationPhase::ProviderPending);
+    fixture.fail_cancel.store(true, Ordering::SeqCst);
+    assert!(conversation.cancel(7).await.is_err());
+    assert!(conversation.resume(8).await.is_err());
+    drop(conversation);
+    fixture.fail_cancel.store(false, Ordering::SeqCst);
+    let (adapter, _) = host::background_responses_provider(&server.endpoint, false, None).unwrap();
+    let conversation = DurableConversation::open(
+        store(),
+        adapter,
+        scope.clone(),
+        request.clone(),
+        65536,
+        Duration::from_secs(1),
+    )
+    .await
+    .unwrap();
+    let cancelled = conversation.cancel(8).await.unwrap();
+    assert_eq!(cancelled.phase, ConversationPhase::Abandoned);
+    assert_eq!(
+        conversation.cancel(cancelled.revision).await.unwrap(),
+        cancelled
+    );
+    assert_eq!(
+        *fixture.operations.lock().unwrap(),
+        [
+            "create",
+            "poll:job-1",
+            "poll:job-1",
+            "poll:job-1",
+            "cancel:job-1",
+            "poll:job-1",
+            "cancel:job-1"
+        ]
+    );
+    assert_eq!(fixture.provider.requests.lock().unwrap().len(), 1);
+    let bytes = std::fs::read(&path).unwrap();
+    for mutation in 0..3 {
+        let mut value: Value = serde_json::from_slice(&bytes).unwrap();
+        match mutation {
+            0 => value["cancellation"]["id"] = json!("another-job"),
+            1 => value["cancellation"]["status"] = json!("in_progress"),
+            _ => value["cancellation"]["background"] = json!(false),
+        }
+        value.as_object_mut().unwrap().remove("checksum");
+        value["checksum"] = json!(battersea_model::configuration_digest(&value));
+        std::fs::write(&path, serde_json::to_vec(&value).unwrap()).unwrap();
+        let (adapter, _) =
+            host::background_responses_provider(&server.endpoint, false, None).unwrap();
+        assert!(DurableConversation::open(
+            store(),
+            adapter,
+            scope.clone(),
+            request.clone(),
+            65536,
+            Duration::from_secs(1)
+        )
+        .await
+        .is_err());
+    }
+    for mutation in 0..10 {
+        let mut value: Value = serde_json::from_slice(&pending_bytes).unwrap();
+        match mutation {
+            0 => value["pending"]["version"] = json!(999),
+            1 => value["pending"]["binding"]["configuration_revision"] = json!("changed"),
+            2 => value["pending"]["request_revision"] = json!("changed"),
+            3 => value["pending"]["input"] = json!([]),
+            4 => value["pending"]["response"]["id"] = json!(""),
+            5 => value["pending"]["response"]["status"] = json!("completed"),
+            6 => value["pending"]["response"]["background"] = json!(false),
+            7 => value["version"] = json!(1),
+            8 => value["pending"]["response"]["output"] = json!("malformed"),
+            _ => value["pending"]["response"]["extra"] = json!("x".repeat(65536)),
+        }
+        value.as_object_mut().unwrap().remove("checksum");
+        value["checksum"] = json!(battersea_model::configuration_digest(&value));
+        let changed = serde_json::to_vec(&value).unwrap();
+        std::fs::write(&path, &changed).unwrap();
+        let (adapter, _) =
+            host::background_responses_provider(&server.endpoint, false, None).unwrap();
+        assert!(
+            DurableConversation::open(
+                store(),
+                adapter,
+                scope.clone(),
+                request.clone(),
+                65536,
+                Duration::from_secs(1)
+            )
+            .await
+            .is_err(),
+            "mutation {mutation}"
+        );
+        assert_eq!(std::fs::read(&path).unwrap(), changed);
+    }
+    std::fs::write(&path, bytes).unwrap();
+    let (foreground, mut chat) = host::responses_provider(&server.endpoint).unwrap();
+    chat.stream = false;
+    let unsupported = host::request(&ToolRegistry::default(), "operator", chat);
+    assert!(foreground.stream_text(unsupported.clone()).await.is_err());
+    assert!(foreground
+        .count_text_stream_input_tokens(unsupported)
+        .await
+        .is_err());
+    assert_eq!(fixture.operations.lock().unwrap().len(), 7);
+}
+
+#[tokio::test]
+async fn cancellation_recovers_a_matching_terminal_response_after_rejection() {
+    use battersea_model::{
+        ConversationPhase, ConversationRequest, ConversationScope, DurableConversation,
+    };
+    use mcp_example::{
+        background_fixture::{self, BackgroundFixture},
+        conversation_journal::FileConversationStore,
+    };
+    use std::{
+        sync::atomic::Ordering,
+        time::{SystemTime, UNIX_EPOCH},
+    };
+    for failure in 0..4 {
+        let (directory, _) = temporary_ledger();
+        let fixture = BackgroundFixture::new(ProviderFixture::new(json!({"value":1}), false));
+        let server = background_fixture::serve(fixture.clone()).await.unwrap();
+        let (adapter, chat) =
+            host::background_responses_provider(&server.endpoint, false, None).unwrap();
+        let original = host::request(&ToolRegistry::default(), "operator", chat);
+        let request = ConversationRequest {
+            shared: original.shared,
+            tools: vec![],
+            max_turns: 1,
+        };
+        let scope = ConversationScope {
+            run_id: "cancel-race".into(),
+            tool_binding_revision: "empty".into(),
+            expires_at_unix_ms: SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap()
+                .as_millis() as u64
+                + 4000,
+        };
+        let store = || Arc::new(FileConversationStore::new(directory.path().into()));
+        let conversation = DurableConversation::create(
+            store(),
+            adapter,
+            scope.clone(),
+            request.clone(),
+            65536,
+            Duration::from_secs(1),
+        )
+        .await
+        .unwrap();
+        let pending = conversation.resume(1).await.unwrap();
+        fixture.fail_cancel.store(true, Ordering::SeqCst);
+        fixture.pending.store(failure == 1, Ordering::SeqCst);
+        fixture.wrong_identity.store(failure == 2, Ordering::SeqCst);
+        fixture.fail_poll.store(failure == 3, Ordering::SeqCst);
+        let result = conversation.cancel(pending.revision).await;
+        if failure == 0 {
+            assert_eq!(result.unwrap().phase, ConversationPhase::Abandoned);
+        } else {
+            assert!(result.is_err());
+            let retained = conversation.inspect().await.unwrap();
+            assert_eq!(retained.phase, ConversationPhase::ProviderCancelling);
+            assert_eq!(retained.pending, pending.pending);
+            assert!(retained.cancellation.is_none());
+        }
+        drop(conversation);
+        fixture.pending.store(false, Ordering::SeqCst);
+        fixture.wrong_identity.store(false, Ordering::SeqCst);
+        fixture.fail_poll.store(false, Ordering::SeqCst);
+        let (adapter, _) =
+            host::background_responses_provider(&server.endpoint, false, None).unwrap();
+        let conversation = DurableConversation::open(
+            store(),
+            adapter,
+            scope,
+            request,
+            65536,
+            Duration::from_secs(1),
+        )
+        .await
+        .unwrap();
+        let revision = conversation.inspect().await.unwrap().revision;
+        let terminal = conversation.cancel(revision).await.unwrap();
+        assert_eq!(terminal.phase, ConversationPhase::Abandoned);
+        assert_eq!(terminal.cancellation.as_ref().unwrap()["id"], "job-1");
+        assert_eq!(
+            terminal.cancellation.as_ref().unwrap()["status"],
+            "completed"
+        );
+        assert!(terminal.turns.is_empty());
+        assert_eq!(terminal.attempts, 1);
+        assert_eq!(
+            conversation.cancel(terminal.revision).await.unwrap(),
+            terminal
+        );
+        let attempts = if failure == 0 { 1 } else { 2 };
+        assert_eq!(fixture.operations.lock().unwrap().len(), 1 + 2 * attempts);
+        assert_eq!(
+            *fixture.retrievals.lock().unwrap(),
+            vec![vec!["reasoning.encrypted_content"]; attempts]
+        );
+        assert_eq!(fixture.provider.requests.lock().unwrap().len(), 1);
     }
 }

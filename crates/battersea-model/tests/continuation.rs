@@ -14,6 +14,7 @@ use std::{
 struct Store {
     bytes: Mutex<Option<Vec<u8>>>,
     fault: Mutex<Option<(u64, bool)>>,
+    conflict: AtomicUsize,
 }
 #[async_trait]
 impl ConversationStore for Store {
@@ -48,6 +49,9 @@ impl ConversationStore for Store {
                 .revision
         });
         if revision != expected {
+            return Err(ConversationStoreError::Conflict);
+        }
+        if self.conflict.load(Ordering::SeqCst) == next.revision as usize {
             return Err(ConversationStoreError::Conflict);
         }
         let fault = *self.fault.lock().unwrap();
@@ -696,3 +700,6 @@ async fn recovered_turns_obey_final_output_admission() {
     assert_eq!(d.inspect().await.unwrap(), completed);
     assert_eq!(provider.calls.load(Ordering::SeqCst), 2);
 }
+
+#[path = "continuation/background.rs"]
+mod background;

@@ -34,6 +34,7 @@ pub(crate) fn create_openai_adapter(
     logger: Option<Arc<dyn EngineAdapterLogger>>,
 ) -> Result<Arc<dyn EngineAdapter>, EngineAdapterRequestError> {
     crate::retry::validate(&backend)?;
+    validate_stream_mode(&backend, backend.chat.stream)?;
     let timeout_ms = backend
         .options
         .timeout_ms
@@ -105,6 +106,16 @@ pub(crate) fn create_openai_adapter(
         } else {
             (0, 0, 0)
         };
+    if background
+        && background_mode == "poll"
+        && background_poll_interval_ms >= timeout_ms.min(background_max_wait_ms)
+    {
+        return Err(EngineAdapterRequestError::new(
+            &backend.provider,
+            "Background polling interval must be shorter than operation and background wait timeouts.",
+            battersea_model::ErrorKind::InvalidRequest,
+        ));
+    }
     let base_url = crate::connection::base(backend.binding.as_ref(), || {
         resolve_openai_base_url(&backend.endpoint)
     });
@@ -141,6 +152,23 @@ pub(crate) fn create_openai_adapter(
             max_retries: Some(max_retries),
         },
     }))
+}
+
+fn validate_stream_mode(
+    backend: &EngineBackendConfig,
+    stream: bool,
+) -> Result<(), EngineAdapterRequestError> {
+    if stream
+        || (backend.options.background == Some(true)
+            && backend.options.background_mode.as_deref() == Some("poll"))
+    {
+        return Ok(());
+    }
+    Err(EngineAdapterRequestError::new(
+        &backend.provider,
+        "Non-streaming Responses requests require background polling.",
+        battersea_model::ErrorKind::InvalidRequest,
+    ))
 }
 
 struct OpenAiEngineAdapter {
@@ -256,6 +284,26 @@ impl EngineAdapter for OpenAiEngineAdapter {
         self.durable_turn(request, state, results).await
     }
 
+    fn validate_conversation_step(
+        &self,
+        request: &battersea_model::ConversationRequest,
+        previous: Option<&Value>,
+        results: &[battersea_model::ConversationToolResult],
+        command: &battersea_model::ConversationCommand,
+        step: &battersea_model::ConversationStep,
+    ) -> Result<battersea_model::ConversationBinding, EngineAdapterRequestError> {
+        self.validate_durable_step(request, previous, results, command, step)
+    }
+    async fn conversation_step(
+        &self,
+        request: battersea_model::ConversationRequest,
+        previous: Option<Value>,
+        results: Vec<battersea_model::ConversationToolResult>,
+        command: battersea_model::ConversationCommand,
+    ) -> Result<battersea_model::ConversationStep, EngineAdapterRequestError> {
+        self.durable_step(request, previous, results, command).await
+    }
+
     fn describe_debug_context(&self) -> EngineAdapterDebugContext {
         self.context.clone()
     }
@@ -265,6 +313,7 @@ impl EngineAdapter for OpenAiEngineAdapter {
         request: EngineTextStreamRequest,
     ) -> Result<EngineTextStream, EngineAdapterRequestError> {
         super::validate_chat_request(&self.backend, &request)?;
+        validate_stream_mode(&self.backend, request.shared.chat.stream)?;
         if !request.local_tools.is_empty() {
             return self.stream_text_with_local_tools(request).await;
         }
@@ -411,6 +460,7 @@ impl EngineAdapter for OpenAiEngineAdapter {
         request: EngineTextStreamRequest,
     ) -> Result<u64, EngineAdapterRequestError> {
         super::validate_chat_request(&self.backend, &request)?;
+        validate_stream_mode(&self.backend, request.shared.chat.stream)?;
         let body = build_input_token_count_body(&self.backend, &request)?;
         let response = crate::retry::send(
             self.http_client
@@ -2631,6 +2681,24 @@ mod tests {
         backend.options.background_poll_interval_ms = Some(3_000);
         backend.options.background_max_wait_ms = Some(1_800_000);
         backend
+    }
+
+    #[test]
+    fn background_poll_interval_must_leave_time_for_retrieval() {
+        for (timeout, maximum, interval, allowed) in [
+            (100, 200, 99, true),
+            (100, 200, 100, false),
+            (100, 200, 101, false),
+            (200, 100, 99, true),
+            (200, 100, 100, false),
+            (200, 100, 101, false),
+        ] {
+            let mut backend = background_backend();
+            backend.options.timeout_ms = Some(timeout);
+            backend.options.background_max_wait_ms = Some(maximum);
+            backend.options.background_poll_interval_ms = Some(interval);
+            assert_eq!(create_openai_adapter(backend, None).is_ok(), allowed);
+        }
     }
 
     #[test]

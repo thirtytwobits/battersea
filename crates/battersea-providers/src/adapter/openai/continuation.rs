@@ -1,11 +1,13 @@
 //! Copyright (c) Scott A Dixon
-//! Foreground Responses checkpoints retain native evidence and derive durable observations.
+//! Responses checkpoints retain native evidence and derive durable observations.
 use super::*;
 use battersea_model::{
     adapter::payload::check_payload, configuration_digest, ContentBlock, ConversationBinding,
     ConversationRequest, ConversationToolResult, ConversationTurn, ErrorKind, StopReason, ToolCode,
 };
 use serde::{Deserialize, Serialize};
+
+mod background;
 
 #[derive(Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -16,6 +18,14 @@ struct Checkpoint {
     /// Exact input sent for this turn, including the preceding tool-result projections.
     input: Vec<Value>,
     response: Value,
+}
+
+fn durable_includes(request: &ConversationRequest) -> Vec<&'static str> {
+    let mut include = vec!["reasoning.encrypted_content"];
+    if request.shared.chat.logprobs == Some(true) || request.shared.chat.top_logprobs.is_some() {
+        include.push("message.output_text.logprobs");
+    }
+    include
 }
 
 fn invalid(message: &str) -> EngineAdapterRequestError {
@@ -34,10 +44,12 @@ impl OpenAiEngineAdapter {
         state: Option<&Value>,
     ) -> Result<ConversationBinding, EngineAdapterRequestError> {
         super::super::validate_chat_request(&self.backend, &request.to_request())?;
-        if self.background || !request.shared.chat.stream {
+        if (self.background && self.background_mode != "poll")
+            || (!self.background && !request.shared.chat.stream)
+        {
             return Err(EngineAdapterRequestError::new(
                 &self.backend.provider,
-                "Durable Responses continuation requires foreground streaming.",
+                "Durable Responses continuation requires foreground streaming or background polling.",
                 ErrorKind::InvalidRequest,
             )
             .with_tool_code(ToolCode::UnsupportedToolContinuation));
@@ -63,7 +75,12 @@ impl OpenAiEngineAdapter {
                 .backend
                 .options
                 .timeout_ms
-                .ok_or_else(|| invalid("Missing Responses timeout."))?,
+                .ok_or_else(|| invalid("Missing Responses timeout."))?
+                .min(if self.background {
+                    self.background_max_wait_ms
+                } else {
+                    u64::MAX
+                }),
         };
         let original =
             crate::content::messages("openai", &self.backend.provider, &request.shared.messages)?;
@@ -202,18 +219,19 @@ impl OpenAiEngineAdapter {
         state: Option<Value>,
         results: Vec<ConversationToolResult>,
     ) -> Result<ConversationTurn, EngineAdapterRequestError> {
+        if self.background {
+            return Err(EngineAdapterRequestError::new(
+                &self.backend.provider,
+                "Background Responses requires the durable step interface.",
+                ErrorKind::InvalidRequest,
+            )
+            .with_tool_code(ToolCode::UnsupportedToolContinuation));
+        }
         let binding = self.validate_durable_request(&request, state.as_ref())?;
         let input = self.continuation_input(&request, state.as_ref(), &results)?;
         let runtime = request.to_request();
         let mut body = build_local_tool_body(&self.backend, &runtime, json!(input));
-        // Retain opaque reasoning for replay with the host-owned transcript.
-        body.as_object_mut()
-            .expect("request object")
-            .entry("include")
-            .or_insert_with(|| json!([]))
-            .as_array_mut()
-            .expect("include array")
-            .push(json!("reasoning.encrypted_content"));
+        body["include"] = json!(durable_includes(&request));
         check_payload(&body, "openai")?;
         emit_request(
             self.logger.as_ref(),
@@ -248,9 +266,21 @@ impl OpenAiEngineAdapter {
                 Some(event) = rx.recv() => { event?; },
             }
         };
+        self.completed_turn(&request, binding, input, response, true)
+            .await
+    }
+
+    async fn completed_turn(
+        &self,
+        request: &ConversationRequest,
+        binding: ConversationBinding,
+        input: Vec<Value>,
+        response: Value,
+        streaming: bool,
+    ) -> Result<ConversationTurn, EngineAdapterRequestError> {
         // The completed native response determines durable events; partial stream observations
         // remain diagnostics and cannot disagree with restored output.
-        let events = response_events(&self.backend.provider, &request, &response, false)?;
+        let events = response_events(&self.backend.provider, request, &response, false)?;
         let calls = collect_openai_function_calls(&response)?;
         emit_response(
             self.logger.as_ref(),
@@ -271,7 +301,7 @@ impl OpenAiEngineAdapter {
                         .sum(),
                 ),
                 usage: response.get("usage").cloned(),
-                streaming: Some(true),
+                streaming: Some(streaming),
                 stop_reason: None,
             },
         )
@@ -280,7 +310,7 @@ impl OpenAiEngineAdapter {
             version: 1,
             binding,
             request_revision: configuration_digest(
-                &serde_json::to_value(&request).expect("request"),
+                &serde_json::to_value(request).expect("request"),
             ),
             input,
             response,

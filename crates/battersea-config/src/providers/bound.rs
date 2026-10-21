@@ -176,6 +176,54 @@ impl EngineAdapter for Chat {
         }
         Ok(binding)
     }
+    fn validate_conversation_step(
+        &self,
+        request: &ConversationRequest,
+        previous: Option<&serde_json::Value>,
+        results: &[ConversationToolResult],
+        command: &ConversationCommand,
+        step: &ConversationStep,
+    ) -> Result<ConversationBinding, EngineAdapterRequestError> {
+        let mut runtime = request.to_request();
+        self.context.admit(&mut runtime)?;
+        let mut admitted = request.clone();
+        admitted.shared = runtime.shared;
+        let binding = self
+            .inner
+            .validate_conversation_step(&admitted, previous, results, command, step)
+            .map_err(|e| self.context.error(e))?;
+        if binding.origin != self.context.binding.origin() {
+            return Err(self
+                .context
+                .invalid("Conversation belongs to another binding."));
+        }
+        Ok(binding)
+    }
+    async fn conversation_step(
+        &self,
+        mut request: ConversationRequest,
+        previous: Option<serde_json::Value>,
+        results: Vec<ConversationToolResult>,
+        command: ConversationCommand,
+    ) -> Result<ConversationStep, EngineAdapterRequestError> {
+        self.validate_conversation(&request, previous.as_ref())?;
+        let mut runtime = request.to_request();
+        self.context.admit(&mut runtime)?;
+        request.shared = runtime.shared;
+        let mut step = self
+            .inner
+            .conversation_step(request, previous, results, command)
+            .await
+            .map_err(|e| self.context.error(e))?;
+        if let ConversationStep::Completed { turn } = &mut step {
+            turn.events = std::mem::take(&mut turn.events)
+                .into_iter()
+                .map(|e| self.context.event(e))
+                .collect::<Result<_, _>>()
+                .map_err(|e| self.context.error(e))?;
+        }
+        Ok(step)
+    }
     async fn conversation_turn(
         &self,
         mut request: ConversationRequest,

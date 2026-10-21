@@ -115,7 +115,7 @@ impl Drop for HttpServer {
         self.task.abort();
     }
 }
-async fn listen(app: Router) -> Result<HttpServer> {
+pub(crate) async fn listen(app: Router) -> Result<HttpServer> {
     let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await?;
     let endpoint = format!("http://{}", listener.local_addr()?);
     let task = tokio::spawn(async move {

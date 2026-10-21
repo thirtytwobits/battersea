@@ -88,10 +88,10 @@ requires an application-authored prompt and is not a fallback for unsupported na
 
 ## Durable tool conversations
 
-`DurableConversation` checkpoints completed provider turns through a host-owned
-`ConversationStore`. Chat Completions supports ordinary and streaming responses. OpenAI Responses
-supports foreground streaming with `contextOverflow=error`. Background Responses modes return
-`unsupported_tool_continuation`: their server-side lifecycle requires a separate recovery contract.
+`DurableConversation` checkpoints provider turns through a host-owned `ConversationStore`.
+Chat Completions supports ordinary and streaming responses. OpenAI Responses supports foreground
+streaming and background polling with `contextOverflow=error`. Background streaming returns
+`unsupported_tool_continuation`: recovery requires a retained event cursor.
 Other adapters return `unsupported_tool_continuation` from the default interface.
 
 Acceptance pins the original request, tool definitions, provider binding, safe backend
@@ -105,9 +105,12 @@ The host store bounds reads before decoding and atomically compares journal revi
 processes. Successful writes are durable. Failed or cancelled writes may have committed, so the
 next command inspects storage. Reads validate version, integrity, payload limits and transcript
 compatibility without upgrading stored values. The checksum detects accidental modification;
-the host owns storage integrity and access control.
+the host owns storage integrity and access control. Shared checkpoint version 2 includes pending
+remote identities and cancellation receipts. Version 1 records remain readable and retain their
+version when resumed.
 
-Each `resume` command performs at most one provider turn. A dispatch intent is persisted before
+Each `resume` command performs one generation or one retrieval of a pending response. A dispatch
+intent is persisted before
 provider I/O. A completed turn, its adapter-owned transcript, complete validated call batch and
 buffered events are then published together. The adapter verifies that the ordered call batch
 and output events match its retained provider response before publication, including reconciliation,
@@ -133,7 +136,7 @@ Final output receives the same modality and structured-output validation as an o
 A final turn with a requested response format retains exactly one matching `StructuredOutput` event.
 Completed conversations return their retained checkpoint, including after expiry.
 
-Responses checkpoint codec version 1 retains the exact input and completed native response.
+Responses checkpoint codec version 1 retains the exact input and native response.
 Continuation appends every output item, including opaque reasoning and function-call fields,
 then the ordered `function_call_output` projections. Requests include encrypted reasoning for
 host-owned history. Durable text, reasoning, native content and usage events are derived from the
@@ -142,12 +145,47 @@ and unsupported output items are rejected before publication and on recovery.
 
 An interrupted provider task, ambiguous response or failed turn publication can leave an intent.
 `resume` refuses that intent as `tool_continuation_unresolved`. After fencing the original task,
-the host can reconcile a retained completed turn, confirm that dispatch did not occur, or abandon
+the host can reconcile a retained completed turn or pending remote identity, confirm that dispatch
+did not occur, or abandon
 the conversation. The host coordinates cancellation of approval work when abandoning a conversation.
 Reconciliation records an actor and evidence and preserves expiry and consumed
 attempts. A timeout or missing reply does not establish that dispatch did not occur.
 
-Provider intents, including explicitly reconciled attempts, consume the request's finite turn
+### Background polling
+
+`ConversationCommand` distinguishes generation, retrieval and cancellation. `ConversationStep`
+returns pending state, a completed turn or terminal cancellation evidence. Adapters validate each
+transition through `validate_conversation_step` against the original request, preceding transcript
+and ordered tool results. The default adapter implementation supports completed generation through
+`conversation_turn`.
+
+Background polling accepts either value of `chat.stream` and sends non-streaming HTTP requests.
+A queued or in-progress Responses create publishes `ProviderPending` with an immutable native
+response identity. Reopening retains that identity and the exact submitted input. Each subsequent
+`resume` retrieves the same response after the configured poll interval, requesting encrypted
+reasoning and any configured log probabilities. A pending retrieval preserves the original handle; a completed retrieval publishes the validated turn and retains its
+handle alongside the transcript. Failed or interrupted retrieval can be retried at the stored
+revision. Retrieval never authorises a new generation. Failure before the create result is published
+leaves `ProviderIntent` and requires host reconciliation.
+
+`cancel` publishes `ProviderCancelling` before requesting remote cancellation. Generation and
+retrieval through `resume` remain blocked until cancellation confirms a matching terminal response.
+An HTTP 400 or 409 cancellation rejection triggers retrieval of the retained response ID; only a
+matching terminal response confirms cleanup. The terminal receipt is published with `Abandoned`; repeating that command returns the saved receipt. Interrupted
+cancellation can be retried against the same remote identity. Validation or publication failures
+after the remote cancellation call report `DispatchState::Unknown`. Cancellation is bounded by the
+configured timeout and remains available after conversation expiry. The host owns remote cleanup:
+dropping a conversation leaves the remote job running. Host abandonment preserves its handle,
+which remains available to `cancel` after reopen and expiry. Cleanup retains the abandonment
+record and publishes a terminal receipt. The host also coordinates outstanding tool approval work.
+
+Background expiry must fit both the backend operation timeout and background wait limit.
+The poll interval must be shorter than both limits.
+Retrieval preserves absolute expiry and consumes no provider-attempt capacity. Remote retention
+and `storeResponse` remain provider and host policy; an unavailable response causes a retrieval
+error. Recovery does not replace an unavailable response with a new generation.
+
+Provider generation intents, including explicitly reconciled attempts, consume the request's finite turn
 budget. The complete checkpoint, including native transcripts, events, results, metadata and
 reconciliation evidence, counts towards its byte limit. The shared batch limit is 256 calls per
 durable turn. Stale revisions, changed bindings, incompatible codecs and corrupt state stop
