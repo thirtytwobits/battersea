@@ -1,5 +1,28 @@
 # Changelog
 
+## 0.16.0 — 2026-10-22
+
+- Add `battersea-mcp`, a Model Context Protocol 2026-07-28 client over rmcp 3.6.0 with `stdio`
+  and `http` transports. It discovers a server's tools within finite limits, binds the selected
+  tools under aliases and runs them through the tool registry. It requires Rust 1.88; the core
+  crates keep Rust 1.85. `examples/mcp` composes it in a host.
+- Breaking Rust API: `EngineLocalToolResult` is an enum of `Json`, an application JSON result
+  (`EngineLocalToolResult::json`), and `Content`, a `ToolContentResult` of ordered content
+  blocks, structured content, an error flag and host `_meta`. `EngineAdapterRequestError` holds
+  `request_id` as `Box<str>` and carries `tool_call`, the `ToolCallEvidence` of a nested tool
+  call's outcome.
+- Add tool approval. `ToolApprovalPolicy` and `ApprovedToolExecutor` ask the host before each
+  call. `DurableToolExecutor` persists pending calls, decisions, dispatch intents and results
+  through a host `ToolApprovalStore`, and resumes a call only when the host asks.
+- Add durable provider conversations. `DurableConversation` checkpoints provider turns and tool
+  results through a host `ConversationStore`, and resumes without regenerating a turn. Chat
+  Completions supports it, and OpenAI Responses supports it with foreground streaming and with
+  background polling and cancellation.
+- State when each journal is no longer read: a recovery journal once
+  `JournalRecord::is_terminal`; a tool-approval journal once `ToolApprovalJournal::is_settled`,
+  and a conversation once `ConversationCheckpoint::is_settled`, each after its run has ended.
+  See `contracts/recovery.md`, Retention.
+
 ## 0.15.1 — 2026-10-21
 
 - The scheduler runs an instrument only when a signal reaches one of its action ports. It ran
