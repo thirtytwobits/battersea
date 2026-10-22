@@ -150,3 +150,6 @@ and result into its [durable provider conversation](providers.md#durable-tool-co
 explicitly resumes the provider turn. The approval and conversation stores have independent
 revisions; a restart between result publication and copying retrieves the published tool result.
 Resubmitting generation cannot reconstruct an interrupted conversation.
+
+A journal is retained until it is settled and its run has ended; see
+[retention](recovery.md#retention).

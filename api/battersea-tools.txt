@@ -762,6 +762,7 @@ pub battersea_tools::ToolApprovalJournal::scope: battersea_tools::DurableToolApp
 pub battersea_tools::ToolApprovalJournal::updated_at_unix_ms: u64
 pub battersea_tools::ToolApprovalJournal::version: u32
 impl battersea_tools::ToolApprovalJournal
+pub fn battersea_tools::ToolApprovalJournal::is_settled(&self) -> bool
 pub fn battersea_tools::ToolApprovalJournal::validate(&self) -> core::result::Result<(), battersea_model::adapter::error::EngineAdapterRequestError>
 impl core::clone::Clone for battersea_tools::ToolApprovalJournal
 pub fn battersea_tools::ToolApprovalJournal::clone(&self) -> battersea_tools::ToolApprovalJournal

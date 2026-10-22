@@ -305,6 +305,17 @@ fn validate_turn_events(
     Ok(())
 }
 impl ConversationCheckpoint {
+    /// Whether the conversation is completed, or abandoned with no remote response left to
+    /// cancel. The run it serves still reads a completed conversation; see
+    /// `contracts/recovery.md` (Retention).
+    pub fn is_settled(&self) -> bool {
+        match self.phase {
+            ConversationPhase::Completed => true,
+            ConversationPhase::Abandoned => self.pending.is_none() || self.cancellation.is_some(),
+            _ => false,
+        }
+    }
+
     fn digest(&self) -> Result<String, EngineAdapterRequestError> {
         let mut value = serde_json::to_value(self).map_err(|_| invalid())?;
         value

@@ -52,6 +52,21 @@ catalogue snapshots belong to the accepted run. Restoring does not select a newe
 Resource expiry and ownership are host invariants: recovery cannot renew or transfer them as a
 side effect of inspection, nor manufacture a successful host commit from scheduler quiescence.
 
+## Retention
+
+A journal is read while a command can still act on it. Once none can, the host may remove it.
+
+- A recovery journal is read until it is terminal, committed or abandoned
+  (`JournalRecord::is_terminal`). Every command refuses a terminal journal.
+- A tool-approval journal and a conversation checkpoint serve a run, which reads their retained
+  results when it resumes. Each is read until it is settled and that run has ended; under a
+  recovery journal, until the journal is terminal.
+- A tool-approval journal is settled when every call is denied, cancelled, completed, failed or
+  abandoned (`ToolApprovalJournal::is_settled`).
+- A conversation is settled when it is completed, or abandoned with no remote response left to
+  cancel (`ConversationCheckpoint::is_settled`). `cancel` reads an abandoned conversation that
+  retains a remote identity until it publishes terminal remote evidence.
+
 ## Required proof
 
 Inject failure before/after acceptance, intent, dispatch, result/checkpoint publication and host

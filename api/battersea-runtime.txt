@@ -799,6 +799,7 @@ pub battersea_runtime::recovery::JournalRecord::resolutions: alloc::vec::Vec<bat
 pub battersea_runtime::recovery::JournalRecord::revision: u64
 pub battersea_runtime::recovery::JournalRecord::version: u32
 impl battersea_runtime::recovery::JournalRecord
+pub fn battersea_runtime::recovery::JournalRecord::is_terminal(&self) -> bool
 pub fn battersea_runtime::recovery::JournalRecord::validate(&self) -> core::result::Result<(), battersea_runtime::recovery::RecoveryError>
 impl core::clone::Clone for battersea_runtime::recovery::JournalRecord
 pub fn battersea_runtime::recovery::JournalRecord::clone(&self) -> battersea_runtime::recovery::JournalRecord
