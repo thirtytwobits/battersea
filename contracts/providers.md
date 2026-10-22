@@ -151,6 +151,9 @@ the conversation. The host coordinates cancellation of approval work when abando
 Reconciliation records an actor and evidence and preserves expiry and consumed
 attempts. A timeout or missing reply does not establish that dispatch did not occur.
 
+A checkpoint is retained until it is settled and its run has ended; see
+[retention](recovery.md#retention).
+
 ### Background polling
 
 `ConversationCommand` distinguishes generation, retrieval and cancellation. `ConversationStep`

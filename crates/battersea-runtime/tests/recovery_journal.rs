@@ -210,3 +210,63 @@ fn completed_effects_and_terminal_outcomes_cannot_be_replaced() {
     ));
     assert!(journal.execution_complete(state()).is_err());
 }
+
+/// contracts/recovery.md (Retention): a journal is terminal once the run has its outcome, and
+/// every command refuses a terminal journal.
+#[test]
+fn a_journal_is_terminal_only_once_committed_or_abandoned_and_then_refuses_every_command() {
+    let committed = Arc::new(Store::default());
+    let mut journal = open(committed.clone());
+    assert!(!journal.record().is_terminal());
+    let effect = journal
+        .begin_effect("provider", "generate", json!({}))
+        .unwrap();
+    assert!(!journal.record().is_terminal());
+    journal
+        .checkpoint(state(), vec![(effect, json!({"output":"retained"}))])
+        .unwrap();
+    journal.execution_complete(state()).unwrap();
+    assert!(!journal.record().is_terminal());
+    journal
+        .begin_host_commit(json!({"destination":"history"}))
+        .unwrap();
+    assert!(!journal.record().is_terminal());
+    journal
+        .host_committed(json!({"record":"history-result"}))
+        .unwrap();
+
+    let abandoned = Arc::new(Store::default());
+    let mut journal = open(abandoned.clone());
+    journal
+        .begin_effect("provider", "generate", json!({}))
+        .unwrap();
+    journal
+        .abandon("operator", "Provider outcome cannot be established")
+        .unwrap();
+
+    for store in [committed, abandoned] {
+        let mut journal = Journal::open(store.clone(), &identity().run_id).unwrap();
+        assert!(journal.record().is_terminal());
+        let revision = journal.record().revision;
+        assert!(matches!(
+            journal.require_resumable(),
+            Err(RecoveryError::Terminal)
+        ));
+        assert!(journal.claim_resume(revision).is_err());
+        assert!(journal
+            .begin_effect("provider", "generate", json!({}))
+            .is_err());
+        assert!(journal.checkpoint(state(), Vec::new()).is_err());
+        assert!(journal.execution_complete(state()).is_err());
+        assert!(journal.begin_host_commit(json!({})).is_err());
+        assert!(journal.host_committed(json!({})).is_err());
+        assert!(matches!(
+            journal.abandon("operator", "Again"),
+            Err(RecoveryError::Terminal)
+        ));
+        assert_eq!(
+            store.value.lock().unwrap().as_ref().unwrap().revision,
+            revision
+        );
+    }
+}

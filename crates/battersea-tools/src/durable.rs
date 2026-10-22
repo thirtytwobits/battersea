@@ -214,6 +214,22 @@ fn checked_limits(limits: ToolApprovalJournalLimits) -> Result<(), EngineAdapter
     Ok(())
 }
 impl ToolApprovalJournal {
+    /// Whether every call is denied, cancelled, completed, failed or abandoned: no decision,
+    /// dispatch or reconciliation waits on the journal. The run it serves still reads its
+    /// results; see `contracts/recovery.md` (Retention).
+    pub fn is_settled(&self) -> bool {
+        self.calls.values().all(|entry| {
+            matches!(
+                entry.state,
+                StoredToolCallState::Denied
+                    | StoredToolCallState::Cancelled
+                    | StoredToolCallState::Completed { .. }
+                    | StoredToolCallState::Failed { .. }
+                    | StoredToolCallState::Abandoned
+            )
+        })
+    }
+
     /// Validate format, identities, state consistency and encoded retention bounds.
     pub fn validate(&self) -> Result<(), EngineAdapterRequestError> {
         checked_limits(self.limits)?;

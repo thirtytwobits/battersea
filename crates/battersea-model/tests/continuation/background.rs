@@ -448,3 +448,64 @@ async fn cancellation_conflicts_report_dispatch_certainty_at_the_publication_bou
         );
     }
 }
+
+/// contracts/recovery.md (Retention): a conversation settles once completed, or once abandoned
+/// with no remote response left to cancel. The run it serves still reads a completed one.
+#[tokio::test]
+async fn a_conversation_settles_when_completed_or_when_nothing_remains_to_cancel() {
+    let provider = Arc::new(Remote::default());
+    let d = remote(Arc::new(Store::default()), provider.clone(), scope(), false).await;
+    let ready = d.inspect().await.unwrap();
+    let pending = d.resume(ready.revision).await.unwrap();
+    let awaiting = d.resume(pending.revision).await.unwrap();
+    let partial = d
+        .record_tool_result(awaiting.revision, result("a"))
+        .await
+        .unwrap();
+    let results = d
+        .record_tool_result(partial.revision, result("b"))
+        .await
+        .unwrap();
+    let continued = d.resume(results.revision).await.unwrap();
+    for unsettled in [&ready, &pending, &awaiting, &partial, &results, &continued] {
+        assert!(!unsettled.is_settled(), "{:?}", unsettled.phase);
+    }
+    let completed = d.resume(continued.revision).await.unwrap();
+    assert_eq!(completed.phase, ConversationPhase::Completed);
+    assert!(completed.is_settled());
+    assert_eq!(d.resume(completed.revision).await.unwrap(), completed);
+
+    let d = remote(Arc::new(Store::default()), provider.clone(), scope(), false).await;
+    let pending = d.resume(1).await.unwrap();
+    assert!(!pending.is_settled());
+    let abandoned = d
+        .reconcile(
+            pending.revision,
+            ConversationResolution::Abandon,
+            "operator",
+            "Original provider task fenced",
+        )
+        .await
+        .unwrap();
+    assert!(
+        !abandoned.is_settled(),
+        "an abandoned conversation retaining a remote response waits on cancellation"
+    );
+    let cancelled = d.cancel(abandoned.revision).await.unwrap();
+    assert!(cancelled.is_settled());
+
+    let d = remote(Arc::new(Store::default()), provider, scope(), false).await;
+    let ready = d.inspect().await.unwrap();
+    let abandoned = d
+        .reconcile(
+            ready.revision,
+            ConversationResolution::Abandon,
+            "operator",
+            "Run abandoned before dispatch",
+        )
+        .await
+        .unwrap();
+    assert!(abandoned.pending.is_none());
+    assert!(abandoned.is_settled());
+    assert!(d.cancel(abandoned.revision).await.is_err());
+}

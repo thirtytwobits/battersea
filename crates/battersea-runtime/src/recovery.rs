@@ -151,6 +151,15 @@ impl std::fmt::Debug for Journal {
     }
 }
 impl JournalRecord {
+    /// Whether the run has its outcome, committed or abandoned. Every command refuses a
+    /// terminal journal; see `contracts/recovery.md` (Retention).
+    pub fn is_terminal(&self) -> bool {
+        matches!(
+            self.phase,
+            RecoveryPhase::Committed { .. } | RecoveryPhase::Abandoned { .. }
+        )
+    }
+
     pub fn validate(&self) -> Result<(), RecoveryError> {
         if self.version != JOURNAL_VERSION {
             return Err(RecoveryError::Incompatible(format!(

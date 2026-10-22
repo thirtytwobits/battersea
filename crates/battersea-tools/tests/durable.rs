@@ -797,3 +797,70 @@ async fn terminal_reconciliation_cannot_be_loaded_as_an_executable_call() {
     }
     assert_eq!(effect.calls.load(Ordering::SeqCst), 1);
 }
+
+/// contracts/recovery.md (Retention): a journal settles once every call is terminal. Until
+/// then a decision, dispatch or reconciliation waits on it, and the run it serves still reads
+/// the results of a settled one.
+#[tokio::test]
+async fn a_journal_settles_only_when_every_call_is_terminal() {
+    for ending in ["deny", "cancel", "complete", "abandon"] {
+        let store = Arc::new(Store::default());
+        let effect = Arc::new(Effect::default());
+        let e = create(store.clone(), effect.clone(), scope()).await;
+        assert!(e.inspect().await.unwrap().is_settled(), "{ending}");
+        let r = e.submit(call("one"), 1).await.unwrap();
+        assert!(
+            !r.is_settled(),
+            "{ending}: a pending call waits on a decision"
+        );
+        let action = match ending {
+            "deny" => ToolApprovalAction::Deny,
+            "cancel" => ToolApprovalAction::Cancel,
+            _ => ToolApprovalAction::Allow,
+        };
+        let mut r = e
+            .decide(
+                "one",
+                &r.calls["one"].request_revision,
+                r.revision,
+                action,
+                "operator",
+            )
+            .await
+            .unwrap();
+        match ending {
+            "complete" => {
+                assert!(!r.is_settled(), "an approved call waits on dispatch");
+                let result = e.resume("one", r.revision).await.unwrap();
+                r = e.inspect().await.unwrap();
+                assert_eq!(e.resume("one", r.revision).await.unwrap(), result);
+            }
+            "abandon" => {
+                // The dispatched call's outcome is never published.
+                *store.fault.lock().unwrap() = Some((r.revision + 2, false));
+                assert!(e.resume("one", r.revision).await.is_err());
+                *store.fault.lock().unwrap() = None;
+                r = e.inspect().await.unwrap();
+                assert!(matches!(r.calls["one"].state, StoredToolCallState::Intent));
+                assert!(!r.is_settled(), "an intent waits on reconciliation");
+                r = e
+                    .reconcile(
+                        "one",
+                        r.revision,
+                        ToolApprovalReconciliation::Abandon,
+                        "operator",
+                        "Executor fenced; effect cannot be recovered",
+                    )
+                    .await
+                    .unwrap();
+            }
+            _ => {}
+        }
+        assert!(r.is_settled(), "{ending}");
+        let r = e.submit(call("two"), r.revision).await.unwrap();
+        assert!(
+            !r.is_settled(),
+            "{ending}: a later call unsettles the journal"
+        );
+    }
+}

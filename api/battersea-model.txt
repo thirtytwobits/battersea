@@ -1299,6 +1299,7 @@ pub battersea_model::adapter::ConversationCheckpoint::turns: alloc::vec::Vec<bat
 pub battersea_model::adapter::ConversationCheckpoint::updated_at_unix_ms: u64
 pub battersea_model::adapter::ConversationCheckpoint::version: u32
 impl battersea_model::ConversationCheckpoint
+pub fn battersea_model::ConversationCheckpoint::is_settled(&self) -> bool
 pub fn battersea_model::ConversationCheckpoint::validate(&self) -> core::result::Result<(), battersea_model::EngineAdapterRequestError>
 impl core::clone::Clone for battersea_model::ConversationCheckpoint
 pub fn battersea_model::ConversationCheckpoint::clone(&self) -> battersea_model::ConversationCheckpoint
@@ -8753,6 +8754,7 @@ pub battersea_model::ConversationCheckpoint::turns: alloc::vec::Vec<battersea_mo
 pub battersea_model::ConversationCheckpoint::updated_at_unix_ms: u64
 pub battersea_model::ConversationCheckpoint::version: u32
 impl battersea_model::ConversationCheckpoint
+pub fn battersea_model::ConversationCheckpoint::is_settled(&self) -> bool
 pub fn battersea_model::ConversationCheckpoint::validate(&self) -> core::result::Result<(), battersea_model::EngineAdapterRequestError>
 impl core::clone::Clone for battersea_model::ConversationCheckpoint
 pub fn battersea_model::ConversationCheckpoint::clone(&self) -> battersea_model::ConversationCheckpoint
