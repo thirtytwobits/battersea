@@ -7,7 +7,7 @@ use serde_json::Value;
 use std::collections::{BTreeMap, HashSet};
 use std::sync::atomic::Ordering;
 
-pub const SCHEDULER_CHECKPOINT_VERSION: u32 = 1;
+pub const SCHEDULER_CHECKPOINT_VERSION: u32 = 2;
 type PortKey = (String, String);
 type PortResolver = fn(
     &std::collections::HashMap<String, FlowNodeDefinition>,
@@ -42,6 +42,10 @@ struct SavedControl {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct SchedulerCheckpoint {
+    handled_failures: BTreeMap<String, crate::HandledNodeFailure>,
+    stopped_nodes: Vec<String>,
+    failed_inputs: Vec<PortKey>,
+    failed_outputs: Vec<PortKey>,
     version: u32,
     run_id: String,
     flow: FlowDocument,
@@ -114,7 +118,9 @@ impl SchedulerCheckpoint {
         Ok(())
     }
     pub fn capture(state: &SchedulerState) -> Result<Self, RecoveryError> {
-        if !state.producers.is_empty()
+        if !state.handling_failures.is_empty()
+            || state.failure_emission.is_some()
+            || !state.producers.is_empty()
             || !state.active_delivery_groups.is_empty()
             || !state.signal_cause.is_empty()
         {
@@ -134,6 +140,14 @@ impl SchedulerCheckpoint {
             .collect::<Vec<_>>();
         inputs.sort_by(|a, b| (&a.node, &a.port).cmp(&(&b.node, &b.port)));
         let snapshot = Self {
+            handled_failures: state
+                .handled_failures
+                .iter()
+                .map(|(id, record)| (id.clone(), (**record).clone()))
+                .collect(),
+            stopped_nodes: sorted(&state.stopped_nodes),
+            failed_inputs: sorted(&state.failed_inputs),
+            failed_outputs: sorted(&state.failed_outputs),
             version: SCHEDULER_CHECKPOINT_VERSION,
             run_id: state.run_id.clone(),
             flow: state.flow.clone(),
@@ -243,6 +257,7 @@ impl SchedulerCheckpoint {
         state.materialized_sources = node_set(&self.materialized_sources)?;
         state.disabled_output_nodes = node_set(&self.disabled_output_nodes)?;
         state.logic_nodes_evaluated = node_set(&self.logic_nodes_evaluated)?;
+        state.stopped_nodes = node_set(&self.stopped_nodes)?;
         node_set(&self.ready_inline_nodes)?;
         state.ready_inline_nodes = self.ready_inline_nodes.iter().cloned().collect();
         for id in self
@@ -285,10 +300,107 @@ impl SchedulerCheckpoint {
         state.received_final_inputs =
             port_set(&self.received_final_inputs, resolve_input_ports_for_node)?;
         state.closed_inputs = port_set(&self.closed_inputs, resolve_checkpoint_inputs)?;
+        state.failed_inputs = port_set(&self.failed_inputs, resolve_input_ports_for_node)?;
+        state.failed_outputs = port_set(&self.failed_outputs, resolve_output_ports_for_node)?;
         state.signal_action_latches =
             port_set(&self.signal_action_latches, resolve_action_ports_for_node)?;
         state.signal_sources_settled =
             port_set(&self.signal_sources_settled, resolve_signal_ports_for_node)?;
+        if !state.failed_inputs.is_subset(&state.closed_inputs)
+            || !state.failed_outputs.is_subset(&state.closed_outputs)
+            || !state.stopped_nodes.is_subset(&state.executed_nodes)
+        {
+            return Err(invalid("Inconsistent failure settlement."));
+        }
+        for (keys, output) in [(&state.failed_inputs, false), (&state.failed_outputs, true)] {
+            for (id, name) in keys {
+                let node = &state.nodes_by_id[id];
+                let ports = if output {
+                    expanded_output_ports_for_node(&state.definitions, node)
+                } else {
+                    expanded_input_ports_for_node(&state.definitions, node)
+                }
+                .map_err(invalid)?;
+                if !ports
+                    .iter()
+                    .any(|p| p.name == *name && p.mode == battersea_flow::FlowPortMode::Stream)
+                {
+                    return Err(invalid("Only a stream can retain a failed closure."));
+                }
+            }
+        }
+        for id in &state.stopped_nodes {
+            let node = &state.nodes_by_id[id];
+            if expanded_output_ports_for_node(&state.definitions, node)
+                .map_err(invalid)?
+                .iter()
+                .any(|p| !state.closed_outputs.contains(&(id.clone(), p.name.clone())))
+                || expanded_signal_ports_for_node(&state.definitions, node)
+                    .map_err(invalid)?
+                    .iter()
+                    .any(|p| {
+                        !state
+                            .signal_sources_settled
+                            .contains(&(id.clone(), p.name.clone()))
+                    })
+            {
+                return Err(invalid("Stopped node has unsettled outputs or signals."));
+            }
+        }
+        for (id, record) in &self.handled_failures {
+            let node = state
+                .nodes_by_id
+                .get(id)
+                .ok_or_else(|| invalid("Unknown failure node."))?;
+            let classified = crate::RecoverableNodeFailure {
+                code: record.failure.code.clone(),
+                message: record.failure.message.clone(),
+            };
+            if !classified.validate()
+                || record.policy != node.failure_policy
+                || record.policy == battersea_flow::FlowFailurePolicy::Fail
+                || record.failure.node_id != *id
+                || record.sequence > self.delivery_sequence
+                || record.failure.id != crate::failure::identity(&self.run_id, id, record.sequence)
+                || ![
+                    "execute_node",
+                    "materialize",
+                    "sink",
+                    "receive_input",
+                    "action",
+                    "controller_action",
+                    "provider_event",
+                    "provider_complete",
+                    "logic",
+                ]
+                .contains(&record.failure.operation.as_str())
+                || !state.stopped_nodes.contains(id)
+                || !battersea_flow::failure::failure_phases(
+                    &state.definitions[&node.definition_name],
+                )
+                .contains(&record.failure.phase)
+            {
+                return Err(invalid("Invalid handled failure."));
+            }
+            if record.policy == battersea_flow::FlowFailurePolicy::Emit {
+                let port = state.definitions[&node.definition_name]
+                    .failure_ports
+                    .iter()
+                    .find(|p| p.phase == record.failure.phase)
+                    .ok_or_else(|| invalid("Missing failure output."))?;
+                if !state
+                    .final_outputs
+                    .contains(&(id.clone(), port.name.clone()))
+                {
+                    return Err(invalid("Handled emit did not publish its failure output."));
+                }
+            }
+            let retained = state
+                .retention
+                .retain(id, record.clone())
+                .map_err(invalid)?;
+            state.handled_failures.insert(id.clone(), retained);
+        }
         let limit = self.flow.execution.limits.retained_bytes as usize;
         let mut sequences = HashSet::new();
         let mut previous = None;

@@ -344,6 +344,7 @@ mod tests {
 
     fn definition() -> FlowNodeDefinition {
         FlowNodeDefinition {
+            failure_ports: vec![],
             class_name: "Concatenate".to_string(),
             short_description: String::new(),
             long_description: String::new(),
@@ -372,6 +373,7 @@ mod tests {
     fn node(parameter_values: HashMap<String, Value>) -> FlowNode {
         FlowNode {
             id: "concatenate-1".to_string(),
+            failure_policy: Default::default(),
             definition_name: "Concatenate".to_string(),
             instance_name: "Concatenate".to_string(),
             parameter_values,

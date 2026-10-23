@@ -177,6 +177,7 @@ export function deleteVariadicPortInWorkspace(options: {
   };
 
   const nextData = buildResolvedNodeData({
+    failurePolicy: node.data.failurePolicy,
     controllerPortPlacement: node.data.controllerPortPlacement,
     definition: options.definition,
     instanceName: node.data.instanceName,

@@ -5,7 +5,7 @@
  */
 import type { Node } from "@xyflow/react";
 import { reconcileFlowSourceOrder } from "./flow-execution-settings.js";
-import { createFlowExecutionPolicy, FLOW_DOCUMENT_VERSION, requireSupportedFlowVersion } from "@battersea/flow";
+import { requireFlowFailurePolicy, createFlowExecutionPolicy, FLOW_DOCUMENT_VERSION, requireSupportedFlowVersion } from "@battersea/flow";
 import type {
   FlowDocument as WireFlowDocument,
   FlowEdge as WireFlowEdge,
@@ -208,6 +208,7 @@ export function reconcileFlowWorkspaceDefinitions(
     }
 
     const nextData = buildResolvedNodeData({
+      failurePolicy: node.data.failurePolicy,
       controllerPortPlacement: node.data.controllerPortPlacement,
       definition,
       instanceName: node.data.instanceName,
@@ -294,6 +295,7 @@ function normalizeCanvasNode(
           ? rawData.longDescription
           : "",
       nodeClass,
+      ...(requireFlowFailurePolicy(rawData.failurePolicy) !== "fail" ? { failurePolicy: rawData.failurePolicy } : {}),
       parameterValues: isRecord(rawData.parameterValues)
         ? rawData.parameterValues
         : {},
@@ -653,6 +655,7 @@ function buildWireFlowNodeFromCanvasNode(
   node: Node<FlowStudioNodeData>,
 ): WireFlowNode {
   return {
+    ...(requireFlowFailurePolicy(node.data.failurePolicy) !== "fail" ? {failure_policy: node.data.failurePolicy} : {}),
     definition_name: node.data.definitionName,
     id: node.id,
     instance_name: node.data.instanceName,
@@ -746,6 +749,7 @@ function mapWireNodeToCanvasNode(
     data: buildResolvedNodeData({
       controllerPortPlacement: layout.controllerPortPlacement,
       definition,
+      failurePolicy: node.failure_policy,
       instanceName: node.instance_name,
       parameterValues: node.parameter_values ?? {},
       portParameterValues: node.port_parameter_values,
@@ -1278,6 +1282,7 @@ function normalizeFlowDocumentForCompare(
     nodes: [...document.nodes]
       .map((node) => ({
         ...node,
+        failure_policy: node.failure_policy === "fail" ? undefined : node.failure_policy,
         parameter_values: sortJsonObject(node.parameter_values),
         port_parameter_values: canonicalizeFlowPortParameterValues(
           node.port_parameter_values,

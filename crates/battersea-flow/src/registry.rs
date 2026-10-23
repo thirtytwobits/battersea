@@ -48,13 +48,31 @@ struct RegisteredParameter {
     schema: jsonschema::Validator,
 }
 
-#[derive(Default)]
 pub struct Registry {
     parameters: HashMap<String, RegisteredParameter>,
     tokens: HashMap<String, (Value, jsonschema::Validator)>,
     handlers: HashSet<String>,
     definition_checks: Vec<Arc<DefinitionCheck>>,
     graph_checks: Vec<Arc<GraphCheck>>,
+}
+impl Default for Registry {
+    fn default() -> Self {
+        let mut registry = Self {
+            parameters: HashMap::new(),
+            tokens: HashMap::new(),
+            handlers: HashSet::new(),
+            definition_checks: vec![],
+            graph_checks: vec![],
+        };
+        registry
+            .register_token_type(
+                crate::failure::NODE_FAILURE_TOKEN_TYPE,
+                serde_json::to_value(schemars::schema_for!(crate::FlowNodeFailure))
+                    .expect("failure schema"),
+            )
+            .expect("built-in failure token schema");
+        registry
+    }
 }
 impl Registry {
     pub fn register_handler(&mut self, name: &str) -> Result<()> {

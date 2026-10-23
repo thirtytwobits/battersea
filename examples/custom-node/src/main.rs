@@ -323,7 +323,7 @@ fn run(id: &str) -> Run {
     let flow = battersea_flow::dsl::parse_flow_dsl(&format!(
         r#"
 flow 1 "example" {{
-    version = 2;
+    version = 3;
     title = "Example";
     execution = {{"source_order":["source"],"limits":{limits}}};
     node "source" "Source" {{"instance_name":"Source"}}

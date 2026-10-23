@@ -139,6 +139,23 @@ impl Batch {
                 attributes.push(attr("gen_ai.tool.name", name));
                 attributes.push(attr("gen_ai.tool.call.id", call_id));
             }
+            if let State::Node {
+                failure_policy,
+                failure_handled,
+                ..
+            } = &record.state
+            {
+                if let Some(policy) = failure_policy {
+                    let value = serde_json::to_value(policy).expect("policy");
+                    attributes.push(attr(
+                        "battersea.node.failure_policy",
+                        value.as_str().expect("policy name"),
+                    ));
+                }
+                if let Some(handled) = failure_handled {
+                    attributes.push(json!({"key":"battersea.node.failure_handled","value":{"boolValue":handled}}));
+                }
+            }
             if let State::Request {
                 provider,
                 model,

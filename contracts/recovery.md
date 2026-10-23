@@ -1,6 +1,6 @@
 # Durable execution recovery
 
-Status: implemented in v0.10.0.
+Status: implemented. Execution and scheduler checkpoints use version 2.
 
 An accepted run has one identity, pinned graph/catalogue/configuration revisions, versioned
 node and host state, and a revision-fenced journal. Its checkpoint contains a resumable driver
@@ -51,6 +51,34 @@ Configuration is pinned by identity; restoring against another configuration fai
 catalogue snapshots belong to the accepted run. Restoring does not select a newer authored graph.
 Resource expiry and ownership are host invariants: recovery cannot renew or transfer them as a
 side effect of inspection, nor manufacture a successful host commit from scheduler quiescence.
+
+## Handled node failures
+
+The accepted graph pins each authored failure policy and the catalogue's failure ports.
+The scheduler checkpoint retains each handled node's failure identity, phase, operation,
+selected policy and payload, failed stream closures, settled ports and pending emissions.
+The checkpoint also retains nodes skipped because a required stream ended in handled
+failure. Restore validates these records against the pinned graph and payload limits.
+
+Handling is part of the enclosing driver segment. Publish its effect results and the
+checkpoint together. Before that publication, interruption leaves the segment's outstanding
+intent requiring reconciliation. A handled node error cannot resolve an uncertain tool,
+provider or host effect. A failed checkpoint publication stops execution, including when
+the storage write may already have committed.
+
+After publication, resume uses retained deliveries and closures. It neither invokes the
+handled node again nor constructs another error token. Already consumed error deliveries
+and settled signal/action latches remain consumed and settled. Failure identities survive
+observation attempts; observation event identities retain their attempt component.
+
+Execution and scheduler checkpoints use version 2 for failure state. Unsupported versions remain
+inspectable and refuse resume. Inspection cannot upgrade a journal or replace its pinned
+graph. Explicit authored-flow upgrades apply to new activations.
+
+Required proof includes interruption before failure classification, after settlement and
+before/after checkpoint publication, including commit followed by lost acknowledgement.
+Reopen through a new driver and verify retained ports, ordered fan-out, failure identities
+and effects, or an explicit unresolved intent.
 
 ## Retention
 

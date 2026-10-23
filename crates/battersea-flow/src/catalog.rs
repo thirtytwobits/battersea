@@ -101,6 +101,8 @@ struct FlowManifestPort {
 #[derive(Debug, Clone, Deserialize, PartialEq)]
 #[serde(deny_unknown_fields)]
 struct FlowManifestNodeDefinition {
+    #[serde(default)]
+    failure_ports: Vec<crate::FlowFailurePort>,
     class_name: String,
     short_description: String,
     long_description: String,
@@ -357,6 +359,7 @@ fn normalize_manifest_definition_with_blocks(
     formatter_blocks: &BTreeMap<String, FlowPromptTemplateDefinition>,
 ) -> Result<FlowNodeDefinition, String> {
     Ok(FlowNodeDefinition {
+        failure_ports: entry.failure_ports,
         class_name: entry.class_name,
         short_description: entry.short_description,
         long_description: entry.long_description,
@@ -516,6 +519,7 @@ fn validate_definition_manifest(
     let mut class_names = HashSet::new();
 
     for entry in entries {
+        crate::failure::validate_failure_ports(entry).map_err(anyhow::Error::msg)?;
         ensure!(
             !entry.class_name.trim().is_empty(),
             "flow manifest definitions must have a non-empty class_name"

@@ -1,6 +1,9 @@
 //! Session-independent node execution and host contracts.
 mod delivery;
+mod failure;
+pub use battersea_flow::FlowFailurePolicy;
 pub use delivery::ProviderEvent;
+pub use failure::{HandledNodeFailure, RecoverableNodeFailure};
 pub mod checkpoint;
 pub mod durable;
 pub mod error_codes;
@@ -37,6 +40,11 @@ pub struct Token {
 /// for a host refusal; the message is for people. [`internal`](Self::internal) reports a
 /// fault and carries no reason.
 pub trait ExecutionError: std::error::Error + Send + Sync + 'static {
+    /// Opt in only for a recoverable node refusal with a host reason code and settled
+    /// effects. Cancellation, interruption, admission and storage errors remain unclassified.
+    fn recoverable_node_failure(&self) -> Option<RecoverableNodeFailure> {
+        None
+    }
     /// The request cannot be carried out.
     fn invalid_request(reason: &'static str, message: impl Into<String>) -> Self;
     /// A fault in the runtime or host.

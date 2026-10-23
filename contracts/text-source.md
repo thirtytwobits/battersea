@@ -1,10 +1,10 @@
 # Text source and code-defined nodes
 
-Status: M6.6 contract. Text syntax version 1 carries flow document version 2.
+Status: M6.6 contract. Text syntax version 1 carries flow document version 3.
 
 ```text
 flow 1 "example" {
-  version = 2;
+  version = 3;
   execution = {
     "source_order": ["source"],
     "limits": {

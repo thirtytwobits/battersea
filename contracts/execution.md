@@ -1,7 +1,7 @@
 # Execution contract
 
-Status: implemented for v0.6.0. Saved flows require an explicitly invoked upgrade to
-flow document version 2.
+Status: implemented. Saved flows use document version 3, reached through an explicitly
+invoked upgrade.
 
 ## Ownership and admission
 
@@ -105,7 +105,7 @@ a pump does not prove that a remote effect was cancelled.
 ## Fan-out and signals
 
 Validate all fan-out destinations before admission. Reserve all lossless destinations
-before making any branch observable. Delivery follows edge order. A destination failure
+before making any branch observable. Delivery follows edge order. An unhandled destination failure
 fails the activation and prevents subsequent branch delivery; earlier applied effects
 remain recorded for host reconciliation. There is no rollback or automatic redispatch.
 Lossy branches use only their declared drop policy.
@@ -119,6 +119,59 @@ signal cannot overtake that turn's data. Signal cycles fail with their causal pa
 Preflight control work drains before provider dispatch. Cancellation has priority over
 both queues and wakes producers waiting for capacity.
 
+## Node failure policies
+
+Each node authors `failure_policy`: `fail`, `emit` or `skip`. Omission means `fail`.
+Only explicitly classified, recoverable node failures are eligible. Classification carries
+a stable host code and a sanitised message and confirms that external effects have settled.
+Unclassified errors and runtime-owned refusal codes retain their original outcome.
+Cancellation, capacity admission, contract violations, panics, journal failures and unresolved
+effect intents bypass node policies. Classification does not authorise retry or effect replay.
+
+| Policy | Eligible failure |
+|---|---|
+| `fail` | Fail the activation and stop subsequent branch delivery |
+| `emit` | Stop the node for this activation, publish one typed failure and settle its ports |
+| `skip` | Stop the node for this activation and settle its ports |
+
+The driver handles a failure at its originating callback: source materialisation, direct
+execution, streaming receive, sink receive, action, controller action, provider event or
+provider completion. Nested delivery retains the destination's attribution and policy.
+Standalone controller calls return their error to the caller; graph policies require an
+activation. Automation rejection retains its separately defined outcome.
+
+A handled node performs no further callbacks in the activation, including later hybrid
+phases. Its provider pump stops, scheduler-owned inputs and pending deliveries to the node are
+released, and subsequent deliveries to that node are discarded with an observation.
+Previously admitted outputs and emitted signals retain their order. Published final values
+remain valid; unpublished final outputs close absent. Streaming outputs close with handled
+failure after their admitted prefix. A dependent node requiring successful stream closure
+skips its remaining execution and propagates absence. Sinks retain effects already applied
+to the delivered prefix. Independent branches continue.
+
+The driver settles unissued signals false and suppresses `post_activate` and success-only
+controller effects. A handled middle fan-out destination permits later destinations to
+receive the admitted token in edge order. Earlier destinations are never redispatched.
+
+Catalogue `failure_ports` declare a unique name and `snapshot` or `execution` phase.
+Each expands to a runtime-owned, final-value `node_failure` output. Names share the ordinary
+output namespace; each phase has at most one failure port. `emit` requires a failure port
+for every phase the node can execute. Ordinary handlers cannot publish on failure ports.
+Failure ports close absent on successful execution and under `skip`. Under `emit`, the
+failing phase publishes exactly one value; other failure ports close absent. Source and
+hybrid snapshot failure ports retain snapshot dependency ordering.
+
+The `node_failure` payload contains `id`, `node_id`, `phase`, `operation`, `code` and
+`message`. Its identity combines the run, node and first failure's delivery sequence and
+is retained by recovery. Code and message are bounded to 128 and 4096 UTF-8 bytes.
+Hosts sanitise messages before classification. Failure output admission uses the activation's
+existing limits, FIFO ordering and fan-out reservations. Publication and closure follow
+previously admitted emissions. Admission and closure failures retain their control outcome.
+A node cannot reapply its policy to its own failure publication.
+
+The driver records the original failure, selected policy and handling result under the
+originating node. Handled node failure and activation outcome are separate observations.
+
 ## Authoring
 
 The editor exposes source priority, activation limits, provider capacity and connection
@@ -126,6 +179,9 @@ order. Stream connections also expose item and byte capacities, maximum event si
 an explicit overflow policy. Catalogue mode and phase are read-only. Invalid capacities
 remain in the form until corrected; applying valid settings participates in undo/redo.
 Draft restoration, validation, save, clone and reload preserve authored settings.
+The node inspector exposes the failure policy and catalogue-declared failure ports.
+Policy changes participate in undo/redo and persist through draft restoration, clone,
+save and reload. The complete graph is validated before activation.
 
 ## Upgrade and verification
 
@@ -137,14 +193,20 @@ validating v1 retains its bytes and reports incompatibility. The host fences the
 by revision and preserves a recoverable original before replacing a stored document.
 Session-bound graph copies require the host's explicit session upgrade as well.
 
+The v2-to-v3 upgrade preserves authored fields and assigns the default `fail` policy.
+The v1 upgrade includes that step. Inspection, import, listing and validation preserve
+older bytes; replacing a stored flow requires explicit, revision-fenced host publication.
+
 | Clause | Distinguishing proof |
 |---|---|
 | Source order | Permute node arrays and titles; observe unchanged declared order; reject dependency cycles |
 | Streaming/final | Empty stream closes; all deltas delivered once; final fires after closure; second final rejected |
 | Pump independence | Consumer blocked while producer reaches capacity; consumer can resume; cancel wakes both |
 | Retention | Hold a received delivery; producer cannot refill its permits; oversize payload fails before delivery |
-| Fan-out | Permute edge arrays; observe declared order; fail middle branch; no later delivery or redispatch |
+| Fan-out | Permute edge arrays; observe declared order; fail an unhandled middle branch; no later delivery or redispatch |
 | Signals | Full data queues cannot prevent cancellation; preflight disable precedes dispatch; cycle diagnostics |
+| Failure policies | Fail/emit/skip across every callback; handled middle fan-out continues; partial streams skip final execution |
+| Failure boundaries | Cancellation, capacity, journal and unresolved effects retain their control outcomes |
 | Upgrade | Read/import leave bytes, timestamps and ownership unchanged; explicit fenced upgrade retains original |
 | Application | Chat, compaction, refinement, story memory and media preserve attributed outputs and durable completion |
 

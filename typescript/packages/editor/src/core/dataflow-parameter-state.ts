@@ -98,6 +98,7 @@ export function updateWorkspaceNodeParameterValue(options: {
     }
 
     const nextData = buildResolvedNodeData({
+      failurePolicy: node.data.failurePolicy,
       controllerPortPlacement: node.data.controllerPortPlacement,
       definition: options.definition,
       instanceName: node.data.instanceName,
@@ -238,6 +239,7 @@ export function updateWorkspaceNodePortParameterValue(options: {
       return {
         ...node,
         data: buildResolvedNodeData({
+          failurePolicy: node.data.failurePolicy,
           controllerPortPlacement: node.data.controllerPortPlacement,
           definition: options.definition,
           instanceName: node.data.instanceName,

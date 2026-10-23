@@ -123,11 +123,14 @@ export {};
 // components/flow-inspector.d.ts
 /** Copyright (c) Scott A Dixon */
 import React from "react";
-import type { FlowParameterDefinition } from "@battersea/flow";
+import { type FlowFailurePolicy, type FlowNodeDefinition, type FlowParameterDefinition } from "@battersea/flow";
 import { groupControlsForDetailPane } from "../core/flow-control-layout.js";
 import { type FlowParameterRenderer } from "./flow-parameter-control.js";
 type Group = ReturnType<typeof groupControlsForDetailPane>[number];
 export interface FlowInspectorProps {
+    failurePolicy?: FlowFailurePolicy;
+    failureDefinition?: FlowNodeDefinition;
+    onFailurePolicyChange?: (policy: FlowFailurePolicy) => void;
     parameters: readonly FlowParameterDefinition[];
     values?: Readonly<Record<string, unknown>>;
     onChange?: (parameter: FlowParameterDefinition, value: unknown) => void;
@@ -136,7 +139,7 @@ export interface FlowInspectorProps {
     renderParameter?: (parameter: FlowParameterDefinition, group: Group) => React.ReactNode;
 }
 /** Grouping and renderer selection are shared; hosts own product-specific sections and framing. */
-export declare function FlowInspector({ parameters, values, onChange, renderers, renderGroup, renderParameter, }: FlowInspectorProps): React.JSX.Element;
+export declare function FlowInspector({ failurePolicy, failureDefinition, onFailurePolicyChange, parameters, values, onChange, renderers, renderGroup, renderParameter, }: FlowInspectorProps): React.JSX.Element;
 export {};
 
 // components/flow-parameter-control.d.ts
@@ -566,6 +569,7 @@ import type { FlowControllerPortPlacement } from "./flow-controller-port-placeme
 import type { FlowStudioPortLike } from "./flow-node-ports.js";
 import type { FlowStudioPortOrder } from "./flow-port-order.js";
 export interface FlowStudioNodeData extends Record<string, unknown> {
+    failurePolicy?: WireFlowNode["failure_policy"];
     actionPorts: FlowStudioPortLike[];
     automationPorts: FlowStudioPortLike[];
     controllerPortPlacement?: FlowControllerPortPlacement;
@@ -808,6 +812,7 @@ import { type FlowStudioPortOrder } from "./flow-port-order.js";
 export type FlowParameterValues = Record<string, unknown>;
 export type FlowPortParameterValues = WireFlowNode["port_parameter_values"];
 export interface FlowStudioResolvedNodeData extends Record<string, unknown> {
+    failurePolicy?: WireFlowNode["failure_policy"];
     actionPorts: FlowStudioPortLike[];
     automationPorts: FlowStudioPortLike[];
     controllerPortPlacement?: FlowControllerPortPlacement;
@@ -866,6 +871,7 @@ export declare function isSupportedFlowParameter(parameter: WireFlowParameterDef
 export declare function getParameterOptions(parameter: WireFlowParameterDefinition): string[];
 export declare function getNodeClassLabel(nodeClass: WireFlowNodeClass): string;
 export declare function buildResolvedNodeData(options: {
+    failurePolicy?: WireFlowNode["failure_policy"];
     controllerPortPlacement?: FlowControllerPortPlacement | null;
     definition: WireFlowNodeDefinition;
     instanceName: string;

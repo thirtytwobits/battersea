@@ -45,7 +45,7 @@ fn manifest() -> String {
 fn a_host_registered_type_validates_values_without_product_dependencies() {
     let catalog = Catalog::from_manifest(&manifest(), registry()).unwrap();
     let mut flow: FlowDocument = serde_json::from_value(json!({
-        "version": 2, "execution": battersea_flow::FlowExecutionPolicy { source_order: vec!["source".into()], limits: battersea_flow::FlowExecutionLimits::default() }, "flow_key": "example", "title": "Example", "nodes": [{
+        "version": 3, "execution": battersea_flow::FlowExecutionPolicy { source_order: vec!["source".into()], limits: battersea_flow::FlowExecutionLimits::default() }, "flow_key": "example", "title": "Example", "nodes": [{
             "id": "source", "definition_name": "Echo", "instance_name": "Source", "parameter_values": {"label": "authored label"}
         }], "layout": {"independent_editor_v1": {"viewport": [4, 7, 1.5]}},
         "metadata": {"owner": {"colour": "violet"}}
@@ -152,7 +152,7 @@ fn an_external_graph_enforces_ports_cardinality_nominal_types_and_acyclicity() {
     source["node_definitions"][0]["output_ports"][0]["phase"] = json!("execution");
     source["node_definitions"][0]["input_ports"] = json!([{"name": "in", "kind": "input", "token_type": "example.message","mode":"final_value","phase":"execution"}]);
     let catalog = Catalog::from_manifest(&source.to_string(), registry()).unwrap();
-    let base = json!({"version": 2, "execution": battersea_flow::FlowExecutionPolicy { source_order: vec![], limits: battersea_flow::FlowExecutionLimits::default() }, "flow_key": "graph", "title": "Graph", "nodes": [
+    let base = json!({"version": 3, "execution": battersea_flow::FlowExecutionPolicy { source_order: vec![], limits: battersea_flow::FlowExecutionLimits::default() }, "flow_key": "graph", "title": "Graph", "nodes": [
         {"id": "left", "definition_name": "Echo", "instance_name": "Left"},
         {"id": "right", "definition_name": "Echo", "instance_name": "Right"}
     ], "edges": [{"id": "forward", "source_node_id": "left", "source_port": "out", "target_node_id": "right", "target_port": "in"}]});

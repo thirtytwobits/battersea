@@ -1480,6 +1480,8 @@ pub battersea_telemetry::view::State::MediaJob::retry: battersea_telemetry::view
 pub battersea_telemetry::view::State::MediaJob::status: battersea_telemetry::view::Status
 pub battersea_telemetry::view::State::Node
 pub battersea_telemetry::view::State::Node::error_code: core::option::Option<alloc::string::String>
+pub battersea_telemetry::view::State::Node::failure_handled: core::option::Option<bool>
+pub battersea_telemetry::view::State::Node::failure_policy: core::option::Option<battersea_flow::failure::FlowFailurePolicy>
 pub battersea_telemetry::view::State::Node::status: battersea_telemetry::view::Status
 pub battersea_telemetry::view::State::Port
 pub battersea_telemetry::view::State::Port::action: battersea_telemetry::view::PortAction

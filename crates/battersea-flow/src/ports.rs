@@ -378,6 +378,17 @@ pub(crate) fn expand_ports(
         }
     }
 
+    if !input {
+        for port in &definition.failure_ports {
+            if !names.insert(port.name.clone()) {
+                return Err(format!(
+                    "Duplicate failure output {:?} on {:?}.",
+                    port.name, node.id
+                ));
+            }
+            ports.push(port.as_port());
+        }
+    }
     Ok(ports)
 }
 
@@ -758,6 +769,7 @@ mod tests {
 
     fn node_definition() -> FlowNodeDefinition {
         FlowNodeDefinition {
+            failure_ports: vec![],
             class_name: "test.node".to_string(),
             short_description: "Test node".to_string(),
             long_description: "Test node definition".to_string(),
@@ -831,6 +843,7 @@ mod tests {
     fn flow_node() -> FlowNode {
         FlowNode {
             id: "node-1".to_string(),
+            failure_policy: Default::default(),
             definition_name: "test.node".to_string(),
             instance_name: "Node 1".to_string(),
             parameter_values: HashMap::new(),

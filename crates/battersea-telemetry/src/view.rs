@@ -61,6 +61,12 @@ pub enum State {
     Node {
         status: Status,
         #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[schemars(with = "battersea_runtime::FlowFailurePolicy")]
+        failure_policy: Option<battersea_runtime::FlowFailurePolicy>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[schemars(with = "bool")]
+        failure_handled: Option<bool>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
         #[schemars(with = "String")]
         error_code: Option<String>,
     },

@@ -329,6 +329,7 @@ pub trait ActivationHost: ExecutionHost {
         runtime.data_queue.clear();
         runtime.control_queue.clear();
         runtime.input_tokens.clear();
+        runtime.handled_failures.clear();
         runtime.active_delivery_groups.clear();
         runtime.activation_values.clear();
         runtime.activation_values_charge.take();

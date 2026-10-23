@@ -22,6 +22,7 @@ import type {
 import type { FlowStudioPortOrder } from "./flow-port-order.js";
 
 export interface FlowStudioNodeData extends Record<string, unknown> {
+  failurePolicy?: WireFlowNode["failure_policy"];
   actionPorts: FlowStudioPortLike[];
   automationPorts: FlowStudioPortLike[];
   controllerPortPlacement?: FlowControllerPortPlacement;

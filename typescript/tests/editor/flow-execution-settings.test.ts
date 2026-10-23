@@ -3,6 +3,8 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   createFlowExecutionPolicy,
+  requireFlowFailurePolicy,
+  canEmitNodeFailure,
   type FlowDocument,
   type FlowNodeDefinition,
 } from "@battersea/flow";
@@ -23,6 +25,7 @@ import {
   areDataflowStructuralSnapshotsEqual,
   restoreDataflowStructuralWorkspace,
 } from "@battersea/editor/core/dataflow-undo";
+import { reconcileFlowWorkspaceDefinitions } from "@battersea/editor/core/flow-persistence";
 
 const definitions: FlowNodeDefinition[] = [
   {
@@ -77,7 +80,7 @@ const definitions: FlowNodeDefinition[] = [
 function fixture(): FlowDocument {
   const execution = createFlowExecutionPolicy(["z", "a"]);
   return {
-    version: 2,
+    version: 3,
     flow_key: "policy",
     title: "Policy",
     execution,
@@ -101,6 +104,43 @@ function fixture(): FlowDocument {
     ],
   };
 }
+
+test("node failure policy survives draft, undo, redo, catalogue reconciliation and save/reload", () => {
+  const document = fixture();
+  document.nodes[0].failure_policy = "skip";
+  const workspace = buildFlowWorkspaceFromDocument({ document, definitions });
+  const original = buildDataflowStructuralSnapshot(workspace);
+  workspace.nodes[0].data.failurePolicy = "emit";
+  const edited = buildDataflowStructuralSnapshot(workspace);
+  assert.equal(areDataflowStructuralSnapshotsEqual(original, edited), false);
+  const undone = restoreDataflowStructuralWorkspace({ currentWorkspace: workspace, snapshot: original });
+  assert.equal(undone.nodes[0].data.failurePolicy, "skip");
+  const redone = restoreDataflowStructuralWorkspace({ currentWorkspace: undone, snapshot: edited });
+  const draft = normalizeFlowWorkspaceState(JSON.parse(JSON.stringify(redone)));
+  const reconciled = reconcileFlowWorkspaceDefinitions(draft, Object.fromEntries(definitions.map(d => [d.class_name,d])));
+  const saved = buildFlowSaveDocument({workspace: reconciled})!;
+  assert.equal(saved.nodes.find(n => n.id === document.nodes[0].id)?.failure_policy,"emit");
+  const loaded = buildFlowWorkspaceFromDocument({document:saved,definitions});
+  assert.equal(loaded.nodes.find(n => n.id === document.nodes[0].id)?.data.failurePolicy,"emit");
+  assert.equal(buildFlowValidationDocument({workspace:loaded}).nodes.find(n=>n.id===document.nodes[0].id)?.failure_policy,"emit");
+});
+
+test("failure authoring validates policy values and both phases of a source", () => {
+  for (const policy of ["fail","emit","skip"] as const) assert.equal(requireFlowFailurePolicy(policy),policy);
+  assert.equal(requireFlowFailurePolicy(undefined),"fail");
+  for (const invalid of [null,"retry",{},1]) assert.throws(()=>requireFlowFailurePolicy(invalid));
+  const source = structuredClone(definitions[0]);
+  assert.equal(canEmitNodeFailure(source),false);
+  source.failure_ports = [{name:"snapshot_error",phase:"snapshot"}];
+  assert.equal(canEmitNodeFailure(source),false);
+  source.failure_ports.push({name:"error",phase:"execution"});
+  assert.equal(canEmitNodeFailure(source),true);
+  const workspace = buildFlowWorkspaceFromDocument({document:fixture(),definitions:[source,definitions[1]]});
+  assert.ok(workspace.nodes[0].data.outputPorts.some(port=>typeof port!=="string" && port.id==="error"));
+  const corrupt = JSON.parse(JSON.stringify(workspace));
+  corrupt.nodes[0].data.failurePolicy = "retry";
+  assert.throws(()=>normalizeFlowWorkspaceState(corrupt));
+});
 
 test("source priority moves by identity independently of node array order and titles", () => {
   const document = fixture();

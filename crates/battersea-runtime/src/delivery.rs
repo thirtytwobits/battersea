@@ -7,10 +7,22 @@ use serde_json::Value;
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "snake_case")]
 pub enum ProviderEvent {
-    Token { port: String, value: Token },
-    Signal { port: String },
-    Data { value: Value },
-    Failure { message: String },
+    Token {
+        port: String,
+        value: Token,
+    },
+    Signal {
+        port: String,
+    },
+    Data {
+        value: Value,
+    },
+    Failure {
+        message: String,
+    },
+    RecoverableFailure {
+        failure: crate::RecoverableNodeFailure,
+    },
 }
 
 pub(crate) type Cause = Vec<(String, String)>;

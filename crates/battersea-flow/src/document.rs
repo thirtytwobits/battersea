@@ -5,7 +5,7 @@ use serde::Serialize;
 use serde_json::Value;
 use std::collections::{BTreeMap, HashMap, HashSet};
 
-pub const FLOW_DOCUMENT_VERSION: u32 = 2;
+pub const FLOW_DOCUMENT_VERSION: u32 = 3;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum DocumentInspection {

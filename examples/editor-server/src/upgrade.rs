@@ -5,8 +5,9 @@ use axum::{
     Json,
 };
 use battersea_flow::{
-    document::serialize_canonical_document, execution::upgrade_v1_document, FlowDocument,
-    FlowExecutionLimits,
+    document::serialize_canonical_document,
+    execution::{upgrade_v1_document, upgrade_v2_document},
+    FlowDocument, FlowExecutionLimits,
 };
 use battersea_runtime::ExecutionError;
 use serde::{Deserialize, Serialize};
@@ -43,11 +44,18 @@ fn prepare(app: &App, name: &str) -> Result<(Plan, Vec<u8>), Error> {
     )
     .map_err(io)?;
     let limits = FlowExecutionLimits::default();
-    let document = upgrade_v1_document(
-        std::str::from_utf8(&source).map_err(io)?,
-        app.runtime.catalog.definitions(),
-        limits.clone(),
-    )
+    let source_text = std::str::from_utf8(&source).map_err(io)?;
+    let version =
+        serde_json::from_str::<serde_json::Value>(source_text).map_err(io)?["version"].as_u64();
+    let document = if version == Some(2) {
+        upgrade_v2_document(source_text, app.runtime.catalog.definitions())
+    } else {
+        upgrade_v1_document(
+            source_text,
+            app.runtime.catalog.definitions(),
+            limits.clone(),
+        )
+    }
     .map_err(|message| Error::invalid_request(codes::UPGRADE_REFUSED, message))?;
     if document.flow_key != name {
         return Err(Error::invalid_request(
@@ -161,6 +169,36 @@ mod tests {
             writes: Arc::default(),
         };
         (temp, app, bytes)
+    }
+
+    #[tokio::test]
+    async fn v2_inspection_preserves_bytes_and_explicit_upgrade_retains_the_original() {
+        let (_temp, app, _) = fixture();
+        let path = app.runtime.root.join("flows/example.json");
+        let mut old: Value =
+            serde_json::from_str(include_str!("../fixtures/example.json")).unwrap();
+        old["version"] = json!(2);
+        let original = serde_json::to_vec_pretty(&old).unwrap();
+        fs::write(&path, &original).unwrap();
+        let (plan, inspected) = prepare(&app, "example").unwrap();
+        assert_eq!(inspected, original);
+        assert_eq!(fs::read(&path).unwrap(), original);
+        assert_eq!(plan.document.version, 3);
+        let receipt = apply(
+            State(app.clone()),
+            Path("example".into()),
+            Json(Request {
+                expected_revision: plan.revision,
+            }),
+        )
+        .await
+        .unwrap()
+        .0;
+        assert_eq!(
+            fs::read(app.runtime.root.join(receipt.original)).unwrap(),
+            original
+        );
+        assert_eq!(read(&app, "example").unwrap().version, 3);
     }
 
     #[tokio::test]
