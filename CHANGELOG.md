@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.17.0 — 2026-10-22
+
+- Add per-node `fail`, `emit` and `skip` policies for explicitly classified recoverable
+  failures. Handled failures preserve admitted outputs and settled effects while independent
+  work and later ordered fan-out destinations continue. Omission preserves `fail` behaviour.
+- Add catalogue-declared, runtime-owned `node_failure` outputs with bounded payloads and
+  durable identities. Cancellation, capacity refusal, journal failure and unresolved effects
+  retain their control outcomes.
+- Retain failure settlement and dependency skip reasons in checkpoints. Recovery validates
+  each stopped node's record and preserves error delivery without repeating settled effects.
+- Expose failure policies in the editor with validation, undo/redo and save/reload support,
+  including port-layout edits. Attribute handled failures separately from activation outcomes.
+- Breaking stored-format change: flows use document version 3 through an explicit upgrade;
+  execution and scheduler checkpoints use version 2. Older flows remain inspectable; older
+  checkpoints refuse resume. Reads preserve stored bytes.
+- Breaking Rust API: flow nodes carry `failure_policy`, node definitions declare
+  `failure_ports`, and provider events include `RecoverableFailure`. Schemas, TypeScript
+  bindings and API snapshots include these contracts. See issue #6 and PR #34.
+
 ## 0.16.0 — 2026-10-22
 
 - Add `battersea-mcp`, a Model Context Protocol 2026-07-28 client over rmcp 3.6.0 with `stdio`
