@@ -44,6 +44,7 @@ struct SavedControl {
 pub struct SchedulerCheckpoint {
     handled_failures: BTreeMap<String, crate::HandledNodeFailure>,
     stopped_nodes: Vec<String>,
+    dependency_skips: BTreeMap<String, crate::failure::DependencySkip>,
     failed_inputs: Vec<PortKey>,
     failed_outputs: Vec<PortKey>,
     version: u32,
@@ -146,6 +147,11 @@ impl SchedulerCheckpoint {
                 .map(|(id, record)| (id.clone(), (**record).clone()))
                 .collect(),
             stopped_nodes: sorted(&state.stopped_nodes),
+            dependency_skips: state
+                .dependency_skips
+                .iter()
+                .map(|(id, reason)| (id.clone(), *reason))
+                .collect(),
             failed_inputs: sorted(&state.failed_inputs),
             failed_outputs: sorted(&state.failed_outputs),
             version: SCHEDULER_CHECKPOINT_VERSION,
@@ -258,6 +264,7 @@ impl SchedulerCheckpoint {
         state.disabled_output_nodes = node_set(&self.disabled_output_nodes)?;
         state.logic_nodes_evaluated = node_set(&self.logic_nodes_evaluated)?;
         state.stopped_nodes = node_set(&self.stopped_nodes)?;
+        state.dependency_skips = self.dependency_skips.clone().into_iter().collect();
         node_set(&self.ready_inline_nodes)?;
         state.ready_inline_nodes = self.ready_inline_nodes.iter().cloned().collect();
         for id in self
@@ -330,6 +337,11 @@ impl SchedulerCheckpoint {
             }
         }
         for id in &state.stopped_nodes {
+            if self.handled_failures.contains_key(id) == self.dependency_skips.contains_key(id) {
+                return Err(invalid(
+                    "Stopped node requires exactly one failure or dependency record.",
+                ));
+            }
             let node = &state.nodes_by_id[id];
             if expanded_output_ports_for_node(&state.definitions, node)
                 .map_err(invalid)?
@@ -345,6 +357,33 @@ impl SchedulerCheckpoint {
                     })
             {
                 return Err(invalid("Stopped node has unsettled outputs or signals."));
+            }
+        }
+        for (id, reason) in &state.dependency_skips {
+            use crate::failure::DependencySkip;
+            let node = state
+                .nodes_by_id
+                .get(id)
+                .ok_or_else(|| invalid("Unknown dependency skip node."))?;
+            let valid = match reason {
+                DependencySkip::FailedInput => {
+                    state.failed_inputs.iter().any(|(node, _)| node == id)
+                }
+                DependencySkip::AbsentSnapshot => {
+                    expanded_input_ports_for_node(&state.definitions, node)
+                        .map_err(invalid)?
+                        .iter()
+                        .any(|port| {
+                            let key = (id.clone(), port.name.clone());
+                            port.phase == FlowPortPhase::Snapshot
+                                && port.mode == battersea_flow::FlowPortMode::FinalValue
+                                && state.closed_inputs.contains(&key)
+                                && !state.received_final_inputs.contains(&key)
+                        })
+                }
+            };
+            if !valid || !state.stopped_nodes.contains(id) {
+                return Err(invalid("Invalid dependency skip."));
             }
         }
         for (id, record) in &self.handled_failures {

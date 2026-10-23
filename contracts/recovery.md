@@ -57,8 +57,10 @@ side effect of inspection, nor manufacture a successful host commit from schedul
 The accepted graph pins each authored failure policy and the catalogue's failure ports.
 The scheduler checkpoint retains each handled node's failure identity, phase, operation,
 selected policy and payload, failed stream closures, settled ports and pending emissions.
-The checkpoint also retains nodes skipped because a required stream ended in handled
-failure. Restore validates these records against the pinned graph and payload limits.
+The checkpoint retains the reason for each dependency skip: failed input or absent snapshot
+value. Every stopped node requires either a handled failure record or a dependency skip
+record. Restore validates these records against the pinned graph, settled inputs and payload
+limits.
 
 Handling is part of the enclosing driver segment. Publish its effect results and the
 checkpoint together. Before that publication, interruption leaves the segment's outstanding

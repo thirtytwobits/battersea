@@ -12,6 +12,7 @@ use tokio_util::sync::CancellationToken;
 pub struct SchedulerState {
     pub handled_failures: HashMap<String, Retained<crate::HandledNodeFailure>>,
     pub(crate) stopped_nodes: HashSet<String>,
+    pub(crate) dependency_skips: HashMap<String, crate::failure::DependencySkip>,
     pub(crate) failed_inputs: HashSet<(String, String)>,
     pub(crate) failed_outputs: HashSet<(String, String)>,
     pub(crate) handling_failures: HashSet<String>,
@@ -173,6 +174,7 @@ impl SchedulerState {
         Ok(Self {
             handled_failures: HashMap::new(),
             stopped_nodes: HashSet::new(),
+            dependency_skips: HashMap::new(),
             failed_inputs: HashSet::new(),
             failed_outputs: HashSet::new(),
             handling_failures: HashSet::new(),

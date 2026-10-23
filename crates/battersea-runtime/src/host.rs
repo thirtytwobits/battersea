@@ -299,10 +299,13 @@ pub trait ExecutionHost: Sized + Send + Sync {
             runtime
                 .node_phases
                 .insert(node.id.clone(), FlowPortPhase::Snapshot);
-            if self.has_failed_input(runtime, &node.id)
-                || self.has_absent_snapshot_input(runtime, &node)?
-            {
-                crate::failure::skip_dependency(self, runtime, &node).await?;
+            let failed_input = self.has_failed_input(runtime, &node.id);
+            if failed_input || self.has_absent_snapshot_input(runtime, &node)? {
+                if failed_input {
+                    crate::failure::skip_dependency(self, runtime, &node).await?;
+                } else {
+                    crate::failure::skip_absent_snapshot(self, runtime, &node).await?;
+                }
                 while self.progress_delivery(runtime, token).await? {}
                 crate::durable::finish(self, runtime)?;
                 continue;
@@ -1540,7 +1543,17 @@ pub trait ExecutionHost: Sized + Send + Sync {
                 .await;
             runtime.signal_cause = previous;
             runtime.active_delivery_groups.remove(&delivery.emission);
-            result?;
+            if let Err(error) = result {
+                if runtime.unhandled_node.is_none() {
+                    runtime.unhandled_node = Some(delivery.edge.target_node_id.clone());
+                    let policy = runtime.nodes_by_id.get(&delivery.edge.target_node_id).map(|node| node.failure_policy).unwrap_or_default();
+                    self.publish_execution_record(runtime, &delivery.edge.target_node_id,
+                        EventKind::NodeError, error.message().into(),
+                        Some(json!({"policy":policy,"handled":false,"operation":"delivery",
+                            "error":{"code":error.reason_code().unwrap_or(error.code()),"message":error.message()}}))).await;
+                }
+                return Err(error);
+            }
         } else {
             let delivery = runtime.control_queue.pop_front().expect("control front");
             let previous = std::mem::replace(&mut runtime.signal_cause, delivery.cause.clone());

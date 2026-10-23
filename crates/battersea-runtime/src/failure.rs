@@ -33,6 +33,13 @@ pub struct HandledNodeFailure {
     pub failure: FlowNodeFailure,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub(crate) enum DependencySkip {
+    FailedInput,
+    AbsentSnapshot,
+}
+
 pub(crate) fn identity(run: &str, node: &str, sequence: u64) -> String {
     format!(
         "{:x}",
@@ -173,7 +180,7 @@ pub(crate) async fn handle_failure<H: ExecutionHost>(
             runtime.failure_emission = previous_emission;
             emitted?;
         }
-        settle_outputs(host, runtime, node).await?;
+        settle_outputs(host, runtime, node, true).await?;
         host.publish_execution_record(
             runtime,
             &node.id,
@@ -218,12 +225,13 @@ async fn settle_outputs<H: ExecutionHost>(
     host: &H,
     runtime: &mut H::State,
     node: &FlowNode,
+    failed: bool,
 ) -> Result<(), H::Error> {
     for port in battersea_flow::ports::expanded_output_ports_for_node(&runtime.definitions, node)
         .map_err(H::Error::internal)?
     {
         let key = (node.id.clone(), port.name.clone());
-        if port.mode == FlowPortMode::Stream && !runtime.closed_outputs.contains(&key) {
+        if failed && port.mode == FlowPortMode::Stream && !runtime.closed_outputs.contains(&key) {
             runtime.failed_outputs.insert(key);
         }
         host.close_flow_output(runtime, &node.id, &port.name)
@@ -238,17 +246,45 @@ pub(crate) async fn skip_dependency<H: ExecutionHost>(
     runtime: &mut H::State,
     node: &FlowNode,
 ) -> Result<(), H::Error> {
+    skip_input(host, runtime, node, DependencySkip::FailedInput).await
+}
+
+pub(crate) async fn skip_absent_snapshot<H: ExecutionHost>(
+    host: &H,
+    runtime: &mut H::State,
+    node: &FlowNode,
+) -> Result<(), H::Error> {
+    skip_input(host, runtime, node, DependencySkip::AbsentSnapshot).await
+}
+
+async fn skip_input<H: ExecutionHost>(
+    host: &H,
+    runtime: &mut H::State,
+    node: &FlowNode,
+    reason: DependencySkip,
+) -> Result<(), H::Error> {
     if runtime.stopped_nodes.contains(&node.id) {
         return Ok(());
     }
     stop_node::<H>(runtime, &node.id);
-    settle_outputs(host, runtime, node).await?;
+    runtime.dependency_skips.insert(node.id.clone(), reason);
+    settle_outputs(host, runtime, node, reason == DependencySkip::FailedInput).await?;
+    let (message, reason) = match reason {
+        DependencySkip::FailedInput => (
+            "Required input did not complete successfully.",
+            "failed_dependency",
+        ),
+        DependencySkip::AbsentSnapshot => (
+            "Snapshot input closed without a final value.",
+            "absent_final_value",
+        ),
+    };
     host.publish_execution_record(
         runtime,
         &node.id,
         EventKind::NodeSkipped,
-        "Required input did not complete successfully.".into(),
-        Some(json!({"reason":"failed_dependency"})),
+        message.into(),
+        Some(json!({"reason":reason})),
     )
     .await;
     Ok(())

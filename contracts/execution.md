@@ -148,6 +148,8 @@ remain valid; unpublished final outputs close absent. Streaming outputs close wi
 failure after their admitted prefix. A dependent node requiring successful stream closure
 skips its remaining execution and propagates absence. Sinks retain effects already applied
 to the delivered prefix. Independent branches continue.
+An absent snapshot final value skips dependent materialisation and execution; its stream
+outputs close successfully without values.
 
 The driver settles unissued signals false and suppresses `post_activate` and success-only
 controller effects. A handled middle fan-out destination permits later destinations to

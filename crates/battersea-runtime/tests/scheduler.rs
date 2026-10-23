@@ -738,6 +738,40 @@ async fn failure_checkpoint_retains_emission_identity_and_rejects_corrupt_settle
 }
 
 #[tokio::test]
+async fn stopped_nodes_require_their_failure_or_dependency_record() {
+    use battersea_runtime::checkpoint::SchedulerCheckpoint;
+    for policy in ["emit", "skip"] {
+        let (host, mut state) = fixture(
+            vec![policy_node(
+                "source",
+                "Source",
+                policy,
+                json!({"failure_at":"execute"}),
+            )],
+            vec![],
+            "final_value",
+        );
+        host.execute_flow_node(&mut state, "source", None, &CancellationToken::new())
+            .await
+            .unwrap();
+        let saved = serde_json::to_value(SchedulerCheckpoint::capture(&state).unwrap()).unwrap();
+        let mut missing = saved.clone();
+        missing["handled_failures"] = json!({});
+        assert!(
+            serde_json::from_value::<SchedulerCheckpoint>(missing.clone())
+                .unwrap()
+                .restore()
+                .is_err()
+        );
+        missing["dependency_skips"] = json!({"source":"failed_input"});
+        assert!(serde_json::from_value::<SchedulerCheckpoint>(missing)
+            .unwrap()
+            .restore()
+            .is_err());
+    }
+}
+
+#[tokio::test]
 async fn failure_retention_exhaustion_remains_a_control_outcome() {
     for policy in ["emit", "skip"] {
         let (host, mut state) = fixture(
@@ -2207,6 +2241,117 @@ async fn incompatible_handler_state_is_rejected_without_dispatch_or_publication(
         before
     );
     assert!(original.calls.is_empty());
+}
+
+#[tokio::test]
+async fn absent_snapshot_dependencies_close_streams_successfully() {
+    use battersea_runtime::checkpoint::SchedulerCheckpoint;
+    let (host, mut state) = fixture(
+        vec![
+            node("source", "Source", json!({})),
+            node("upstream", "Source", json!({"values":[]})),
+            node("middle", "Join", json!({})),
+            node("consumer", "Join", json!({})),
+        ],
+        vec![],
+        "stream",
+    );
+    let mut defs = state.definitions.clone();
+    let mut upstream = defs["Source"].clone();
+    upstream.class_name = "Snapshot".into();
+    upstream.interfaces.clear();
+    upstream.output_ports[0].phase = FlowPortPhase::Snapshot;
+    upstream.output_ports[0].mode = FlowPortMode::FinalValue;
+    let mut middle = defs["Join"].clone();
+    middle.class_name = "Hybrid".into();
+    middle.kind = FlowNodeClass::Hybrid;
+    middle.input_ports[0].phase = FlowPortPhase::Snapshot;
+    middle.input_ports[0].mode = FlowPortMode::FinalValue;
+    defs.insert(upstream.class_name.clone(), upstream);
+    defs.insert(middle.class_name.clone(), middle);
+    let mut flow = state.flow.clone();
+    flow.nodes
+        .iter_mut()
+        .find(|n| n.id == "upstream")
+        .unwrap()
+        .definition_name = "Snapshot".into();
+    flow.nodes
+        .iter_mut()
+        .find(|n| n.id == "middle")
+        .unwrap()
+        .definition_name = "Hybrid".into();
+    flow.execution.source_order = vec!["source".into(), "middle".into(), "upstream".into()];
+    flow.edges = vec![
+        edge("snapshot", "upstream", "middle", 0, "final_value"),
+        edge("empty", "middle", "consumer", 0, "stream"),
+    ]
+    .into_iter()
+    .map(|e| serde_json::from_value(e).unwrap())
+    .collect();
+    state.scheduler = SchedulerState::new("absent-snapshot".into(), &flow, defs).unwrap();
+    run(&host, &mut state).await.unwrap();
+    assert!(!state
+        .calls
+        .iter()
+        .any(|id| id == "middle" || id == "middle:snapshot"));
+    assert!(state.calls.iter().any(|id| id == "consumer"));
+    let saved = serde_json::to_value(SchedulerCheckpoint::capture(&state).unwrap()).unwrap();
+    assert_eq!(saved["failed_outputs"], json!([]));
+    assert_eq!(saved["failed_inputs"], json!([]));
+    assert!(serde_json::from_value::<SchedulerCheckpoint>(saved.clone())
+        .unwrap()
+        .restore()
+        .is_ok());
+    let mut missing = saved;
+    missing["dependency_skips"] = json!({});
+    assert!(serde_json::from_value::<SchedulerCheckpoint>(missing)
+        .unwrap()
+        .restore()
+        .is_err());
+}
+
+#[tokio::test]
+async fn runtime_delivery_refusals_record_one_destination_error() {
+    for policy in ["fail", "emit", "skip"] {
+        let (host, mut state) = fixture(
+            vec![
+                node("source", "Source", json!({"values":["second"]})),
+                policy_node("join", "Join", policy, json!({})),
+            ],
+            vec![edge("data", "source", "join", 0, "final_value")],
+            "final_value",
+        );
+        let edge = state.flow.edges[0].clone();
+        let value = state
+            .retention
+            .retain(
+                "join",
+                Token {
+                    token_type: "text".into(),
+                    value: json!("first"),
+                },
+            )
+            .unwrap();
+        host.deliver_flow_token(&mut state, &edge, value, &CancellationToken::new())
+            .await
+            .unwrap();
+        let error = run(&host, &mut state).await.unwrap_err();
+        assert_eq!(
+            error.reason_code(),
+            Some(error_codes::DUPLICATE_FINAL_VALUE)
+        );
+        let events = host.events.lock().unwrap();
+        let errors = events
+            .iter()
+            .filter(|e| e.kind == EventKind::NodeError)
+            .collect::<Vec<_>>();
+        assert_eq!(errors.len(), 1);
+        assert_eq!(errors[0].node_id, "join");
+        assert_eq!(
+            errors[0].detail.as_ref().unwrap()["error"]["code"],
+            error_codes::DUPLICATE_FINAL_VALUE
+        );
+    }
 }
 
 #[tokio::test]
