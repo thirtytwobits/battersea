@@ -1,6 +1,6 @@
 /** Copyright (c) Scott A Dixon */
 import React from "react";
-import type { FlowParameterDefinition } from "@battersea/flow";
+import { canEmitNodeFailure, type FlowFailurePolicy, type FlowNodeDefinition, type FlowParameterDefinition } from "@battersea/flow";
 import { groupControlsForDetailPane } from "../core/flow-control-layout.js";
 import { formatFlowParameterLabel } from "../core/flow-node-definitions.js";
 import {
@@ -9,6 +9,9 @@ import {
 } from "./flow-parameter-control.js";
 type Group = ReturnType<typeof groupControlsForDetailPane>[number];
 export interface FlowInspectorProps {
+  failurePolicy?: FlowFailurePolicy;
+  failureDefinition?: FlowNodeDefinition;
+  onFailurePolicyChange?: (policy: FlowFailurePolicy) => void;
   parameters: readonly FlowParameterDefinition[];
   values?: Readonly<Record<string, unknown>>;
   onChange?: (parameter: FlowParameterDefinition, value: unknown) => void;
@@ -21,6 +24,9 @@ export interface FlowInspectorProps {
 }
 /** Grouping and renderer selection are shared; hosts own product-specific sections and framing. */
 export function FlowInspector({
+  failurePolicy = "fail",
+  failureDefinition,
+  onFailurePolicyChange,
   parameters,
   values = {},
   onChange,
@@ -30,6 +36,20 @@ export function FlowInspector({
 }: FlowInspectorProps) {
   return (
     <>
+      {onFailurePolicyChange && (
+        <label>
+          Failure policy
+          <select aria-label="Failure policy" value={failurePolicy}
+            onChange={event => {
+              const value = event.target.value;
+              if (value === "fail" || value === "emit" || value === "skip") onFailurePolicyChange(value);
+            }}>
+            <option value="fail">Fail activation</option>
+            <option value="emit" disabled={!failureDefinition || !canEmitNodeFailure(failureDefinition)}>Emit error</option>
+            <option value="skip">Skip remaining work</option>
+          </select>
+        </label>
+      )}
       {groupControlsForDetailPane([...parameters]).map((group) => {
         const key = group.parameters
           .map((parameter) => parameter.name)

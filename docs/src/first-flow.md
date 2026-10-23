@@ -7,7 +7,7 @@ cargo run --locked -p catalogue-example
 ```
 
 It registers an application handler, a nominal token schema, and a parameter schema; builds
-a catalogue; validates a version 2 flow; and prints canonical JSON. It also checks that
+a catalogue; validates a version 3 flow; and prints canonical JSON. It also checks that
 opaque editor layout and application metadata survive a save/load round trip.
 
 The complete, compiled example is included below so it stays aligned with the released API:

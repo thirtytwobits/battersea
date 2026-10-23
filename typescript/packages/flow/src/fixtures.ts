@@ -52,7 +52,7 @@ export const flows = [
   "output_encoding": "xml",
   "plain_fragment_delimiter": "blank_line",
   "title": "Independent application",
-  "version": 2,
+  "version": 3,
   "whitespace_mode": "preserve"
 }
 ] satisfies FlowDocument[];

@@ -8,6 +8,9 @@ pub fn contract_schema() -> Value {
         .for_serialize()
         .into_generator();
     generator.subschema_for::<FlowPortKind>();
+    generator.subschema_for::<FlowFailurePolicy>();
+    generator.subschema_for::<FlowFailurePort>();
+    generator.subschema_for::<FlowNodeFailure>();
     generator.subschema_for::<FlowNodeClass>();
     generator.subschema_for::<FlowPortDisplayClass>();
     generator.subschema_for::<FlowParameterDataType>();

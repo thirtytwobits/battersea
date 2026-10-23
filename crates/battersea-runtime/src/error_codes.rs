@@ -11,6 +11,8 @@ macro_rules! error_codes {
 }
 
 error_codes! {
+    /// A classified node failure violates the bounded failure-payload contract.
+    INVALID_NODE_FAILURE = "invalid_node_failure";
     /// A handler does not implement the entry point the runtime called, for example sink
     /// execution or logic evaluation.
     UNSUPPORTED_HANDLER_OPERATION = "unsupported_handler_operation";

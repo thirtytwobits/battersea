@@ -345,11 +345,38 @@
       ],
       "type": "object"
     },
+    "FlowFailurePolicy": {
+      "enum": [
+        "fail",
+        "emit",
+        "skip"
+      ],
+      "type": "string"
+    },
+    "FlowFailurePort": {
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "phase": {
+          "$ref": "#/$defs/FlowPortPhase"
+        }
+      },
+      "required": [
+        "name",
+        "phase"
+      ],
+      "type": "object"
+    },
     "FlowNode": {
       "additionalProperties": false,
       "properties": {
         "definition_name": {
           "type": "string"
+        },
+        "failure_policy": {
+          "$ref": "#/$defs/FlowFailurePolicy"
         },
         "id": {
           "type": "string"
@@ -456,6 +483,12 @@
           },
           "type": "array"
         },
+        "failure_ports": {
+          "items": {
+            "$ref": "#/$defs/FlowFailurePort"
+          },
+          "type": "array"
+        },
         "handler_id": {
           "type": "string"
         },
@@ -519,6 +552,38 @@
         "dynamic_output_ports",
         "action_ports",
         "signal_ports"
+      ],
+      "type": "object"
+    },
+    "FlowNodeFailure": {
+      "additionalProperties": false,
+      "properties": {
+        "code": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "message": {
+          "type": "string"
+        },
+        "node_id": {
+          "type": "string"
+        },
+        "operation": {
+          "type": "string"
+        },
+        "phase": {
+          "$ref": "#/$defs/FlowPortPhase"
+        }
+      },
+      "required": [
+        "id",
+        "node_id",
+        "phase",
+        "operation",
+        "code",
+        "message"
       ],
       "type": "object"
     },

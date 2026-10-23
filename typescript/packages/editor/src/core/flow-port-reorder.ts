@@ -226,6 +226,7 @@ export function reorderNodePortsInWorkspace(options: {
   const nextData = buildResolvedNodeData({
     controllerPortPlacement: targetNode.data.controllerPortPlacement,
     definition: options.definition,
+    failurePolicy: targetNode.data.failurePolicy,
     instanceName: targetNode.data.instanceName,
     parameterValues: targetNode.data.parameterValues,
     portOrder: nextOverallOrder,
@@ -308,6 +309,7 @@ export function setNodeControllerPortPlacementInWorkspace(options: {
   const nextData = buildResolvedNodeData({
     controllerPortPlacement: placement,
     definition: options.definition,
+    failurePolicy: targetNode.data.failurePolicy,
     instanceName: targetNode.data.instanceName,
     parameterValues: targetNode.data.parameterValues,
     portParameterValues: targetNode.data.portParameterValues,

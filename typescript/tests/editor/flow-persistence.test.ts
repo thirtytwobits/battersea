@@ -428,7 +428,7 @@ test("buildFlowSaveDocument applies a confirmed draft name without mutating the 
         }
       }],
       title: "",
-      version: 2,
+      version: 3,
       output_encoding: "xml",
       plain_fragment_delimiter: "blank_line",
       whitespace_mode: "trim"
@@ -504,7 +504,7 @@ test("buildFlowWorkspaceFromDocument maps definition ports to canvas handles", (
       }
     ],
     title: "Default Session Activation",
-    version: 2,
+    version: 3,
     output_encoding: "xml",
     plain_fragment_delimiter: "blank_line",
     whitespace_mode: "trim"
@@ -562,7 +562,7 @@ test("query parameter values survive a workspace round trip unchanged", () => {
       }
     ],
     title: "Query flow",
-    version: 2,
+    version: 3,
     output_encoding: "xml",
     plain_fragment_delimiter: "blank_line",
     whitespace_mode: "trim"
@@ -635,7 +635,7 @@ test("port parameter values survive a workspace round trip unchanged", () => {
         }
       }],
       title: "Port parameters",
-      version: 2,
+      version: 3,
       output_encoding: "xml",
       plain_fragment_delimiter: "blank_line",
       whitespace_mode: "trim"
@@ -698,7 +698,7 @@ test("buildFlowDocumentFromWorkspace maps canvas handles back to manifest ports 
         }
       ],
       title: "Test flow",
-      version: 2,
+      version: 3,
       output_encoding: "xml",
       plain_fragment_delimiter: "blank_line",
       whitespace_mode: "trim"
@@ -762,7 +762,7 @@ test("buildFlowDocumentFromWorkspace persists swapped controller port placement 
         }
       ],
       title: "Test flow",
-      version: 2,
+      version: 3,
       output_encoding: "xml",
       plain_fragment_delimiter: "blank_line",
       whitespace_mode: "trim"
@@ -817,7 +817,7 @@ test("buildFlowDocumentFromWorkspace round-trips reversed logic direction throug
         }
       ],
       title: "Test flow",
-      version: 2,
+      version: 3,
       output_encoding: "xml",
       plain_fragment_delimiter: "blank_line",
       whitespace_mode: "trim"
@@ -900,7 +900,7 @@ test("buildFlowDocumentFromWorkspace persists edge waypoints inside the canvas l
         }
       ],
       title: "Test flow",
-      version: 2,
+      version: 3,
       output_encoding: "xml",
       plain_fragment_delimiter: "blank_line",
       whitespace_mode: "trim"
@@ -983,7 +983,7 @@ test("buildFlowDocumentFromWorkspace persists edge bridges inside the canvas lay
         }
       ],
       title: "Test flow",
-      version: 2,
+      version: 3,
       output_encoding: "xml",
       plain_fragment_delimiter: "blank_line",
       whitespace_mode: "trim"
@@ -1064,7 +1064,7 @@ test("buildFlowWorkspaceFromDocument restores edge waypoints from layout", () =>
         }
       ],
       title: "Test flow",
-      version: 2,
+      version: 3,
       output_encoding: "xml",
       plain_fragment_delimiter: "blank_line",
       whitespace_mode: "trim"
@@ -1106,7 +1106,7 @@ test("buildFlowWorkspaceFromDocument restores swapped controller port placement 
         }
       ],
       title: "Test flow",
-      version: 2,
+      version: 3,
       output_encoding: "xml",
       plain_fragment_delimiter: "blank_line",
       whitespace_mode: "trim"
@@ -1167,7 +1167,7 @@ test("buildFlowWorkspaceFromDocument restores edge bridges from layout", () => {
         }
       ],
       title: "Test flow",
-      version: 2,
+      version: 3,
       output_encoding: "xml",
       plain_fragment_delimiter: "blank_line",
       whitespace_mode: "trim"
@@ -1216,7 +1216,7 @@ test("buildFlowDocumentFromWorkspace preserves numbered dynamic ports", () => {
         }
       ],
       title: "Dynamic flow",
-      version: 2,
+      version: 3,
       output_encoding: "xml",
       plain_fragment_delimiter: "blank_line",
       whitespace_mode: "trim"
@@ -1325,7 +1325,7 @@ test("buildFlowDocumentFromWorkspace canonicalises flow ordering for stable roun
       }
     ],
     title: "Stable round trip",
-    version: 2,
+    version: 3,
     output_encoding: "xml",
     plain_fragment_delimiter: "blank_line",
     whitespace_mode: "trim"
@@ -1409,7 +1409,7 @@ test("buildFlowWorkspaceFromDocument uses deterministic fallback positions when 
         }
       ],
       title: "No layout",
-      version: 2,
+      version: 3,
       output_encoding: "xml",
       plain_fragment_delimiter: "blank_line",
       whitespace_mode: "trim"
@@ -1423,7 +1423,7 @@ test("buildFlowWorkspaceFromDocument uses deterministic fallback positions when 
 test("areFlowDocumentsEqual treats node ordering and JSON key ordering as irrelevant", () => {
   const left: WireFlowDocument = {
     execution: createFlowExecutionPolicy(),
-    version: 2,
+    version: 3,
     output_encoding: "xml",
     plain_fragment_delimiter: "blank_line",
     whitespace_mode: "trim",
@@ -1483,7 +1483,7 @@ test("areFlowDocumentsEqual treats an empty canvas layout and a missing layout a
     metadata: null,
     nodes: [],
     title: "Empty flow",
-    version: 2,
+    version: 3,
     output_encoding: "xml",
     plain_fragment_delimiter: "blank_line",
     whitespace_mode: "trim"
@@ -1529,7 +1529,7 @@ test("areFlowDocumentsEqual ignores insignificant floating-point drift in layout
       }
     ],
     title: "Position drift",
-    version: 2,
+    version: 3,
     output_encoding: "xml",
     plain_fragment_delimiter: "blank_line",
     whitespace_mode: "trim"
@@ -1601,7 +1601,7 @@ test("areFlowDocumentsEqual ignores insignificant floating-point drift in edge w
       }
     ],
     title: "Waypoint drift",
-    version: 2,
+    version: 3,
     output_encoding: "xml",
     plain_fragment_delimiter: "blank_line",
     whitespace_mode: "trim"
@@ -1678,7 +1678,7 @@ test("areFlowDocumentsEqual ignores insignificant floating-point drift in edge b
       }
     ],
     title: "Bridge drift",
-    version: 2,
+    version: 3,
     output_encoding: "xml",
     plain_fragment_delimiter: "blank_line",
     whitespace_mode: "trim"
@@ -1873,7 +1873,7 @@ test("removeNodeFromWorkspace drops the node and all attached edges", () => {
         }
       ],
       title: "Remove node",
-      version: 2,
+      version: 3,
       output_encoding: "xml",
       plain_fragment_delimiter: "blank_line",
       whitespace_mode: "trim"
@@ -1917,7 +1917,7 @@ test("renameNodeInstanceInWorkspace updates the node instance name without distu
         }
       ],
       title: "Rename node",
-      version: 2,
+      version: 3,
       output_encoding: "xml",
       plain_fragment_delimiter: "blank_line",
       whitespace_mode: "trim"
@@ -1961,7 +1961,7 @@ test("findNextFlowNodeIndex returns one greater than the highest numeric node su
         }
       ],
       title: "Suffixes",
-      version: 2,
+      version: 3,
       output_encoding: "xml",
       plain_fragment_delimiter: "blank_line",
       whitespace_mode: "trim"
@@ -2035,7 +2035,7 @@ test("multiplexer output count survives a workspace round trip", () => {
         }
       ],
       title: "Multiplexer round trip",
-      version: 2,
+      version: 3,
       output_encoding: "xml",
       plain_fragment_delimiter: "blank_line",
       whitespace_mode: "trim"
@@ -2080,7 +2080,7 @@ test("node port order survives a document to workspace round trip without adding
       }
     }],
     title: "Port order round trip",
-    version: 2,
+    version: 3,
     output_encoding: "xml",
     plain_fragment_delimiter: "blank_line",
     whitespace_mode: "trim"

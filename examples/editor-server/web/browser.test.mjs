@@ -68,6 +68,7 @@ for (const [name, engine] of Object.entries({ chromium, webkit })) {
     expectedGraph = null;
     await page.goto(origin);
     const fixture = await read(page);
+    delete fixture.nodes.find(node => node.id === "text").failure_policy;
     fixture.layout = {
       ...fixture.layout,
       flow_builder_v1: {
@@ -113,6 +114,15 @@ for (const [name, engine] of Object.entries({ chromium, webkit })) {
       "application",
     );
     const delay = page.getByRole("combobox", { name: "Delay Ms" });
+    const failurePolicy = page.getByRole("combobox", { name: "Failure policy", exact: true });
+    assert.equal(await failurePolicy.inputValue(), "fail");
+    await failurePolicy.selectOption("skip");
+    await page.getByRole("button", { name: "Undo", exact: true }).click();
+    await page.locator('.react-flow__node[data-id="text"]').click();
+    assert.equal(await failurePolicy.inputValue(), "fail");
+    await page.getByRole("button", { name: "Redo", exact: true }).click();
+    await page.locator('.react-flow__node[data-id="text"]').click();
+    assert.equal(await failurePolicy.inputValue(), "skip");
     await delay.selectOption("1000");
     await page.getByRole("button", { name: "Save", exact: true }).click();
     await page.waitForFunction(
@@ -121,6 +131,7 @@ for (const [name, engine] of Object.entries({ chromium, webkit })) {
           ?.textContent === "Saved",
     );
     let saved = await read(page);
+    assert.equal(saved.nodes.find(node => node.id === "text").failure_policy, "skip");
     assert.equal(
       saved.nodes.find((n) => n.id === "text").parameter_values.delay_ms,
       1000,

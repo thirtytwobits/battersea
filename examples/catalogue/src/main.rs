@@ -29,7 +29,7 @@ fn example() -> Result<String, Box<dyn std::error::Error>> {
         .registry()
         .validate_token("example.note", &json!({"text": "Authored content"}))?;
     let flow = load_document(&json!({
-        "version": 2, "execution": battersea_flow::FlowExecutionPolicy { source_order: vec!["note".into()], limits: battersea_flow::FlowExecutionLimits::default() }, "flow_key": "notes", "title": "Notes",
+        "version": 3, "execution": battersea_flow::FlowExecutionPolicy { source_order: vec!["note".into()], limits: battersea_flow::FlowExecutionLimits::default() }, "flow_key": "notes", "title": "Notes",
         "nodes": [{"id": "note", "definition_name": "Note", "instance_name": "First note", "parameter_values": {"label": "Example"}}],
         "layout": {"example-editor": {"position": [12, 34], "zoom": 1.5}},
         "metadata": {"example": {"flags": [true, null]}}

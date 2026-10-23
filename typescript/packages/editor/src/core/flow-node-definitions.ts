@@ -6,6 +6,7 @@ import type {
   FlowParameterDefinition as WireFlowParameterDefinition,
   FlowPort as WireFlowPort,
 } from "@battersea/flow";
+import { requireFlowFailurePolicy } from "@battersea/flow";
 import {
   buildResolvedFlowPort,
   cloneFlowStudioPortNames,
@@ -28,6 +29,7 @@ export type FlowParameterValues = Record<string, unknown>;
 export type FlowPortParameterValues = WireFlowNode["port_parameter_values"];
 
 export interface FlowStudioResolvedNodeData extends Record<string, unknown> {
+  failurePolicy?: WireFlowNode["failure_policy"];
   actionPorts: FlowStudioPortLike[];
   automationPorts: FlowStudioPortLike[];
   controllerPortPlacement?: FlowControllerPortPlacement;
@@ -256,6 +258,11 @@ export function expandDefinitionPorts(
     }
   }
 
+  if (side === "output") {
+    for (const port of definition.failure_ports ?? []) {
+      ports.push({ name: port.name, phase: port.phase, kind: "output", token_type: "node_failure", mode: "final_value" });
+    }
+  }
   return ports;
 }
 
@@ -506,6 +513,7 @@ export function getNodeClassLabel(nodeClass: WireFlowNodeClass): string {
 }
 
 export function buildResolvedNodeData(options: {
+  failurePolicy?: WireFlowNode["failure_policy"];
   controllerPortPlacement?: FlowControllerPortPlacement | null;
   definition: WireFlowNodeDefinition;
   instanceName: string;
@@ -574,6 +582,7 @@ export function buildResolvedNodeData(options: {
 
   return {
     actionPorts,
+    ...(requireFlowFailurePolicy(options.failurePolicy) !== "fail" ? { failurePolicy: options.failurePolicy } : {}),
     automationPorts,
     controllerPortPlacement: normalizeFlowControllerPortPlacement(
       options.controllerPortPlacement,

@@ -82,8 +82,14 @@ export type FlowExecutionPolicy = {
     "limits": FlowExecutionLimits;
     "source_order": Array<string>;
 };
+export type FlowFailurePolicy = "fail" | "emit" | "skip";
+export type FlowFailurePort = {
+    "name": string;
+    "phase": FlowPortPhase;
+};
 export type FlowNode = {
     "definition_name": string;
+    "failure_policy"?: FlowFailurePolicy;
     "id": string;
     "instance_name": string;
     "parameter_values": {
@@ -105,6 +111,7 @@ export type FlowNodeDefinition = {
     "dynamic_input_ports": Array<FlowDynamicPortGroup>;
     "dynamic_output_ports": Array<FlowDynamicPortGroup>;
     "dynamic_signal_ports"?: Array<FlowDynamicSignalPortGroup>;
+    "failure_ports"?: Array<FlowFailurePort>;
     "handler_id": string;
     "input_ports": Array<FlowPort>;
     "interfaces": Array<string>;
@@ -114,6 +121,14 @@ export type FlowNodeDefinition = {
     "parameters": Array<FlowParameterDefinition>;
     "short_description": string;
     "signal_ports": Array<FlowSignalPortDefinition>;
+};
+export type FlowNodeFailure = {
+    "code": string;
+    "id": string;
+    "message": string;
+    "node_id": string;
+    "operation": string;
+    "phase": FlowPortPhase;
 };
 export type FlowNodePortNames = {
     "action"?: {
@@ -262,7 +277,7 @@ export type FlowValidationResult = {
 };
 
 // defaults.d.ts
-export declare const FLOW_DOCUMENT_VERSION = 2;
+export declare const FLOW_DOCUMENT_VERSION = 3;
 export declare const DEFAULT_FLOW_EXECUTION_LIMITS: {
     pending_events: number;
     retained_bytes: number;
@@ -276,11 +291,14 @@ export declare const DEFAULT_FLOW_EXECUTION_LIMITS: {
 };
 
 // execution.d.ts
-import type { FlowDocument, FlowExecutionPolicy } from "./contract.js";
+import type { FlowDocument, FlowExecutionPolicy, FlowFailurePolicy, FlowNodeDefinition } from "./contract.js";
 /** Execution policy for a newly authored document. Stored documents require an explicit upgrade. */
 export declare function createFlowExecutionPolicy(sourceOrder?: string[]): FlowExecutionPolicy;
 /** Version admission; complete graph validation belongs to the catalogue. */
 export declare function requireSupportedFlowVersion(document: Pick<FlowDocument, "version" | "execution">): void;
+export declare function requireFlowFailurePolicy(value: unknown): FlowFailurePolicy;
+/** Mirrors the callback phases validated by the Rust execution contract. */
+export declare function canEmitNodeFailure(definition: FlowNodeDefinition): boolean;
 
 // fixtures.d.ts
 export declare const flows: {
@@ -332,7 +350,7 @@ export declare const flows: {
 export type * from "./contract.js";
 export { tokenConnectionCompatible } from "./ports.js";
 export { FLOW_DOCUMENT_VERSION } from "./defaults.js";
-export { createFlowExecutionPolicy, requireSupportedFlowVersion } from "./execution.js";
+export { createFlowExecutionPolicy, requireSupportedFlowVersion, requireFlowFailurePolicy, canEmitNodeFailure } from "./execution.js";
 export type * as Runtime from "./runtime-contract.js";
 export { applyRuntimeDelta, applyRuntimeUpdate, RuntimeResyncRequired } from "./runtime-view.js";
 export type * as Tools from "./tools-contract.js";
@@ -394,6 +412,7 @@ export type Delta = {
     "cursor": Cursor;
 };
 export type Direction = "input" | "output";
+export type FlowFailurePolicy = "fail" | "emit" | "skip";
 export type Ledger = {
     "budgets": {
         [key: string]: Budget;
@@ -495,6 +514,8 @@ export type State = {
     "status": Status;
 } | {
     "error_code"?: string;
+    "failure_handled"?: boolean;
+    "failure_policy"?: FlowFailurePolicy;
     "kind": "node";
     "status": Status;
 } | {

@@ -190,7 +190,7 @@ pub fn generate(root: &Path, check: bool) -> Result<()> {
         check,
     )?;
     let flow: FlowDocument = serde_json::from_value(json!({
-        "version": 2, "execution": battersea_flow::FlowExecutionPolicy { source_order: vec!["source".into()], limits: battersea_flow::FlowExecutionLimits::default() }, "flow_key": "example", "title": "Independent application", "whitespace_mode": "preserve",
+        "version": 3, "execution": battersea_flow::FlowExecutionPolicy { source_order: vec!["source".into()], limits: battersea_flow::FlowExecutionLimits::default() }, "flow_key": "example", "title": "Independent application", "whitespace_mode": "preserve",
         "nodes": [{"id": "source", "instance_name": "Source", "definition_name": "Echo", "parameter_values": {"label": "example"}}],
         "layout": {"editor.example": {"position": [12, 34], "viewport": {"zoom": 1.5}}},
         "metadata": {"application": {"tags": ["contract", "roundtrip"]}}

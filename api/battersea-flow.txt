@@ -565,7 +565,202 @@ impl<T> serde_core::de::DeserializeOwned for battersea_flow::execution::FlowQueu
 impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_flow::execution::FlowQueueLimits where T: ?core::marker::Sized
 pub fn battersea_flow::execution::ordered_sources(flow: &battersea_flow::FlowDocument, definitions: &std::collections::hash::map::HashMap<alloc::string::String, battersea_flow::FlowNodeDefinition>) -> core::result::Result<alloc::vec::Vec<alloc::string::String>, alloc::string::String>
 pub fn battersea_flow::execution::upgrade_v1_document(source: &str, definitions: &std::collections::hash::map::HashMap<alloc::string::String, battersea_flow::FlowNodeDefinition>, limits: battersea_flow::execution::FlowExecutionLimits) -> core::result::Result<battersea_flow::FlowDocument, alloc::string::String>
+pub fn battersea_flow::execution::upgrade_v2_document(source: &str, definitions: &std::collections::hash::map::HashMap<alloc::string::String, battersea_flow::FlowNodeDefinition>) -> core::result::Result<battersea_flow::FlowDocument, alloc::string::String>
 pub fn battersea_flow::execution::validate_execution_contract(flow: &battersea_flow::FlowDocument, definitions: &std::collections::hash::map::HashMap<alloc::string::String, battersea_flow::FlowNodeDefinition>) -> core::result::Result<(), battersea_flow::FlowValidationIssue>
+pub mod battersea_flow::failure
+pub enum battersea_flow::failure::FlowFailurePolicy
+pub battersea_flow::failure::FlowFailurePolicy::Emit
+pub battersea_flow::failure::FlowFailurePolicy::Fail
+pub battersea_flow::failure::FlowFailurePolicy::Skip
+impl battersea_flow::failure::FlowFailurePolicy
+pub fn battersea_flow::failure::FlowFailurePolicy::is_fail(&self) -> bool
+impl core::clone::Clone for battersea_flow::failure::FlowFailurePolicy
+pub fn battersea_flow::failure::FlowFailurePolicy::clone(&self) -> battersea_flow::failure::FlowFailurePolicy
+impl core::cmp::Eq for battersea_flow::failure::FlowFailurePolicy
+impl core::cmp::PartialEq for battersea_flow::failure::FlowFailurePolicy
+pub fn battersea_flow::failure::FlowFailurePolicy::eq(&self, other: &battersea_flow::failure::FlowFailurePolicy) -> bool
+impl core::default::Default for battersea_flow::failure::FlowFailurePolicy
+pub fn battersea_flow::failure::FlowFailurePolicy::default() -> battersea_flow::failure::FlowFailurePolicy
+impl core::fmt::Debug for battersea_flow::failure::FlowFailurePolicy
+pub fn battersea_flow::failure::FlowFailurePolicy::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for battersea_flow::failure::FlowFailurePolicy
+impl core::marker::StructuralPartialEq for battersea_flow::failure::FlowFailurePolicy
+impl schemars::JsonSchema for battersea_flow::failure::FlowFailurePolicy
+pub fn battersea_flow::failure::FlowFailurePolicy::inline_schema() -> bool
+pub fn battersea_flow::failure::FlowFailurePolicy::json_schema(generator: &mut schemars::generate::SchemaGenerator) -> schemars::schema::Schema
+pub fn battersea_flow::failure::FlowFailurePolicy::schema_id() -> alloc::borrow::Cow<'static, str>
+pub fn battersea_flow::failure::FlowFailurePolicy::schema_name() -> alloc::borrow::Cow<'static, str>
+impl serde_core::ser::Serialize for battersea_flow::failure::FlowFailurePolicy
+pub fn battersea_flow::failure::FlowFailurePolicy::serialize<__S>(&self, __serializer: __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for battersea_flow::failure::FlowFailurePolicy
+pub fn battersea_flow::failure::FlowFailurePolicy::deserialize<__D>(__deserializer: __D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for battersea_flow::failure::FlowFailurePolicy
+impl core::marker::Send for battersea_flow::failure::FlowFailurePolicy
+impl core::marker::Sync for battersea_flow::failure::FlowFailurePolicy
+impl core::marker::Unpin for battersea_flow::failure::FlowFailurePolicy
+impl core::panic::unwind_safe::RefUnwindSafe for battersea_flow::failure::FlowFailurePolicy
+impl core::panic::unwind_safe::UnwindSafe for battersea_flow::failure::FlowFailurePolicy
+impl<Q, K> equivalent::Equivalent<K> for battersea_flow::failure::FlowFailurePolicy where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn battersea_flow::failure::FlowFailurePolicy::equivalent(&self, key: &K) -> bool
+impl<Q, K> hashbrown::Equivalent<K> for battersea_flow::failure::FlowFailurePolicy where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn battersea_flow::failure::FlowFailurePolicy::equivalent(&self, key: &K) -> bool
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_flow::failure::FlowFailurePolicy where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_flow::failure::FlowFailurePolicy where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<T, U> core::convert::Into<U> for battersea_flow::failure::FlowFailurePolicy where U: core::convert::From<T>
+pub fn battersea_flow::failure::FlowFailurePolicy::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_flow::failure::FlowFailurePolicy where U: core::convert::Into<T>
+pub type battersea_flow::failure::FlowFailurePolicy::Error = core::convert::Infallible
+pub fn battersea_flow::failure::FlowFailurePolicy::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for battersea_flow::failure::FlowFailurePolicy where U: core::convert::TryFrom<T>
+pub type battersea_flow::failure::FlowFailurePolicy::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_flow::failure::FlowFailurePolicy::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for battersea_flow::failure::FlowFailurePolicy where T: core::clone::Clone
+pub type battersea_flow::failure::FlowFailurePolicy::Owned = T
+pub fn battersea_flow::failure::FlowFailurePolicy::clone_into(&self, target: &mut T)
+pub fn battersea_flow::failure::FlowFailurePolicy::to_owned(&self) -> T
+impl<T> core::any::Any for battersea_flow::failure::FlowFailurePolicy where T: 'static + ?core::marker::Sized
+pub fn battersea_flow::failure::FlowFailurePolicy::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_flow::failure::FlowFailurePolicy where T: ?core::marker::Sized
+pub fn battersea_flow::failure::FlowFailurePolicy::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_flow::failure::FlowFailurePolicy where T: ?core::marker::Sized
+pub fn battersea_flow::failure::FlowFailurePolicy::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for battersea_flow::failure::FlowFailurePolicy where T: core::clone::Clone
+pub unsafe fn battersea_flow::failure::FlowFailurePolicy::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for battersea_flow::failure::FlowFailurePolicy
+pub fn battersea_flow::failure::FlowFailurePolicy::from(t: T) -> T
+impl<T> dyn_clone::DynClone for battersea_flow::failure::FlowFailurePolicy where T: core::clone::Clone
+pub fn battersea_flow::failure::FlowFailurePolicy::__clone_box(&self, _: dyn_clone::sealed::Private) -> *mut ()
+impl<T> outref::AsOut<T> for battersea_flow::failure::FlowFailurePolicy where T: core::marker::Copy
+pub fn battersea_flow::failure::FlowFailurePolicy::as_out(&mut self) -> outref::Out<'_, T>
+impl<T> serde_core::de::DeserializeOwned for battersea_flow::failure::FlowFailurePolicy where T: for<'de> serde_core::de::Deserialize<'de>
+impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_flow::failure::FlowFailurePolicy where T: ?core::marker::Sized
+pub struct battersea_flow::failure::FlowFailurePort
+pub battersea_flow::failure::FlowFailurePort::name: alloc::string::String
+pub battersea_flow::failure::FlowFailurePort::phase: battersea_flow::execution::FlowPortPhase
+impl battersea_flow::failure::FlowFailurePort
+pub fn battersea_flow::failure::FlowFailurePort::as_port(&self) -> battersea_flow::FlowPort
+impl core::clone::Clone for battersea_flow::failure::FlowFailurePort
+pub fn battersea_flow::failure::FlowFailurePort::clone(&self) -> battersea_flow::failure::FlowFailurePort
+impl core::cmp::Eq for battersea_flow::failure::FlowFailurePort
+impl core::cmp::PartialEq for battersea_flow::failure::FlowFailurePort
+pub fn battersea_flow::failure::FlowFailurePort::eq(&self, other: &battersea_flow::failure::FlowFailurePort) -> bool
+impl core::fmt::Debug for battersea_flow::failure::FlowFailurePort
+pub fn battersea_flow::failure::FlowFailurePort::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for battersea_flow::failure::FlowFailurePort
+impl schemars::JsonSchema for battersea_flow::failure::FlowFailurePort
+pub fn battersea_flow::failure::FlowFailurePort::inline_schema() -> bool
+pub fn battersea_flow::failure::FlowFailurePort::json_schema(generator: &mut schemars::generate::SchemaGenerator) -> schemars::schema::Schema
+pub fn battersea_flow::failure::FlowFailurePort::schema_id() -> alloc::borrow::Cow<'static, str>
+pub fn battersea_flow::failure::FlowFailurePort::schema_name() -> alloc::borrow::Cow<'static, str>
+impl serde_core::ser::Serialize for battersea_flow::failure::FlowFailurePort
+pub fn battersea_flow::failure::FlowFailurePort::serialize<__S>(&self, __serializer: __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for battersea_flow::failure::FlowFailurePort
+pub fn battersea_flow::failure::FlowFailurePort::deserialize<__D>(__deserializer: __D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for battersea_flow::failure::FlowFailurePort
+impl core::marker::Send for battersea_flow::failure::FlowFailurePort
+impl core::marker::Sync for battersea_flow::failure::FlowFailurePort
+impl core::marker::Unpin for battersea_flow::failure::FlowFailurePort
+impl core::panic::unwind_safe::RefUnwindSafe for battersea_flow::failure::FlowFailurePort
+impl core::panic::unwind_safe::UnwindSafe for battersea_flow::failure::FlowFailurePort
+impl<Q, K> equivalent::Equivalent<K> for battersea_flow::failure::FlowFailurePort where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn battersea_flow::failure::FlowFailurePort::equivalent(&self, key: &K) -> bool
+impl<Q, K> hashbrown::Equivalent<K> for battersea_flow::failure::FlowFailurePort where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn battersea_flow::failure::FlowFailurePort::equivalent(&self, key: &K) -> bool
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_flow::failure::FlowFailurePort where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_flow::failure::FlowFailurePort where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<T, U> core::convert::Into<U> for battersea_flow::failure::FlowFailurePort where U: core::convert::From<T>
+pub fn battersea_flow::failure::FlowFailurePort::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_flow::failure::FlowFailurePort where U: core::convert::Into<T>
+pub type battersea_flow::failure::FlowFailurePort::Error = core::convert::Infallible
+pub fn battersea_flow::failure::FlowFailurePort::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for battersea_flow::failure::FlowFailurePort where U: core::convert::TryFrom<T>
+pub type battersea_flow::failure::FlowFailurePort::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_flow::failure::FlowFailurePort::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for battersea_flow::failure::FlowFailurePort where T: core::clone::Clone
+pub type battersea_flow::failure::FlowFailurePort::Owned = T
+pub fn battersea_flow::failure::FlowFailurePort::clone_into(&self, target: &mut T)
+pub fn battersea_flow::failure::FlowFailurePort::to_owned(&self) -> T
+impl<T> core::any::Any for battersea_flow::failure::FlowFailurePort where T: 'static + ?core::marker::Sized
+pub fn battersea_flow::failure::FlowFailurePort::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_flow::failure::FlowFailurePort where T: ?core::marker::Sized
+pub fn battersea_flow::failure::FlowFailurePort::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_flow::failure::FlowFailurePort where T: ?core::marker::Sized
+pub fn battersea_flow::failure::FlowFailurePort::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for battersea_flow::failure::FlowFailurePort where T: core::clone::Clone
+pub unsafe fn battersea_flow::failure::FlowFailurePort::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for battersea_flow::failure::FlowFailurePort
+pub fn battersea_flow::failure::FlowFailurePort::from(t: T) -> T
+impl<T> dyn_clone::DynClone for battersea_flow::failure::FlowFailurePort where T: core::clone::Clone
+pub fn battersea_flow::failure::FlowFailurePort::__clone_box(&self, _: dyn_clone::sealed::Private) -> *mut ()
+impl<T> serde_core::de::DeserializeOwned for battersea_flow::failure::FlowFailurePort where T: for<'de> serde_core::de::Deserialize<'de>
+impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_flow::failure::FlowFailurePort where T: ?core::marker::Sized
+pub struct battersea_flow::failure::FlowNodeFailure
+pub battersea_flow::failure::FlowNodeFailure::code: alloc::string::String
+pub battersea_flow::failure::FlowNodeFailure::id: alloc::string::String
+pub battersea_flow::failure::FlowNodeFailure::message: alloc::string::String
+pub battersea_flow::failure::FlowNodeFailure::node_id: alloc::string::String
+pub battersea_flow::failure::FlowNodeFailure::operation: alloc::string::String
+pub battersea_flow::failure::FlowNodeFailure::phase: battersea_flow::execution::FlowPortPhase
+impl core::clone::Clone for battersea_flow::failure::FlowNodeFailure
+pub fn battersea_flow::failure::FlowNodeFailure::clone(&self) -> battersea_flow::failure::FlowNodeFailure
+impl core::cmp::Eq for battersea_flow::failure::FlowNodeFailure
+impl core::cmp::PartialEq for battersea_flow::failure::FlowNodeFailure
+pub fn battersea_flow::failure::FlowNodeFailure::eq(&self, other: &battersea_flow::failure::FlowNodeFailure) -> bool
+impl core::fmt::Debug for battersea_flow::failure::FlowNodeFailure
+pub fn battersea_flow::failure::FlowNodeFailure::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for battersea_flow::failure::FlowNodeFailure
+impl schemars::JsonSchema for battersea_flow::failure::FlowNodeFailure
+pub fn battersea_flow::failure::FlowNodeFailure::inline_schema() -> bool
+pub fn battersea_flow::failure::FlowNodeFailure::json_schema(generator: &mut schemars::generate::SchemaGenerator) -> schemars::schema::Schema
+pub fn battersea_flow::failure::FlowNodeFailure::schema_id() -> alloc::borrow::Cow<'static, str>
+pub fn battersea_flow::failure::FlowNodeFailure::schema_name() -> alloc::borrow::Cow<'static, str>
+impl serde_core::ser::Serialize for battersea_flow::failure::FlowNodeFailure
+pub fn battersea_flow::failure::FlowNodeFailure::serialize<__S>(&self, __serializer: __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for battersea_flow::failure::FlowNodeFailure
+pub fn battersea_flow::failure::FlowNodeFailure::deserialize<__D>(__deserializer: __D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for battersea_flow::failure::FlowNodeFailure
+impl core::marker::Send for battersea_flow::failure::FlowNodeFailure
+impl core::marker::Sync for battersea_flow::failure::FlowNodeFailure
+impl core::marker::Unpin for battersea_flow::failure::FlowNodeFailure
+impl core::panic::unwind_safe::RefUnwindSafe for battersea_flow::failure::FlowNodeFailure
+impl core::panic::unwind_safe::UnwindSafe for battersea_flow::failure::FlowNodeFailure
+impl<Q, K> equivalent::Equivalent<K> for battersea_flow::failure::FlowNodeFailure where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn battersea_flow::failure::FlowNodeFailure::equivalent(&self, key: &K) -> bool
+impl<Q, K> hashbrown::Equivalent<K> for battersea_flow::failure::FlowNodeFailure where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn battersea_flow::failure::FlowNodeFailure::equivalent(&self, key: &K) -> bool
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_flow::failure::FlowNodeFailure where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_flow::failure::FlowNodeFailure where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<T, U> core::convert::Into<U> for battersea_flow::failure::FlowNodeFailure where U: core::convert::From<T>
+pub fn battersea_flow::failure::FlowNodeFailure::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_flow::failure::FlowNodeFailure where U: core::convert::Into<T>
+pub type battersea_flow::failure::FlowNodeFailure::Error = core::convert::Infallible
+pub fn battersea_flow::failure::FlowNodeFailure::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for battersea_flow::failure::FlowNodeFailure where U: core::convert::TryFrom<T>
+pub type battersea_flow::failure::FlowNodeFailure::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_flow::failure::FlowNodeFailure::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for battersea_flow::failure::FlowNodeFailure where T: core::clone::Clone
+pub type battersea_flow::failure::FlowNodeFailure::Owned = T
+pub fn battersea_flow::failure::FlowNodeFailure::clone_into(&self, target: &mut T)
+pub fn battersea_flow::failure::FlowNodeFailure::to_owned(&self) -> T
+impl<T> core::any::Any for battersea_flow::failure::FlowNodeFailure where T: 'static + ?core::marker::Sized
+pub fn battersea_flow::failure::FlowNodeFailure::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_flow::failure::FlowNodeFailure where T: ?core::marker::Sized
+pub fn battersea_flow::failure::FlowNodeFailure::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_flow::failure::FlowNodeFailure where T: ?core::marker::Sized
+pub fn battersea_flow::failure::FlowNodeFailure::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for battersea_flow::failure::FlowNodeFailure where T: core::clone::Clone
+pub unsafe fn battersea_flow::failure::FlowNodeFailure::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for battersea_flow::failure::FlowNodeFailure
+pub fn battersea_flow::failure::FlowNodeFailure::from(t: T) -> T
+impl<T> dyn_clone::DynClone for battersea_flow::failure::FlowNodeFailure where T: core::clone::Clone
+pub fn battersea_flow::failure::FlowNodeFailure::__clone_box(&self, _: dyn_clone::sealed::Private) -> *mut ()
+impl<T> serde_core::de::DeserializeOwned for battersea_flow::failure::FlowNodeFailure where T: for<'de> serde_core::de::Deserialize<'de>
+impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_flow::failure::FlowNodeFailure where T: ?core::marker::Sized
+pub const battersea_flow::failure::FAILURE_CODE_BYTES: usize
+pub const battersea_flow::failure::FAILURE_MESSAGE_BYTES: usize
+pub const battersea_flow::failure::NODE_FAILURE_TOKEN_TYPE: &str
+pub fn battersea_flow::failure::failure_phases(definition: &battersea_flow::FlowNodeDefinition) -> alloc::vec::Vec<battersea_flow::execution::FlowPortPhase>
+pub fn battersea_flow::failure::validate_failure_ports(definition: &battersea_flow::FlowNodeDefinition) -> core::result::Result<(), alloc::string::String>
 pub mod battersea_flow::issue_codes
 pub const battersea_flow::issue_codes::ALIAS_FOR_UNKNOWN_PORT: &str
 pub const battersea_flow::issue_codes::ALL: &[&str]
@@ -1005,7 +1200,7 @@ pub fn battersea_flow::registry::Registry::validate_datatype(&self, datatype: &b
 pub fn battersea_flow::registry::Registry::validate_token(&self, name: &str, value: &serde_json::value::Value) -> anyhow::Result<()>
 pub fn battersea_flow::registry::Registry::validate_value(&self, datatype: &battersea_flow::FlowParameterDataType, value: &serde_json::value::Value) -> anyhow::Result<()>
 impl core::default::Default for battersea_flow::registry::Registry
-pub fn battersea_flow::registry::Registry::default() -> battersea_flow::registry::Registry
+pub fn battersea_flow::registry::Registry::default() -> Self
 impl core::marker::Freeze for battersea_flow::registry::Registry
 impl core::marker::Send for battersea_flow::registry::Registry
 impl core::marker::Sync for battersea_flow::registry::Registry
@@ -1099,6 +1294,72 @@ impl<T> dyn_clone::DynClone for battersea_flow::FlowEdgeKind where T: core::clon
 pub fn battersea_flow::FlowEdgeKind::__clone_box(&self, _: dyn_clone::sealed::Private) -> *mut ()
 impl<T> serde_core::de::DeserializeOwned for battersea_flow::FlowEdgeKind where T: for<'de> serde_core::de::Deserialize<'de>
 impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_flow::FlowEdgeKind where T: ?core::marker::Sized
+pub enum battersea_flow::FlowFailurePolicy
+pub battersea_flow::FlowFailurePolicy::Emit
+pub battersea_flow::FlowFailurePolicy::Fail
+pub battersea_flow::FlowFailurePolicy::Skip
+impl battersea_flow::failure::FlowFailurePolicy
+pub fn battersea_flow::failure::FlowFailurePolicy::is_fail(&self) -> bool
+impl core::clone::Clone for battersea_flow::failure::FlowFailurePolicy
+pub fn battersea_flow::failure::FlowFailurePolicy::clone(&self) -> battersea_flow::failure::FlowFailurePolicy
+impl core::cmp::Eq for battersea_flow::failure::FlowFailurePolicy
+impl core::cmp::PartialEq for battersea_flow::failure::FlowFailurePolicy
+pub fn battersea_flow::failure::FlowFailurePolicy::eq(&self, other: &battersea_flow::failure::FlowFailurePolicy) -> bool
+impl core::default::Default for battersea_flow::failure::FlowFailurePolicy
+pub fn battersea_flow::failure::FlowFailurePolicy::default() -> battersea_flow::failure::FlowFailurePolicy
+impl core::fmt::Debug for battersea_flow::failure::FlowFailurePolicy
+pub fn battersea_flow::failure::FlowFailurePolicy::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for battersea_flow::failure::FlowFailurePolicy
+impl core::marker::StructuralPartialEq for battersea_flow::failure::FlowFailurePolicy
+impl schemars::JsonSchema for battersea_flow::failure::FlowFailurePolicy
+pub fn battersea_flow::failure::FlowFailurePolicy::inline_schema() -> bool
+pub fn battersea_flow::failure::FlowFailurePolicy::json_schema(generator: &mut schemars::generate::SchemaGenerator) -> schemars::schema::Schema
+pub fn battersea_flow::failure::FlowFailurePolicy::schema_id() -> alloc::borrow::Cow<'static, str>
+pub fn battersea_flow::failure::FlowFailurePolicy::schema_name() -> alloc::borrow::Cow<'static, str>
+impl serde_core::ser::Serialize for battersea_flow::failure::FlowFailurePolicy
+pub fn battersea_flow::failure::FlowFailurePolicy::serialize<__S>(&self, __serializer: __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for battersea_flow::failure::FlowFailurePolicy
+pub fn battersea_flow::failure::FlowFailurePolicy::deserialize<__D>(__deserializer: __D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for battersea_flow::failure::FlowFailurePolicy
+impl core::marker::Send for battersea_flow::failure::FlowFailurePolicy
+impl core::marker::Sync for battersea_flow::failure::FlowFailurePolicy
+impl core::marker::Unpin for battersea_flow::failure::FlowFailurePolicy
+impl core::panic::unwind_safe::RefUnwindSafe for battersea_flow::failure::FlowFailurePolicy
+impl core::panic::unwind_safe::UnwindSafe for battersea_flow::failure::FlowFailurePolicy
+impl<Q, K> equivalent::Equivalent<K> for battersea_flow::failure::FlowFailurePolicy where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn battersea_flow::failure::FlowFailurePolicy::equivalent(&self, key: &K) -> bool
+impl<Q, K> hashbrown::Equivalent<K> for battersea_flow::failure::FlowFailurePolicy where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn battersea_flow::failure::FlowFailurePolicy::equivalent(&self, key: &K) -> bool
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_flow::failure::FlowFailurePolicy where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_flow::failure::FlowFailurePolicy where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<T, U> core::convert::Into<U> for battersea_flow::failure::FlowFailurePolicy where U: core::convert::From<T>
+pub fn battersea_flow::failure::FlowFailurePolicy::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_flow::failure::FlowFailurePolicy where U: core::convert::Into<T>
+pub type battersea_flow::failure::FlowFailurePolicy::Error = core::convert::Infallible
+pub fn battersea_flow::failure::FlowFailurePolicy::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for battersea_flow::failure::FlowFailurePolicy where U: core::convert::TryFrom<T>
+pub type battersea_flow::failure::FlowFailurePolicy::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_flow::failure::FlowFailurePolicy::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for battersea_flow::failure::FlowFailurePolicy where T: core::clone::Clone
+pub type battersea_flow::failure::FlowFailurePolicy::Owned = T
+pub fn battersea_flow::failure::FlowFailurePolicy::clone_into(&self, target: &mut T)
+pub fn battersea_flow::failure::FlowFailurePolicy::to_owned(&self) -> T
+impl<T> core::any::Any for battersea_flow::failure::FlowFailurePolicy where T: 'static + ?core::marker::Sized
+pub fn battersea_flow::failure::FlowFailurePolicy::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_flow::failure::FlowFailurePolicy where T: ?core::marker::Sized
+pub fn battersea_flow::failure::FlowFailurePolicy::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_flow::failure::FlowFailurePolicy where T: ?core::marker::Sized
+pub fn battersea_flow::failure::FlowFailurePolicy::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for battersea_flow::failure::FlowFailurePolicy where T: core::clone::Clone
+pub unsafe fn battersea_flow::failure::FlowFailurePolicy::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for battersea_flow::failure::FlowFailurePolicy
+pub fn battersea_flow::failure::FlowFailurePolicy::from(t: T) -> T
+impl<T> dyn_clone::DynClone for battersea_flow::failure::FlowFailurePolicy where T: core::clone::Clone
+pub fn battersea_flow::failure::FlowFailurePolicy::__clone_box(&self, _: dyn_clone::sealed::Private) -> *mut ()
+impl<T> outref::AsOut<T> for battersea_flow::failure::FlowFailurePolicy where T: core::marker::Copy
+pub fn battersea_flow::failure::FlowFailurePolicy::as_out(&mut self) -> outref::Out<'_, T>
+impl<T> serde_core::de::DeserializeOwned for battersea_flow::failure::FlowFailurePolicy where T: for<'de> serde_core::de::Deserialize<'de>
+impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_flow::failure::FlowFailurePolicy where T: ?core::marker::Sized
 pub enum battersea_flow::FlowNodeClass
 pub battersea_flow::FlowNodeClass::Control
 pub battersea_flow::FlowNodeClass::Hybrid
@@ -2269,8 +2530,69 @@ impl<T> dyn_clone::DynClone for battersea_flow::execution::FlowExecutionPolicy w
 pub fn battersea_flow::execution::FlowExecutionPolicy::__clone_box(&self, _: dyn_clone::sealed::Private) -> *mut ()
 impl<T> serde_core::de::DeserializeOwned for battersea_flow::execution::FlowExecutionPolicy where T: for<'de> serde_core::de::Deserialize<'de>
 impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_flow::execution::FlowExecutionPolicy where T: ?core::marker::Sized
+pub struct battersea_flow::FlowFailurePort
+pub battersea_flow::FlowFailurePort::name: alloc::string::String
+pub battersea_flow::FlowFailurePort::phase: battersea_flow::execution::FlowPortPhase
+impl battersea_flow::failure::FlowFailurePort
+pub fn battersea_flow::failure::FlowFailurePort::as_port(&self) -> battersea_flow::FlowPort
+impl core::clone::Clone for battersea_flow::failure::FlowFailurePort
+pub fn battersea_flow::failure::FlowFailurePort::clone(&self) -> battersea_flow::failure::FlowFailurePort
+impl core::cmp::Eq for battersea_flow::failure::FlowFailurePort
+impl core::cmp::PartialEq for battersea_flow::failure::FlowFailurePort
+pub fn battersea_flow::failure::FlowFailurePort::eq(&self, other: &battersea_flow::failure::FlowFailurePort) -> bool
+impl core::fmt::Debug for battersea_flow::failure::FlowFailurePort
+pub fn battersea_flow::failure::FlowFailurePort::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for battersea_flow::failure::FlowFailurePort
+impl schemars::JsonSchema for battersea_flow::failure::FlowFailurePort
+pub fn battersea_flow::failure::FlowFailurePort::inline_schema() -> bool
+pub fn battersea_flow::failure::FlowFailurePort::json_schema(generator: &mut schemars::generate::SchemaGenerator) -> schemars::schema::Schema
+pub fn battersea_flow::failure::FlowFailurePort::schema_id() -> alloc::borrow::Cow<'static, str>
+pub fn battersea_flow::failure::FlowFailurePort::schema_name() -> alloc::borrow::Cow<'static, str>
+impl serde_core::ser::Serialize for battersea_flow::failure::FlowFailurePort
+pub fn battersea_flow::failure::FlowFailurePort::serialize<__S>(&self, __serializer: __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for battersea_flow::failure::FlowFailurePort
+pub fn battersea_flow::failure::FlowFailurePort::deserialize<__D>(__deserializer: __D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for battersea_flow::failure::FlowFailurePort
+impl core::marker::Send for battersea_flow::failure::FlowFailurePort
+impl core::marker::Sync for battersea_flow::failure::FlowFailurePort
+impl core::marker::Unpin for battersea_flow::failure::FlowFailurePort
+impl core::panic::unwind_safe::RefUnwindSafe for battersea_flow::failure::FlowFailurePort
+impl core::panic::unwind_safe::UnwindSafe for battersea_flow::failure::FlowFailurePort
+impl<Q, K> equivalent::Equivalent<K> for battersea_flow::failure::FlowFailurePort where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn battersea_flow::failure::FlowFailurePort::equivalent(&self, key: &K) -> bool
+impl<Q, K> hashbrown::Equivalent<K> for battersea_flow::failure::FlowFailurePort where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn battersea_flow::failure::FlowFailurePort::equivalent(&self, key: &K) -> bool
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_flow::failure::FlowFailurePort where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_flow::failure::FlowFailurePort where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<T, U> core::convert::Into<U> for battersea_flow::failure::FlowFailurePort where U: core::convert::From<T>
+pub fn battersea_flow::failure::FlowFailurePort::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_flow::failure::FlowFailurePort where U: core::convert::Into<T>
+pub type battersea_flow::failure::FlowFailurePort::Error = core::convert::Infallible
+pub fn battersea_flow::failure::FlowFailurePort::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for battersea_flow::failure::FlowFailurePort where U: core::convert::TryFrom<T>
+pub type battersea_flow::failure::FlowFailurePort::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_flow::failure::FlowFailurePort::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for battersea_flow::failure::FlowFailurePort where T: core::clone::Clone
+pub type battersea_flow::failure::FlowFailurePort::Owned = T
+pub fn battersea_flow::failure::FlowFailurePort::clone_into(&self, target: &mut T)
+pub fn battersea_flow::failure::FlowFailurePort::to_owned(&self) -> T
+impl<T> core::any::Any for battersea_flow::failure::FlowFailurePort where T: 'static + ?core::marker::Sized
+pub fn battersea_flow::failure::FlowFailurePort::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_flow::failure::FlowFailurePort where T: ?core::marker::Sized
+pub fn battersea_flow::failure::FlowFailurePort::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_flow::failure::FlowFailurePort where T: ?core::marker::Sized
+pub fn battersea_flow::failure::FlowFailurePort::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for battersea_flow::failure::FlowFailurePort where T: core::clone::Clone
+pub unsafe fn battersea_flow::failure::FlowFailurePort::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for battersea_flow::failure::FlowFailurePort
+pub fn battersea_flow::failure::FlowFailurePort::from(t: T) -> T
+impl<T> dyn_clone::DynClone for battersea_flow::failure::FlowFailurePort where T: core::clone::Clone
+pub fn battersea_flow::failure::FlowFailurePort::__clone_box(&self, _: dyn_clone::sealed::Private) -> *mut ()
+impl<T> serde_core::de::DeserializeOwned for battersea_flow::failure::FlowFailurePort where T: for<'de> serde_core::de::Deserialize<'de>
+impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_flow::failure::FlowFailurePort where T: ?core::marker::Sized
 pub struct battersea_flow::FlowNode
 pub battersea_flow::FlowNode::definition_name: alloc::string::String
+pub battersea_flow::FlowNode::failure_policy: battersea_flow::failure::FlowFailurePolicy
 pub battersea_flow::FlowNode::id: alloc::string::String
 pub battersea_flow::FlowNode::instance_name: alloc::string::String
 pub battersea_flow::FlowNode::parameter_values: std::collections::hash::map::HashMap<alloc::string::String, serde_json::value::Value>
@@ -2338,6 +2660,7 @@ pub battersea_flow::FlowNodeDefinition::dynamic_action_ports: alloc::vec::Vec<ba
 pub battersea_flow::FlowNodeDefinition::dynamic_input_ports: alloc::vec::Vec<battersea_flow::FlowDynamicPortGroup>
 pub battersea_flow::FlowNodeDefinition::dynamic_output_ports: alloc::vec::Vec<battersea_flow::FlowDynamicPortGroup>
 pub battersea_flow::FlowNodeDefinition::dynamic_signal_ports: alloc::vec::Vec<battersea_flow::FlowDynamicSignalPortGroup>
+pub battersea_flow::FlowNodeDefinition::failure_ports: alloc::vec::Vec<battersea_flow::failure::FlowFailurePort>
 pub battersea_flow::FlowNodeDefinition::handler_id: alloc::string::String
 pub battersea_flow::FlowNodeDefinition::input_ports: alloc::vec::Vec<battersea_flow::FlowPort>
 pub battersea_flow::FlowNodeDefinition::interfaces: alloc::vec::Vec<alloc::string::String>
@@ -2397,6 +2720,68 @@ impl<T> dyn_clone::DynClone for battersea_flow::FlowNodeDefinition where T: core
 pub fn battersea_flow::FlowNodeDefinition::__clone_box(&self, _: dyn_clone::sealed::Private) -> *mut ()
 impl<T> serde_core::de::DeserializeOwned for battersea_flow::FlowNodeDefinition where T: for<'de> serde_core::de::Deserialize<'de>
 impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_flow::FlowNodeDefinition where T: ?core::marker::Sized
+pub struct battersea_flow::FlowNodeFailure
+pub battersea_flow::FlowNodeFailure::code: alloc::string::String
+pub battersea_flow::FlowNodeFailure::id: alloc::string::String
+pub battersea_flow::FlowNodeFailure::message: alloc::string::String
+pub battersea_flow::FlowNodeFailure::node_id: alloc::string::String
+pub battersea_flow::FlowNodeFailure::operation: alloc::string::String
+pub battersea_flow::FlowNodeFailure::phase: battersea_flow::execution::FlowPortPhase
+impl core::clone::Clone for battersea_flow::failure::FlowNodeFailure
+pub fn battersea_flow::failure::FlowNodeFailure::clone(&self) -> battersea_flow::failure::FlowNodeFailure
+impl core::cmp::Eq for battersea_flow::failure::FlowNodeFailure
+impl core::cmp::PartialEq for battersea_flow::failure::FlowNodeFailure
+pub fn battersea_flow::failure::FlowNodeFailure::eq(&self, other: &battersea_flow::failure::FlowNodeFailure) -> bool
+impl core::fmt::Debug for battersea_flow::failure::FlowNodeFailure
+pub fn battersea_flow::failure::FlowNodeFailure::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for battersea_flow::failure::FlowNodeFailure
+impl schemars::JsonSchema for battersea_flow::failure::FlowNodeFailure
+pub fn battersea_flow::failure::FlowNodeFailure::inline_schema() -> bool
+pub fn battersea_flow::failure::FlowNodeFailure::json_schema(generator: &mut schemars::generate::SchemaGenerator) -> schemars::schema::Schema
+pub fn battersea_flow::failure::FlowNodeFailure::schema_id() -> alloc::borrow::Cow<'static, str>
+pub fn battersea_flow::failure::FlowNodeFailure::schema_name() -> alloc::borrow::Cow<'static, str>
+impl serde_core::ser::Serialize for battersea_flow::failure::FlowNodeFailure
+pub fn battersea_flow::failure::FlowNodeFailure::serialize<__S>(&self, __serializer: __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for battersea_flow::failure::FlowNodeFailure
+pub fn battersea_flow::failure::FlowNodeFailure::deserialize<__D>(__deserializer: __D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for battersea_flow::failure::FlowNodeFailure
+impl core::marker::Send for battersea_flow::failure::FlowNodeFailure
+impl core::marker::Sync for battersea_flow::failure::FlowNodeFailure
+impl core::marker::Unpin for battersea_flow::failure::FlowNodeFailure
+impl core::panic::unwind_safe::RefUnwindSafe for battersea_flow::failure::FlowNodeFailure
+impl core::panic::unwind_safe::UnwindSafe for battersea_flow::failure::FlowNodeFailure
+impl<Q, K> equivalent::Equivalent<K> for battersea_flow::failure::FlowNodeFailure where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn battersea_flow::failure::FlowNodeFailure::equivalent(&self, key: &K) -> bool
+impl<Q, K> hashbrown::Equivalent<K> for battersea_flow::failure::FlowNodeFailure where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn battersea_flow::failure::FlowNodeFailure::equivalent(&self, key: &K) -> bool
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_flow::failure::FlowNodeFailure where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_flow::failure::FlowNodeFailure where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<T, U> core::convert::Into<U> for battersea_flow::failure::FlowNodeFailure where U: core::convert::From<T>
+pub fn battersea_flow::failure::FlowNodeFailure::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_flow::failure::FlowNodeFailure where U: core::convert::Into<T>
+pub type battersea_flow::failure::FlowNodeFailure::Error = core::convert::Infallible
+pub fn battersea_flow::failure::FlowNodeFailure::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for battersea_flow::failure::FlowNodeFailure where U: core::convert::TryFrom<T>
+pub type battersea_flow::failure::FlowNodeFailure::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_flow::failure::FlowNodeFailure::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for battersea_flow::failure::FlowNodeFailure where T: core::clone::Clone
+pub type battersea_flow::failure::FlowNodeFailure::Owned = T
+pub fn battersea_flow::failure::FlowNodeFailure::clone_into(&self, target: &mut T)
+pub fn battersea_flow::failure::FlowNodeFailure::to_owned(&self) -> T
+impl<T> core::any::Any for battersea_flow::failure::FlowNodeFailure where T: 'static + ?core::marker::Sized
+pub fn battersea_flow::failure::FlowNodeFailure::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_flow::failure::FlowNodeFailure where T: ?core::marker::Sized
+pub fn battersea_flow::failure::FlowNodeFailure::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_flow::failure::FlowNodeFailure where T: ?core::marker::Sized
+pub fn battersea_flow::failure::FlowNodeFailure::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for battersea_flow::failure::FlowNodeFailure where T: core::clone::Clone
+pub unsafe fn battersea_flow::failure::FlowNodeFailure::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for battersea_flow::failure::FlowNodeFailure
+pub fn battersea_flow::failure::FlowNodeFailure::from(t: T) -> T
+impl<T> dyn_clone::DynClone for battersea_flow::failure::FlowNodeFailure where T: core::clone::Clone
+pub fn battersea_flow::failure::FlowNodeFailure::__clone_box(&self, _: dyn_clone::sealed::Private) -> *mut ()
+impl<T> serde_core::de::DeserializeOwned for battersea_flow::failure::FlowNodeFailure where T: for<'de> serde_core::de::Deserialize<'de>
+impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_flow::failure::FlowNodeFailure where T: ?core::marker::Sized
 pub struct battersea_flow::FlowNodePortNames
 pub battersea_flow::FlowNodePortNames::action: alloc::collections::btree::map::BTreeMap<alloc::string::String, alloc::string::String>
 pub battersea_flow::FlowNodePortNames::automation: alloc::collections::btree::map::BTreeMap<alloc::string::String, alloc::string::String>

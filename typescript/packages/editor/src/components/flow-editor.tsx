@@ -416,6 +416,14 @@ function FlowEditorBody({
           {selectedNode && selectedDefinition ? (
             <>
               <FlowInspector
+                failurePolicy={selectedNode.data.failurePolicy}
+                failureDefinition={selectedDefinition}
+                onFailurePolicyChange={policy => undo.commitStructuralChange("Edit failure policy", current => ({
+                  ...current,
+                  nodes: current.nodes.map(node => node.id === selectedNode.id
+                    ? { ...node, data: { ...node.data, failurePolicy: policy === "fail" ? undefined : policy } }
+                    : node),
+                }))}
                 parameters={getPersistedParameters(selectedDefinition)}
                 values={selectedNode.data.parameterValues}
                 renderers={parameterRenderers}

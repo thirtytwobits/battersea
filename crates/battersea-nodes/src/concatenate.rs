@@ -491,6 +491,7 @@ mod tests {
     ) -> FlowNode {
         FlowNode {
             id: id.to_string(),
+            failure_policy: Default::default(),
             definition_name: "Concatenate".to_string(),
             instance_name: format!("Concatenate {id}"),
             parameter_values,

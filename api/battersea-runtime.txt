@@ -1,4 +1,5 @@
 pub mod battersea_runtime
+pub use battersea_runtime::FlowFailurePolicy
 pub mod battersea_runtime::checkpoint
 pub struct battersea_runtime::checkpoint::SchedulerCheckpoint
 impl battersea_runtime::checkpoint::SchedulerCheckpoint
@@ -235,6 +236,7 @@ pub const battersea_runtime::error_codes::INVALID_ACTIVATION_VALUE: &str
 pub const battersea_runtime::error_codes::INVALID_CHECKPOINT_VERSION: &str
 pub const battersea_runtime::error_codes::INVALID_DYNAMIC_PORTS: &str
 pub const battersea_runtime::error_codes::INVALID_EXECUTION_CONTRACT: &str
+pub const battersea_runtime::error_codes::INVALID_NODE_FAILURE: &str
 pub const battersea_runtime::error_codes::INVALID_PUMP_LIMITS: &str
 pub const battersea_runtime::error_codes::INVALID_RECOVERY_OPERATION: &str
 pub const battersea_runtime::error_codes::MISMATCHED_OUTPUT_PHASE: &str
@@ -1215,6 +1217,7 @@ pub battersea_runtime::EventKind::AutomationWrite
 pub battersea_runtime::EventKind::LogicEvaluate
 pub battersea_runtime::EventKind::NodeComplete
 pub battersea_runtime::EventKind::NodeError
+pub battersea_runtime::EventKind::NodeFailureHandled
 pub battersea_runtime::EventKind::NodeSkipped
 pub battersea_runtime::EventKind::NodeStart
 pub battersea_runtime::EventKind::ProviderEvent
@@ -1350,6 +1353,8 @@ pub battersea_runtime::ProviderEvent::Data
 pub battersea_runtime::ProviderEvent::Data::value: serde_json::value::Value
 pub battersea_runtime::ProviderEvent::Failure
 pub battersea_runtime::ProviderEvent::Failure::message: alloc::string::String
+pub battersea_runtime::ProviderEvent::RecoverableFailure
+pub battersea_runtime::ProviderEvent::RecoverableFailure::failure: battersea_runtime::RecoverableNodeFailure
 pub battersea_runtime::ProviderEvent::Signal
 pub battersea_runtime::ProviderEvent::Signal::port: alloc::string::String
 pub battersea_runtime::ProviderEvent::Token
@@ -1541,6 +1546,54 @@ impl<T> serde_core::de::DeserializeOwned for battersea_runtime::ExecutionEvent w
 impl<T> typenum::type_operators::Same for battersea_runtime::ExecutionEvent
 pub type battersea_runtime::ExecutionEvent::Output = T
 impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_runtime::ExecutionEvent where T: ?core::marker::Sized
+pub struct battersea_runtime::HandledNodeFailure
+pub battersea_runtime::HandledNodeFailure::failure: battersea_flow::failure::FlowNodeFailure
+pub battersea_runtime::HandledNodeFailure::policy: battersea_flow::failure::FlowFailurePolicy
+pub battersea_runtime::HandledNodeFailure::sequence: u64
+impl core::clone::Clone for battersea_runtime::HandledNodeFailure
+pub fn battersea_runtime::HandledNodeFailure::clone(&self) -> battersea_runtime::HandledNodeFailure
+impl core::fmt::Debug for battersea_runtime::HandledNodeFailure
+pub fn battersea_runtime::HandledNodeFailure::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl serde_core::ser::Serialize for battersea_runtime::HandledNodeFailure
+pub fn battersea_runtime::HandledNodeFailure::serialize<__S>(&self, __serializer: __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for battersea_runtime::HandledNodeFailure
+pub fn battersea_runtime::HandledNodeFailure::deserialize<__D>(__deserializer: __D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for battersea_runtime::HandledNodeFailure
+impl core::marker::Send for battersea_runtime::HandledNodeFailure
+impl core::marker::Sync for battersea_runtime::HandledNodeFailure
+impl core::marker::Unpin for battersea_runtime::HandledNodeFailure
+impl core::panic::unwind_safe::RefUnwindSafe for battersea_runtime::HandledNodeFailure
+impl core::panic::unwind_safe::UnwindSafe for battersea_runtime::HandledNodeFailure
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_runtime::HandledNodeFailure where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_runtime::HandledNodeFailure where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<T, U> core::convert::Into<U> for battersea_runtime::HandledNodeFailure where U: core::convert::From<T>
+pub fn battersea_runtime::HandledNodeFailure::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_runtime::HandledNodeFailure where U: core::convert::Into<T>
+pub type battersea_runtime::HandledNodeFailure::Error = core::convert::Infallible
+pub fn battersea_runtime::HandledNodeFailure::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for battersea_runtime::HandledNodeFailure where U: core::convert::TryFrom<T>
+pub type battersea_runtime::HandledNodeFailure::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_runtime::HandledNodeFailure::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for battersea_runtime::HandledNodeFailure where T: core::clone::Clone
+pub type battersea_runtime::HandledNodeFailure::Owned = T
+pub fn battersea_runtime::HandledNodeFailure::clone_into(&self, target: &mut T)
+pub fn battersea_runtime::HandledNodeFailure::to_owned(&self) -> T
+impl<T> core::any::Any for battersea_runtime::HandledNodeFailure where T: 'static + ?core::marker::Sized
+pub fn battersea_runtime::HandledNodeFailure::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_runtime::HandledNodeFailure where T: ?core::marker::Sized
+pub fn battersea_runtime::HandledNodeFailure::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_runtime::HandledNodeFailure where T: ?core::marker::Sized
+pub fn battersea_runtime::HandledNodeFailure::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for battersea_runtime::HandledNodeFailure where T: core::clone::Clone
+pub unsafe fn battersea_runtime::HandledNodeFailure::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for battersea_runtime::HandledNodeFailure
+pub fn battersea_runtime::HandledNodeFailure::from(t: T) -> T
+impl<T> dyn_clone::DynClone for battersea_runtime::HandledNodeFailure where T: core::clone::Clone
+pub fn battersea_runtime::HandledNodeFailure::__clone_box(&self, _: dyn_clone::sealed::Private) -> *mut ()
+impl<T> serde_core::de::DeserializeOwned for battersea_runtime::HandledNodeFailure where T: for<'de> serde_core::de::Deserialize<'de>
+impl<T> typenum::type_operators::Same for battersea_runtime::HandledNodeFailure
+pub type battersea_runtime::HandledNodeFailure::Output = T
+impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_runtime::HandledNodeFailure where T: ?core::marker::Sized
 pub struct battersea_runtime::HandlerRegistry<H: battersea_runtime::ExecutionHost>
 impl<H: battersea_runtime::ExecutionHost> battersea_runtime::HandlerRegistry<H>
 pub fn battersea_runtime::HandlerRegistry<H>::bind_catalog(&self, catalog: battersea_flow::catalog::Catalog) -> core::result::Result<battersea_runtime::ExecutableCatalog, alloc::string::String>
@@ -1575,6 +1628,55 @@ pub fn battersea_runtime::HandlerRegistry<H>::from(t: T) -> T
 impl<T> typenum::type_operators::Same for battersea_runtime::HandlerRegistry<H>
 pub type battersea_runtime::HandlerRegistry<H>::Output = T
 impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_runtime::HandlerRegistry<H> where T: ?core::marker::Sized
+pub struct battersea_runtime::RecoverableNodeFailure
+pub battersea_runtime::RecoverableNodeFailure::code: alloc::string::String
+pub battersea_runtime::RecoverableNodeFailure::message: alloc::string::String
+impl battersea_runtime::RecoverableNodeFailure
+pub fn battersea_runtime::RecoverableNodeFailure::validate(&self) -> bool
+impl core::clone::Clone for battersea_runtime::RecoverableNodeFailure
+pub fn battersea_runtime::RecoverableNodeFailure::clone(&self) -> battersea_runtime::RecoverableNodeFailure
+impl core::fmt::Debug for battersea_runtime::RecoverableNodeFailure
+pub fn battersea_runtime::RecoverableNodeFailure::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl serde_core::ser::Serialize for battersea_runtime::RecoverableNodeFailure
+pub fn battersea_runtime::RecoverableNodeFailure::serialize<__S>(&self, __serializer: __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for battersea_runtime::RecoverableNodeFailure
+pub fn battersea_runtime::RecoverableNodeFailure::deserialize<__D>(__deserializer: __D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for battersea_runtime::RecoverableNodeFailure
+impl core::marker::Send for battersea_runtime::RecoverableNodeFailure
+impl core::marker::Sync for battersea_runtime::RecoverableNodeFailure
+impl core::marker::Unpin for battersea_runtime::RecoverableNodeFailure
+impl core::panic::unwind_safe::RefUnwindSafe for battersea_runtime::RecoverableNodeFailure
+impl core::panic::unwind_safe::UnwindSafe for battersea_runtime::RecoverableNodeFailure
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_runtime::RecoverableNodeFailure where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_runtime::RecoverableNodeFailure where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<T, U> core::convert::Into<U> for battersea_runtime::RecoverableNodeFailure where U: core::convert::From<T>
+pub fn battersea_runtime::RecoverableNodeFailure::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_runtime::RecoverableNodeFailure where U: core::convert::Into<T>
+pub type battersea_runtime::RecoverableNodeFailure::Error = core::convert::Infallible
+pub fn battersea_runtime::RecoverableNodeFailure::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+impl<T, U> core::convert::TryInto<U> for battersea_runtime::RecoverableNodeFailure where U: core::convert::TryFrom<T>
+pub type battersea_runtime::RecoverableNodeFailure::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_runtime::RecoverableNodeFailure::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for battersea_runtime::RecoverableNodeFailure where T: core::clone::Clone
+pub type battersea_runtime::RecoverableNodeFailure::Owned = T
+pub fn battersea_runtime::RecoverableNodeFailure::clone_into(&self, target: &mut T)
+pub fn battersea_runtime::RecoverableNodeFailure::to_owned(&self) -> T
+impl<T> core::any::Any for battersea_runtime::RecoverableNodeFailure where T: 'static + ?core::marker::Sized
+pub fn battersea_runtime::RecoverableNodeFailure::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_runtime::RecoverableNodeFailure where T: ?core::marker::Sized
+pub fn battersea_runtime::RecoverableNodeFailure::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_runtime::RecoverableNodeFailure where T: ?core::marker::Sized
+pub fn battersea_runtime::RecoverableNodeFailure::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for battersea_runtime::RecoverableNodeFailure where T: core::clone::Clone
+pub unsafe fn battersea_runtime::RecoverableNodeFailure::clone_to_uninit(&self, dest: *mut u8)
+impl<T> core::convert::From<T> for battersea_runtime::RecoverableNodeFailure
+pub fn battersea_runtime::RecoverableNodeFailure::from(t: T) -> T
+impl<T> dyn_clone::DynClone for battersea_runtime::RecoverableNodeFailure where T: core::clone::Clone
+pub fn battersea_runtime::RecoverableNodeFailure::__clone_box(&self, _: dyn_clone::sealed::Private) -> *mut ()
+impl<T> serde_core::de::DeserializeOwned for battersea_runtime::RecoverableNodeFailure where T: for<'de> serde_core::de::Deserialize<'de>
+impl<T> typenum::type_operators::Same for battersea_runtime::RecoverableNodeFailure
+pub type battersea_runtime::RecoverableNodeFailure::Output = T
+impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_runtime::RecoverableNodeFailure where T: ?core::marker::Sized
 pub struct battersea_runtime::RegistryBuilder<H: battersea_runtime::ExecutionHost>
 impl<H: battersea_runtime::ExecutionHost> battersea_runtime::RegistryBuilder<H>
 pub fn battersea_runtime::RegistryBuilder<H>::build(self) -> battersea_runtime::HandlerRegistry<H>
@@ -1831,6 +1933,7 @@ pub battersea_runtime::SchedulerState::event_attempt: u64
 pub battersea_runtime::SchedulerState::event_sequence: alloc::sync::Arc<core::sync::atomic::AtomicU64>
 pub battersea_runtime::SchedulerState::executed_nodes: std::collections::hash::set::HashSet<alloc::string::String>
 pub battersea_runtime::SchedulerState::flow: battersea_flow::types::FlowDocument
+pub battersea_runtime::SchedulerState::handled_failures: std::collections::hash::map::HashMap<alloc::string::String, battersea_runtime::retention::Retained<battersea_runtime::HandledNodeFailure>>
 pub battersea_runtime::SchedulerState::incoming_edges: std::collections::hash::map::HashMap<(alloc::string::String, alloc::string::String), battersea_flow::types::FlowEdge>
 pub battersea_runtime::SchedulerState::incoming_signal_edges: std::collections::hash::map::HashMap<(alloc::string::String, alloc::string::String), battersea_flow::types::FlowEdge>
 pub battersea_runtime::SchedulerState::input_tokens: std::collections::hash::map::HashMap<(alloc::string::String, alloc::string::String), battersea_runtime::retention::Retained<battersea_runtime::Token>>
@@ -1945,6 +2048,7 @@ pub fn battersea_runtime::ExecutionError::interrupted(reason: &'static str, mess
 pub fn battersea_runtime::ExecutionError::invalid_request(reason: &'static str, message: impl core::convert::Into<alloc::string::String>) -> Self
 pub fn battersea_runtime::ExecutionError::message(&self) -> &str
 pub fn battersea_runtime::ExecutionError::reason_code(&self) -> core::option::Option<&str>
+pub fn battersea_runtime::ExecutionError::recoverable_node_failure(&self) -> core::option::Option<battersea_runtime::RecoverableNodeFailure>
 pub fn battersea_runtime::ExecutionError::recovery_required(reason: &'static str, message: impl core::convert::Into<alloc::string::String>) -> Self where Self: core::marker::Sized
 pub trait battersea_runtime::ExecutionHost: core::marker::Sized + core::marker::Send + core::marker::Sync
 pub type battersea_runtime::ExecutionHost::Error: battersea_runtime::ExecutionError
@@ -1978,6 +2082,8 @@ pub fn battersea_runtime::ExecutionHost::finish_node_phase<'life0, 'life1, 'life
 pub fn battersea_runtime::ExecutionHost::finish_sink_if_ready<'life0, 'life1, 'life2, 'async_trait>(&'life0 self, runtime: &'life1 mut Self::State, node: &'life2 battersea_flow::types::FlowNode) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<(), Self::Error>> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait, 'life1: 'async_trait, 'life2: 'async_trait
 pub fn battersea_runtime::ExecutionHost::flow_token_excerpt(value: &serde_json::value::Value) -> core::option::Option<alloc::string::String>
 pub fn battersea_runtime::ExecutionHost::handlers(&self) -> &battersea_runtime::HandlerRegistry<Self>
+pub fn battersea_runtime::ExecutionHost::has_absent_snapshot_input(&self, runtime: &Self::State, node: &battersea_flow::types::FlowNode) -> core::result::Result<bool, Self::Error>
+pub fn battersea_runtime::ExecutionHost::has_failed_input(&self, runtime: &Self::State, node: &str) -> bool
 pub fn battersea_runtime::ExecutionHost::inline_node_ready(&self, runtime: &Self::State, node_id: &str) -> bool
 pub fn battersea_runtime::ExecutionHost::logic_gate_label(&self, node: &battersea_flow::types::FlowNode, definition: &battersea_flow::types::FlowNodeDefinition) -> alloc::string::String
 pub fn battersea_runtime::ExecutionHost::logic_node_ready_to_evaluate(&self, runtime: &Self::State, node: &battersea_flow::types::FlowNode) -> core::result::Result<bool, Self::Error>

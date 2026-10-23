@@ -355,6 +355,8 @@ pub struct FlowDynamicSignalPortGroup {
 #[derive(Debug, Clone, Serialize, Deserialize, schemars::JsonSchema, PartialEq)]
 #[serde(deny_unknown_fields)]
 pub struct FlowNodeDefinition {
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub failure_ports: Vec<crate::FlowFailurePort>,
     pub class_name: String,
     pub short_description: String,
     pub long_description: String,
@@ -434,6 +436,8 @@ pub struct FlowNodePortParameterValues {
 #[derive(Debug, Clone, Serialize, Deserialize, schemars::JsonSchema, PartialEq)]
 #[serde(deny_unknown_fields)]
 pub struct FlowNode {
+    #[serde(default, skip_serializing_if = "crate::FlowFailurePolicy::is_fail")]
+    pub failure_policy: crate::FlowFailurePolicy,
     pub id: String,
     pub definition_name: String,
     pub instance_name: String,

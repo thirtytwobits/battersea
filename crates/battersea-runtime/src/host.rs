@@ -299,6 +299,17 @@ pub trait ExecutionHost: Sized + Send + Sync {
             runtime
                 .node_phases
                 .insert(node.id.clone(), FlowPortPhase::Snapshot);
+            let failed_input = self.has_failed_input(runtime, &node.id);
+            if failed_input || self.has_absent_snapshot_input(runtime, &node)? {
+                if failed_input {
+                    crate::failure::skip_dependency(self, runtime, &node).await?;
+                } else {
+                    crate::failure::skip_absent_snapshot(self, runtime, &node).await?;
+                }
+                while self.progress_delivery(runtime, token).await? {}
+                crate::durable::finish(self, runtime)?;
+                continue;
+            }
             materialize_registered_flow_node(self, runtime, &node, &definition, token).await?;
             if !runtime.producers.contains_key(&node.id) {
                 self.finish_node_phase(runtime, &node, FlowPortPhase::Snapshot)
@@ -322,6 +333,9 @@ pub trait ExecutionHost: Sized + Send + Sync {
         activation_values: Option<&HashMap<String, Value>>,
         token: &CancellationToken,
     ) -> Result<(), Self::Error> {
+        if runtime.stopped_nodes.contains(node_id) {
+            return Ok(());
+        }
         crate::durable::begin::<Self>(runtime, node_id, "execute_node")?;
         let step: Result<(), Self::Error> = async {
             let node = runtime.nodes_by_id.get(node_id).cloned().ok_or_else(|| {
@@ -407,24 +421,7 @@ pub trait ExecutionHost: Sized + Send + Sync {
                     }
                     Ok(())
                 }
-                Err(error) => {
-                    self.publish_execution_record(
-                        runtime,
-                        node_id,
-                        EventKind::NodeError,
-                        format!("Flow node \"{node_id}\" failed."),
-                        Some(json!({
-                            "definitionName": node.definition_name,
-                            "handlerId": definition.handler_id,
-                            "error": {
-                                "code": error.code(),
-                                "message": error.message(),
-                            },
-                        })),
-                    )
-                    .await;
-                    Err(error)
-                }
+                Err(error) => Err(error),
             }
         }
         .await;
@@ -466,6 +463,9 @@ pub trait ExecutionHost: Sized + Send + Sync {
     }
 
     fn inline_node_ready(&self, runtime: &Self::State, node_id: &str) -> bool {
+        if self.has_failed_input(runtime, node_id) || runtime.stopped_nodes.contains(node_id) {
+            return false;
+        }
         let Some(node) = runtime.nodes_by_id.get(node_id) else {
             return false;
         };
@@ -499,6 +499,26 @@ pub trait ExecutionHost: Sized + Send + Sync {
             })
     }
 
+    fn has_failed_input(&self, runtime: &Self::State, node: &str) -> bool {
+        runtime.failed_inputs.iter().any(|(id, _)| id == node)
+    }
+
+    fn has_absent_snapshot_input(
+        &self,
+        runtime: &Self::State,
+        node: &FlowNode,
+    ) -> Result<bool, Self::Error> {
+        Ok(expanded_input_ports_for_node(&runtime.definitions, node)
+            .map_err(Self::Error::internal)?
+            .iter()
+            .any(|port| {
+                let key = (node.id.clone(), port.name.clone());
+                port.phase == FlowPortPhase::Snapshot
+                    && runtime.closed_inputs.contains(&key)
+                    && !runtime.received_final_inputs.contains(&key)
+            }))
+    }
+
     async fn emit_flow_token(
         &self,
         runtime: &mut Self::State,
@@ -512,6 +532,18 @@ pub trait ExecutionHost: Sized + Send + Sync {
             .nodes_by_id
             .get(source_node_id)
             .ok_or_else(|| Self::Error::internal("Missing token source."))?;
+        let failure_port = node_definition(&runtime.definitions, source)
+            .is_some_and(|d| d.failure_ports.iter().any(|p| p.name == source_port));
+        let driver_failure = runtime
+            .failure_emission
+            .as_ref()
+            .is_some_and(|(node, port)| node == source_node_id && port == source_port);
+        if (failure_port || runtime.stopped_nodes.contains(source_node_id)) && !driver_failure {
+            return Err(Self::Error::invalid_request(
+                error_codes::CLOSED_OUTPUT,
+                "Node output is stopped or reserved for driver failure publication.",
+            ));
+        }
         let port = expanded_output_ports_for_node(&runtime.definitions, source)
             .map_err(Self::Error::internal)?
             .into_iter()
@@ -744,6 +776,9 @@ pub trait ExecutionHost: Sized + Send + Sync {
         node: &FlowNode,
         action_port: &str,
     ) -> Result<(), Self::Error> {
+        if runtime.stopped_nodes.contains(&node.id) {
+            return Ok(());
+        }
         let definition = node_definition(&runtime.definitions, node)
             .ok_or_else(|| Self::Error::internal("Flow runtime lost an action definition."))?
             .clone();
@@ -842,13 +877,18 @@ pub trait ExecutionHost: Sized + Send + Sync {
                             && !runtime.received_final_inputs.contains(&key)
                     })
                     .collect::<Vec<_>>();
-                if !missing.is_empty() {
+                if !missing.is_empty() || self.has_failed_input(runtime, &node.id) {
                     absent.push((node.clone(), missing));
                 }
             }
             absent.sort_by(|(left, _), (right, _)| left.id.cmp(&right.id));
             if let Some((node, missing)) = absent.into_iter().next() {
                 crate::durable::begin::<Self>(runtime, &node.id, "settle_absent_inputs")?;
+                if self.has_failed_input(runtime, &node.id) {
+                    crate::failure::skip_dependency(self, runtime, &node).await?;
+                    crate::durable::finish(self, runtime)?;
+                    continue;
+                }
                 runtime.executed_nodes.insert(node.id.clone());
                 self.discard_queued_input_tokens_for_node(runtime, &node.id);
                 for port in expanded_output_ports_for_node(&runtime.definitions, &node)
@@ -1024,14 +1064,27 @@ pub trait ExecutionHost: Sized + Send + Sync {
                 true
             };
 
-            let output_ports = self.prepare_logic_outputs(
+            let output_ports = match self.prepare_logic_outputs(
                 node,
                 &definition,
                 &action_ports,
                 &signal_ports,
                 &fired_ports,
                 enabled,
-            )?;
+            ) {
+                Ok(outputs) => outputs,
+                Err(error) => {
+                    return crate::failure::handle_error(
+                        self,
+                        runtime,
+                        node,
+                        &definition,
+                        "logic",
+                        error,
+                    )
+                    .await
+                }
+            };
 
             runtime.logic_nodes_evaluated.insert(node.id.clone());
             self.publish_execution_record(
@@ -1087,6 +1140,12 @@ pub trait ExecutionHost: Sized + Send + Sync {
         node: &FlowNode,
         signal_port: &str,
     ) -> Result<(), Self::Error> {
+        if runtime.stopped_nodes.contains(&node.id) {
+            return Err(Self::Error::invalid_request(
+                error_codes::CLOSED_OUTPUT,
+                "Node signals are stopped.",
+            ));
+        }
         if !expanded_signal_ports_for_node(&runtime.definitions, node)
             .map_err(Self::Error::internal)?
             .iter()
@@ -1298,6 +1357,9 @@ pub trait ExecutionHost: Sized + Send + Sync {
         node: &FlowNode,
         phase: FlowPortPhase,
     ) -> Result<(), Self::Error> {
+        if runtime.stopped_nodes.contains(&node.id) {
+            return Ok(());
+        }
         for port in expanded_output_ports_for_node(&runtime.definitions, node)
             .map_err(Self::Error::internal)?
         {
@@ -1481,38 +1543,48 @@ pub trait ExecutionHost: Sized + Send + Sync {
                 .await;
             runtime.signal_cause = previous;
             runtime.active_delivery_groups.remove(&delivery.emission);
-            if let Err(error) = &result {
-                self.publish_execution_record(
-                    runtime,
-                    &delivery.edge.target_node_id,
-                    EventKind::NodeError,
-                    error.message().into(),
-                    Some(json!({"edgeId":delivery.edge.id,"code":error.code()})),
-                )
-                .await;
+            if let Err(error) = result {
+                if runtime.unhandled_node.is_none() {
+                    runtime.unhandled_node = Some(delivery.edge.target_node_id.clone());
+                    let policy = runtime.nodes_by_id.get(&delivery.edge.target_node_id).map(|node| node.failure_policy).unwrap_or_default();
+                    self.publish_execution_record(runtime, &delivery.edge.target_node_id,
+                        EventKind::NodeError, error.message().into(),
+                        Some(json!({"policy":policy,"handled":false,"operation":"delivery",
+                            "error":{"code":error.reason_code().unwrap_or(error.code()),"message":error.message()}}))).await;
+                }
+                return Err(error);
             }
-            result?;
         } else {
             let delivery = runtime.control_queue.pop_front().expect("control front");
             let previous = std::mem::replace(&mut runtime.signal_cause, delivery.cause.clone());
             let result = async {
                 match &delivery.control {
                     crate::delivery::Control::Controller(node) => {
-                        let values = runtime.activation_values.clone();
-                        self.controller_activation_effects(runtime, node, &values);
+                        if !runtime.stopped_nodes.contains(node) {
+                            let values = runtime.activation_values.clone();
+                            self.controller_activation_effects(runtime, node, &values);
+                        }
                     }
                     crate::delivery::Control::Close { node, port } => {
                         let edges = runtime.outgoing_edges.get(&(node.clone(), port.clone())).cloned().unwrap_or_default();
                         for edge in edges {
                             runtime.closed_inputs.insert((edge.target_node_id.clone(), edge.target_port.clone()));
+                            if runtime.failed_outputs.contains(&(node.clone(), port.clone())) {
+                                runtime.failed_inputs.insert((edge.target_node_id.clone(), edge.target_port.clone()));
+                            }
                             self.publish_execution_record(runtime,&edge.target_node_id,EventKind::TokenClose,"Input closed.".into(),Some(json!({"targetPort":edge.target_port,"sourceNode":node,"sourcePort":port,"direction":"input"}))).await;
                             let target = runtime.nodes_by_id.get(&edge.target_node_id).cloned().ok_or_else(|| Self::Error::internal("Missing closure target."))?;
-                            self.finish_sink_if_ready(runtime, &target).await?;
+                            if self.has_failed_input(runtime, &target.id) {
+                                crate::failure::skip_dependency(self, runtime, &target).await?;
+                            } else {
+                                self.finish_sink_if_ready(runtime, &target).await?;
+                            }
                         }
                         self.enqueue_ready_nodes(runtime);
                     }
                     crate::delivery::Control::Signal(edge) => {
                         let target = runtime.nodes_by_id.get(&edge.target_node_id).cloned().ok_or_else(|| Self::Error::internal("Missing signal target."))?;
+                        if runtime.stopped_nodes.contains(&target.id) { return Ok(()); }
                         let key = (target.id.clone(), edge.target_port.clone());
                         if runtime.signal_cause.contains(&key) {
                             return Err(Self::Error::invalid_request(error_codes::SIGNAL_CYCLE, format!("Signal cycle: {:?} -> {:?} (edge {:?}).", runtime.signal_cause, key, edge.id)));
@@ -1551,7 +1623,8 @@ pub trait ExecutionHost: Sized + Send + Sync {
         let definition = node_definition(&runtime.definitions, &target)
             .ok_or_else(|| Self::Error::internal("Missing target definition."))?
             .clone();
-        if self.edge_source_is_disabled(runtime, edge)
+        if runtime.stopped_nodes.contains(&target.id)
+            || self.edge_source_is_disabled(runtime, edge)
             || self.node_is_disabled_output_capable(runtime, &target, &definition)
         {
             self.publish_execution_record(
@@ -1715,22 +1788,38 @@ pub trait ExecutionHost: Sized + Send + Sync {
                         self.emit_flow_signal(runtime, &node, port).await?
                     }
                     crate::ProviderEvent::Data { value } => {
-                        self.handlers()
+                        let result = self.handlers()
                             .resolve(&definition.handler_id)?
                             .receive_provider_event(self, runtime, &node, &definition, value, token)
-                            .await?
+                            .await;
+                        if let Err(error) = result {
+                            drop(delivery);
+                            crate::failure::handle_error(self, runtime, &node, &definition, "provider_event", error).await?;
+                        }
                     }
                     crate::ProviderEvent::Failure { message } => {
-                        return Err(Self::Error::internal(message.clone()))
+                        let error = Self::Error::internal(message.clone());
+                        drop(delivery);
+                        crate::failure::handle_error(self, runtime, &node, &definition,
+                            "provider_event", error).await?;
+                    }
+                    crate::ProviderEvent::RecoverableFailure { failure } => {
+                        let failure = failure.clone();
+                        drop(delivery);
+                        crate::failure::handle_failure(self, runtime, &node, &definition,
+                            "provider_event", failure.clone()).await?;
                     }
                 }
             }
             None => {
                 runtime.producers.remove(&node_id);
-                self.handlers()
+                let result = self.handlers()
                     .resolve(&definition.handler_id)?
                     .provider_complete(self, runtime, &node, &definition, token)
-                    .await?;
+                    .await;
+                if let Err(error) = result {
+                    crate::failure::handle_error(self, runtime, &node, &definition, "provider_complete", error).await?;
+                }
                 // Completion callbacks may start the next tool/provider turn.
                 if !runtime.producers.contains_key(&node_id) {
                     self.finish_node_phase(runtime, &node, phase).await?;

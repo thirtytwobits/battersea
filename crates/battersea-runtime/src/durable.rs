@@ -8,7 +8,7 @@ use sha2::{Digest, Sha256};
 use std::collections::BTreeMap;
 use std::sync::Arc;
 
-pub const EXECUTION_CHECKPOINT_VERSION: u32 = 1;
+pub const EXECUTION_CHECKPOINT_VERSION: u32 = 2;
 
 pub struct Durability {
     pub store: Arc<dyn JournalStore>,

@@ -225,6 +225,17 @@ fn check_execution_contract(
     ordered_sources(flow, definitions)?;
     for node in &flow.nodes {
         let definition = node_definition(definitions, node).ok_or("Unknown node definition.")?;
+        crate::failure::validate_failure_ports(definition)?;
+        if node.failure_policy == crate::FlowFailurePolicy::Emit {
+            for phase in crate::failure::failure_phases(definition) {
+                if !definition.failure_ports.iter().any(|p| p.phase == phase) {
+                    return Err(format!(
+                        "Node {:?} requires a {:?} failure port for emit.",
+                        node.id, phase
+                    ));
+                }
+            }
+        }
         for port in expanded_input_ports_for_node(definitions, node)?
             .into_iter()
             .chain(expanded_output_ports_for_node(definitions, node)?)
@@ -271,19 +282,35 @@ fn check_execution_contract(
             .find(|port| port.name == edge.target_port);
         let input_mode = match input {
             Some(input) => {
+                if output.token_type == crate::failure::NODE_FAILURE_TOKEN_TYPE
+                    && !crate::ports::port_accepts_token_type(&input, &output.token_type)
+                {
+                    return Err(format!(
+                        "Failure edge {:?} requires a node_failure input.",
+                        edge.id
+                    ));
+                }
                 if input.phase == FlowPortPhase::Snapshot && output.phase != FlowPortPhase::Snapshot
                 {
                     return Err("Snapshot inputs require snapshot outputs.".into());
                 }
                 input.mode
             }
-            None if expanded_automation_ports_for_node(definitions, target)?
-                .iter()
-                .any(|port| port.name == edge.target_port) =>
-            {
+            None => {
+                let port = expanded_automation_ports_for_node(definitions, target)?
+                    .into_iter()
+                    .find(|port| port.name == edge.target_port)
+                    .ok_or("Edge has an unknown input.")?;
+                if output.token_type == crate::failure::NODE_FAILURE_TOKEN_TYPE
+                    && !crate::ports::automation_port_accepts_token_type(&port, &output.token_type)
+                {
+                    return Err(format!(
+                        "Failure edge {:?} requires node_failure automation.",
+                        edge.id
+                    ));
+                }
                 FlowPortMode::FinalValue
             }
-            None => return Err("Edge has an unknown input.".into()),
         };
         if input_mode != output.mode {
             return Err(format!(
@@ -315,6 +342,32 @@ fn check_execution_contract(
     Ok(())
 }
 
+/// Upgrade v2 only on explicit invocation. The caller owns fenced publication.
+pub fn upgrade_v2_document(
+    source: &str,
+    definitions: &HashMap<String, FlowNodeDefinition>,
+) -> Result<FlowDocument, String> {
+    let mut raw: Value = serde_json::from_str(source).map_err(|e| e.to_string())?;
+    if raw.get("version").and_then(Value::as_u64) != Some(2) {
+        return Err("The v2 upgrade requires document version 2.".into());
+    }
+    if raw
+        .get("nodes")
+        .and_then(Value::as_array)
+        .is_some_and(|nodes| {
+            nodes
+                .iter()
+                .any(|node| node.get("failure_policy").is_some())
+        })
+    {
+        return Err("A v2 document cannot author failure policies.".into());
+    }
+    raw["version"] = serde_json::json!(FLOW_DOCUMENT_VERSION);
+    let flow: FlowDocument = serde_json::from_value(raw).map_err(|e| e.to_string())?;
+    validate_execution_contract(&flow, definitions).map_err(|issue| issue.message)?;
+    Ok(flow)
+}
+
 /// Convert a v1 document only when explicitly invoked. The caller owns revision
 /// fencing, a recoverable original and publication. Unknown catalogue entries fail.
 pub fn upgrade_v1_document(
@@ -325,6 +378,17 @@ pub fn upgrade_v1_document(
     let mut raw: Value = serde_json::from_str(source).map_err(|error| error.to_string())?;
     if raw.get("version").and_then(Value::as_u64) != Some(1) {
         return Err("The v1 upgrade requires document version 1.".into());
+    }
+    if raw
+        .get("nodes")
+        .and_then(Value::as_array)
+        .is_some_and(|nodes| {
+            nodes
+                .iter()
+                .any(|node| node.get("failure_policy").is_some())
+        })
+    {
+        return Err("A v1 document cannot author failure policies.".into());
     }
     if raw.get("execution").is_some()
         || raw

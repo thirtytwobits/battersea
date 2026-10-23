@@ -395,6 +395,8 @@ fn scheduler_observations_update_typed_live_state_without_tracing() {
             started_at_ms: 1,
             updated_at_ms: 2,
             state: State::Node {
+                failure_policy: None,
+                failure_handled: None,
                 status: Status::Succeeded,
                 ..
             },
@@ -619,6 +621,49 @@ fn closing_a_port_preserves_its_type_and_reports_direction_without_payload() {
     assert!(!serde_json::to_string(&view.snapshot())
         .unwrap()
         .contains("private"));
+}
+
+#[test]
+fn a_handled_node_failure_preserves_policy_and_the_successful_activation_outcome() {
+    use battersea_runtime::{EventKind, ExecutionEvent, FlowFailurePolicy, Outcome, RunPhase};
+    let mut view = view();
+    let mut event = ExecutionEvent {
+        attempt: 0,
+        run_id: "run".into(),
+        flow_key: "flow".into(),
+        node_id: "node".into(),
+        sequence: 0,
+        kind: EventKind::NodeError,
+        summary: "Declined".into(),
+        detail: Some(
+            serde_json::json!({"policy":"emit","handled":false,"error":{"code":"declined"}}),
+        ),
+    };
+    view.observe_execution(&event, None, 1, None, |_| Ok(()))
+        .unwrap();
+    event.kind = EventKind::NodeFailureHandled;
+    event.sequence += 1;
+    event.detail.as_mut().unwrap()["handled"] = serde_json::json!(true);
+    view.observe_execution(&event, None, 2, None, |_| Ok(()))
+        .unwrap();
+    event.kind = EventKind::ActivationExecutionFinished;
+    event.sequence += 1;
+    event.detail = Some(
+        serde_json::to_value(RunPhase::Terminal {
+            outcome: Outcome::Succeeded,
+        })
+        .unwrap(),
+    );
+    view.observe_execution(&event, None, 3, None, |_| Ok(()))
+        .unwrap();
+    assert!(view.records().any(|r|matches!(&r.state,State::Node{status:Status::Failed,
+        failure_policy:Some(FlowFailurePolicy::Emit),failure_handled:Some(true),error_code:Some(code)} if code=="declined")));
+    assert!(view.records().any(|r| matches!(
+        &r.state,
+        State::Activation {
+            status: Status::Succeeded
+        }
+    )));
 }
 
 #[test]

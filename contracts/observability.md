@@ -1,5 +1,9 @@
 # Runtime observation and accounting
 
+Node failure observations retain the selected policy and whether handling completed.
+A handled node remains failed while its activation can succeed. These optional fields
+extend node records; existing records retain their representation when read.
+
 Status: implemented; the independent editor server exposes the runtime view.
 
 `battersea-telemetry` owns typed records and revisioned views independently of tracing.

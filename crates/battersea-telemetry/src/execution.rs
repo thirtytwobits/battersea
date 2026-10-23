@@ -59,10 +59,11 @@ impl View {
             EventKind::NodeStart
             | EventKind::NodeComplete
             | EventKind::NodeSkipped
-            | EventKind::NodeError => {
+            | EventKind::NodeError
+            | EventKind::NodeFailureHandled => {
                 let status = match event.kind {
                     EventKind::NodeStart => Status::Running,
-                    EventKind::NodeError => Status::Failed,
+                    EventKind::NodeError | EventKind::NodeFailureHandled => Status::Failed,
                     EventKind::NodeComplete
                         if detail
                             .and_then(|v| v.get("complete"))
@@ -77,6 +78,12 @@ impl View {
                     node_record_id(&event.run_id, &event.node_id),
                     State::Node {
                         status,
+                        failure_policy: detail
+                            .and_then(|v| v.get("policy"))
+                            .and_then(|v| serde_json::from_value(v.clone()).ok()),
+                        failure_handled: detail
+                            .and_then(|v| v.get("handled"))
+                            .and_then(|v| v.as_bool()),
                         error_code: detail
                             .and_then(|v| v.pointer("/error/code"))
                             .and_then(|v| v.as_str())

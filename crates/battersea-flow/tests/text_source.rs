@@ -7,7 +7,7 @@ use serde_json::json;
 
 fn fixture() -> FlowDocument {
     serde_json::from_value(json!({
-        "version": 2, "flow_key": "quotes\".雪", "title": "A\nflow",
+        "version": 3, "flow_key": "quotes\".雪", "title": "A\nflow",
         "description": "round trip", "execution": {
             "source_order": ["z", "a"], "limits": FlowExecutionLimits::default()
         },
@@ -53,7 +53,7 @@ fn authored_source_handles_comments_multiline_json_and_quoted_identifiers() {
     let source = format!(
         r#"// authored by a person
 flow 1 "manual" {{
- version = 2;
+ version = 3;
  title = "Manual";
  execution = {{"source_order":["s"],"limits":{limits}}};
  node "s" "Source" {{"instance_name":"S", "parameter_values":{{"text":"https://x"}}}}
@@ -66,7 +66,7 @@ flow 1 "manual" {{
     );
     let document = parse_flow_dsl(&source).unwrap();
     let expected: FlowDocument = serde_json::from_value(json!({
-        "version":2,"flow_key":"manual","title":"Manual",
+        "version":3,"flow_key":"manual","title":"Manual",
         "execution":{"source_order":["s"],"limits":FlowExecutionLimits::default()},
         "nodes":[{"id":"s","definition_name":"Source","instance_name":"S","parameter_values":{"text":"https://x"}},
                  {"id":"t","definition_name":"Sink","instance_name":"T"}],
@@ -82,9 +82,9 @@ fn ambiguous_or_unsupported_sources_fail_with_locations() {
     let valid = export_flow_dsl(&fixture()).unwrap();
     for broken in [
         valid.replacen("flow 1", "flow 999", 1),
-        valid.replacen("version = 2", "version = 1", 1),
+        valid.replacen("version = 3", "version = 1", 1),
         valid.replacen("title =", "typo =", 1),
-        valid.replacen("title =", "version = 2; title =", 1),
+        valid.replacen("title =", "version = 3; title =", 1),
         valid.replacen("node \"z\"", "node \"a\"", 1),
         valid.replacen("edge \"e2\"", "edge \"e1\"", 1),
         valid.replacen(
@@ -99,7 +99,7 @@ fn ambiguous_or_unsupported_sources_fail_with_locations() {
         ),
         valid.replacen("\"order\":", "\"kind\":\"signal\",\"order\":", 1),
         valid.replacen(" -> ", " => ", 1),
-        valid.replacen("version = 2;", "version = 2", 1),
+        valid.replacen("version = 3;", "version = 3", 1),
         format!("{valid} garbage"),
         valid[..valid.len() / 2].to_string(),
     ] {
@@ -158,7 +158,7 @@ fn typed_errors_point_to_the_authored_declaration() {
         .unwrap()
         + 1;
     assert_eq!(parse_flow_dsl(&broken).unwrap_err().line, line);
-    let broken = valid.replacen("version = 2", "version = 99", 1);
+    let broken = valid.replacen("version = 3", "version = 99", 1);
     let line = broken
         .lines()
         .position(|line| line.contains("version ="))

@@ -36,6 +36,15 @@ impl std::fmt::Display for Error {
 }
 impl std::error::Error for Error {}
 impl ExecutionError for Error {
+    fn recoverable_node_failure(&self) -> Option<RecoverableNodeFailure> {
+        (self.class == "invalid_request" && self.reason == Some("fixture_recoverable")).then(|| {
+            RecoverableNodeFailure {
+                code: "fixture_recoverable".into(),
+                message: self.message.clone(),
+            }
+        })
+    }
+
     fn invalid_request(reason: &'static str, s: impl Into<String>) -> Self {
         Self::new("invalid_request", Some(reason), s)
     }
@@ -150,6 +159,27 @@ impl battersea_runtime::recovery::JournalStore for RecoveryStore {
         Ok(())
     }
 }
+fn injected_failure(node: &FlowNode, operation: &str) -> Result<(), Error> {
+    if node
+        .parameter_values
+        .get("failure_at")
+        .and_then(Value::as_str)
+        == Some(operation)
+    {
+        let reason = node
+            .parameter_values
+            .get("failure_reason")
+            .and_then(Value::as_str);
+        return Err(match reason {
+            Some("capacity") => Error::invalid_request(error_codes::CAPACITY_EXHAUSTED, "capacity"),
+            Some("cancel") => Error::cancelled(error_codes::ACTIVATION_CANCELLED, "cancelled"),
+            Some("effect") => Error::interrupted(error_codes::UNRESOLVED_EFFECTS, "uncertain"),
+            Some("unclassified") => Error::internal("unclassified"),
+            _ => Error::invalid_request("fixture_recoverable", "recoverable failure"),
+        });
+    }
+    Ok(())
+}
 struct Handler;
 #[async_trait]
 impl NodeHandler<Host> for Handler {
@@ -166,6 +196,11 @@ impl NodeHandler<Host> for Handler {
         cancel: &CancellationToken,
     ) -> Result<(), Error> {
         run.calls.push(node.id.clone());
+        injected_failure(node, "execute")?;
+        if node.parameter_values.get("failure_at") == Some(&json!("controller")) {
+            return dispatch::execute_registered_controller_action(host, run, node, def, "refresh")
+                .await;
+        }
         if def.kind == FlowNodeClass::Instrument {
             return Err(Error::invalid_request(
                 "instrument_executed",
@@ -196,6 +231,17 @@ impl NodeHandler<Host> for Handler {
                     },
                 })
                 .collect::<Vec<_>>();
+            if node.parameter_values.get("failure_at") == Some(&json!("provider_event")) {
+                events.push(ProviderEvent::Data { value: json!({}) });
+            }
+            if node.parameter_values.get("recoverable_provider") == Some(&json!(true)) {
+                events.push(ProviderEvent::RecoverableFailure {
+                    failure: RecoverableNodeFailure {
+                        code: "fixture_recoverable".into(),
+                        message: "provider failed".into(),
+                    },
+                });
+            }
             if node.parameter_values.get("provider_fail") == Some(&json!(true)) {
                 events.push(ProviderEvent::Failure {
                     message: "fixture provider failure".into(),
@@ -289,6 +335,7 @@ impl NodeHandler<Host> for Handler {
         def: &FlowNodeDefinition,
         cancel: &CancellationToken,
     ) -> Result<(), Error> {
+        injected_failure(node, "materialize")?;
         if def.kind == FlowNodeClass::Hybrid {
             run.calls.push(format!("{}:snapshot", node.id));
             let value = node.parameter_values["snapshot"].clone();
@@ -320,6 +367,7 @@ impl NodeHandler<Host> for Handler {
         value: Retained<Token>,
     ) -> Result<(), Error> {
         run.calls.push(node.id.clone());
+        injected_failure(node, "sink")?;
         if node.parameter_values.get("block") == Some(&json!(true)) {
             host.entered.notify_one();
             std::future::pending::<()>().await;
@@ -351,6 +399,7 @@ impl NodeHandler<Host> for Handler {
         value: &Token,
         _: &CancellationToken,
     ) -> Result<(), Error> {
+        injected_failure(node, "receive")?;
         assert!(
             !run.input_tokens
                 .contains_key(&(node.id.clone(), port.into())),
@@ -358,6 +407,45 @@ impl NodeHandler<Host> for Handler {
         );
         run.seen.push((node.id.clone(), value.value.clone()));
         Ok(())
+    }
+    async fn receive_provider_event(
+        &self,
+        _: &Host,
+        _: &mut Run,
+        node: &FlowNode,
+        _: &FlowNodeDefinition,
+        _: &Value,
+        _: &CancellationToken,
+    ) -> Result<(), Error> {
+        injected_failure(node, "provider_event")?;
+        Err(Error::invalid_request(
+            error_codes::UNSUPPORTED_HANDLER_OPERATION,
+            "provider events unsupported",
+        ))
+    }
+    async fn provider_complete(
+        &self,
+        _: &Host,
+        _: &mut Run,
+        node: &FlowNode,
+        _: &FlowNodeDefinition,
+        _: &CancellationToken,
+    ) -> Result<(), Error> {
+        injected_failure(node, "provider_complete")
+    }
+    async fn execute_controller_action(
+        &self,
+        _: &Host,
+        _: &mut Run,
+        node: &FlowNode,
+        _: &FlowNodeDefinition,
+        _: &str,
+    ) -> Result<(), Error> {
+        injected_failure(node, "controller")?;
+        Err(Error::invalid_request(
+            error_codes::UNSUPPORTED_HANDLER_OPERATION,
+            "controller unsupported",
+        ))
     }
     async fn execute_action(
         &self,
@@ -368,6 +456,7 @@ impl NodeHandler<Host> for Handler {
         _: &str,
     ) -> Result<(), Error> {
         run.calls.push(node.id.clone());
+        injected_failure(node, "action")?;
         if node.parameter_values.get("cancel") == Some(&json!(true)) {
             return host.request_activation_cancel(run, "cancel action");
         }
@@ -520,7 +609,30 @@ fn document(nodes: Vec<Value>, edges: Vec<Value>) -> FlowDocument {
 }
 fn fixture(nodes: Vec<Value>, edges: Vec<Value>, mode: &str) -> (Host, Run) {
     let flow = document(nodes, edges);
-    let scheduler = SchedulerState::new("test-run".into(), &flow, definitions(mode)).unwrap();
+    let mut defs = definitions(mode);
+    let mut error_sink = defs["Sink"].clone();
+    error_sink.class_name = "ErrorSink".into();
+    error_sink.input_ports[0].token_type = "node_failure".into();
+    error_sink.input_ports[0].mode = FlowPortMode::FinalValue;
+    defs.insert("ErrorSink".into(), error_sink);
+    for node in &flow.nodes {
+        if node.failure_policy == FlowFailurePolicy::Emit {
+            let d = defs.get_mut(&node.definition_name).unwrap();
+            d.failure_ports = battersea_flow::failure::failure_phases(d)
+                .into_iter()
+                .map(|phase| FlowFailurePort {
+                    name: if phase == FlowPortPhase::Snapshot {
+                        "snapshot_error"
+                    } else {
+                        "error"
+                    }
+                    .into(),
+                    phase,
+                })
+                .collect();
+        }
+    }
+    let scheduler = SchedulerState::new("test-run".into(), &flow, defs).unwrap();
     let mut builder = RegistryBuilder::default();
     builder.register(Handler).unwrap();
     (
@@ -558,6 +670,603 @@ fn signal(id: &str, source: &str, target: &str, port: &str) -> Value {
 async fn run(host: &Host, run: &mut Run) -> Result<(), Error> {
     host.run_activation(run, "source", HashMap::new(), CancellationToken::new())
         .await
+}
+
+fn policy_node(id: &str, kind: &str, policy: &str, params: Value) -> Value {
+    let mut node = node(id, kind, params);
+    node["failure_policy"] = json!(policy);
+    node
+}
+fn error_edge(source: &str, phase: &str) -> Value {
+    json!({"id":"failure","source_node_id":source,"source_port":phase,
+        "target_node_id":"errors","target_port":"in"})
+}
+
+#[tokio::test]
+async fn failure_checkpoint_retains_emission_identity_and_rejects_corrupt_settlement() {
+    use battersea_runtime::checkpoint::SchedulerCheckpoint;
+    let (host, mut state) = fixture(
+        vec![
+            policy_node("source", "Source", "emit", json!({"failure_at":"execute"})),
+            node("errors", "ErrorSink", json!({})),
+        ],
+        vec![error_edge("source", "error")],
+        "final_value",
+    );
+    host.execute_flow_node(&mut state, "source", None, &CancellationToken::new())
+        .await
+        .unwrap();
+    let checkpoint = SchedulerCheckpoint::capture(&state).unwrap();
+    let saved = serde_json::to_value(&checkpoint).unwrap();
+    let id = saved["handled_failures"]["source"]["failure"]["id"].clone();
+    let restored = checkpoint.restore().unwrap();
+    state.scheduler = restored;
+    host.drain_flow_work(&mut state, &CancellationToken::new())
+        .await
+        .unwrap();
+    host.drain_flow_work(&mut state, &CancellationToken::new())
+        .await
+        .unwrap();
+    assert_eq!(state.seen.len(), 1);
+    assert_eq!(state.seen[0].1["id"], id);
+    for field in ["id", "node_id", "code", "operation"] {
+        let mut corrupt = saved.clone();
+        corrupt["handled_failures"]["source"]["failure"][field] = json!("");
+        let checkpoint: SchedulerCheckpoint = serde_json::from_value(corrupt).unwrap();
+        assert!(checkpoint.restore().is_err(), "{field}");
+    }
+    let mut corrupt = saved.clone();
+    corrupt["stopped_nodes"] = json!([]);
+    assert!(serde_json::from_value::<SchedulerCheckpoint>(corrupt)
+        .unwrap()
+        .restore()
+        .is_err());
+    let mut corrupt = saved.clone();
+    corrupt["failed_outputs"] = json!([["source", "error"]]);
+    assert!(serde_json::from_value::<SchedulerCheckpoint>(corrupt)
+        .unwrap()
+        .restore()
+        .is_err());
+    let mut corrupt = saved;
+    corrupt["version"] = json!(1);
+    assert!(matches!(
+        serde_json::from_value::<SchedulerCheckpoint>(corrupt)
+            .unwrap()
+            .restore(),
+        Err(recovery::RecoveryError::Incompatible(_))
+    ));
+}
+
+#[tokio::test]
+async fn stopped_nodes_require_their_failure_or_dependency_record() {
+    use battersea_runtime::checkpoint::SchedulerCheckpoint;
+    for policy in ["emit", "skip"] {
+        let (host, mut state) = fixture(
+            vec![policy_node(
+                "source",
+                "Source",
+                policy,
+                json!({"failure_at":"execute"}),
+            )],
+            vec![],
+            "final_value",
+        );
+        host.execute_flow_node(&mut state, "source", None, &CancellationToken::new())
+            .await
+            .unwrap();
+        let saved = serde_json::to_value(SchedulerCheckpoint::capture(&state).unwrap()).unwrap();
+        let mut missing = saved.clone();
+        missing["handled_failures"] = json!({});
+        assert!(
+            serde_json::from_value::<SchedulerCheckpoint>(missing.clone())
+                .unwrap()
+                .restore()
+                .is_err()
+        );
+        missing["dependency_skips"] = json!({"source":"failed_input"});
+        assert!(serde_json::from_value::<SchedulerCheckpoint>(missing)
+            .unwrap()
+            .restore()
+            .is_err());
+    }
+}
+
+#[tokio::test]
+async fn failure_retention_exhaustion_remains_a_control_outcome() {
+    for policy in ["emit", "skip"] {
+        let (host, mut state) = fixture(
+            vec![
+                policy_node("source", "Source", policy, json!({"failure_at":"execute"})),
+                node("errors", "ErrorSink", json!({})),
+            ],
+            if policy == "emit" {
+                vec![error_edge("source", "error")]
+            } else {
+                vec![]
+            },
+            "final_value",
+        );
+        let mut flow = state.flow.clone();
+        flow.execution.limits.node_retained_bytes = 64;
+        state.scheduler =
+            SchedulerState::new("capacity".into(), &flow, state.definitions.clone()).unwrap();
+        let error = run(&host, &mut state).await.unwrap_err();
+        assert_eq!(error.reason_code(), Some(error_codes::CAPACITY_EXHAUSTED));
+        assert!(state.seen.is_empty());
+        assert!(host
+            .events
+            .lock()
+            .unwrap()
+            .iter()
+            .any(|e| e.kind == EventKind::NodeError
+                && e.detail.as_ref().unwrap()["policy"] == policy));
+    }
+}
+
+#[tokio::test]
+async fn failure_outputs_are_reserved_for_the_driver() {
+    let (host, mut state) = fixture(
+        vec![policy_node("source", "Source", "emit", json!({}))],
+        vec![],
+        "final_value",
+    );
+    let error = host
+        .emit_flow_token(
+            &mut state,
+            "source",
+            "error",
+            Token {
+                token_type: "node_failure".into(),
+                value: json!({}),
+            },
+            &CancellationToken::new(),
+        )
+        .await
+        .unwrap_err();
+    assert_eq!(error.reason_code(), Some(error_codes::CLOSED_OUTPUT));
+}
+
+#[tokio::test]
+async fn hybrid_failures_stop_both_phases_and_use_the_failing_phases_error_port() {
+    for policy in ["fail", "emit", "skip"] {
+        for operation in ["materialize", "execute"] {
+            let (host, mut state) = fixture(
+                vec![
+                    node("source", "Source", json!({"values":["delta"]})),
+                    policy_node(
+                        "hybrid",
+                        "Join",
+                        policy,
+                        json!({"failure_at":operation,"snapshot":"saved","execution":"unused"}),
+                    ),
+                    node("errors", "ErrorSink", json!({})),
+                ],
+                vec![],
+                "stream",
+            );
+            let mut defs = state.definitions.clone();
+            let hybrid = defs.get_mut("Join").unwrap();
+            hybrid.kind = FlowNodeClass::Hybrid;
+            hybrid.output_ports.push(
+                serde_json::from_value(
+                    json!({"name":"snapshot","kind":"output","token_type":"text",
+                "mode":"final_value","phase":"snapshot"}),
+                )
+                .unwrap(),
+            );
+            if policy == "emit" {
+                hybrid.failure_ports = vec![
+                    FlowFailurePort {
+                        name: "snapshot_error".into(),
+                        phase: FlowPortPhase::Snapshot,
+                    },
+                    FlowFailurePort {
+                        name: "error".into(),
+                        phase: FlowPortPhase::Execution,
+                    },
+                ];
+            }
+            let mut flow = state.flow.clone();
+            flow.execution.source_order.push("hybrid".into());
+            let mut edges = vec![edge("data", "source", "hybrid", 0, "stream")];
+            if policy == "emit" {
+                edges.push(error_edge(
+                    "hybrid",
+                    if operation == "materialize" {
+                        "snapshot_error"
+                    } else {
+                        "error"
+                    },
+                ));
+            }
+            flow.edges = edges
+                .into_iter()
+                .map(|e| serde_json::from_value(e).unwrap())
+                .collect();
+            state.scheduler = SchedulerState::new("hybrid-failure".into(), &flow, defs).unwrap();
+            assert_eq!(
+                run(&host, &mut state).await.is_ok(),
+                policy != "fail",
+                "{policy} {operation}"
+            );
+            assert_eq!(
+                state.seen.iter().filter(|(id, _)| id == "errors").count(),
+                usize::from(policy == "emit")
+            );
+            if operation == "materialize" {
+                assert!(!state.calls.iter().any(|id| id == "hybrid"));
+            }
+            assert!(!host
+                .events
+                .lock()
+                .unwrap()
+                .iter()
+                .any(|e| e.node_id == "hybrid" && e.kind == EventKind::SignalEmit));
+        }
+    }
+}
+
+#[tokio::test]
+async fn published_final_values_survive_a_handled_provider_completion_failure() {
+    for policy in ["emit", "skip"] {
+        let mut edges = vec![edge("data", "source", "sink", 0, "final_value")];
+        if policy == "emit" {
+            edges.push(error_edge("source", "error"));
+        }
+        let (host, mut state) = fixture(
+            vec![
+                policy_node(
+                    "source",
+                    "Source",
+                    policy,
+                    json!({"values":["retained"],"pump":true,"failure_at":"provider_complete"}),
+                ),
+                node("sink", "Sink", json!({})),
+                node("errors", "ErrorSink", json!({})),
+            ],
+            edges,
+            "final_value",
+        );
+        run(&host, &mut state).await.unwrap();
+        assert_eq!(
+            state
+                .seen
+                .iter()
+                .filter(|(id, value)| id == "sink" && value == &json!("retained"))
+                .count(),
+            1
+        );
+    }
+}
+
+#[tokio::test]
+async fn node_policies_settle_middle_fanout_without_redispatch() {
+    for mode in ["final_value", "stream"] {
+        for policy in ["fail", "emit", "skip"] {
+            let mut edges = vec![
+                edge("a", "source", "first", 0, mode),
+                edge("b", "source", "middle", 1, mode),
+                edge("c", "source", "last", 2, mode),
+            ];
+            if policy == "emit" {
+                edges.push(error_edge("middle", "error"));
+            }
+            let (host, mut state) = fixture(
+                vec![
+                    node("source", "Source", json!({"values":["one"]})),
+                    node("first", "Sink", json!({})),
+                    policy_node("middle", "Sink", policy, json!({"failure_at":"sink"})),
+                    node("last", "Sink", json!({})),
+                    node("errors", "ErrorSink", json!({})),
+                ],
+                edges,
+                mode,
+            );
+            let result = run(&host, &mut state).await;
+            assert_eq!(result.is_ok(), policy != "fail", "{policy} {mode}");
+            let ordinary: Vec<_> = state
+                .seen
+                .iter()
+                .filter(|(id, _)| id != "errors")
+                .map(|(id, _)| id.as_str())
+                .collect();
+            assert_eq!(
+                ordinary,
+                if policy == "fail" {
+                    vec!["first"]
+                } else {
+                    vec!["first", "last"]
+                }
+            );
+            let failures: Vec<_> = state.seen.iter().filter(|(id, _)| id == "errors").collect();
+            assert_eq!(failures.len(), usize::from(policy == "emit"));
+            if policy == "emit" {
+                assert_eq!(failures[0].1["node_id"], "middle");
+            }
+            assert_eq!(state.retention.usage(), retention::Usage::default());
+            let events = host.events.lock().unwrap();
+            assert!(events.iter().any(|e| e.node_id == "middle"
+                && e.kind == EventKind::NodeError
+                && e.detail.as_ref().unwrap()["policy"] == policy));
+        }
+    }
+}
+
+#[tokio::test]
+async fn partial_provider_stream_skips_dependent_execution_but_delivers_error() {
+    for policy in ["fail", "emit", "skip"] {
+        let mut edges = vec![edge("stream", "source", "join", 0, "stream")];
+        if policy == "emit" {
+            edges.push(error_edge("source", "error"));
+        }
+        let (host, mut state) = fixture(
+            vec![
+                policy_node(
+                    "source",
+                    "Source",
+                    policy,
+                    json!({"values":["prefix"],"pump":true,"recoverable_provider":true}),
+                ),
+                node("join", "Join", json!({})),
+                node("errors", "ErrorSink", json!({})),
+            ],
+            edges,
+            "stream",
+        );
+        assert_eq!(run(&host, &mut state).await.is_ok(), policy != "fail");
+        assert!(state.seen.contains(&("join".into(), json!("prefix"))));
+        assert!(!state.calls.iter().any(|id| id == "join"));
+        assert_eq!(
+            state.seen.iter().filter(|(id, _)| id == "errors").count(),
+            usize::from(policy == "emit")
+        );
+        assert!(!host
+            .events
+            .lock()
+            .unwrap()
+            .iter()
+            .any(|e| e.node_id == "source" && e.kind == EventKind::SignalEmit));
+    }
+}
+
+#[tokio::test]
+async fn control_outcomes_bypass_emit_and_skip() {
+    for policy in ["emit", "skip"] {
+        for reason in ["cancel", "capacity", "effect", "unclassified"] {
+            let (host, mut state) = fixture(
+                vec![
+                    policy_node(
+                        "source",
+                        "Source",
+                        policy,
+                        json!({"failure_at":"execute","failure_reason":reason}),
+                    ),
+                    node("errors", "ErrorSink", json!({})),
+                ],
+                if policy == "emit" {
+                    vec![error_edge("source", "error")]
+                } else {
+                    vec![]
+                },
+                "final_value",
+            );
+            assert!(run(&host, &mut state).await.is_err(), "{policy} {reason}");
+            assert!(state.seen.is_empty());
+        }
+    }
+}
+
+#[tokio::test]
+async fn failure_handling_survives_every_publication_boundary_or_requires_resolution() {
+    use battersea_runtime::recovery::{Journal, RecoveryError};
+    for policy in ["emit", "skip"] {
+        let make = || {
+            fixture(
+                vec![
+                    node("source", "Source", json!({"values":["prefix"]})),
+                    policy_node("sink", "Sink", policy, json!({"failure_at":"sink"})),
+                    node("last", "Sink", json!({})),
+                    node("errors", "ErrorSink", json!({})),
+                ],
+                {
+                    let mut edges = vec![
+                        edge("a", "source", "sink", 0, "final_value"),
+                        edge("b", "source", "last", 1, "final_value"),
+                    ];
+                    if policy == "emit" {
+                        edges.push(error_edge("sink", "error"));
+                    }
+                    edges
+                },
+                "final_value",
+            )
+        };
+        let (mut host, mut state) = make();
+        let baseline = Arc::new(RecoveryStore::default());
+        host.recovery_store = Some(baseline.clone());
+        run(&host, &mut state).await.unwrap();
+        let expected = state.seen.clone();
+        let writes = baseline.writes.load(Ordering::SeqCst);
+        for after in [false, true] {
+            for boundary in 1..=writes {
+                let (mut host, mut state) = make();
+                let store = Arc::new(RecoveryStore::default());
+                store.fail_write.store(boundary, Ordering::SeqCst);
+                store.fail_after.store(after, Ordering::SeqCst);
+                host.recovery_store = Some(store.clone());
+                assert!(run(&host, &mut state).await.is_err());
+                drop(state);
+                match Journal::open(store, "test-run") {
+                    Err(RecoveryError::Missing) => {}
+                    Ok(journal) => match journal.require_resumable() {
+                        Ok(()) => {
+                            let revision = journal.record().revision;
+                            let mut restored = host.restore_activation(&journal).unwrap();
+                            host.resume_activation(
+                                &mut restored,
+                                journal,
+                                revision,
+                                CancellationToken::new(),
+                            )
+                            .await
+                            .unwrap();
+                            assert_eq!(restored.seen, expected, "{policy} {boundary} {after}");
+                        }
+                        Err(RecoveryError::UnresolvedEffects(_))
+                        | Err(RecoveryError::CommitPending) => {}
+                        other => panic!("{other:?}"),
+                    },
+                    Err(error) => panic!("{error}"),
+                }
+                let events = host.events.lock().unwrap();
+                assert!(
+                    events
+                        .iter()
+                        .filter(|e| e.node_id == "sink" && e.kind == EventKind::NodeError)
+                        .count()
+                        <= 1
+                );
+                assert!(
+                    events
+                        .iter()
+                        .filter(|e| e.node_id == "errors" && e.kind == EventKind::TokenReceive)
+                        .count()
+                        <= 1
+                );
+                assert!(
+                    events
+                        .iter()
+                        .filter(|e| e.node_id == "last" && e.kind == EventKind::TokenReceive)
+                        .count()
+                        <= 1
+                );
+                let ids: HashSet<_> = events
+                    .iter()
+                    .map(|e| (&e.run_id, e.attempt, e.sequence))
+                    .collect();
+                assert_eq!(ids.len(), events.len());
+            }
+        }
+    }
+}
+
+#[tokio::test]
+async fn snapshot_failure_uses_snapshot_error_port_and_stops_remaining_node_phases() {
+    for policy in ["fail", "emit", "skip"] {
+        let (host, mut state) = fixture(
+            vec![
+                node("source", "Source", json!({})),
+                policy_node(
+                    "snapshot",
+                    "Source",
+                    policy,
+                    json!({"failure_at":"materialize"}),
+                ),
+                node("errors", "ErrorSink", json!({})),
+            ],
+            if policy == "emit" {
+                vec![error_edge("snapshot", "snapshot_error")]
+            } else {
+                vec![]
+            },
+            "final_value",
+        );
+        state
+            .definitions
+            .get_mut("Source")
+            .unwrap()
+            .interfaces
+            .clear();
+        let token = CancellationToken::new();
+        let result = host
+            .materialize_snapshot_sources(&mut state, "source", &token)
+            .await;
+        assert_eq!(result.is_ok(), policy != "fail");
+        if result.is_ok() {
+            host.drain_flow_work(&mut state, &token).await.unwrap();
+            assert_eq!(
+                state.seen.iter().filter(|(id, _)| id == "errors").count(),
+                usize::from(policy == "emit")
+            );
+            assert!(!state.calls.iter().any(|id| id == "snapshot"));
+        }
+    }
+}
+
+#[tokio::test]
+async fn a_nested_failure_keeps_the_destination_policy_and_attribution() {
+    let (host, mut state) = fixture(
+        vec![
+            policy_node("source", "Source", "emit", json!({"start_peer":"peer"})),
+            node("peer", "Source", json!({"failure_at":"execute"})),
+            node("errors", "ErrorSink", json!({})),
+        ],
+        vec![error_edge("source", "error")],
+        "final_value",
+    );
+    assert!(run(&host, &mut state).await.is_err());
+    assert!(state.seen.is_empty());
+    let events = host.events.lock().unwrap();
+    let failures: Vec<_> = events
+        .iter()
+        .filter(|e| e.kind == EventKind::NodeError)
+        .collect();
+    assert_eq!(failures.len(), 1);
+    assert_eq!(failures[0].node_id, "peer");
+}
+
+#[tokio::test]
+async fn callback_policies_cover_sources_inline_receives_actions_and_provider_completion() {
+    for policy in ["fail", "emit", "skip"] {
+        for (kind, operation, mode) in [
+            ("Source", "execute", "final_value"),
+            ("Join", "execute", "final_value"),
+            ("Join", "receive", "stream"),
+            ("Action", "action", "final_value"),
+            ("Source", "provider_complete", "final_value"),
+            ("Source", "provider_event", "final_value"),
+            ("Source", "controller", "final_value"),
+        ] {
+            let failing_source = kind == "Source";
+            let failed = if failing_source { "source" } else { "target" };
+            let params = if operation == "provider_complete" || operation == "provider_event" {
+                json!({"failure_at":operation,"pump":true})
+            } else {
+                json!({"failure_at":operation})
+            };
+            let mut nodes = vec![
+                policy_node(failed, kind, policy, params),
+                node("errors", "ErrorSink", json!({})),
+            ];
+            let mut edges = vec![];
+            if !failing_source {
+                nodes.push(node(
+                    "source",
+                    "Source",
+                    json!({"values":["value"],"signal":true}),
+                ));
+                edges.push(if kind == "Action" {
+                    signal("action", "source", "target", "go")
+                } else {
+                    edge("data", "source", "target", 0, mode)
+                });
+            }
+            if policy == "emit" {
+                edges.push(error_edge(failed, "error"));
+            }
+            let (host, mut state) = fixture(nodes, edges, mode);
+            assert_eq!(
+                run(&host, &mut state).await.is_ok(),
+                policy != "fail",
+                "{policy} {operation}"
+            );
+            assert_eq!(
+                state.seen.iter().filter(|(id, _)| id == "errors").count(),
+                usize::from(policy == "emit"),
+                "{policy} {operation}"
+            );
+        }
+    }
 }
 
 #[tokio::test]
@@ -1532,6 +2241,117 @@ async fn incompatible_handler_state_is_rejected_without_dispatch_or_publication(
         before
     );
     assert!(original.calls.is_empty());
+}
+
+#[tokio::test]
+async fn absent_snapshot_dependencies_close_streams_successfully() {
+    use battersea_runtime::checkpoint::SchedulerCheckpoint;
+    let (host, mut state) = fixture(
+        vec![
+            node("source", "Source", json!({})),
+            node("upstream", "Source", json!({"values":[]})),
+            node("middle", "Join", json!({})),
+            node("consumer", "Join", json!({})),
+        ],
+        vec![],
+        "stream",
+    );
+    let mut defs = state.definitions.clone();
+    let mut upstream = defs["Source"].clone();
+    upstream.class_name = "Snapshot".into();
+    upstream.interfaces.clear();
+    upstream.output_ports[0].phase = FlowPortPhase::Snapshot;
+    upstream.output_ports[0].mode = FlowPortMode::FinalValue;
+    let mut middle = defs["Join"].clone();
+    middle.class_name = "Hybrid".into();
+    middle.kind = FlowNodeClass::Hybrid;
+    middle.input_ports[0].phase = FlowPortPhase::Snapshot;
+    middle.input_ports[0].mode = FlowPortMode::FinalValue;
+    defs.insert(upstream.class_name.clone(), upstream);
+    defs.insert(middle.class_name.clone(), middle);
+    let mut flow = state.flow.clone();
+    flow.nodes
+        .iter_mut()
+        .find(|n| n.id == "upstream")
+        .unwrap()
+        .definition_name = "Snapshot".into();
+    flow.nodes
+        .iter_mut()
+        .find(|n| n.id == "middle")
+        .unwrap()
+        .definition_name = "Hybrid".into();
+    flow.execution.source_order = vec!["source".into(), "middle".into(), "upstream".into()];
+    flow.edges = vec![
+        edge("snapshot", "upstream", "middle", 0, "final_value"),
+        edge("empty", "middle", "consumer", 0, "stream"),
+    ]
+    .into_iter()
+    .map(|e| serde_json::from_value(e).unwrap())
+    .collect();
+    state.scheduler = SchedulerState::new("absent-snapshot".into(), &flow, defs).unwrap();
+    run(&host, &mut state).await.unwrap();
+    assert!(!state
+        .calls
+        .iter()
+        .any(|id| id == "middle" || id == "middle:snapshot"));
+    assert!(state.calls.iter().any(|id| id == "consumer"));
+    let saved = serde_json::to_value(SchedulerCheckpoint::capture(&state).unwrap()).unwrap();
+    assert_eq!(saved["failed_outputs"], json!([]));
+    assert_eq!(saved["failed_inputs"], json!([]));
+    assert!(serde_json::from_value::<SchedulerCheckpoint>(saved.clone())
+        .unwrap()
+        .restore()
+        .is_ok());
+    let mut missing = saved;
+    missing["dependency_skips"] = json!({});
+    assert!(serde_json::from_value::<SchedulerCheckpoint>(missing)
+        .unwrap()
+        .restore()
+        .is_err());
+}
+
+#[tokio::test]
+async fn runtime_delivery_refusals_record_one_destination_error() {
+    for policy in ["fail", "emit", "skip"] {
+        let (host, mut state) = fixture(
+            vec![
+                node("source", "Source", json!({"values":["second"]})),
+                policy_node("join", "Join", policy, json!({})),
+            ],
+            vec![edge("data", "source", "join", 0, "final_value")],
+            "final_value",
+        );
+        let edge = state.flow.edges[0].clone();
+        let value = state
+            .retention
+            .retain(
+                "join",
+                Token {
+                    token_type: "text".into(),
+                    value: json!("first"),
+                },
+            )
+            .unwrap();
+        host.deliver_flow_token(&mut state, &edge, value, &CancellationToken::new())
+            .await
+            .unwrap();
+        let error = run(&host, &mut state).await.unwrap_err();
+        assert_eq!(
+            error.reason_code(),
+            Some(error_codes::DUPLICATE_FINAL_VALUE)
+        );
+        let events = host.events.lock().unwrap();
+        let errors = events
+            .iter()
+            .filter(|e| e.kind == EventKind::NodeError)
+            .collect::<Vec<_>>();
+        assert_eq!(errors.len(), 1);
+        assert_eq!(errors[0].node_id, "join");
+        assert_eq!(
+            errors[0].detail.as_ref().unwrap()["error"]["code"],
+            error_codes::DUPLICATE_FINAL_VALUE
+        );
+    }
 }
 
 #[tokio::test]
