@@ -12,6 +12,12 @@ import {
   swapNodeControllerPortPlacementInWorkspace
 } from "@battersea/editor/core/flow-port-reorder";
 import type { FlowStudioWorkspaceState } from "@battersea/editor/core/flow-persistence";
+import {
+  buildDefaultFlowWorkspace,
+  buildFlowSaveDocument,
+  buildFlowWorkspaceFromDocument
+} from "@battersea/editor/core/flow-persistence";
+import { buildResolvedNodeData } from "@battersea/editor/core/flow-node-definitions";
 
 const CONCATENATE_DEFINITION = {
   action_ports: [],
@@ -47,6 +53,49 @@ const CONCATENATE_DEFINITION = {
   short_description: "Combines inputs.",
   signal_ports: []
 };
+
+for (const failurePolicy of ["emit", "skip"] as const) {
+  test(`port layout edits preserve ${failurePolicy} through save and reload`, () => {
+    const definition = {
+      ...CONCATENATE_DEFINITION,
+      failure_ports: [{ name: "error", phase: "execution" as const }]
+    };
+    const workspace: FlowStudioWorkspaceState = {
+      ...buildDefaultFlowWorkspace(),
+      title: "Recovery policy",
+      nodes: [{
+        id: "concatenate",
+        position: { x: 0, y: 0 },
+        type: "flowStudio",
+        data: buildResolvedNodeData({
+          definition,
+          failurePolicy,
+          instanceName: "Concatenate",
+          parameterValues: { input_ports: 3 }
+        })
+      }]
+    };
+    const common = { definition, nodeId: "concatenate", workspace };
+    const edits = [
+      reorderNodePortsInWorkspace({
+        ...common, activePortId: "input-0", previewIndex: 2, side: "input"
+      }),
+      setNodeControllerPortPlacementInWorkspace({ ...common, placement: "swapped" }),
+      swapNodeControllerPortPlacementInWorkspace(common)
+    ];
+    for (const edited of edits) {
+      assert.notEqual(edited, workspace);
+      assert.equal(edited.nodes[0]?.data.failurePolicy, failurePolicy);
+      const saved = buildFlowSaveDocument({ workspace: edited });
+      assert.ok(saved);
+      assert.equal(saved.nodes[0]?.failure_policy, failurePolicy);
+      const reloaded = buildFlowWorkspaceFromDocument({
+        definitions: [definition], document: saved
+      });
+      assert.equal(reloaded.nodes[0]?.data.failurePolicy, failurePolicy);
+    }
+  });
+}
 
 test("reorderNodePortsInWorkspace renames dynamic input port ids so the saved flow's logical order matches the visual order", () => {
   // Three edges fan into the Concatenate node, each one wired to a distinct
