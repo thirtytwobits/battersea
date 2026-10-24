@@ -1,5 +1,16 @@
 {
     "cSpell.words": [
         "battersea"
-    ]
+    ],
+    "cSpell.language": "en-GB",
+    "cSpell.allowCompoundWords": true,
+    "cSpell.caseSensitive": false,
+    "cSpell.customDictionaries": {
+        "london-project-words": {
+            "name": "london-project-words",
+            "path": "${workspaceFolder}/.vscode/london.dictionary.txt",
+            "description": "Words used across all Project London projects.",
+            "addWords": true
+        }
+    }
 }
