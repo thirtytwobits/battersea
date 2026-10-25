@@ -1,23 +1,19 @@
 //! A standalone application: explicitly registered providers, a local tool and media generation.
-use async_trait::async_trait;
 use battersea_model::{engine::*, media::*, *};
-use battersea_tools::{Tool, ToolAnnotations, ToolRegistry};
+use battersea_tools::ToolRegistry;
+use clapham::{Bounds, Call, Contribution, Effect, OAuthContext, TypedOperation};
 use futures_util::StreamExt;
+use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::sync::Arc;
 use tokio_util::sync::CancellationToken;
 
-struct Echo;
-#[async_trait]
-impl EngineLocalToolExecutor for Echo {
-    async fn call(
-        &self,
-        call: EngineLocalToolCall,
-    ) -> Result<EngineLocalToolResult, EngineAdapterRequestError> {
-        Ok(EngineLocalToolResult::Json {
-            content: call.arguments,
-        })
-    }
+/// The text the echo operation is called with, and returns.
+#[derive(Serialize, Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
+struct Text {
+    text: String,
 }
 fn auth() -> EngineAuthConfig {
     EngineAuthConfig {
@@ -61,18 +57,26 @@ fn chat_backend() -> EngineBackendConfig {
 async fn demonstrate() -> Result<(), Box<dyn std::error::Error>> {
     let mut providers = ProviderRegistry::default();
     battersea_providers::register_builtin_providers(&mut providers)?;
-    let mut tools = ToolRegistry::default();
-    let input_schema = json!({"type":"object","properties":{"text":{"type":"string"}},"required":["text"],"additionalProperties":false});
-    tools.register(
-        Tool::new(
-            "example.echo",
-            input_schema.as_object().cloned().unwrap_or_default(),
-        )
-        .with_title("Echo text")
-        .with_description("Echo the supplied text.")
-        .with_annotations(ToolAnnotations::read_only_closed_world()),
-        Arc::new(Echo),
+    let echo = TypedOperation::<Text, Text>::new(
+        "example.echo",
+        "Echo the supplied text.",
+        Effect::Query,
+    )?
+    .title("Echo text");
+    let set = clapham::compose(
+        [Contribution::new("example")
+            .typed_operation(echo, |_: Call, text: Text| async move { Ok(text) })],
+        Bounds::default(),
     )?;
+    let selection = set.select(["example.echo"])?;
+    // The host verifies the grant each run's tool calls are made under.
+    let grant = OAuthContext::from_verified(
+        "https://identity.example.com",
+        "https://backend.example.com",
+        "example-agent",
+        Vec::<String>::new(),
+    );
+    let tools = ToolRegistry::new(set, selection, grant)?;
     let backend = chat_backend();
     let adapter = providers.create_chat(backend.clone(), None)?;
     let input = "A quiet landscape.";

@@ -1,4 +1,6 @@
 //! Copyright (c) Scott A Dixon
+mod support;
+
 use async_trait::async_trait;
 use battersea_model::*;
 use battersea_tools::*;
@@ -39,21 +41,21 @@ impl EngineLocalToolExecutor for Effect {
         Ok(EngineLocalToolResult::json(call.arguments))
     }
 }
-fn tool() -> Tool {
-    Tool::new(
+fn tool() -> clapham::Operation {
+    let mut operation = support::operation(
         "host.write",
-        json!({"type":"object","properties":{"value":{"type":"integer"}},"required":["value"]})
-            .as_object()
-            .unwrap()
-            .clone(),
-    )
-    .with_description("Write a value")
-    .with_profiles(["operator"])
+        support::object(
+            json!({"type":"object","properties":{"value":{"type":"integer"}},"required":["value"]}),
+        ),
+    );
+    operation.description = "Write a value".into();
+    operation
 }
-fn registry(effect: Arc<Effect>, tool: Tool) -> ToolRegistry {
-    let mut registry = ToolRegistry::default();
-    registry.register(tool, effect).unwrap();
-    registry.for_profile("operator")
+fn registry(effect: Arc<Effect>, tool: clapham::Operation) -> ToolRegistry {
+    support::registry(vec![(tool, effect)])
+        .with_profile("operator", ["host.write"])
+        .unwrap()
+        .for_profile("operator")
 }
 fn scope() -> ToolApprovalScope {
     ToolApprovalScope {
@@ -197,7 +199,7 @@ async fn approval_revision_binds_run_binding_record_identity_and_arguments() {
         match change {
             1 => scope.run_id = "run-2".into(),
             2 => scope.binding_revision = "binding-2".into(),
-            3 => tool.description = Some("Changed contract".into()),
+            3 => tool.description = "Changed contract".into(),
             4 => call.id = "two".into(),
             5 => call.arguments = json!({"value":2}),
             _ => (),
@@ -262,8 +264,9 @@ async fn cancelled_and_timed_out_executions_cannot_be_repeated() {
 async fn read_only_author_claims_cannot_override_the_host_decision() {
     let effect = Arc::new(Effect::default());
     let policy = policy(ToolApprovalDecision::Deny);
-    let claimed = tool().with_annotations(ToolAnnotations::read_only_closed_world());
-    assert!(claimed.effect().read_only);
+    let mut claimed = tool();
+    claimed.effect = clapham::Effect::Query;
+    assert!(Tool::for_operation(&claimed).effect().read_only);
     let executor =
         ApprovedToolExecutor::new(registry(effect.clone(), claimed), scope(), policy, 8).unwrap();
     refused(
@@ -277,18 +280,9 @@ async fn read_only_author_claims_cannot_override_the_host_decision() {
 async fn approval_keeps_registry_output_validation_and_snapshot() {
     let effect = Arc::new(Effect::default());
     let policy = policy(ToolApprovalDecision::Allow);
-    let mut definition = tool();
-    definition.output_schema = Some(
-        json!({"type":"object","required":["receipt"]})
-            .as_object()
-            .unwrap()
-            .clone(),
-    );
-    let mut registry = registry(effect.clone(), definition);
-    let executor = ApprovedToolExecutor::new(registry.clone(), scope(), policy, 8).unwrap();
-    let mut extra = tool();
-    extra.name = "host.other".into();
-    registry.register(extra, effect.clone()).unwrap();
+    let definition = support::with_output(tool(), json!({"type":"object","required":["receipt"]}));
+    let registry = registry(effect.clone(), definition);
+    let executor = ApprovedToolExecutor::new(registry, scope(), policy, 8).unwrap();
     assert_eq!(executor.definitions().len(), 1);
     let error = executor.call(call("one", json!(1))).await.unwrap_err();
     assert_eq!(error.tool_code, Some(ToolCode::InvalidToolResult));
@@ -317,7 +311,7 @@ fn approval_scope_and_capacity_must_be_explicit_and_bounded() {
             }
         };
         let result = ApprovedToolExecutor::new(
-            ToolRegistry::default(),
+            support::registry(Vec::new()),
             scope,
             policy(ToolApprovalDecision::Allow),
             capacity,

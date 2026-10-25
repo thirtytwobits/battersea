@@ -353,9 +353,40 @@ export { FLOW_DOCUMENT_VERSION } from "./defaults.js";
 export { createFlowExecutionPolicy, requireSupportedFlowVersion, requireFlowFailurePolicy, canEmitNodeFailure } from "./execution.js";
 export type * as Runtime from "./runtime-contract.js";
 export { applyRuntimeDelta, applyRuntimeUpdate, RuntimeResyncRequired } from "./runtime-view.js";
+export type * as Operations from "./operation-contract.js";
 export type * as Tools from "./tools-contract.js";
 export { MCP_PROTOCOL_REVISION, TOOL_PROFILES_META_KEY } from "./tools-defaults.js";
 export { toolProfiles } from "./tools.js";
+
+// operation-contract.d.ts
+export type Operation = {
+    "confirmation"?: boolean;
+    "description": string;
+    "effect": Effect;
+    "idempotent": boolean;
+    "input": {
+        "type": "object";
+        [key: string]: unknown;
+    };
+    "locality": Locality;
+    "name": OperationName;
+    "open_world": boolean;
+    "output"?: Schema | null;
+    "policies"?: Array<string>;
+    "positional"?: Array<string>;
+    "preview"?: boolean;
+    "refusals"?: {
+        [key: string]: Category;
+    };
+    "scopes"?: Array<string>;
+    "streams"?: boolean;
+    "title"?: string | null;
+};
+export type Category = "usage" | "invalid_input" | "not_found" | "conflict" | "refused" | "unavailable" | "interrupted" | "configuration" | "internal";
+export type Effect = "query" | "mutation" | "administrative" | "destructive";
+export type Locality = "workspace" | "daemon";
+export type OperationName = string;
+export type Schema = {} | boolean;
 
 // ports.d.ts
 /** Nominal token compatibility, including pass-through outputs with inferred input types. */

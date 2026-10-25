@@ -1,9 +1,12 @@
 //! Copyright (c) Scott A Dixon
 //! Host-owned process lifecycle, profile selection and provider configuration.
 use crate::fixture::{Fault, Result};
-use battersea_mcp::{McpConfig, McpConnection, McpSelection, McpToolBinding};
 use battersea_model::{engine::*, *};
 use battersea_tools::{ApprovedToolExecutor, ToolApprovalPolicy, ToolApprovalScope, ToolRegistry};
+use clapham::{
+    compose_with_options, Bounds, ComposeOptions, Contribution, ExecutionMode, OAuthContext,
+};
+use clapham_mcp_client::{McpConfig, McpConnection, McpSelection, McpToolBinding};
 use std::{
     path::Path,
     process::Stdio,
@@ -15,8 +18,8 @@ use tokio_util::sync::CancellationToken;
 pub fn mcp_config(timeout: Duration) -> McpConfig {
     let mut config = McpConfig::new("remote", "example-account-1");
     config.operation_timeout = timeout;
-    config.limits.message_bytes = 64 * 1024;
-    config.limits.schema_bytes = 32 * 1024;
+    config.bounds.message_bytes = 64 * 1024;
+    config.bounds.schema_bytes = 32 * 1024;
     config
 }
 
@@ -66,17 +69,52 @@ impl StdioHost {
     }
 }
 
+/// The verified grant the host runs the agent's tool calls under.
+pub fn grant() -> OAuthContext {
+    OAuthContext::from_verified(
+        "https://identity.example.com",
+        "https://mcp-example.example.com",
+        "example-agent",
+        Vec::<String>::new(),
+    )
+}
+
+/// A registry over every operation `contributions` compose, with each profile's operations.
+pub fn registry(
+    contributions: Vec<Contribution>,
+    profiles: &[(&str, &[&str])],
+) -> Result<ToolRegistry> {
+    let set = compose_with_options(
+        contributions,
+        Bounds::default(),
+        ComposeOptions {
+            execution: ExecutionMode::Daemon,
+            ..ComposeOptions::default()
+        },
+    )?;
+    let names = set
+        .operations()
+        .map(|operation| operation.name.to_string())
+        .filter(|name| !name.starts_with("clapham."))
+        .collect::<Vec<_>>();
+    let selection = set.select(names)?;
+    let mut registry = ToolRegistry::new(set, selection, grant())?;
+    for (profile, names) in profiles {
+        registry = registry.with_profile(*profile, names.iter().copied())?;
+    }
+    Ok(registry)
+}
+
 pub async fn bind(connection: &McpConnection) -> Result<(McpToolBinding, ToolRegistry)> {
     let catalogue = connection.discover().await?;
     if !catalogue.diagnostics().is_empty() {
         return Err("MCP fixture catalogue was refused".into());
     }
-    let mut registry = ToolRegistry::default();
-    let binding = catalogue.bind(
-        vec![McpSelection::new("write", vec!["operator".into()])],
-        &registry,
+    let binding = catalogue.bind(vec![McpSelection::new("write")])?;
+    let registry = registry(
+        vec![binding.contribution()],
+        &[("operator", &["remote.write"])],
     )?;
-    binding.register_into(&mut registry)?;
     Ok((binding, registry))
 }
 
@@ -167,19 +205,20 @@ pub fn request(
     }
 }
 
-/// Apply the host's decision policy to this run's selected MCP binding.
+/// Apply the host's decision policy to this run's selection, which includes its MCP binding.
 pub fn approved_request(
-    binding: &McpToolBinding,
     registry: &ToolRegistry,
     chat: EngineChatParameters,
     run_id: &str,
     policy: Arc<dyn ToolApprovalPolicy>,
 ) -> Result<EngineTextStreamRequest> {
+    let operator = registry.for_profile("operator");
+    let binding_revision = operator.revision().into();
     let executor = ApprovedToolExecutor::new(
-        registry.for_profile("operator"),
+        operator,
         ToolApprovalScope {
             run_id: run_id.into(),
-            binding_revision: binding.revision().into(),
+            binding_revision,
             deadline: Instant::now() + Duration::from_secs(5),
         },
         policy,

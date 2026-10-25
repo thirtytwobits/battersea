@@ -17,7 +17,7 @@ media independently of a product session.
 The declarative-provider example binds two service identities to the same mock adapter and
 checks their diagnostic identities. Its contract tests exercise HTTP protocols with local fixtures.
 
-The [MCP consumer](mcp.md) requires Rust 1.88. It launches a controlled stdio child and local
+The [MCP consumer](mcp.md) launches a controlled stdio child and local
 HTTP JSON/SSE servers, then delivers remote tool results through a provider conversation.
 Its tests inject lost replies, disconnects, cancellation and provider continuation retries.
 

@@ -1347,8 +1347,7 @@ mod tests {
             assert_eq!(
                 body["toolConfig"]["functionCallingConfig"]["mode"],
                 json!(expected),
-                "mode {:?}",
-                mode
+                "mode {mode:?}"
             );
         }
     }

@@ -21,11 +21,7 @@ struct Cli {
 #[derive(Subcommand)]
 enum Task {
     /// Format, check dependencies/versions, test and build Rust documentation. Needs no Node.
-    Check {
-        /// Check core packages on their Rust 1.85 minimum.
-        #[arg(long)]
-        core_only: bool,
-    },
+    Check,
     /// Check dependency direction and synchronised Cargo/npm versions.
     Boundaries,
     /// Scan AI-facing source against declared prompt roots.
@@ -43,11 +39,7 @@ enum Task {
         update: bool,
     },
     /// Build crate archives and compile an independent consumer of each archive.
-    Package {
-        /// Package core crates on their Rust 1.85 minimum.
-        #[arg(long)]
-        core_only: bool,
-    },
+    Package,
     /// Check publication decisions and require the tag to match all package versions.
     ReleaseCheck { tag: String },
     /// Build the handbook and public Rust reference. Needs mdBook, but no Node.
@@ -125,10 +117,11 @@ fn dependency_errors(metadata: &Value, policy: &Value, root: &Path) -> Vec<Strin
             continue;
         };
         let node = nodes.iter().find(|n| n["id"] == package["id"]).unwrap();
+        let allows = |target: &str| allowed.iter().any(|v| v == target);
         for dep in node["deps"].as_array().unwrap() {
             let target = packages.iter().find(|p| p["id"] == dep["pkg"]).unwrap();
             let target_name = target["name"].as_str().unwrap();
-            if target_name.starts_with("battersea-") && !allowed.iter().any(|v| v == target_name) {
+            if target_name.starts_with("battersea-") && !allows(target_name) {
                 errors.push(format!("{name} cannot depend on {target_name}"));
             }
         }
@@ -140,11 +133,23 @@ fn dependency_errors(metadata: &Value, policy: &Value, root: &Path) -> Vec<Strin
             }
             let target = packages.iter().find(|p| p["id"] == id).unwrap();
             let target_name = target["name"].as_str().unwrap();
-            if target_name == "rmcp" && name != "battersea-mcp" {
-                errors.push(format!("{name} reaches rmcp outside the MCP adapter"));
+            if target_name == "rmcp" {
+                errors.push(format!("{name} reaches rmcp outside Clapham's MCP crates"));
             }
             if target_name.starts_with("primrose-") || target_name.starts_with("clerkenwell-") {
                 errors.push(format!("{name} reaches product dependency {target_name}"));
+            }
+            if target_name.starts_with("walthamstow-") {
+                errors.push(format!("{name} reaches London piece {target_name}"));
+            }
+            if target_name.starts_with("clapham") && !allows(target_name) {
+                errors.push(format!(
+                    "{name} reaches {target_name} without a dependency policy"
+                ));
+            }
+            // Clapham's MCP crates own rmcp; a crate allowed one of them reaches rmcp through it.
+            if target_name.starts_with("clapham-mcp-") && allows(target_name) {
+                continue;
             }
             if target["source"].is_null()
                 && !Path::new(target["manifest_path"].as_str().unwrap()).starts_with(root)
@@ -267,7 +272,7 @@ fn api(root: &Path, update: bool) -> Result<()> {
     }
     Ok(())
 }
-fn package(root: &Path, core_only: bool) -> Result<()> {
+fn package(root: &Path) -> Result<()> {
     boundaries(root)?;
     let release = json(root.join("release.json"))?;
     let version = string(&release, "version")?;
@@ -281,10 +286,7 @@ fn package(root: &Path, core_only: bool) -> Result<()> {
             .as_str()
             .ok_or("Cargo returned no target directory")?,
     );
-    let mut crates = release["crates"].as_object().unwrap().clone();
-    if core_only {
-        crates.remove("battersea-mcp");
-    }
+    let crates = release["crates"].as_object().unwrap().clone();
     let mut directories = std::collections::BTreeMap::new();
     for name in crates.keys() {
         let manifest = metadata["packages"]
@@ -302,6 +304,28 @@ fn package(root: &Path, core_only: bool) -> Result<()> {
                 .to_path_buf(),
         );
     }
+    // Git dependencies, such as Clapham, are pinned by the lockfile. Archives name them by
+    // version; consumers resolve those versions to the locked checkouts.
+    let resolved: Value = serde_json::from_str(&output(
+        root,
+        "cargo",
+        &["metadata", "--format-version", "1", "--locked"],
+    )?)?;
+    let mut git = std::collections::BTreeMap::new();
+    for dependency in resolved["packages"].as_array().unwrap() {
+        if dependency["source"]
+            .as_str()
+            .is_some_and(|source| source.starts_with("git+"))
+        {
+            git.insert(
+                dependency["name"].as_str().unwrap().to_string(),
+                Path::new(dependency["manifest_path"].as_str().unwrap())
+                    .parent()
+                    .ok_or("manifest has no directory")?
+                    .to_path_buf(),
+            );
+        }
+    }
     let unpack_root = tempfile::tempdir()?;
     for (name, required) in &crates {
         let directory = &directories[name];
@@ -310,25 +334,28 @@ fn package(root: &Path, core_only: bool) -> Result<()> {
         }
         let mut args = vec![
             "package".to_string(),
-            "--locked".into(),
             "--allow-dirty".into(),
             "--no-verify".into(),
             "-p".into(),
             name.clone(),
         ];
-        // Packages are distributed together. Resolve their versioned dependencies
-        // locally while creating archives, then verify only the unpacked archives.
-        for (dependency, path) in &directories {
+        // Packages are distributed together. Resolve their versioned dependencies, Clapham's
+        // included, locally while creating archives, then verify only the unpacked archives.
+        // Cargo records the unused Clapham patches in the workspace lockfile, which is restored.
+        for (dependency, path) in directories.iter().chain(&git) {
             args.extend([
                 "--config".into(),
-                format!("patch.crates-io.{dependency}.path={:?}", path),
+                format!("patch.crates-io.{dependency}.path={path:?}"),
             ]);
         }
-        run(
+        let lockfile = fs::read(root.join("Cargo.lock"))?;
+        let packaged = run(
             root,
             "cargo",
             &args.iter().map(String::as_str).collect::<Vec<_>>(),
-        )?;
+        );
+        fs::write(root.join("Cargo.lock"), lockfile)?;
+        packaged?;
         let archive = target_dir
             .join("package")
             .join(format!("{name}-{version}.crate"));
@@ -362,9 +389,6 @@ fn package(root: &Path, core_only: bool) -> Result<()> {
         "editor-server",
         "mcp",
     ] {
-        if core_only && example == "mcp" {
-            continue;
-        }
         let consumer = unpack_root.path().join(example);
         fs::create_dir_all(consumer.join("src"))?;
         let tokio_features = if example == "mcp" {
@@ -380,15 +404,27 @@ fn package(root: &Path, core_only: bool) -> Result<()> {
             manifest.push_str("axum = { version = \"0.8\", features = [\"json\"] }\nclap = { version = \"4\", features = [\"derive\"] }\ntempfile = \"3\"\n");
         }
         for name in crates.keys() {
-            let features = if example == "mcp" && name == "battersea-mcp" {
-                ", features = [\"stdio\", \"http\"]"
-            } else {
-                ""
-            };
             manifest.push_str(&format!(
-                "{name} = {{ path = {:?}{features} }}\n",
+                "{name} = {{ path = {:?} }}\n",
                 unpack_root.path().join(format!("{name}-{version}"))
             ));
+        }
+        if example == "backend" {
+            manifest.push_str(
+                "serde = { version = \"1\", features = [\"derive\"] }\nschemars = \"1\"\n",
+            );
+        }
+        if matches!(example, "backend" | "mcp") {
+            for (name, path) in &git {
+                if name == "clapham" || (example == "mcp" && name == "clapham-mcp-client") {
+                    let features = if name == "clapham-mcp-client" {
+                        ", features = [\"stdio\", \"http\"]"
+                    } else {
+                        ""
+                    };
+                    manifest.push_str(&format!("{name} = {{ path = {path:?}{features} }}\n"));
+                }
+            }
         }
         if example == "mcp" {
             manifest.push_str("[lib]\nname = \"mcp_example\"\n[[bin]]\nname = \"mcp-example\"\npath = \"src/main.rs\"\n");
@@ -399,6 +435,9 @@ fn package(root: &Path, core_only: bool) -> Result<()> {
                 "{name} = {{ path = {:?} }}\n",
                 unpack_root.path().join(format!("{name}-{version}"))
             ));
+        }
+        for (name, path) in &git {
+            manifest.push_str(&format!("{name} = {{ path = {path:?} }}\n"));
         }
         fs::write(consumer.join("Cargo.toml"), manifest)?;
         fs::write(
@@ -503,7 +542,7 @@ fn scan_prompts(root: &Path) -> Result<()> {
     let policy = battersea_guard::PromptPolicy::new(
         &["crates/battersea-nodes/src/nodes.yaml"],
         &[
-            r"^crates/(battersea-model|battersea-tools|battersea-mcp|battersea-providers|battersea-config|battersea-nodes)/src/.*\.(rs|yaml)$",
+            r"^crates/(battersea-model|battersea-tools|battersea-providers|battersea-config|battersea-nodes)/src/.*\.(rs|yaml)$",
         ],
     )?;
     fn visit(
@@ -543,21 +582,6 @@ fn scan_prompts(root: &Path) -> Result<()> {
     }
 }
 
-fn workspace_args<'a>(args: &[&'a str], core_only: bool) -> Vec<&'a str> {
-    let mut result = args.to_vec();
-    if core_only {
-        let index = result
-            .iter()
-            .position(|arg| *arg == "--")
-            .unwrap_or(result.len());
-        result.splice(
-            index..index,
-            ["--exclude", "battersea-mcp", "--exclude", "mcp-example"],
-        );
-    }
-    result
-}
-
 fn main() -> Result<()> {
     let root = root();
     match Cli::parse().command {
@@ -568,7 +592,7 @@ fn main() -> Result<()> {
         Task::Bindings { check } => bindings::generate(&root, check),
         Task::Boundaries => boundaries(&root),
         Task::ScanPrompts => scan_prompts(&root),
-        Task::Check { core_only } => {
+        Task::Check => {
             run(&root, "cargo", &["fmt", "--all", "--check"])?;
             boundaries(&root)?;
             bindings::generate(&root, true)?;
@@ -609,36 +633,30 @@ fn main() -> Result<()> {
             run(
                 &root,
                 "cargo",
-                &workspace_args(
-                    &["test", "--workspace", "--all-features", "--locked"],
-                    core_only,
-                ),
+                &["test", "--workspace", "--all-features", "--locked"],
             )?;
             run(
                 &root,
                 "cargo",
-                &workspace_args(
-                    &[
-                        "clippy",
-                        "--workspace",
-                        "--all-targets",
-                        "--all-features",
-                        "--locked",
-                        "--",
-                        "-D",
-                        "warnings",
-                    ],
-                    core_only,
-                ),
+                &[
+                    "clippy",
+                    "--workspace",
+                    "--all-targets",
+                    "--all-features",
+                    "--locked",
+                    "--",
+                    "-D",
+                    "warnings",
+                ],
             )?;
             run(
                 &root,
                 "cargo",
-                &workspace_args(&["doc", "--workspace", "--no-deps", "--locked"], core_only),
+                &["doc", "--workspace", "--no-deps", "--locked"],
             )
         }
         Task::Api { update } => api(&root, update),
-        Task::Package { core_only } => package(&root, core_only),
+        Task::Package => package(&root),
         Task::ReleaseCheck { tag } => release_check(&root, &tag),
     }
 }
@@ -686,17 +704,53 @@ mod tests {
         .is_empty());
     }
     #[test]
-    fn the_mcp_sdk_is_confined_to_the_adapter() {
-        let mut data = metadata("rmcp", json!("registry"), "/cache/Cargo.toml");
-        assert!(
-            dependency_errors(&data, &json!({"battersea-flow":[]}), Path::new("/repo"))
-                .iter()
-                .any(|error| error.contains("rmcp"))
-        );
-        data["packages"][0]["name"] = json!("battersea-mcp");
-        assert!(
-            dependency_errors(&data, &json!({"battersea-mcp":[]}), Path::new("/repo")).is_empty()
-        );
+    fn the_mcp_sdk_is_reached_only_through_claphams_mcp_crates() {
+        assert!(dependency_errors(
+            &metadata("rmcp", json!("registry"), "/cache/Cargo.toml"),
+            &json!({"battersea-flow":[]}),
+            Path::new("/repo")
+        )
+        .iter()
+        .any(|error| error.contains("rmcp")));
+        let mut data = metadata("clapham-mcp-client", json!("git"), "/cache/Cargo.toml");
+        data["packages"]
+            .as_array_mut()
+            .unwrap()
+            .push(json!({"id":"rmcp","name":"rmcp","source":"registry","manifest_path":"/cache/rmcp/Cargo.toml"}));
+        data["resolve"]["nodes"][2]["deps"] = json!([{"name":"rmcp","pkg":"rmcp"}]);
+        data["resolve"]["nodes"]
+            .as_array_mut()
+            .unwrap()
+            .push(json!({"id":"rmcp","deps":[]}));
+        assert!(dependency_errors(
+            &data,
+            &json!({"battersea-flow":["clapham-mcp-client"]}),
+            Path::new("/repo")
+        )
+        .is_empty());
+    }
+    #[test]
+    fn a_london_piece_is_reached_only_where_the_policy_names_it() {
+        for (name, policy) in [
+            ("clapham", json!({"battersea-flow":[]})),
+            (
+                "walthamstow-workspace",
+                json!({"battersea-flow":["walthamstow-workspace"]}),
+            ),
+        ] {
+            let errors = dependency_errors(
+                &metadata(name, json!("git"), "/cache/Cargo.toml"),
+                &policy,
+                Path::new("/repo"),
+            );
+            assert!(errors.iter().any(|e| e.contains(name)), "{name}");
+        }
+        assert!(dependency_errors(
+            &metadata("clapham", json!("git"), "/cache/Cargo.toml"),
+            &json!({"battersea-flow":["clapham"]}),
+            Path::new("/repo")
+        )
+        .is_empty());
     }
 
     #[test]

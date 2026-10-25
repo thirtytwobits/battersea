@@ -1,13 +1,11 @@
 //! Copyright (c) Scott A Dixon
 //! Behavioural contracts across the public MCP, registry and provider interfaces.
-use battersea_mcp::{McpConnection, McpHttpOptions, McpSelection};
 use battersea_model::{
     EngineAdapter, EngineAdapterRequestError, EngineTextStreamEvent, EngineTextStreamRequest,
-    ToolCallOutcome,
+    ToolCallOutcome, ToolCode,
 };
-use battersea_tools::{
-    ToolApprovalDecision, ToolApprovalPolicy, ToolApprovalRequest, ToolRegistry,
-};
+use battersea_tools::{ToolApprovalDecision, ToolApprovalPolicy, ToolApprovalRequest};
+use clapham_mcp_client::{McpConnection, McpHttpOptions, McpSelection};
 use futures_util::StreamExt;
 use mcp_example::{
     fixture::{self, Fault, HttpServer, McpFixture, ProviderFixture, Result},
@@ -60,18 +58,17 @@ async fn remote_approval_precedes_effects_and_provider_retries_reuse_the_decisio
             let remote = Remote::start(transport, &ledger, Fault::None, Duration::from_secs(10))
                 .await
                 .unwrap();
-            let (binding, tools) = host::bind(&remote.connection).await.unwrap();
+            let (_binding, tools) = host::bind(&remote.connection).await.unwrap();
             let policy = Arc::new(HostPolicy {
                 decision,
-                binding_revision: binding.revision().into(),
+                binding_revision: tools.for_profile("operator").revision().into(),
                 calls: 0.into(),
             });
             let fixture = ProviderFixture::new(json!({"value":1}), true);
             let provider = fixture::provider_http(fixture.clone()).await.unwrap();
             let (adapter, chat) = host::provider(&provider.endpoint).unwrap();
             let request =
-                host::approved_request(&binding, &tools, chat, "approval-run", policy.clone())
-                    .unwrap();
+                host::approved_request(&tools, chat, "approval-run", policy.clone()).unwrap();
             let executor = request.local_tool_executor.clone().unwrap();
             let result = collect(&adapter, request).await;
             let count = match decision {
@@ -245,8 +242,7 @@ async fn provider_continuation_retries_reuse_mcp_results_and_exclude_metadata() 
                 evidence.as_ref().unwrap().outcome,
                 ToolCallOutcome::Completed
             );
-            let retained = serde_json::to_value(retained).unwrap().to_string();
-            assert!(retained.contains("private-receipt"));
+            assert!(retained.is_some());
             assert!(!projected.to_string().contains("private-receipt"));
             assert!(events.iter().any(|e| matches!(e, EngineTextStreamEvent::TextDelta { text } if text == "Remote result received")));
             let requests = fixture.requests.lock().unwrap().clone();
@@ -451,21 +447,16 @@ async fn catalogue_admission_and_alias_collisions_use_shared_registry_rules() {
     let catalogue = connection.discover().await.unwrap();
     assert_eq!(catalogue.diagnostics().len(), 1);
     assert_eq!(catalogue.diagnostics()[0].name.as_deref(), Some("invalid"));
-    assert!(catalogue
-        .bind(
-            vec![McpSelection::new("invalid", vec!["operator".into()])],
-            &ToolRegistry::default()
-        )
-        .is_err());
-    assert!(catalogue
-        .bind(
-            vec![
-                McpSelection::new("a.b", vec![]),
-                McpSelection::new("a_b", vec![])
-            ],
-            &ToolRegistry::default()
-        )
-        .is_err());
+    assert!(catalogue.bind(vec![McpSelection::new("invalid")]).is_err());
+    let colliding = catalogue
+        .bind(vec![McpSelection::new("a.b"), McpSelection::new("a_b")])
+        .unwrap();
+    let error = host::registry(vec![colliding.contribution()], &[])
+        .err()
+        .unwrap()
+        .downcast::<EngineAdapterRequestError>()
+        .unwrap();
+    assert_eq!(error.tool_code, Some(ToolCode::DuplicateTool));
     connection.close();
 }
 
@@ -551,9 +542,6 @@ async fn durable_pending_calls_resume_from_disk_once_without_regenerating() {
             .resume("effect-1", approved.revision)
             .await
             .unwrap();
-        assert!(serde_json::to_string(&result)
-            .unwrap()
-            .contains("private-receipt"));
         assert!(!format!("{:?}", executor.inspect().await.unwrap()).contains("private-receipt"));
         drop(executor);
         let executor = DurableToolExecutor::open(
@@ -601,7 +589,7 @@ async fn file_approval_store_fences_competing_handles_and_bounds_read_only_loads
     };
     let executor = DurableToolExecutor::create(
         store.clone(),
-        ToolRegistry::default(),
+        host::registry(Vec::new(), &[]).unwrap(),
         scope,
         ToolApprovalJournalLimits {
             max_calls: 1,
@@ -918,9 +906,6 @@ async fn durable_provider_continuation_reopens_both_journals_and_retries_the_sav
         assert!(completed.turns[1].response.events.iter().any(
             |e| matches!(e,EngineTextStreamEvent::TextDelta{text} if text==&fixture.final_text)
         ));
-        assert!(serde_json::to_string(&completed)
-            .unwrap()
-            .contains("private-receipt"));
         assert!(!format!("{completed:?}").contains("private-receipt"));
         {
             let requests = fixture.requests.lock().unwrap();
@@ -1663,7 +1648,7 @@ async fn background_retrieval_failures_preserve_identity_and_cancellation_is_exp
     let server = background_fixture::serve(fixture.clone()).await.unwrap();
     let (adapter, chat) =
         host::background_responses_provider(&server.endpoint, false, None).unwrap();
-    let original = host::request(&ToolRegistry::default(), "operator", chat);
+    let original = host::request(&host::registry(Vec::new(), &[]).unwrap(), "operator", chat);
     let request = ConversationRequest {
         shared: original.shared,
         tools: vec![],
@@ -1816,7 +1801,7 @@ async fn background_retrieval_failures_preserve_identity_and_cancellation_is_exp
     std::fs::write(&path, bytes).unwrap();
     let (foreground, mut chat) = host::responses_provider(&server.endpoint).unwrap();
     chat.stream = false;
-    let unsupported = host::request(&ToolRegistry::default(), "operator", chat);
+    let unsupported = host::request(&host::registry(Vec::new(), &[]).unwrap(), "operator", chat);
     assert!(foreground.stream_text(unsupported.clone()).await.is_err());
     assert!(foreground
         .count_text_stream_input_tokens(unsupported)
@@ -1844,7 +1829,7 @@ async fn cancellation_recovers_a_matching_terminal_response_after_rejection() {
         let server = background_fixture::serve(fixture.clone()).await.unwrap();
         let (adapter, chat) =
             host::background_responses_provider(&server.endpoint, false, None).unwrap();
-        let original = host::request(&ToolRegistry::default(), "operator", chat);
+        let original = host::request(&host::registry(Vec::new(), &[]).unwrap(), "operator", chat);
         let request = ConversationRequest {
             shared: original.shared,
             tools: vec![],

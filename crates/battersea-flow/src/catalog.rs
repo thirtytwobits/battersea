@@ -296,10 +296,7 @@ fn normalize_manifest_formatter_definition(
                 return Err("flow formatter references must not be blank".to_string());
             }
             formatter_blocks.get(ref_key).cloned().ok_or_else(|| {
-                format!(
-                    "flow formatter reference \"{}\" does not match a formatter block",
-                    ref_key
-                )
+                format!("flow formatter reference \"{ref_key}\" does not match a formatter block")
             })
         }
     }
@@ -967,8 +964,7 @@ where
         let name = port.name();
         ensure!(
             !name.trim().is_empty(),
-            "flow {} port names must be non-empty in the manifest",
-            side
+            "flow {side} port names must be non-empty in the manifest"
         );
         if side == "signal" {
             ensure!(
@@ -978,8 +974,7 @@ where
         }
         ensure!(
             names.insert(name.to_string()),
-            "flow {} port names must be unique within a definition",
-            side
+            "flow {side} port names must be unique within a definition"
         );
     }
     Ok(names)

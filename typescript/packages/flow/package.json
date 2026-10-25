@@ -12,7 +12,8 @@
     "./schema": "./schemas/flow.schema.json",
     "./fixtures/*": "./fixtures/*",
     "./runtime-schema": "./schemas/runtime.schema.json",
-    "./tools-schema": "./schemas/tools.schema.json"
+    "./tools-schema": "./schemas/tools.schema.json",
+    "./operation-schema": "./schemas/operation.schema.json"
   },
   "files": [
     "dist",

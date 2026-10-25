@@ -1423,7 +1423,7 @@ pub trait ExecutionHost: Sized + Send + Sync {
             runtime,
             &node.id,
             EventKind::NodeComplete,
-            format!("Completed {:?} phase.", phase),
+            format!("Completed {phase:?} phase."),
             Some(json!({"definitionName":node.definition_name,"handlerId":definition.handler_id,"complete":runtime.executed_nodes.contains(&node.id),"phase":phase})),
         )
         .await;

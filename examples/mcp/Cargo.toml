@@ -2,18 +2,19 @@
 name = "mcp-example"
 version.workspace = true
 edition.workspace = true
-rust-version = "1.88"
+rust-version.workspace = true
 license.workspace = true
 publish = false
 
 [dependencies]
 async-trait.workspace = true
-battersea-mcp = { path = "../../crates/battersea-mcp", features = ["stdio", "http"] }
 battersea-model = { path = "../../crates/battersea-model" }
 battersea-tools = { path = "../../crates/battersea-tools" }
 battersea-providers = { path = "../../crates/battersea-providers", default-features = false, features = ["openai"] }
 battersea-config = { path = "../../crates/battersea-config" }
 clap.workspace = true
+clapham.workspace = true
+clapham-mcp-client = { workspace = true, features = ["stdio", "http"] }
 axum.workspace = true
 futures-util.workspace = true
 serde_json.workspace = true

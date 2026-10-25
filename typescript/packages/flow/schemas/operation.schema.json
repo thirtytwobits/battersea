@@ -1,0 +1,228 @@
+{
+  "$defs": {
+    "Category": {
+      "description": "The fixed categories front ends act on when an operation refuses a call.",
+      "oneOf": [
+        {
+          "const": "usage",
+          "description": "The invocation was wrong.",
+          "type": "string"
+        },
+        {
+          "const": "invalid_input",
+          "description": "The input failed its schema or the operation's checks.",
+          "type": "string"
+        },
+        {
+          "const": "not_found",
+          "description": "What the input names is absent.",
+          "type": "string"
+        },
+        {
+          "const": "conflict",
+          "description": "A fence or state conflict prevents the change.",
+          "type": "string"
+        },
+        {
+          "const": "refused",
+          "description": "A gate, policy or approval said no.",
+          "type": "string"
+        },
+        {
+          "const": "unavailable",
+          "description": "A required workspace, daemon or remote is unavailable.",
+          "type": "string"
+        },
+        {
+          "const": "interrupted",
+          "description": "The call was cancelled, timed out or stopped by shutdown.",
+          "type": "string"
+        },
+        {
+          "const": "configuration",
+          "description": "The host's configuration is wrong.",
+          "type": "string"
+        },
+        {
+          "const": "internal",
+          "description": "A fault, including an undeclared refusal code.",
+          "type": "string"
+        }
+      ]
+    },
+    "Effect": {
+      "description": "What an operation does to its environment, declared independently of transport.",
+      "oneOf": [
+        {
+          "const": "query",
+          "description": "Reads without changing state.",
+          "type": "string"
+        },
+        {
+          "const": "mutation",
+          "description": "Changes state within the operation's domain.",
+          "type": "string"
+        },
+        {
+          "const": "administrative",
+          "description": "Changes the host's own administrative state.",
+          "type": "string"
+        },
+        {
+          "const": "destructive",
+          "description": "May destroy or overwrite state.",
+          "type": "string"
+        }
+      ]
+    },
+    "Locality": {
+      "description": "Where an operation runs.",
+      "oneOf": [
+        {
+          "const": "workspace",
+          "description": "Runs against the workspace under its lock.",
+          "type": "string"
+        },
+        {
+          "const": "daemon",
+          "description": "Needs the running daemon.",
+          "type": "string"
+        }
+      ]
+    },
+    "OperationName": {
+      "maxLength": 128,
+      "minLength": 1,
+      "not": {
+        "pattern": "[^A-Za-z0-9_.-]"
+      },
+      "pattern": "^[A-Za-z0-9_.-]+$",
+      "type": "string"
+    },
+    "Schema": {
+      "type": [
+        "object",
+        "boolean"
+      ]
+    }
+  },
+  "$id": "https://raw.githubusercontent.com/thirtytwobits/clapham/main/crates/clapham/schemas/operation.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "An operation's language-neutral descriptor.\n\nOAuth scopes and resource policies constrain admission independently of effects.\nThe behaviour declarations, `idempotent` and `open_world`, are\nrequired rather than silently defaulted. Composition compiles the schemas and\nchecks the descriptor's cross-field semantics before calls can run.",
+  "properties": {
+    "confirmation": {
+      "default": false,
+      "description": "Whether the CLI requires explicit confirmation.",
+      "type": "boolean"
+    },
+    "description": {
+      "description": "What the operation does; this field is required.",
+      "type": "string"
+    },
+    "effect": {
+      "$ref": "#/$defs/Effect",
+      "description": "What the operation does to its environment."
+    },
+    "idempotent": {
+      "description": "Whether repeating the operation has the same effect as one call.",
+      "type": "boolean"
+    },
+    "input": {
+      "additionalProperties": true,
+      "description": "The input JSON Schema, explicitly declaring `type: object` at its root.",
+      "properties": {
+        "type": {
+          "const": "object"
+        }
+      },
+      "required": [
+        "type"
+      ],
+      "type": "object"
+    },
+    "locality": {
+      "$ref": "#/$defs/Locality",
+      "description": "Where the operation runs."
+    },
+    "name": {
+      "$ref": "#/$defs/OperationName",
+      "description": "The operation's identity, split into namespace and local name at the first dot."
+    },
+    "open_world": {
+      "description": "Whether the operation reaches entities outside its own domain.",
+      "type": "boolean"
+    },
+    "output": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/Schema"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "The result JSON Schema, where supplied; object and boolean schemas are admitted."
+    },
+    "policies": {
+      "default": [],
+      "description": "Named resource policies, resolved at composition.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "positional": {
+      "default": [],
+      "description": "Input properties taken as positional command-line arguments, in order.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "preview": {
+      "default": false,
+      "description": "Whether the operation accepts a dry run.",
+      "type": "boolean"
+    },
+    "refusals": {
+      "additionalProperties": {
+        "$ref": "#/$defs/Category"
+      },
+      "default": {},
+      "description": "Each declared refusal code and the category front ends act on.",
+      "type": "object"
+    },
+    "scopes": {
+      "default": [],
+      "description": "Every OAuth scope required to invoke or discover this operation.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "streams": {
+      "default": false,
+      "description": "Whether typed records precede the result.",
+      "type": "boolean"
+    },
+    "title": {
+      "description": "The name people read, where supplied.",
+      "type": [
+        "string",
+        "null"
+      ]
+    }
+  },
+  "required": [
+    "name",
+    "description",
+    "input",
+    "effect",
+    "locality",
+    "idempotent",
+    "open_world"
+  ],
+  "title": "Operation",
+  "type": "object"
+}

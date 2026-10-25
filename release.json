@@ -87,13 +87,6 @@
       "README.md",
       "LICENSE",
       "NOTICE"
-    ],
-    "battersea-mcp": [
-      "Cargo.toml",
-      "src/lib.rs",
-      "README.md",
-      "LICENSE",
-      "NOTICE"
     ]
   },
   "npm": {
@@ -108,7 +101,8 @@
       "fixtures/token-type-compatibility.json",
       "fixtures/flows.json",
       "schemas/runtime.schema.json",
-      "schemas/tools.schema.json"
+      "schemas/tools.schema.json",
+      "schemas/operation.schema.json"
     ],
     "@battersea/editor": [
       "package.json",

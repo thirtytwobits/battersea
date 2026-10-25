@@ -18,7 +18,8 @@ use std::{
 #[derive(Clone, Debug)]
 pub struct ToolApprovalScope {
     pub run_id: String,
-    /// Host revision covering the selected bindings and credential scopes.
+    /// Host revision covering the registry's selection, [`ToolRegistry::revision`], its grant
+    /// and its credential scopes.
     pub binding_revision: String,
     pub deadline: Instant,
 }
@@ -52,7 +53,7 @@ pub trait ToolApprovalPolicy: Send + Sync {
     fn decide(&self, request: ToolApprovalRequest<'_>) -> ToolApprovalDecision;
 }
 
-/// A registry snapshot gated by one host policy and run identity.
+/// A registry gated by one host policy and run identity.
 ///
 /// Clones share call-ID reservations. Every valid logical call ID is reserved before policy
 /// evaluation and remains reserved after denial, pending, cancellation or failure. Reusing
