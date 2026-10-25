@@ -200,15 +200,20 @@ impl ToolRegistry {
             .collect()
     }
 
-    /// The registry over the selection of operations the agent profile `profile` is permitted
-    /// to call.
+    /// The registry over the operations of its selection that the agent profile `profile` is
+    /// permitted to call. Narrowing never restores an operation the selection excludes.
     pub fn for_profile(&self, profile: &str) -> Self {
-        let names = self.profiles.get(profile).cloned().unwrap_or_default();
+        let names = self
+            .profiles
+            .get(profile)
+            .into_iter()
+            .flatten()
+            .filter(|name| self.dispatch.selection.contains(name));
         let selection = self
             .dispatch
             .set
             .select(names)
-            .expect("a profile names selected operations");
+            .expect("a profile names composed operations");
         let mut registry = Self {
             dispatch: Arc::new(Dispatch {
                 set: self.dispatch.set.clone(),

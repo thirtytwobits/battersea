@@ -376,6 +376,20 @@ async fn a_profile_is_offered_and_runs_only_the_operations_it_is_permitted() {
         .tools()
         .find(|tool| tool.name == "example.unlisted")
         .is_some_and(|tool| tool.profiles() == Some(Vec::new())));
+    let narrowed = player.for_profile("author");
+    assert_eq!(
+        narrowed
+            .tools()
+            .map(|tool| tool.name.as_str())
+            .collect::<Vec<_>>(),
+        vec!["example.shared"]
+    );
+    let error = narrowed
+        .call(call("example.authoring", json!({"key": "selected"})))
+        .await
+        .unwrap_err();
+    assert_eq!(error.tool_code, Some(ToolCode::UnregisteredTool));
+    assert!(recorder.calls().is_empty());
     assert_ne!(author.revision(), registry.revision());
     assert_eq!(author.revision(), registry.for_profile("author").revision());
 }

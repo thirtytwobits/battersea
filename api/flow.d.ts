@@ -386,7 +386,9 @@ export type Category = "usage" | "invalid_input" | "not_found" | "conflict" | "r
 export type Effect = "query" | "mutation" | "administrative" | "destructive";
 export type Locality = "workspace" | "daemon";
 export type OperationName = string;
-export type Schema = {} | boolean;
+export type Schema = {
+    [key: string]: unknown;
+} | boolean;
 
 // ports.d.ts
 /** Nominal token compatibility, including pass-through outputs with inferred input types. */
