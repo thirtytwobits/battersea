@@ -1,5 +1,34 @@
 # Changelog
 
+## 0.18.0 — 2026-10-25
+
+- Take [Clapham](https://github.com/thirtytwobits/clapham) v0.3.0, the operations contract of
+  the London set. Every crate requires Rust 1.88.
+- Breaking Rust API: `ToolRegistry::new` offers a selection of a Clapham composed set under the
+  run's verified OAuth grant, and dispatches each call through `ComposedSet::call`. `register` and
+  `Default` are removed; hosts contribute their tools as Clapham operations. Profiles are named
+  selections, set with `with_profile` and narrowed with `for_profile`. `ToolRegistry::revision` is
+  the selection's revision, which an approval scope's binding revision covers.
+  `Tool::for_operation` presents a descriptor as Clapham's MCP server does.
+- A refusal reaches the tool loop with its message and evidence. Clapham's `invalid_input`,
+  `invalid_result` and `unknown_operation`, and any code spelled as a `ToolCode`, set
+  `tool_code`; any other code, such as a remote `mcp_timeout`, is the classification unchanged.
+  A registry result carries no host metadata, so a remote tool result's `_meta` no longer reaches
+  the host.
+- Remove `battersea-mcp`. Remote tools arrive as operations through Clapham's
+  `clapham-mcp-client`, and `examples/mcp` runs on it. The MCP adapter contract is Clapham's.
+- Add `battersea-ops`, which contributes Battersea's flow, run, approval and MCP-connection
+  operations under the `battersea` namespace over the host capabilities the application
+  supplies. See `contracts/operations.md`. `examples/ops` gives the same result for every
+  operation through all seven of Clapham's front ends.
+- `@battersea/flow` carries Clapham's `operation.schema.json` and its `Operations` types.
+- `examples/editor-server` serves its flow and run operations at `/mcp` under local tokens and
+  writes an endpoint record. Its CLI is Clapham's, built from the daemon's catalogue; the
+  `activate`, `inspect`, `cancel`, `inspect-upgrade` and `upgrade` subcommands are removed.
+- Stored formats are unchanged. Tool approval journals keep version 1, and a 0.17.0 journal reads
+  back unchanged; its calls refuse to dispatch, because the registry presents a different tool
+  record. See issues #31, #32 and #33, and PRs #38, #39 and #40.
+
 ## 0.17.0 — 2026-10-22
 
 - Add per-node `fail`, `emit` and `skip` policies for explicitly classified recoverable
