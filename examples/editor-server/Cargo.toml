@@ -11,16 +11,19 @@ battersea-flow = { path = "../../crates/battersea-flow" }
 battersea-runtime = { path = "../../crates/battersea-runtime" }
 battersea-nodes = { path = "../../crates/battersea-nodes" }
 battersea-pianola = { path = "../../crates/battersea-pianola" }
+battersea-ops = { path = "../../crates/battersea-ops" }
+clapham.workspace = true
+clapham-cli.workspace = true
+clapham-mcp-server.workspace = true
 async-trait.workspace = true
 axum.workspace = true
 futures-util.workspace = true
-clap.workspace = true
+clap = { workspace = true, features = ["env"] }
 serde.workspace = true
 serde_json.workspace = true
 sha2 = "0.10"
 tokio.workspace = true
 tokio-util.workspace = true
-reqwest.workspace = true
 uuid = { version = "1", features = ["v4"] }
 [dev-dependencies]
 tempfile.workspace = true

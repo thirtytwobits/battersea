@@ -399,7 +399,7 @@ fn package(root: &Path) -> Result<()> {
         };
         let mut manifest = format!("[package]\nname = \"package-{example}\"\nversion = \"0.0.0\"\nedition = \"2021\"\n[dependencies]\nserde_json = \"1\"\nfutures-util = \"0.3\"\nasync-trait = \"0.1\"\ntokio = {{ version = \"1\", features = {tokio_features} }}\ntokio-util = \"0.7\"\n");
         if example == "editor-server" {
-            manifest.push_str("sha2 = \"0.10\"\naxum = { version = \"0.8\", features = [\"json\"] }\nclap = { version = \"4\", features = [\"derive\"] }\nserde = { version = \"1\", features = [\"derive\"] }\nreqwest = { version = \"0.12\", default-features = false, features = [\"json\", \"rustls-tls\"] }\nuuid = { version = \"1\", features = [\"v4\"] }\ntempfile = \"3\"\n");
+            manifest.push_str("sha2 = \"0.10\"\naxum = { version = \"0.8\", features = [\"json\"] }\nclap = { version = \"4\", features = [\"derive\", \"env\"] }\nserde = { version = \"1\", features = [\"derive\"] }\nuuid = { version = \"1\", features = [\"v4\"] }\ntempfile = \"3\"\n");
         }
         if example == "mcp" {
             manifest.push_str("axum = { version = \"0.8\", features = [\"json\"] }\nclap = { version = \"4\", features = [\"derive\"] }\ntempfile = \"3\"\n");
@@ -418,11 +418,13 @@ fn package(root: &Path) -> Result<()> {
                 "serde = { version = \"1\", features = [\"derive\"] }\nschemars = \"1\"\n",
             );
         }
-        if matches!(example, "backend" | "mcp" | "ops") {
+        if matches!(example, "backend" | "editor-server" | "mcp" | "ops") {
             for (name, path) in &git {
                 if name == "clapham"
                     || (example == "mcp" && name == "clapham-mcp-client")
                     || (example == "ops" && name != "clapham-mcp-client")
+                    || (example == "editor-server"
+                        && matches!(name.as_str(), "clapham-cli" | "clapham-mcp-server"))
                 {
                     let features = if name == "clapham-mcp-client" {
                         ", features = [\"stdio\", \"http\"]"
@@ -432,6 +434,10 @@ fn package(root: &Path) -> Result<()> {
                     manifest.push_str(&format!("{name} = {{ path = {path:?}{features} }}\n"));
                 }
             }
+        }
+        if example == "editor-server" {
+            manifest
+                .push_str("[[bin]]\nname = \"editor-server-example\"\npath = \"src/main.rs\"\n");
         }
         if matches!(example, "mcp" | "ops") {
             manifest.push_str(&format!("[lib]\nname = \"{example}_example\"\n[[bin]]\nname = \"{example}-example\"\npath = \"src/main.rs\"\n"));
@@ -499,12 +505,17 @@ fn package(root: &Path) -> Result<()> {
             )?;
         }
         if example == "editor-server" {
-            for module in ["runtime.rs", "upgrade.rs"] {
+            for module in ["ops.rs", "runtime.rs", "upgrade.rs"] {
                 fs::copy(
                     root.join("examples/editor-server/src").join(module),
                     consumer.join("src").join(module),
                 )?;
             }
+            fs::create_dir_all(consumer.join("tests"))?;
+            fs::copy(
+                root.join("examples/editor-server/tests/cli.rs"),
+                consumer.join("tests/cli.rs"),
+            )?;
             fs::create_dir_all(consumer.join("fixtures"))?;
             for name in ["nodes.json", "example.json"] {
                 fs::write(

@@ -93,6 +93,8 @@ pub struct Application {
     pub observation_error: Mutex<Option<String>>,
     exporter: Option<battersea_telemetry::otlp::Exporter>,
     pub acceptance: Mutex<HashMap<String, tokio::sync::oneshot::Sender<Result<(), String>>>>,
+    /// Signalled after each observed execution event and each change of an activation's status.
+    pub changed: tokio::sync::Notify,
 }
 struct TextSource;
 struct Output;
@@ -219,6 +221,7 @@ impl Application {
                 })
                 .transpose()?,
             acceptance: Mutex::default(),
+            changed: tokio::sync::Notify::new(),
         })
     }
     pub async fn publish_retained_outcome(&self, run: &Run) -> Result<(), Error> {
@@ -368,6 +371,7 @@ impl ExecutionHost for Application {
         {
             *self.observation_error.lock().unwrap() = Some(error.to_string());
         }
+        self.changed.notify_waiters();
     }
     fn observe_token(&self, run: &Run, node: &str, port: &str, token: &Token) {
         run.tap.lock().unwrap().capture(
