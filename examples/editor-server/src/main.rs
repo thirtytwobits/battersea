@@ -1,3 +1,4 @@
+mod ops;
 mod runtime;
 mod upgrade;
 use axum::{
@@ -14,64 +15,119 @@ use battersea_flow::{
 use battersea_runtime::{ActivationHost, ExecutionError};
 use clap::{Parser, Subcommand};
 use runtime::{codes, Application, Error};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::{
-    collections::HashMap,
+    collections::{BTreeMap, HashMap},
+    ffi::OsString,
     path::PathBuf,
     sync::{Arc, Mutex},
 };
 use tokio_util::sync::CancellationToken;
 #[derive(Parser)]
-#[command(about = "Battersea example editor server and activation client")]
+#[command(
+    about = "Battersea example editor server and the CLI assembled from its operations",
+    after_help = "Any other command is one of the daemon's operations, such as `battersea run \
+                  activate`. With a daemon running, `battersea --help` lists them."
+)]
 struct Cli {
+    /// The application directory whose endpoint record names the running daemon.
+    #[arg(long)]
+    root: Option<PathBuf>,
+    /// The daemon's MCP endpoint, instead of the endpoint record's.
+    #[arg(long, env = "BATTERSEA_ENDPOINT")]
+    endpoint: Option<String>,
+    /// The bearer token, instead of the endpoint record's.
+    #[arg(long, env = "BATTERSEA_TOKEN", hide_env_values = true)]
+    token: Option<String>,
     #[command(subcommand)]
     command: Command,
 }
 #[derive(Subcommand)]
 enum Command {
-    /// Initialise an empty application directory with example nodes and a flow.
+    /// Initialise an empty application directory with example nodes, a flow and local tokens.
     Init { root: PathBuf },
-    /// Serve the application API on loopback. Reads require prior initialisation.
+    /// Serve the application API and the operations' MCP endpoint on loopback, and write the
+    /// endpoint record. Reads require prior initialisation.
     Serve {
         root: PathBuf,
+        /// The loopback port; 0 chooses a free one.
         #[arg(long, default_value_t = 18180)]
         port: u16,
     },
-    /// Start an activation using the same endpoint as the editor.
-    Activate {
-        #[arg(long, default_value = "http://127.0.0.1:18180")]
-        server: String,
-        flow: String,
-        node: String,
-        text: String,
-    },
-    /// Inspect a saved flow's explicit upgrade and revision without changing it.
-    InspectUpgrade {
-        #[arg(long, default_value = "http://127.0.0.1:18180")]
-        server: String,
-        flow: String,
-    },
-    /// Upgrade a saved flow at the inspected revision, retaining its original.
-    Upgrade {
-        #[arg(long, default_value = "http://127.0.0.1:18180")]
-        server: String,
-        flow: String,
-        #[arg(long)]
-        expected_revision: String,
-    },
-    /// Read an activation and its ordered diagnostics.
-    Inspect {
-        #[arg(long, default_value = "http://127.0.0.1:18180")]
-        server: String,
-        id: String,
-    },
-    /// Request cancellation of an accepted activation.
-    Cancel {
-        #[arg(long, default_value = "http://127.0.0.1:18180")]
-        server: String,
-        id: String,
-    },
+    #[command(external_subcommand)]
+    Operation(Vec<OsString>),
+}
+/// The issuer of the example's local tokens.
+const ISSUER: &str = "urn:battersea:editor-server-example";
+/// The endpoint record the daemon writes in its application directory.
+const ENDPOINT_RECORD: &str = "daemon.json";
+/// One local token's grant.
+#[derive(Serialize, Deserialize)]
+struct Grant {
+    subject: String,
+    scopes: Vec<String>,
+}
+/// The operator's token, holding every scope the example's operations require, and the agent's,
+/// holding none of the administrative ones.
+fn local_tokens() -> BTreeMap<String, Grant> {
+    let grant = |subject: &str, scopes: &[&str]| Grant {
+        subject: subject.into(),
+        scopes: scopes.iter().map(|scope| scope.to_string()).collect(),
+    };
+    BTreeMap::from([
+        (
+            uuid::Uuid::new_v4().to_string(),
+            grant(
+                "operator",
+                &[
+                    "battersea:flows:read",
+                    "battersea:flows:admin",
+                    "battersea:runs:read",
+                    "battersea:runs:write",
+                    "battersea:runs:admin",
+                ],
+            ),
+        ),
+        (
+            uuid::Uuid::new_v4().to_string(),
+            grant(
+                "agent",
+                &[
+                    "battersea:flows:read",
+                    "battersea:runs:read",
+                    "battersea:runs:write",
+                ],
+            ),
+        ),
+    ])
+}
+/// Writes `value` to `path`, readable only by its owner, replacing it atomically.
+fn write_private(path: &std::path::Path, value: &Value) -> Result<(), Error> {
+    use std::io::Write;
+    let pending = path.with_extension(format!("{}.tmp", uuid::Uuid::new_v4()));
+    let mut options = std::fs::OpenOptions::new();
+    options.write(true).create_new(true);
+    #[cfg(unix)]
+    std::os::unix::fs::OpenOptionsExt::mode(&mut options, 0o600);
+    let mut file = options.open(&pending).map_err(io)?;
+    file.write_all(&serde_json::to_vec_pretty(value).map_err(io)?)
+        .map_err(io)?;
+    file.sync_all().map_err(io)?;
+    std::fs::rename(pending, path).map_err(io)
+}
+/// The application's local tokens, created on first use for a directory initialised without them.
+fn tokens(root: &std::path::Path) -> Result<BTreeMap<String, Grant>, Error> {
+    let path = root.join("tokens.json");
+    match std::fs::read(&path) {
+        Ok(bytes) => serde_json::from_slice(&bytes).map_err(io),
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
+            let tokens = local_tokens();
+            write_private(&path, &json!(tokens))?;
+            Ok(tokens)
+        }
+        Err(error) => Err(io(error)),
+    }
 }
 #[derive(Clone)]
 struct App {
@@ -123,7 +179,8 @@ fn initialise(root: &std::path::Path) -> Result<(), Error> {
         root.join("flows/example.json"),
         include_str!("../fixtures/example.json"),
     )
-    .map_err(io)
+    .map_err(io)?;
+    write_private(&root.join("tokens.json"), &json!(local_tokens()))
 }
 fn read(app: &App, name: &str) -> Result<FlowDocument, Error> {
     load_document(
@@ -260,11 +317,9 @@ struct Activation {
     node_id: String,
     parameters: HashMap<String, Value>,
 }
-async fn activate(
-    State(app): State<App>,
-    Json(request): Json<Activation>,
-) -> Result<Json<Value>, Error> {
-    let flow = read(&app, &request.flow_key)?;
+/// Starts an activation and returns its identity once the runtime has accepted it.
+async fn start(app: &App, request: Activation) -> Result<String, Error> {
+    let flow = read(app, &request.flow_key)?;
     let id = uuid::Uuid::new_v4().to_string();
     let mut run = app.runtime.run(id.clone(), &flow)?;
     app.runtime.validate_activation(&run)?;
@@ -282,14 +337,16 @@ async fn activate(
             token: token.clone(),
         },
     );
-    let returned = json!({"id":id,"status":"running"});
     let (accepted, receiver) = tokio::sync::oneshot::channel();
     app.runtime
         .acceptance
         .lock()
         .unwrap()
         .insert(id.clone(), accepted);
+    let app = app.clone();
+    let started = id.clone();
     tokio::spawn(async move {
+        let id = started;
         let result = app
             .runtime
             .run_activation(&mut run, &request.node_id, request.parameters, token)
@@ -311,20 +368,44 @@ async fn activate(
         if let Some(record) = app.runs.lock().unwrap().get_mut(&id) {
             record.status = status.into();
         }
+        app.runtime.changed.notify_waiters();
     });
     receiver.await.map_err(io)?.map_err(Error::internal)?;
-    Ok(Json(returned))
+    Ok(id)
 }
-async fn inspect(State(app): State<App>, Path(id): Path<String>) -> Result<Json<Value>, Error> {
-    key(&id)?;
+async fn activate(
+    State(app): State<App>,
+    Json(request): Json<Activation>,
+) -> Result<Json<Value>, Error> {
+    let id = start(&app, request).await?;
+    Ok(Json(json!({"id":id,"status":"running"})))
+}
+/// The position of one diagnostic in the runtime view: its delta's revision and its change's
+/// index in that delta.
+type Position = (u64, usize);
+/// An activation's status, its retained diagnostics by position, and the revision the oldest
+/// retained delta follows. Earlier deltas have been evicted from the view.
+struct History {
+    status: String,
+    events: Vec<(Position, Value)>,
+    follows: u64,
+}
+fn history(app: &App, id: &str) -> Result<History, Error> {
+    key(id)?;
     let runs = app.runs.lock().unwrap();
     let live = runs
-        .get(&id)
+        .get(id)
         .ok_or_else(|| Error::invalid_request(codes::UNKNOWN_ACTIVATION, "unknown activation"))?;
     let view = app.runtime.view.lock().unwrap();
+    let number = |revision: &str| revision.parse::<u64>().unwrap_or_default();
+    let current = number(&view.snapshot().cursor.revision);
+    let follows = view
+        .history()
+        .next()
+        .map_or(current, |delta| number(&delta.base.revision));
     let mut events = Vec::new();
     for delta in view.history() {
-        for change in &delta.changes {
+        for (index, change) in delta.changes.iter().enumerate() {
             if let battersea_telemetry::view::Change::Upsert { record } = change {
                 if record.context.activation_id != id {
                     continue;
@@ -343,15 +424,37 @@ async fn inspect(State(app): State<App>, Path(id): Path<String>) -> Result<Json<
                     RuntimeState::Node { .. } => "flow.node.state",
                     _ => "runtime.state",
                 };
-                events.push(json!({"activation_id":id,"node_id":record.context.node_id,"sequence":delta.cursor.revision,"phase":phase,"detail":record.state}));
+                events.push((
+                    (number(&delta.cursor.revision), index),
+                    json!({"activation_id":id,"node_id":record.context.node_id,"sequence":delta.cursor.revision,"phase":phase,"detail":record.state}),
+                ));
             }
         }
     }
     if live.status != "running" {
-        events.push(json!({"activation_id":id,"sequence":view.snapshot().cursor.revision,"phase":live.status}));
+        events.push((
+            (current, usize::MAX),
+            json!({"activation_id":id,"sequence":current.to_string(),"phase":live.status}),
+        ));
     }
+    Ok(History {
+        status: live.status.clone(),
+        events,
+        follows,
+    })
+}
+/// An activation's status and its retained diagnostics in order, each carrying its identity.
+fn snapshot(app: &App, id: &str) -> Result<(String, Vec<Value>), Error> {
+    let history = history(app, id)?;
+    Ok((
+        history.status,
+        history.events.into_iter().map(|(_, event)| event).collect(),
+    ))
+}
+async fn inspect(State(app): State<App>, Path(id): Path<String>) -> Result<Json<Value>, Error> {
+    let (status, events) = snapshot(&app, &id)?;
     Ok(Json(
-        json!({"id":id,"status":live.status,"events":events,"observation_error":*app.runtime.observation_error.lock().unwrap()}),
+        json!({"id":id,"status":status,"events":events,"observation_error":*app.runtime.observation_error.lock().unwrap()}),
     ))
 }
 #[derive(Deserialize)]
@@ -407,81 +510,119 @@ fn router(app: App) -> Router {
         .route("/api/activations/{id}", get(inspect).delete(cancel))
         .with_state(app)
 }
-#[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    match Cli::parse().command {
-        Command::Init { root } => initialise(&root)?,
-        Command::Serve { root, port } => {
-            let app = App {
-                runtime: Arc::new(Application::new(root)?),
-                runs: Arc::default(),
-                writes: Arc::default(),
-            };
-            let listener =
-                tokio::net::TcpListener::bind((std::net::Ipv4Addr::LOCALHOST, port)).await?;
-            axum::serve(listener, router(app)).await?;
+/// Serves the application API and the operations' MCP endpoint until interrupted.
+async fn serve(root: PathBuf, port: u16) -> Result<(), Box<dyn std::error::Error>> {
+    let tokens = Arc::new(tokens(&root)?);
+    let app = App {
+        runtime: Arc::new(Application::new(root.clone())?),
+        runs: Arc::default(),
+        writes: Arc::default(),
+    };
+    let listener = tokio::net::TcpListener::bind((std::net::Ipv4Addr::LOCALHOST, port)).await?;
+    let audience = format!("http://{}", listener.local_addr()?);
+    let host = Arc::new(ops::Host(app.clone()));
+    let set = clapham::compose_with_options(
+        [battersea_ops::BatterseaOps::new()
+            .with_flows(host.clone())
+            .with_runs(host)
+            .contribution()],
+        clapham::Bounds::default(),
+        clapham::ComposeOptions {
+            execution: clapham::ExecutionMode::Daemon,
+            oauth: Some(clapham::OAuthResource {
+                issuer: ISSUER.into(),
+                audience: audience.clone(),
+            }),
+            ..clapham::ComposeOptions::default()
+        },
+    )?;
+    let authority = {
+        let (tokens, audience) = (tokens.clone(), audience.clone());
+        move |credential: &clapham_mcp_server::Credential| {
+            let token = credential.authorization()?.strip_prefix("Bearer ")?;
+            let grant = tokens.get(token)?;
+            Some(clapham::OAuthContext::from_verified(
+                ISSUER,
+                audience.as_str(),
+                grant.subject.as_str(),
+                grant.scopes.iter().map(String::as_str),
+            ))
         }
-        Command::Activate {
-            server,
-            flow,
-            node,
-            text,
-        } => {
-            println!(
-                "{}",
-                reqwest::Client::new()
-                    .post(format!("{server}/api/activations"))
-                    .json(&json!({"flow_key":flow,"node_id":node,"parameters":{"text":text}}))
-                    .send()
-                    .await?
-                    .error_for_status()?
-                    .text()
-                    .await?
-            );
-        }
-        Command::InspectUpgrade { server, flow } => println!(
-            "{}",
-            reqwest::get(format!("{server}/api/flows/{}/upgrade", key(&flow)?))
-                .await?
-                .error_for_status()?
-                .text()
-                .await?
-        ),
-        Command::Upgrade {
-            server,
-            flow,
-            expected_revision,
-        } => println!(
-            "{}",
-            reqwest::Client::new()
-                .post(format!("{server}/api/flows/{}/upgrade", key(&flow)?))
-                .json(&json!({"expected_revision": expected_revision}))
-                .send()
-                .await?
-                .error_for_status()?
-                .text()
-                .await?
-        ),
-        Command::Inspect { server, id } => println!(
-            "{}",
-            reqwest::get(format!("{server}/api/activations/{id}"))
-                .await?
-                .error_for_status()?
-                .text()
-                .await?
-        ),
-        Command::Cancel { server, id } => println!(
-            "{}",
-            reqwest::Client::new()
-                .delete(format!("{server}/api/activations/{id}"))
-                .send()
-                .await?
-                .error_for_status()?
-                .text()
-                .await?
-        ),
-    }
+    };
+    let mcp = clapham_mcp_server::HttpServer::new(set, authority)?.into_router();
+    let operator = tokens
+        .iter()
+        .find(|(_, grant)| grant.subject == "operator")
+        .map(|(token, _)| token.clone())
+        .ok_or("the application holds no operator token")?;
+    write_private(
+        &root.join(ENDPOINT_RECORD),
+        &json!({"endpoint": format!("{audience}/mcp"), "token": operator}),
+    )?;
+    axum::serve(listener, router(app).merge(mcp)).await?;
     Ok(())
+}
+/// Runs one operation through Clapham's CLI against the daemon the endpoint names, and returns
+/// its exit code. A refusal is one JSON line on stderr.
+async fn operation(cli: Cli, args: Vec<OsString>) -> u8 {
+    let usage = |message: String| {
+        clapham::Refusal::not_dispatched("usage", clapham::Category::Usage, message)
+    };
+    let record = match &cli.root {
+        Some(root) => std::fs::read(root.join(ENDPOINT_RECORD))
+            .map_err(|error| format!("no endpoint record under {}: {error}", root.display()))
+            .and_then(|bytes| {
+                serde_json::from_slice::<Value>(&bytes).map_err(|error| error.to_string())
+            })
+            .map(Some),
+        None => Ok(None),
+    };
+    let connected = async {
+        let record = record.map_err(usage)?;
+        let field = |name: &str| {
+            record
+                .as_ref()
+                .and_then(|record| record[name].as_str())
+                .map(String::from)
+        };
+        let endpoint = cli.endpoint.or_else(|| field("endpoint")).ok_or_else(|| {
+            usage("name the daemon with --root, --endpoint or BATTERSEA_ENDPOINT".into())
+        })?;
+        let token = cli.token.or_else(|| field("token")).ok_or_else(|| {
+            usage("supply a token with --root, --token or BATTERSEA_TOKEN".into())
+        })?;
+        let backend = clapham_cli::McpBackend::http(endpoint, token).await?;
+        clapham_cli::Cli::connect("editor-server-example", backend, clapham::Bounds::default())
+            .await
+    };
+    let assembled = match connected.await {
+        Ok(assembled) => assembled,
+        Err(refusal) => return clapham_cli::write_refusal(&refusal, std::io::stderr()),
+    };
+    let program = std::env::args_os().next().unwrap_or_default();
+    use std::io::IsTerminal;
+    assembled
+        .execute_from(
+            std::iter::once(program).chain(args),
+            std::io::stdin(),
+            std::io::stdout(),
+            std::io::stderr(),
+            std::io::stdout().is_terminal(),
+            clapham::Cancellation::new(),
+        )
+        .await
+}
+#[tokio::main]
+async fn main() -> Result<std::process::ExitCode, Box<dyn std::error::Error>> {
+    let mut cli = Cli::parse();
+    match std::mem::replace(&mut cli.command, Command::Operation(Vec::new())) {
+        Command::Init { root } => initialise(&root)?,
+        Command::Serve { root, port } => serve(root, port).await?,
+        Command::Operation(args) => {
+            return Ok(std::process::ExitCode::from(operation(cli, args).await))
+        }
+    }
+    Ok(std::process::ExitCode::SUCCESS)
 }
 #[cfg(test)]
 mod tests {

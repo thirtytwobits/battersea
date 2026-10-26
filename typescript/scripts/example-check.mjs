@@ -103,18 +103,29 @@ try {
   );
   await ready("http://127.0.0.1:18181", vite);
   run("npm", ["test"], web);
-  const activation = JSON.parse(
-    execFileSync(
-      server,
-      ["activate", "example", "text", "A CLI-authored input"],
-      { encoding: "utf8" },
-    ),
-  );
-  const snapshot = JSON.parse(
-    execFileSync(server, ["inspect", activation.id], { encoding: "utf8" }),
-  );
-  assert.equal(snapshot.id, activation.id);
-  run(server, ["cancel", activation.id]);
+  // The CLI calls the daemon's operations over MCP, found through its endpoint record.
+  const printed = execFileSync(
+    server,
+    [
+      "--root",
+      data,
+      "battersea",
+      "run",
+      "activate",
+      "example",
+      "text",
+      "--parameters-json",
+      JSON.stringify({ text: "A CLI-authored input" }),
+    ],
+    { encoding: "utf8" },
+  ).trim().split("\n").map((line) => JSON.parse(line));
+  const activation = printed.at(-1).data;
+  const snapshot = await (
+    await fetch(`http://127.0.0.1:18180/api/activations/${activation.run_id}`)
+  ).json();
+  assert.equal(snapshot.id, activation.run_id);
+  assert.equal(snapshot.status, activation.status);
+  run(server, ["--root", data, "battersea", "run", "cancel", activation.run_id]);
   console.log("Installed editor, server and CLI share activation identities");
 } finally {
   await Promise.all(

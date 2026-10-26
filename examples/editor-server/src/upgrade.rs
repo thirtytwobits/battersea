@@ -44,9 +44,13 @@ fn prepare(app: &App, name: &str) -> Result<(Plan, Vec<u8>), Error> {
     )
     .map_err(io)?;
     let limits = FlowExecutionLimits::default();
-    let source_text = std::str::from_utf8(&source).map_err(io)?;
-    let version =
-        serde_json::from_str::<serde_json::Value>(source_text).map_err(io)?["version"].as_u64();
+    let invalid = |error: &dyn std::fmt::Display| {
+        Error::invalid_request(codes::INVALID_DOCUMENT, error.to_string())
+    };
+    let source_text = std::str::from_utf8(&source).map_err(|error| invalid(&error))?;
+    let version = serde_json::from_str::<serde_json::Value>(source_text)
+        .map_err(|error| invalid(&error))?["version"]
+        .as_u64();
     let document = if version == Some(2) {
         upgrade_v2_document(source_text, app.runtime.catalog.definitions())
     } else {
@@ -80,12 +84,17 @@ fn prepare(app: &App, name: &str) -> Result<(Plan, Vec<u8>), Error> {
     Ok((Plan { revision, document }, source))
 }
 
+/// The upgrade of the stored flow `name`, without applying it.
+pub fn plan(app: &App, name: &str) -> Result<Plan, Error> {
+    let _guard = app.writes.lock().unwrap();
+    Ok(prepare(app, name)?.0)
+}
+
 pub async fn inspect(
     State(app): State<App>,
     Path(name): Path<String>,
 ) -> Result<Json<Plan>, Error> {
-    let _guard = app.writes.lock().unwrap();
-    Ok(Json(prepare(&app, &name)?.0))
+    Ok(Json(plan(&app, &name)?))
 }
 
 fn write_new(path: &FsPath, bytes: &[u8]) -> Result<(), Error> {
@@ -108,9 +117,15 @@ pub async fn apply(
     Path(name): Path<String>,
     Json(request): Json<Request>,
 ) -> Result<Json<Receipt>, Error> {
+    Ok(Json(apply_at(&app, &name, &request.expected_revision)?))
+}
+
+/// Upgrades the stored flow `name` when its source revision is `expected_revision`, retaining
+/// its original.
+pub fn apply_at(app: &App, name: &str, expected_revision: &str) -> Result<Receipt, Error> {
     let _guard = app.writes.lock().unwrap();
-    let (plan, original) = prepare(&app, &name)?;
-    if plan.revision != request.expected_revision {
+    let (plan, original) = prepare(app, name)?;
+    if plan.revision != expected_revision {
         return Err(Error::invalid_request(
             codes::STALE_UPGRADE_REVISION,
             "The flow or catalogue changed; inspect the upgrade again.",
@@ -139,11 +154,11 @@ pub async fn apply(
     write_new(&pending, upgraded.as_bytes())?;
     fs::rename(&pending, &path).map_err(io)?;
     sync_dir(path.parent().unwrap())?;
-    Ok(Json(Receipt {
+    Ok(Receipt {
         flow: plan.document,
         original: format!("upgrades/{id}/original.json"),
         source_revision: plan.revision,
-    }))
+    })
 }
 
 #[cfg(test)]
