@@ -150,7 +150,8 @@ impl RunHost for Host {
         activation: Request,
         events: &RecordSink,
     ) -> Result<RunStatus, Refusal> {
-        self.exists(&activation.flow_key)?;
+        // Classify a missing or unreadable flow before the activation reads it.
+        self.get(&activation.flow_key).await?;
         let run_id = start(
             &self.0,
             Activation {
