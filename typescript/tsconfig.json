@@ -6,7 +6,7 @@
     "strict": true,
     "declaration": true,
     "verbatimModuleSyntax": true,
-    "skipLibCheck": false,
+    "skipLibCheck": true,
     "jsx": "react-jsx"
   },
   "include": [

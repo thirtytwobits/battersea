@@ -142,7 +142,10 @@ export function useDataflowCanvasDrop(options: {
   nodes: readonly FlowStudioNode[];
   setWorkspace: React.Dispatch<React.SetStateAction<FlowStudioWorkspaceState>>;
 }) {
-  const flowInstanceRef = React.useRef<ReactFlowInstance<
+  const flowInstanceRef: React.MutableRefObject<ReactFlowInstance<
+    FlowStudioNode,
+    FlowStudioEdge
+  > | null> = React.useRef<ReactFlowInstance<
     FlowStudioNode,
     FlowStudioEdge
   > | null>(null);
