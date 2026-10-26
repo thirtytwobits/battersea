@@ -380,17 +380,32 @@ async fn activate(
     let id = start(&app, request).await?;
     Ok(Json(json!({"id":id,"status":"running"})))
 }
-/// An activation's status and its ordered diagnostics, each carrying its identity.
-fn snapshot(app: &App, id: &str) -> Result<(String, Vec<Value>), Error> {
+/// The position of one diagnostic in the runtime view: its delta's revision and its change's
+/// index in that delta.
+type Position = (u64, usize);
+/// An activation's status, its retained diagnostics by position, and the revision the oldest
+/// retained delta follows. Earlier deltas have been evicted from the view.
+struct History {
+    status: String,
+    events: Vec<(Position, Value)>,
+    follows: u64,
+}
+fn history(app: &App, id: &str) -> Result<History, Error> {
     key(id)?;
     let runs = app.runs.lock().unwrap();
     let live = runs
         .get(id)
         .ok_or_else(|| Error::invalid_request(codes::UNKNOWN_ACTIVATION, "unknown activation"))?;
     let view = app.runtime.view.lock().unwrap();
+    let number = |revision: &str| revision.parse::<u64>().unwrap_or_default();
+    let current = number(&view.snapshot().cursor.revision);
+    let follows = view
+        .history()
+        .next()
+        .map_or(current, |delta| number(&delta.base.revision));
     let mut events = Vec::new();
     for delta in view.history() {
-        for change in &delta.changes {
+        for (index, change) in delta.changes.iter().enumerate() {
             if let battersea_telemetry::view::Change::Upsert { record } = change {
                 if record.context.activation_id != id {
                     continue;
@@ -409,14 +424,32 @@ fn snapshot(app: &App, id: &str) -> Result<(String, Vec<Value>), Error> {
                     RuntimeState::Node { .. } => "flow.node.state",
                     _ => "runtime.state",
                 };
-                events.push(json!({"activation_id":id,"node_id":record.context.node_id,"sequence":delta.cursor.revision,"phase":phase,"detail":record.state}));
+                events.push((
+                    (number(&delta.cursor.revision), index),
+                    json!({"activation_id":id,"node_id":record.context.node_id,"sequence":delta.cursor.revision,"phase":phase,"detail":record.state}),
+                ));
             }
         }
     }
     if live.status != "running" {
-        events.push(json!({"activation_id":id,"sequence":view.snapshot().cursor.revision,"phase":live.status}));
+        events.push((
+            (current, usize::MAX),
+            json!({"activation_id":id,"sequence":current.to_string(),"phase":live.status}),
+        ));
     }
-    Ok((live.status.clone(), events))
+    Ok(History {
+        status: live.status.clone(),
+        events,
+        follows,
+    })
+}
+/// An activation's status and its retained diagnostics in order, each carrying its identity.
+fn snapshot(app: &App, id: &str) -> Result<(String, Vec<Value>), Error> {
+    let history = history(app, id)?;
+    Ok((
+        history.status,
+        history.events.into_iter().map(|(_, event)| event).collect(),
+    ))
 }
 async fn inspect(State(app): State<App>, Path(id): Path<String>) -> Result<Json<Value>, Error> {
     let (status, events) = snapshot(&app, &id)?;

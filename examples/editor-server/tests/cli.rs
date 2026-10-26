@@ -164,10 +164,32 @@ fn each_token_carries_its_own_grant() {
 #[test]
 fn an_unknown_flow_is_refused_with_its_category_exit_code() {
     let daemon = Daemon::start();
-    let output = daemon.run(&["battersea", "flow", "get", "missing"]);
-    assert_eq!(output.status.code(), Some(66));
-    let refusal: Value = serde_json::from_slice(&output.stderr).unwrap();
-    assert_eq!(refusal["code"], "unknown_flow");
+    for args in [
+        &["battersea", "flow", "get", "missing"][..],
+        &["battersea", "run", "activate", "missing", "text"],
+        &[
+            "battersea",
+            "flow",
+            "upgrade",
+            "missing",
+            "--dry-run",
+            "--yes",
+        ],
+        &[
+            "battersea",
+            "flow",
+            "upgrade",
+            "missing",
+            "--expected_revision",
+            "any",
+            "--yes",
+        ],
+    ] {
+        let output = daemon.run(args);
+        assert_eq!(output.status.code(), Some(66), "{args:?}: {output:?}");
+        let refusal: Value = serde_json::from_slice(&output.stderr).unwrap();
+        assert_eq!(refusal["code"], "unknown_flow", "{args:?}");
+    }
     let output = daemon.run(&["battersea", "run", "status", "unknown"]);
     assert_eq!(output.status.code(), Some(66));
 }
