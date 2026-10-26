@@ -198,16 +198,27 @@ fn an_unknown_flow_is_refused_with_its_category_exit_code() {
 fn an_unreadable_flow_is_refused_as_invalid() {
     let daemon = Daemon::start();
     for (name, source) in [
-        ("malformed", "{ not json"),
+        ("malformed", &b"{ not json"[..]),
+        ("binary", &b"\xff\xfe"[..]),
         (
             "future",
-            r#"{"version":999,"flow_key":"future","title":"Future","nodes":[]}"#,
+            &br#"{"version":999,"flow_key":"future","title":"Future","nodes":[]}"#[..],
         ),
     ] {
         std::fs::write(daemon.root.join(format!("flows/{name}.json")), source).unwrap();
         for args in [
             &["battersea", "flow", "get", name][..],
             &["battersea", "run", "activate", name, "text"],
+            &["battersea", "flow", "upgrade", name, "--dry-run", "--yes"],
+            &[
+                "battersea",
+                "flow",
+                "upgrade",
+                name,
+                "--expected_revision",
+                "any",
+                "--yes",
+            ],
         ] {
             let output = daemon.run(args);
             assert_eq!(output.status.code(), Some(65), "{args:?}: {output:?}");

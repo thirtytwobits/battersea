@@ -44,9 +44,13 @@ fn prepare(app: &App, name: &str) -> Result<(Plan, Vec<u8>), Error> {
     )
     .map_err(io)?;
     let limits = FlowExecutionLimits::default();
-    let source_text = std::str::from_utf8(&source).map_err(io)?;
-    let version =
-        serde_json::from_str::<serde_json::Value>(source_text).map_err(io)?["version"].as_u64();
+    let invalid = |error: &dyn std::fmt::Display| {
+        Error::invalid_request(codes::INVALID_DOCUMENT, error.to_string())
+    };
+    let source_text = std::str::from_utf8(&source).map_err(|error| invalid(&error))?;
+    let version = serde_json::from_str::<serde_json::Value>(source_text)
+        .map_err(|error| invalid(&error))?["version"]
+        .as_u64();
     let document = if version == Some(2) {
         upgrade_v2_document(source_text, app.runtime.catalog.definitions())
     } else {
