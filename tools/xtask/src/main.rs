@@ -388,11 +388,12 @@ fn package(root: &Path) -> Result<()> {
         "declarative-providers",
         "editor-server",
         "mcp",
+        "ops",
     ] {
         let consumer = unpack_root.path().join(example);
         fs::create_dir_all(consumer.join("src"))?;
-        let tokio_features = if example == "mcp" {
-            r#"["macros", "rt-multi-thread", "net", "time", "io-util", "io-std", "process"]"#
+        let tokio_features = if matches!(example, "mcp" | "ops") {
+            r#"["macros", "rt-multi-thread", "net", "time", "io-util", "io-std", "process", "signal"]"#
         } else {
             r#"["macros", "rt-multi-thread", "net", "time"]"#
         };
@@ -409,14 +410,20 @@ fn package(root: &Path) -> Result<()> {
                 unpack_root.path().join(format!("{name}-{version}"))
             ));
         }
-        if example == "backend" {
+        if example == "ops" {
+            manifest.push_str("axum = \"0.8\"\n");
+        }
+        if matches!(example, "backend" | "ops") {
             manifest.push_str(
                 "serde = { version = \"1\", features = [\"derive\"] }\nschemars = \"1\"\n",
             );
         }
-        if matches!(example, "backend" | "mcp") {
+        if matches!(example, "backend" | "mcp" | "ops") {
             for (name, path) in &git {
-                if name == "clapham" || (example == "mcp" && name == "clapham-mcp-client") {
+                if name == "clapham"
+                    || (example == "mcp" && name == "clapham-mcp-client")
+                    || (example == "ops" && name != "clapham-mcp-client")
+                {
                     let features = if name == "clapham-mcp-client" {
                         ", features = [\"stdio\", \"http\"]"
                     } else {
@@ -426,8 +433,8 @@ fn package(root: &Path) -> Result<()> {
                 }
             }
         }
-        if example == "mcp" {
-            manifest.push_str("[lib]\nname = \"mcp_example\"\n[[bin]]\nname = \"mcp-example\"\npath = \"src/main.rs\"\n");
+        if matches!(example, "mcp" | "ops") {
+            manifest.push_str(&format!("[lib]\nname = \"{example}_example\"\n[[bin]]\nname = \"{example}-example\"\npath = \"src/main.rs\"\n"));
         }
         manifest.push_str("[patch.crates-io]\n");
         for name in crates.keys() {
@@ -467,6 +474,24 @@ fn package(root: &Path) -> Result<()> {
                 fs::copy(root.join("examples/mcp").join(asset), consumer.join(asset))?;
             }
         }
+        if example == "ops" {
+            fs::copy(
+                root.join("examples/ops/src/lib.rs"),
+                consumer.join("src/lib.rs"),
+            )?;
+            for directory in ["tests", "fixtures"] {
+                fs::create_dir_all(consumer.join(directory))?;
+            }
+            for file in [
+                "tests/conformance.rs",
+                "tests/contracts.rs",
+                "fixtures/example.json",
+                "LICENSE",
+                "NOTICE",
+            ] {
+                fs::copy(root.join("examples/ops").join(file), consumer.join(file))?;
+            }
+        }
         if example == "declarative-providers" {
             fs::copy(
                 root.join("examples/declarative-providers/providers.yaml"),
@@ -492,7 +517,7 @@ fn package(root: &Path) -> Result<()> {
             &consumer,
             "cargo",
             &[
-                if matches!(example, "editor-server" | "mcp") {
+                if matches!(example, "editor-server" | "mcp" | "ops") {
                     "test"
                 } else {
                     "run"
@@ -542,7 +567,7 @@ fn scan_prompts(root: &Path) -> Result<()> {
     let policy = battersea_guard::PromptPolicy::new(
         &["crates/battersea-nodes/src/nodes.yaml"],
         &[
-            r"^crates/(battersea-model|battersea-tools|battersea-providers|battersea-config|battersea-nodes)/src/.*\.(rs|yaml)$",
+            r"^crates/(battersea-model|battersea-tools|battersea-ops|battersea-providers|battersea-config|battersea-nodes)/src/.*\.(rs|yaml)$",
         ],
     )?;
     fn visit(
