@@ -305,6 +305,74 @@ impl Host {
         Ok(journal)
     }
 
+    /// Runs the activation of the reserved run `run_id` through the mock provider, whose tool
+    /// call waits in the run's approval journal.
+    async fn execute(
+        &self,
+        run_id: &str,
+        activation: Activation,
+        events: &RecordSink,
+    ) -> Result<Run, Refusal> {
+        let journal = self.create_journal(run_id).await;
+        self.journals
+            .lock()
+            .await
+            .insert(run_id.into(), journal.clone());
+        let mut providers = ProviderRegistry::default();
+        battersea_providers::register_builtin_providers(&mut providers)
+            .map_err(|error| codes::refusal(codes::HOST_FAILURE, error.to_string()))?;
+        let backend = backend();
+        let adapter = providers
+            .create_chat(backend.clone(), None)
+            .map_err(|error| codes::refusal(codes::HOST_FAILURE, error.to_string()))?;
+        let text = activation
+            .parameters
+            .get("text")
+            .and_then(Value::as_str)
+            .unwrap_or("Record the value.")
+            .to_string();
+        let mut stream = adapter
+            .stream_text(EngineTextStreamRequest {
+                shared: EngineAdapterRequest {
+                    operation: EngineOperation::FlowTextStream,
+                    messages: vec![Message::text(Role::User, text)],
+                    chat: backend.chat,
+                    debug_rules: None,
+                },
+                local_tools: journal.definitions(),
+                local_tool_executor: Some(journal),
+                max_tool_rounds: 2,
+                mock_response: None,
+            })
+            .await
+            .map_err(|error| codes::refusal(codes::HOST_UNAVAILABLE, error.message.to_string()))?;
+        let mut run = Run {
+            status: "succeeded".into(),
+            terminal: true,
+            events: Vec::new(),
+        };
+        while let Some(event) = stream.next().await {
+            match event {
+                Ok(event) => {
+                    if let Some(record) = record(&event) {
+                        events.send(record.clone()).await?;
+                        run.events.push(record);
+                    }
+                }
+                Err(error) => {
+                    (run.status, run.terminal) =
+                        if error.tool_code == Some(ToolCode::ToolApprovalPending) {
+                            ("awaiting_approval".into(), false)
+                        } else {
+                            ("failed".into(), true)
+                        };
+                    break;
+                }
+            }
+        }
+        Ok(run)
+    }
+
     fn plan(&self, flow_key: &str) -> Result<FlowUpgrade, Refusal> {
         let source = self.source(flow_key)?;
         let document = load_document(&source)
@@ -394,67 +462,40 @@ impl RunHost for Host {
                 "The node is not in the flow.",
             ));
         }
-        let run_id = format!("run-{}", self.runs.lock().unwrap().len());
-        let journal = self.create_journal(&run_id).await;
-        self.journals
-            .lock()
-            .await
-            .insert(run_id.clone(), journal.clone());
-        let mut providers = ProviderRegistry::default();
-        battersea_providers::register_builtin_providers(&mut providers)
-            .map_err(|error| codes::refusal(codes::HOST_FAILURE, error.to_string()))?;
-        let backend = backend();
-        let adapter = providers
-            .create_chat(backend.clone(), None)
-            .map_err(|error| codes::refusal(codes::HOST_FAILURE, error.to_string()))?;
-        let text = activation
-            .parameters
-            .get("text")
-            .and_then(Value::as_str)
-            .unwrap_or("Record the value.")
-            .to_string();
-        let mut stream = adapter
-            .stream_text(EngineTextStreamRequest {
-                shared: EngineAdapterRequest {
-                    operation: EngineOperation::FlowTextStream,
-                    messages: vec![Message::text(Role::User, text)],
-                    chat: backend.chat,
-                    debug_rules: None,
+        // Reserve the run's identity before the first await, so concurrent activations differ.
+        let run_id = {
+            let mut runs = self.runs.lock().unwrap();
+            let run_id = format!("run-{}", runs.len());
+            runs.insert(
+                run_id.clone(),
+                Run {
+                    status: "running".into(),
+                    terminal: false,
+                    events: Vec::new(),
                 },
-                local_tools: journal.definitions(),
-                local_tool_executor: Some(journal),
-                max_tool_rounds: 2,
-                mock_response: None,
-            })
-            .await
-            .map_err(|error| codes::refusal(codes::HOST_UNAVAILABLE, error.message.to_string()))?;
-        let mut run = Run {
-            status: "succeeded".into(),
-            terminal: true,
-            events: Vec::new(),
+            );
+            run_id
         };
-        while let Some(event) = stream.next().await {
-            match event {
-                Ok(event) => {
-                    if let Some(record) = record(&event) {
-                        events.send(record.clone()).await?;
-                        run.events.push(record);
-                    }
-                }
-                Err(error) => {
-                    (run.status, run.terminal) =
-                        if error.tool_code == Some(ToolCode::ToolApprovalPending) {
-                            ("awaiting_approval".into(), false)
-                        } else {
-                            ("failed".into(), true)
-                        };
-                    break;
-                }
+        let outcome = self.execute(&run_id, activation, events).await;
+        let mut runs = self.runs.lock().unwrap();
+        match outcome {
+            Ok(run) => {
+                let status = run.status(&run_id);
+                runs.insert(run_id, run);
+                Ok(status)
+            }
+            Err(refusal) => {
+                runs.insert(
+                    run_id,
+                    Run {
+                        status: "failed".into(),
+                        terminal: true,
+                        events: Vec::new(),
+                    },
+                );
+                Err(refusal)
             }
         }
-        let status = run.status(&run_id);
-        self.runs.lock().unwrap().insert(run_id, run);
-        Ok(status)
     }
     async fn status(&self, run_id: &str) -> Result<RunStatus, Refusal> {
         self.runs
@@ -487,7 +528,12 @@ impl RunHost for Host {
         Ok(run.status(run_id))
     }
     async fn resume(&self, run_id: &str) -> Result<RunStatus, Refusal> {
-        self.status(run_id).await?;
+        if self.status(run_id).await?.terminal {
+            return Err(codes::refusal(
+                battersea_runtime::error_codes::EXECUTION_TERMINAL,
+                "The run has finished; its tool calls no longer dispatch.",
+            ));
+        }
         let journal = self.journal(run_id).await?;
         let inspected = journal
             .inspect()

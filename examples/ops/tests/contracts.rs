@@ -286,3 +286,53 @@ fn every_code_is_declared_once_under_its_category() {
         Some(json!({"code": "a_code_battersea_does_not_declare"}))
     );
 }
+
+#[tokio::test]
+async fn concurrent_activations_are_distinct_runs() {
+    let daemon = Daemon::new();
+    let activation =
+        || json!({"flow_key": "example", "node_id": "text", "parameters": {"text": "Record it."}});
+    let (first, second) = tokio::join!(
+        daemon.call("battersea.run.activate", activation()),
+        daemon.call("battersea.run.activate", activation()),
+    );
+    let (first, second) = (first.unwrap(), second.unwrap());
+    assert_ne!(first["run_id"], second["run_id"]);
+    for run in [first, second] {
+        let journal = daemon
+            .call("battersea.approval.list", json!({"run_id": run["run_id"]}))
+            .await
+            .unwrap();
+        assert_eq!(journal["calls"].as_array().unwrap().len(), 1);
+    }
+}
+
+#[tokio::test]
+async fn a_cancelled_run_does_not_resume_its_approved_call() {
+    let daemon = Daemon::new();
+    daemon
+        .call("battersea.approval.decide", seeded_decision("allow").await)
+        .await
+        .unwrap();
+    let cancelled = daemon
+        .call("battersea.run.cancel", json!({"run_id": PENDING_RUN}))
+        .await
+        .unwrap();
+    assert_eq!(cancelled["status"], "cancelled");
+    let refused = daemon
+        .call("battersea.run.resume", json!({"run_id": PENDING_RUN}))
+        .await
+        .unwrap_err();
+    assert_eq!(refused.code, "execution_terminal");
+    assert_eq!(refused.category, Category::Conflict);
+    let journal = daemon
+        .call("battersea.approval.list", json!({"run_id": PENDING_RUN}))
+        .await
+        .unwrap();
+    assert_eq!(journal["calls"][0]["state"], "approved");
+    let status = daemon
+        .call("battersea.run.status", json!({"run_id": PENDING_RUN}))
+        .await
+        .unwrap();
+    assert_eq!(status["status"], "cancelled");
+}
