@@ -445,7 +445,6 @@ export type Delta = {
     "cursor": Cursor;
 };
 export type Direction = "input" | "output";
-export type FlowFailurePolicy = "fail" | "emit" | "skip";
 export type Ledger = {
     "budgets": {
         [key: string]: Budget;
@@ -548,7 +547,7 @@ export type State = {
 } | {
     "error_code"?: string;
     "failure_handled"?: boolean;
-    "failure_policy"?: FlowFailurePolicy;
+    "failure_policy"?: "fail" | "emit" | "skip";
     "kind": "node";
     "status": Status;
 } | {

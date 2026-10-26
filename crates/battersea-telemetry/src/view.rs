@@ -52,6 +52,12 @@ pub struct Context {
     pub session_id: Option<String>,
 }
 
+/// The flow contract's failure policy, written in place: the runtime contract composes beside
+/// the flow contract, which defines it.
+fn flow_failure_policy(generator: &mut schemars::SchemaGenerator) -> schemars::Schema {
+    <battersea_runtime::FlowFailurePolicy as JsonSchema>::json_schema(generator)
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(tag = "kind", rename_all = "snake_case", deny_unknown_fields)]
 pub enum State {
@@ -61,7 +67,7 @@ pub enum State {
     Node {
         status: Status,
         #[serde(default, skip_serializing_if = "Option::is_none")]
-        #[schemars(with = "battersea_runtime::FlowFailurePolicy")]
+        #[schemars(schema_with = "flow_failure_policy")]
         failure_policy: Option<battersea_runtime::FlowFailurePolicy>,
         #[serde(default, skip_serializing_if = "Option::is_none")]
         #[schemars(with = "bool")]

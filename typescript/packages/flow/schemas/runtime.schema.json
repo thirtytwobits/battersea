@@ -243,14 +243,6 @@
       ],
       "type": "string"
     },
-    "FlowFailurePolicy": {
-      "enum": [
-        "fail",
-        "emit",
-        "skip"
-      ],
-      "type": "string"
-    },
     "Ledger": {
       "additionalProperties": false,
       "properties": {
@@ -742,7 +734,12 @@
               "type": "boolean"
             },
             "failure_policy": {
-              "$ref": "#/$defs/FlowFailurePolicy"
+              "enum": [
+                "fail",
+                "emit",
+                "skip"
+              ],
+              "type": "string"
             },
             "kind": {
               "const": "node",
