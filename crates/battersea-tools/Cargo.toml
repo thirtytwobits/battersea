@@ -16,5 +16,8 @@ async-trait.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 schemars.workspace = true
-jsonschema = { version = "0.30", default-features = false }
+clapham.workspace = true
 tokio.workspace = true
+
+[dev-dependencies]
+jsonschema = { version = "0.30", default-features = false }

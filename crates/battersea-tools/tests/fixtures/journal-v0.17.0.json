@@ -1,0 +1,96 @@
+{
+  "version": 1,
+  "revision": 6,
+  "scope": {
+    "run_id": "run-1",
+    "binding_revision": "binding-1",
+    "expires_at_unix_ms": 1792966729242
+  },
+  "limits": {
+    "max_calls": 2,
+    "max_bytes": 8192
+  },
+  "updated_at_unix_ms": 1792966669276,
+  "calls": {
+    "one": {
+      "tool": {
+        "name": "host.write",
+        "description": "Write a value",
+        "inputSchema": {
+          "properties": {
+            "value": {
+              "type": "integer"
+            }
+          },
+          "required": [
+            "value"
+          ],
+          "type": "object"
+        },
+        "_meta": {
+          "io.github.thirtytwobits.battersea/profiles": [
+            "operator"
+          ]
+        }
+      },
+      "call": {
+        "id": "one",
+        "name": "host.write",
+        "arguments": {
+          "value": 1
+        }
+      },
+      "request_revision": "1e238a2728562c17cf376522e7ff42aeb298da2880903dfd93de00239cc4d6d7",
+      "decision": {
+        "request_revision": "1e238a2728562c17cf376522e7ff42aeb298da2880903dfd93de00239cc4d6d7",
+        "action": "allow",
+        "actor": "operator",
+        "at_unix_ms": 1792966669274
+      },
+      "state": {
+        "phase": "completed",
+        "result": {
+          "content": {
+            "value": 1
+          }
+        }
+      },
+      "resolutions": []
+    },
+    "two": {
+      "tool": {
+        "name": "host.write",
+        "description": "Write a value",
+        "inputSchema": {
+          "properties": {
+            "value": {
+              "type": "integer"
+            }
+          },
+          "required": [
+            "value"
+          ],
+          "type": "object"
+        },
+        "_meta": {
+          "io.github.thirtytwobits.battersea/profiles": [
+            "operator"
+          ]
+        }
+      },
+      "call": {
+        "id": "two",
+        "name": "host.write",
+        "arguments": {
+          "value": 1
+        }
+      },
+      "request_revision": "9bf630aa147f3137f4fa414c9611674e4b4ee2fa78abcfa5eeb18d0ea5dc69f1",
+      "decision": null,
+      "state": {
+        "phase": "pending"
+      },
+      "resolutions": []
+    }
+  }
+}

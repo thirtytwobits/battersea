@@ -5,7 +5,8 @@
   ],
   "battersea-model": [],
   "battersea-tools": [
-    "battersea-model"
+    "battersea-model",
+    "clapham"
   ],
   "battersea-providers": [
     "battersea-model"
@@ -31,9 +32,5 @@
   ],
   "battersea-derive": [
     "battersea-flow"
-  ],
-  "battersea-mcp": [
-    "battersea-model",
-    "battersea-tools"
   ]
 }

@@ -1,28 +1,31 @@
 # Connect MCP tools
 
-`examples/mcp` is an independent Rust 1.88 consumer. The application starts a controlled stdio
+`examples/mcp` is an independent consumer of Clapham's MCP client. The application starts a controlled stdio
 child process and local Streamable HTTP servers. A configured Chat Completions provider calls
 the discovered tool, receives its result, and retries a rejected continuation without repeating
 the effect. All servers run locally and use application-owned temporary storage.
 
 ## Host composition
 
-Create an `McpConfig` with a stable server identity, credential-scope revision, finite limits
+Create an `McpConfig` with a stable server identity, credential-scope revision, finite bounds
 and an operation timeout. The host supplies streams to `McpConnection::stdio`, or an approved
 endpoint and resolved bearer credential to `McpConnection::http`. The example's `StdioHost`
 launches and reaps its child; the adapter's shutdown token signals when that work can stop.
 
-Discovery returns raw provenance, admitted tool names and diagnostics. Select admitted names
-with host-authored profiles, bind them against the application's registry, and retain the binding
-revision with the accepted run. `McpToolBinding::register_into` registers the immutable definitions
-and executor atomically. Apply `ToolRegistry::for_profile`, then create an `ApprovedToolExecutor`
-with the host policy, conversation identity, binding revision, absolute deadline and call capacity.
-Pass its definitions and executor to `EngineTextStreamRequest`.
+Discovery returns raw provenance, admitted tool names and diagnostics. Bind the admitted names the
+host selects; `McpToolBinding::contribution` contributes them as operations under the connection's
+server identity. Compose that contribution with the application's own, select the operations the
+agent may call, and create a `ToolRegistry` under the run's verified grant. Name the host's profiles
+with `ToolRegistry::with_profile` and apply `ToolRegistry::for_profile`. Create an
+`ApprovedToolExecutor` with the host policy, conversation identity, the profile registry's
+revision, an absolute deadline and a call capacity. Pass its definitions and executor to
+`EngineTextStreamRequest`.
 
-`ToolCallCompleted` retains content, host metadata and completion evidence. Provider projections
-exclude host metadata and preserve text and resource references. A tool-reported error reaches
-the provider as a result; protocol or delivery failures stop the conversation with separate tool
-outcome evidence. See the [MCP contract](contracts/mcp.md) and [tool contract](contracts/tools.md).
+`ToolCallCompleted` retains content and completion evidence. Provider projections preserve text
+and resource references. A tool-reported error reaches the provider as a result; protocol or
+delivery failures stop the conversation with separate tool outcome evidence. See Clapham's
+[MCP client](https://github.com/thirtytwobits/clapham/blob/v0.3.0/docs/mcp.md) and the
+[tool contract](contracts/tools.md).
 
 ## Effect ownership
 
@@ -54,14 +57,14 @@ and synchronises the file and directory before acknowledgement. The filesystem m
 durable replacement. A crash-left lock requires host inspection and executor fencing before removal.
 Cancelled storage operations can finish in the background; subsequent commands inspect durable state.
 
-Create a `DurableToolExecutor` with the profile-filtered registry, binding revision, conversation
+Create a `DurableToolExecutor` with the profile's registry, binding revision, conversation
 identity, absolute expiry and journal limits. Its provider-facing call persists the pending request
 and stops before dispatch. Reopen the same scope, inspect the request, record the authenticated
 host's decision, then explicitly resume the stored call. Published results remain available after
 another reopen. An outstanding intent requires effect inspection and explicit reconciliation.
 
 The consumer tests reopen file storage between pending, approval and completion over all three
-transports. The effect occurs once and its private metadata survives storage. The provider receives
+transports. The effect occurs once. The provider receives
 one generation request while testing the tool approval boundary.
 
 
@@ -76,8 +79,8 @@ handles and the original configured binding.
 The consumer exercises ordinary and streaming Chat Completions, foreground streaming Responses
 and background polling Responses over all three MCP transports. Responses retains native reasoning and function-call items across
 reopen, including their opaque fields. A rejected
-continuation reuses the saved transcript, the tool effect occurs once, and private tool metadata
-stays out of provider requests. Failed, cancelled and invalid provider continuations retain an
+continuation reuses the saved transcript, the tool effect occurs once, and the remote result's
+`_meta` stays out of provider requests. Failed, cancelled and invalid provider continuations retain an
 unresolved intent and the preceding tool result. The host fences the original task before resolving
 that intent. See the [provider contract](contracts/providers.md#durable-tool-conversations).
 

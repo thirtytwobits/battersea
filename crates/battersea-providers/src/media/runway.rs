@@ -152,7 +152,7 @@ impl MediaGenerationAdapter for RunwayMediaGenerator {
             return Err(EngineAdapterRequestError::new(
                 "runway",
                 if error_body.trim().is_empty() {
-                    format!("Runway task submission failed with HTTP {}.", submit_status)
+                    format!("Runway task submission failed with HTTP {submit_status}.")
                 } else {
                     error_body
                 },

@@ -483,7 +483,7 @@ fn build_mock_asset(
             None
         },
 
-        provider_asset_id: Some(format!("mock-asset-{}", index)),
+        provider_asset_id: Some(format!("mock-asset-{index}")),
     }
 }
 

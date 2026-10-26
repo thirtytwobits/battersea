@@ -23,3 +23,4 @@ battersea-flow = { path = "../../crates/battersea-flow" }
 battersea-guard = { path = "../../crates/battersea-guard" }
 battersea-telemetry = { path = "../../crates/battersea-telemetry" }
 battersea-tools = { path = "../../crates/battersea-tools" }
+clapham.workspace = true

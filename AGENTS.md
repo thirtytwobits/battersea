@@ -4,8 +4,9 @@ The Cargo workspace owns the backend and repository tooling. `typescript/` owns 
 Rust builds and tests must work without Node. Cargo-backed commands run sequentially.
 
 Keep product sessions, storage policy, owned media and UI composition in the consuming application.
-Public crates and npm packages must not depend on Primrose or Clerkenwell. A future optional
-integration belongs in an explicit adapter package.
+Public crates and npm packages must not depend on Primrose, Clerkenwell or any London piece but
+Clapham, and only where `contracts/dependencies.json` names it. A future optional integration
+belongs in an explicit adapter package.
 
 Use `cargo xtask --help` and `npm run` for the available gates. Add behaviour tests from contracts.
 Record source commits, paths and copyright notices when extracting code. Read the relevant

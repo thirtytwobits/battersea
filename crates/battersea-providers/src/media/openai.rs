@@ -221,7 +221,7 @@ impl OpenAiMediaGenerator {
                     .or_else(|| {
                         image
                             .b64_json
-                            .map(|b64_json| format!("data:{};base64,{}", mime_type, b64_json))
+                            .map(|b64_json| format!("data:{mime_type};base64,{b64_json}"))
                     })
                     .ok_or_else(|| {
                         EngineAdapterRequestError::new(
@@ -293,10 +293,7 @@ async fn send_image_generation_json_request(
         return Err(parse_openai_error_body(&body).unwrap_or_else(|| {
             EngineAdapterRequestError::new(
                 "openai",
-                format!(
-                    "OpenAI image generation failed with HTTP status {}.",
-                    status
-                ),
+                format!("OpenAI image generation failed with HTTP status {status}."),
                 "request",
             )
         }));
@@ -331,10 +328,7 @@ async fn send_image_generation_stream_request(
         return Err(parse_openai_error_body(&body).unwrap_or_else(|| {
             EngineAdapterRequestError::new(
                 "openai",
-                format!(
-                    "OpenAI image generation failed with HTTP status {}.",
-                    status
-                ),
+                format!("OpenAI image generation failed with HTTP status {status}."),
                 "request",
             )
         }));
@@ -909,8 +903,7 @@ mod tests {
                 "data: {\"type\":\"image_generation.completed\",\"b64_json\":\"ZmluYWw=\",\"created_at\":1780292001,\"size\":\"1024x1024\",\"quality\":\"high\",\"background\":\"opaque\",\"output_format\":\"png\",\"usage\":{\"input_tokens\":1,\"total_tokens\":3,\"output_tokens\":2,\"output_token_details\":{\"text_tokens\":0,\"image_tokens\":2},\"input_tokens_details\":{\"text_tokens\":1,\"image_tokens\":0}}}\n\n"
             );
             let response = format!(
-                "HTTP/1.1 200 OK\r\nContent-Type: text/event-stream\r\nConnection: close\r\n\r\n{}",
-                body
+                "HTTP/1.1 200 OK\r\nContent-Type: text/event-stream\r\nConnection: close\r\n\r\n{body}"
             );
             stream
                 .write_all(response.as_bytes())

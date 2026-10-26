@@ -1,4 +1,6 @@
 //! Copyright (c) Scott A Dixon
+mod support;
+
 use async_trait::async_trait;
 use battersea_model::*;
 use battersea_tools::*;
@@ -84,19 +86,24 @@ impl EngineLocalToolExecutor for Effect {
         ))
     }
 }
-fn registry(effect: Arc<Effect>) -> ToolRegistry {
-    let tool = Tool::new(
+fn write() -> clapham::Operation {
+    let mut operation = support::operation(
         "host.write",
-        json!({"type":"object","properties":{"value":{"type":"integer"}},"required":["value"]})
-            .as_object()
-            .unwrap()
-            .clone(),
-    )
-    .with_description("Write a value")
-    .with_profiles(["operator"]);
-    let mut r = ToolRegistry::default();
-    r.register(tool, effect).unwrap();
-    r.for_profile("operator")
+        support::object(
+            json!({"type":"object","properties":{"value":{"type":"integer"}},"required":["value"]}),
+        ),
+    );
+    operation.description = "Write a value".into();
+    operation
+}
+fn operator(operation: clapham::Operation, effect: Arc<Effect>) -> ToolRegistry {
+    support::registry(vec![(operation, effect)])
+        .with_profile("operator", ["host.write"])
+        .unwrap()
+        .for_profile("operator")
+}
+fn registry(effect: Arc<Effect>) -> ToolRegistry {
+    operator(write(), effect)
 }
 fn scope() -> DurableToolApprovalScope {
     DurableToolApprovalScope {
@@ -568,10 +575,9 @@ async fn changed_definition_and_profile_reject_previously_approved_dispatch() {
         if profile {
             changed = changed.for_profile("untrusted");
         } else {
-            let mut tool = e.inspect().await.unwrap().calls["one"].tool.clone();
-            tool.description = Some("Changed contract".into());
-            changed = ToolRegistry::default();
-            changed.register(tool, effect.clone()).unwrap();
+            let mut operation = write();
+            operation.description = "Changed contract".into();
+            changed = operator(operation, effect.clone());
         }
         let e = DurableToolExecutor::open(store, changed, scope, 8192, Duration::from_secs(1))
             .await
@@ -624,20 +630,12 @@ async fn oversized_results_retain_intent_and_reconciliation_enforces_output_sche
 
     let store = Arc::new(Store::default());
     let effect = Arc::new(Effect::default());
-    let mut tool = Tool::new(
-        "host.write",
-        json!({"type":"object"}).as_object().unwrap().clone(),
-    )
-    .with_description("Write")
-    .with_profiles(["operator"]);
-    tool.output_schema = Some(
-        json!({"type":"object","required":["receipt"]})
-            .as_object()
-            .unwrap()
-            .clone(),
+    let mut operation = support::operation("host.write", support::object(json!({"type":"object"})));
+    operation.description = "Write".into();
+    let registry = operator(
+        support::with_output(operation, json!({"type":"object","required":["receipt"]})),
+        effect.clone(),
     );
-    let mut registry = ToolRegistry::default();
-    registry.register(tool, effect.clone()).unwrap();
     let e = DurableToolExecutor::create(
         store.clone(),
         registry,
@@ -863,4 +861,36 @@ async fn a_journal_settles_only_when_every_call_is_terminal() {
             "{ending}: a later call unsettles the journal"
         );
     }
+}
+
+#[tokio::test]
+async fn a_journal_written_by_battersea_0_17_reads_unchanged() {
+    let written = include_str!("fixtures/journal-v0.17.0.json");
+    let journal: ToolApprovalJournal = serde_json::from_str(written).unwrap();
+    journal.validate().unwrap();
+    assert_eq!(journal.version, TOOL_APPROVAL_JOURNAL_VERSION);
+    assert_eq!(
+        serde_json::to_string_pretty(&journal).unwrap() + "\n",
+        written
+    );
+    let store = Arc::new(Store {
+        bytes: Mutex::new(Some(written.as_bytes().to_vec())),
+        ..Store::default()
+    });
+    let effect = Arc::new(Effect::default());
+    let e = DurableToolExecutor::open(
+        store,
+        registry(effect.clone()),
+        journal.scope.clone(),
+        8192,
+        Duration::from_secs(1),
+    )
+    .await
+    .unwrap();
+    assert_eq!(
+        serde_json::to_value(e.inspect().await.unwrap()).unwrap(),
+        serde_json::to_value(&journal).unwrap()
+    );
+    assert!(e.resume("two", journal.revision).await.is_err());
+    assert_eq!(effect.calls.load(Ordering::SeqCst), 0);
 }

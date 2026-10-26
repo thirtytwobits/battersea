@@ -24,3 +24,12 @@ test('the published tool schema names the profiles key the package reads', async
   assert.ok(schema.$defs.Tool.required.includes('inputSchema'));
   assert.match(TOOL_PROFILES_META_KEY, /^[a-z][a-z0-9-]*(\.[a-z][a-z0-9-]*)+\/[a-z]+$/);
 });
+
+test('the package carries the operation schema its tools are presented from', async () => {
+  const schema = JSON.parse(await readFile(new URL('../packages/flow/schemas/operation.schema.json', import.meta.url), 'utf8'));
+  assert.equal(schema.title, 'Operation');
+  for (const field of ['name', 'description', 'input', 'effect', 'idempotent', 'open_world']) {
+    assert.ok(schema.required.includes(field), field);
+  }
+  assert.ok(schema.$defs.Effect);
+});

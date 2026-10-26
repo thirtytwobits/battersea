@@ -9,6 +9,12 @@ pub const MCP_PROTOCOL_REVISION: &str = "2026-07-28";
 /// The `_meta` key under which a tool lists the agent profiles permitted to call it.
 pub const PROFILES_META_KEY: &str = "io.github.thirtytwobits.battersea/profiles";
 
+/// The `_meta` key under which Clapham's MCP form names an `administrative` effect.
+const EFFECT_META_KEY: &str = "io.github.thirtytwobits.clapham/effect";
+
+/// The `_meta` key under which Clapham's MCP form marks an operation that streams records.
+const RECORDS_META_KEY: &str = "io.github.thirtytwobits.clapham/records";
+
 /// A tool, as the Model Context Protocol's tool record describes it.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
@@ -42,6 +48,46 @@ pub struct Tool {
 }
 
 impl Tool {
+    /// The record Clapham's MCP server presents for `operation`: its name, title, description
+    /// and schemas, every hint stated from its effect, and Clapham's `_meta` keys for an
+    /// `administrative` effect and for streamed records.
+    pub fn for_operation(operation: &clapham::Operation) -> Self {
+        use clapham::Effect;
+        let effect = operation.effect;
+        let mut meta = Map::new();
+        if effect == Effect::Administrative {
+            meta.insert(EFFECT_META_KEY.into(), Value::from("administrative"));
+        }
+        if operation.streams {
+            meta.insert(RECORDS_META_KEY.into(), Value::from(true));
+        }
+        // A boolean output schema has an exact object equivalent.
+        let output_schema = operation
+            .output
+            .as_ref()
+            .map(|schema| match schema.as_value() {
+                Value::Object(object) => object.clone(),
+                Value::Bool(true) => Map::new(),
+                _ => Map::from_iter([("not".into(), Value::Object(Map::new()))]),
+            });
+        Self {
+            name: operation.name.to_string(),
+            title: operation.title.clone(),
+            description: Some(operation.description.clone()),
+            input_schema: operation.input.clone(),
+            output_schema,
+            annotations: Some(ToolAnnotations {
+                title: None,
+                read_only_hint: Some(effect == Effect::Query),
+                destructive_hint: Some(effect == Effect::Destructive),
+                idempotent_hint: Some(effect == Effect::Query || operation.idempotent),
+                open_world_hint: Some(operation.open_world),
+            }),
+            icons: Vec::new(),
+            meta,
+        }
+    }
+
     /// A tool named `name` whose arguments satisfy `input_schema`.
     pub fn new(name: impl Into<String>, input_schema: Map<String, Value>) -> Self {
         Self {

@@ -1,9 +1,9 @@
 //! Copyright (c) Scott A Dixon
 //! Run controlled MCP tools through a configured provider on both supported transports.
-use battersea_mcp::{McpConnection, McpHttpOptions};
 use battersea_model::{EngineTextStreamEvent, ToolCallOutcome};
 use battersea_tools::{ToolApprovalDecision, ToolApprovalPolicy, ToolApprovalRequest};
 use clap::{Parser, Subcommand};
+use clapham_mcp_client::{McpConnection, McpHttpOptions};
 use futures_util::StreamExt;
 use mcp_example::{
     fixture::{self, Fault, Result},
@@ -50,7 +50,6 @@ async fn conversation(connection: &McpConnection, run_id: &str) -> Result<()> {
     println!("MCP binding {}", binding.revision());
     let mut stream = adapter
         .stream_text(host::approved_request(
-            &binding,
             &registry,
             chat,
             run_id,

@@ -273,10 +273,7 @@ fn build_item_binding_map(item: &Value, item_bindings: &[String]) -> Result<Map<
                     .cloned()
                     .map(|value| (binding.clone(), value))
                     .ok_or_else(|| {
-                        anyhow!(
-                            "Flow list item is missing expected binding \"{}\".",
-                            binding
-                        )
+                        anyhow!("Flow list item is missing expected binding \"{binding}\".")
                     })
             })
             .collect(),
@@ -302,16 +299,11 @@ fn resolve_port_formatter_definition<'a>(
     match variant_key {
         Some(key) => formatter.variants.get(key).ok_or_else(|| {
             anyhow!(
-                "Flow output port \"{}\" does not declare formatter variant \"{}\".",
-                port_name,
-                key
+                "Flow output port \"{port_name}\" does not declare formatter variant \"{key}\"."
             )
         }),
         None => formatter.default.as_ref().ok_or_else(|| {
-            anyhow!(
-                "Flow output port \"{}\" does not declare a default formatter.",
-                port_name
-            )
+            anyhow!("Flow output port \"{port_name}\" does not declare a default formatter.")
         }),
     }
 }
@@ -358,8 +350,7 @@ fn validate_flow_prompt_template_node(
                 if let Some(name) = capture.get(1).map(|inner| inner.as_str()) {
                     if !bindings.contains(name) {
                         return Err(anyhow!(
-                            "Flow formatter template referenced undeclared binding \"{}\".",
-                            name
+                            "Flow formatter template referenced undeclared binding \"{name}\"."
                         ));
                     }
                 }

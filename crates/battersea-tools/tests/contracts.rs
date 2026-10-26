@@ -1,8 +1,12 @@
+mod support;
+
 use async_trait::async_trait;
 use battersea_model::*;
 use battersea_tools::*;
+use clapham::{CompositionCode, Effect, OperationName};
 use serde_json::{json, Map, Value};
 use std::sync::{Arc, Mutex};
+use support::{object, operation, with_output};
 
 /// An executor that records each call it runs and answers with its arguments.
 #[derive(Default)]
@@ -24,18 +28,31 @@ impl Recorder {
     }
 }
 
-fn object(value: Value) -> Map<String, Value> {
-    value.as_object().expect("an object").clone()
-}
-
 fn keyed_schema() -> Map<String, Value> {
     object(
         json!({"type":"object","properties":{"key":{"type":"string"}},"required":["key"],"additionalProperties":false}),
     )
 }
 
-fn lookup(name: &str) -> Tool {
-    Tool::new(name, keyed_schema()).with_description("Looks a key up.")
+fn lookup(name: &str) -> clapham::Operation {
+    operation(name, keyed_schema())
+}
+
+fn recorded(
+    recorder: &Arc<Recorder>,
+    operations: impl IntoIterator<Item = clapham::Operation>,
+) -> ToolRegistry {
+    support::registry(
+        operations
+            .into_iter()
+            .map(|operation| {
+                (
+                    operation,
+                    recorder.clone() as Arc<dyn EngineLocalToolExecutor>,
+                )
+            })
+            .collect(),
+    )
 }
 
 fn call(name: &str, arguments: Value) -> EngineLocalToolCall {
@@ -47,16 +64,9 @@ fn call(name: &str, arguments: Value) -> EngineLocalToolCall {
 }
 
 #[tokio::test]
-async fn a_call_is_checked_against_its_tool_before_its_executor_runs() {
+async fn a_call_is_checked_against_its_operation_before_its_handler_runs() {
     let recorder = Arc::new(Recorder::default());
-    let mut registry = ToolRegistry::default();
-    registry
-        .register(lookup("example.lookup"), recorder.clone())
-        .unwrap();
-    let collision = registry
-        .register(lookup("example_lookup"), recorder.clone())
-        .unwrap_err();
-    assert_eq!(collision.tool_code, Some(ToolCode::DuplicateTool));
+    let registry = recorded(&recorder, [lookup("example.lookup")]);
     for (name, arguments, code) in [
         (
             "example.lookup",
@@ -75,139 +85,160 @@ async fn a_call_is_checked_against_its_tool_before_its_executor_runs() {
     assert!(recorder.calls().is_empty());
 }
 
-#[tokio::test]
-async fn an_executor_receives_a_call_under_its_tools_own_name() {
+#[test]
+fn operations_whose_provider_names_collide_are_refused() {
     let recorder = Arc::new(Recorder::default());
-    let mut registry = ToolRegistry::default();
-    let tool = lookup("example.lookup");
-    registry.register(tool.clone(), recorder.clone()).unwrap();
+    let set = clapham::compose(
+        [
+            clapham::Contribution::new("a")
+                .operation(lookup("a.b_c"), support::handler(recorder.clone())),
+            clapham::Contribution::new("a_b")
+                .operation(lookup("a_b.c"), support::handler(recorder)),
+        ],
+        clapham::Bounds::default(),
+    )
+    .unwrap();
+    let error = ToolRegistry::new(
+        set.clone(),
+        set.select(["a.b_c", "a_b.c"]).unwrap(),
+        support::grant(),
+    )
+    .err()
+    .unwrap();
+    assert_eq!(error.tool_code, Some(ToolCode::DuplicateTool));
+    assert!(ToolRegistry::new(
+        set.clone(),
+        set.select(["a.b_c"]).unwrap(),
+        support::grant()
+    )
+    .is_ok());
+}
+
+#[tokio::test]
+async fn a_handler_receives_a_call_under_its_operations_own_name() {
+    let recorder = Arc::new(Recorder::default());
+    let registry = recorded(&recorder, [lookup("example.lookup")]);
     let offered = registry.definitions();
     assert_eq!(offered.len(), 1);
     let arguments = json!({"key": "selected"});
-    for name in [offered[0].name.as_str(), tool.name.as_str()] {
+    for name in [offered[0].name.as_str(), "example.lookup"] {
         let result = registry.call(call(name, arguments.clone())).await.unwrap();
         assert_eq!(result, EngineLocalToolResult::json(arguments.clone()));
     }
     let calls = recorder.calls();
     assert_eq!(calls.len(), 2);
-    assert!(calls.iter().all(|received| received.name == tool.name));
+    assert!(calls
+        .iter()
+        .all(|received| received.name == "example.lookup"));
 }
 
 #[test]
-fn a_provider_is_offered_each_tool_under_its_portable_name_with_its_description() {
-    let tool =
-        lookup("example.lookup").with_description("  Looks a key up.\n\n  Indented detail.\n");
-    let mut registry = ToolRegistry::default();
-    registry
-        .register(tool.clone(), Arc::new(Recorder::default()))
-        .unwrap();
+fn a_provider_is_offered_each_operation_under_its_portable_name_with_its_description() {
+    let mut described = lookup("example.lookup");
+    described.description = "  Looks a key up.\n\n  Indented detail.\n".into();
+    let registry = recorded(&Arc::default(), [described.clone()]);
     let offered = registry.definitions();
     assert_eq!(offered.len(), 1);
-    assert_eq!(offered[0].name, local_tool_name(&tool.name));
+    assert_eq!(offered[0].name, local_tool_name("example.lookup"));
+    assert_eq!(offered[0].description, described.description);
+    assert_eq!(offered[0].input_schema, Value::Object(keyed_schema()));
     assert_eq!(
-        Some(offered[0].description.as_str()),
-        tool.description.as_deref()
+        registry.tools().collect::<Vec<_>>(),
+        vec![&Tool::for_operation(&described)]
     );
-    assert_eq!(
-        offered[0].input_schema,
-        Value::Object(tool.input_schema.clone())
-    );
-    assert_eq!(registry.tools().collect::<Vec<_>>(), vec![&tool]);
 }
 
 #[test]
-fn a_record_that_cannot_be_offered_is_refused() {
-    let mut profiles_not_names = lookup("example.lookup");
-    profiles_not_names
-        .meta
-        .insert(PROFILES_META_KEY.into(), json!("author"));
-    let mut not_a_list = lookup("example.lookup");
-    not_a_list.meta.insert(PROFILES_META_KEY.into(), json!([1]));
+fn a_descriptor_that_cannot_be_offered_is_refused_by_clapham() {
+    for name in ["", "example lookup", &format!("e.{}", "n".repeat(127))] {
+        assert!(OperationName::new(name).is_err(), "{name:?}");
+    }
+    assert!(OperationName::new(format!("e.{}", "n".repeat(126))).is_ok());
+    let mut blank = lookup("example.lookup");
+    blank.description = " ".into();
     let refused = [
-        ("blank name", lookup("")),
-        ("name with a space", lookup("example lookup")),
-        ("name too long", lookup(&"n".repeat(129))),
+        (blank, CompositionCode::MissingDescription),
         (
-            "no description",
-            Tool::new("example.lookup", keyed_schema()),
+            operation("example.lookup", object(json!({"type": "array"}))),
+            CompositionCode::InvalidSchema,
         ),
         (
-            "blank description",
-            Tool::new("example.lookup", keyed_schema()).with_description(" "),
+            operation("example.lookup", Map::new()),
+            CompositionCode::InvalidSchema,
         ),
         (
-            "array input schema",
-            Tool::new("example.lookup", object(json!({"type": "array"})))
-                .with_description("Lists."),
+            operation(
+                "example.lookup",
+                object(json!({"type": "object", "minProperties": "one"})),
+            ),
+            CompositionCode::InvalidSchema,
         ),
         (
-            "untyped input schema",
-            Tool::new("example.lookup", Map::new()).with_description("Looks a key up."),
-        ),
-        ("profiles not a list", profiles_not_names),
-        ("profiles not names", not_a_list),
-        (
-            "blank profile",
-            lookup("example.lookup").with_profiles(["author", " "]),
-        ),
-        (
-            "repeated profile",
-            lookup("example.lookup").with_profiles(["author", "author"]),
+            with_output(
+                lookup("example.lookup"),
+                json!({"type": "object", "minProperties": "one"}),
+            ),
+            CompositionCode::InvalidSchema,
         ),
     ];
-    for (case, tool) in refused {
-        let error = ToolRegistry::default()
-            .register(tool, Arc::new(Recorder::default()))
-            .unwrap_err();
-        assert_eq!(
-            error.tool_code,
-            Some(ToolCode::InvalidToolDefinition),
-            "{case}"
-        );
+    for (operation, code) in refused {
+        let error = support::compose(vec![(operation, Arc::new(Recorder::default()))])
+            .err()
+            .unwrap();
+        assert_eq!(error.code, code);
     }
-    let mut uncompilable_output = lookup("example.lookup");
-    uncompilable_output.output_schema =
-        Some(object(json!({"type": "object", "minProperties": "one"})));
-    let error = ToolRegistry::default()
-        .register(uncompilable_output, Arc::new(Recorder::default()))
-        .unwrap_err();
-    assert_eq!(error.tool_code, Some(ToolCode::InvalidToolSchema));
-    let uncompilable = Tool::new(
-        "example.lookup",
-        object(json!({"type": "object", "minProperties": "one"})),
+    let error = support::compose(
+        [lookup("example.lookup"), lookup("example.lookup")]
+            .into_iter()
+            .map(|operation| {
+                (
+                    operation,
+                    Arc::new(Recorder::default()) as Arc<dyn EngineLocalToolExecutor>,
+                )
+            })
+            .collect(),
     )
-    .with_description("Looks a key up.");
-    let error = ToolRegistry::default()
-        .register(uncompilable, Arc::new(Recorder::default()))
-        .unwrap_err();
-    assert_eq!(error.tool_code, Some(ToolCode::InvalidToolSchema));
-    let longest = lookup(&"n".repeat(128));
-    assert!(ToolRegistry::default()
-        .register(longest, Arc::new(Recorder::default()))
-        .is_ok());
+    .err()
+    .unwrap();
+    assert_eq!(error.code, CompositionCode::DuplicateOperation);
+}
+
+#[test]
+fn profiles_must_be_distinct_non_blank_and_name_selected_operations() {
+    let registry = recorded(&Arc::default(), [lookup("example.lookup")]);
+    for (profile, names) in [
+        (" ", vec!["example.lookup"]),
+        ("author", vec!["example.missing"]),
+    ] {
+        let error = registry.clone().with_profile(profile, names).err().unwrap();
+        assert_eq!(error.tool_code, Some(ToolCode::InvalidToolDefinition));
+    }
+    let error = registry
+        .with_profile("author", ["example.lookup"])
+        .unwrap()
+        .with_profile("author", ["example.lookup"])
+        .err()
+        .unwrap();
+    assert_eq!(error.tool_code, Some(ToolCode::InvalidToolDefinition));
 }
 
 #[tokio::test]
 async fn a_result_outside_the_declared_output_schema_is_refused() {
     let recorder = Arc::new(Recorder::default());
-    let mut registry = ToolRegistry::default();
-    let mut echo = lookup("example.echo");
-    echo.output_schema = Some(keyed_schema());
-    let mut answers = lookup("example.answers");
-    answers.output_schema = Some(object(
+    let echo = with_output(lookup("example.echo"), Value::Object(keyed_schema()));
+    let answers = with_output(
+        lookup("example.answers"),
         json!({"type": "object", "required": ["value"], "properties": {"value": {"type": "string"}}}),
-    ));
-    for tool in [&echo, &answers] {
-        registry.register(tool.clone(), recorder.clone()).unwrap();
-    }
+    );
+    let registry = recorded(&recorder, [echo, answers]);
     let arguments = json!({"key": "selected"});
     let result = registry
-        .call(call(&echo.name, arguments.clone()))
+        .call(call("example.echo", arguments.clone()))
         .await
         .unwrap();
     assert_eq!(result, EngineLocalToolResult::json(arguments.clone()));
     let error = registry
-        .call(call(&answers.name, arguments.clone()))
+        .call(call("example.answers", arguments.clone()))
         .await
         .unwrap_err();
     assert_eq!(error.tool_code, Some(ToolCode::InvalidToolResult));
@@ -215,7 +246,7 @@ async fn a_result_outside_the_declared_output_schema_is_refused() {
     assert_eq!(
         recorder.calls().len(),
         2,
-        "the executor ran before its result was checked"
+        "the handler ran before its result was checked"
     );
 }
 
@@ -246,14 +277,12 @@ async fn content_results_validate_structured_output_and_preserve_tool_errors() {
             }],
             structured_content,
             is_error,
-            meta: Map::from_iter([("private".into(), json!("retained"))]),
+            meta: Map::new(),
         });
-        let mut tool = lookup("example.lookup");
-        tool.output_schema = Some(keyed_schema());
-        let mut registry = ToolRegistry::default();
-        registry
-            .register(tool, Arc::new(FixedResult(result.clone())))
-            .unwrap();
+        let registry = support::registry(vec![(
+            with_output(lookup("example.lookup"), Value::Object(keyed_schema())),
+            Arc::new(FixedResult(result.clone())),
+        )]);
         let returned = registry
             .call(call("example.lookup", json!({"key": "query"})))
             .await;
@@ -270,10 +299,7 @@ async fn content_results_validate_structured_output_and_preserve_tool_errors() {
 #[tokio::test]
 async fn registry_refusals_retain_not_dispatched_evidence() {
     let recorder = Arc::new(Recorder::default());
-    let mut registry = ToolRegistry::default();
-    registry
-        .register(lookup("example.lookup"), recorder.clone())
-        .unwrap();
+    let registry = recorded(&recorder, [lookup("example.lookup")]);
     for (name, arguments) in [
         ("missing", json!({})),
         ("example.lookup", json!({"key": 3})),
@@ -287,61 +313,140 @@ async fn registry_refusals_retain_not_dispatched_evidence() {
 }
 
 #[tokio::test]
-async fn a_profile_is_offered_and_runs_only_the_tools_it_is_permitted() {
+async fn a_refusal_reaches_the_tool_loop_with_its_code_and_evidence() {
+    let mut scoped = lookup("example.scoped");
+    scoped.scopes = vec!["example:write".into()];
     let recorder = Arc::new(Recorder::default());
-    let mut registry = ToolRegistry::default();
-    let shared = lookup("example.shared").with_profiles(["author", "player"]);
-    let authoring = lookup("example.authoring").with_profiles(["author"]);
-    let unlisted = lookup("example.unlisted");
-    for tool in [&shared, &authoring, &unlisted] {
-        registry.register(tool.clone(), recorder.clone()).unwrap();
-    }
+    let registry = recorded(&recorder, [scoped]);
+    let error = registry
+        .call(call("example.scoped", json!({"key": "selected"})))
+        .await
+        .unwrap_err();
+    assert_eq!(error.classification.as_str(), "insufficient_scope");
+    assert_eq!(error.tool_code, None);
+    assert_eq!(
+        error.tool_call.unwrap().outcome,
+        ToolCallOutcome::NotDispatched
+    );
+    assert!(recorder.calls().is_empty());
+}
+
+#[tokio::test]
+async fn a_profile_is_offered_and_runs_only_the_operations_it_is_permitted() {
+    let recorder = Arc::new(Recorder::default());
+    let registry = recorded(
+        &recorder,
+        [
+            lookup("example.shared"),
+            lookup("example.authoring"),
+            lookup("example.unlisted"),
+        ],
+    )
+    .with_profile("author", ["example.shared", "example.authoring"])
+    .unwrap()
+    .with_profile("player", ["example.shared"])
+    .unwrap();
     let player = registry.for_profile("player");
-    assert_eq!(player.tools().collect::<Vec<_>>(), vec![&shared]);
+    let shared = player.tools().collect::<Vec<_>>();
+    assert_eq!(shared.len(), 1);
+    assert_eq!(shared[0].name, "example.shared");
+    assert_eq!(shared[0].profiles(), Some(vec!["author", "player"]));
     assert_eq!(
         player
             .definitions()
             .iter()
             .map(|tool| tool.name.clone())
             .collect::<Vec<_>>(),
-        vec![local_tool_name(&shared.name)]
+        vec![local_tool_name("example.shared")]
     );
     let error = player
-        .call(call(&authoring.name, json!({"key": "selected"})))
+        .call(call("example.authoring", json!({"key": "selected"})))
         .await
         .unwrap_err();
     assert_eq!(error.tool_code, Some(ToolCode::UnregisteredTool));
     assert!(recorder.calls().is_empty());
     let author = registry.for_profile("author");
-    let mut names = author
+    let names = author
         .tools()
         .map(|tool| tool.name.as_str())
         .collect::<Vec<_>>();
-    names.sort_unstable();
-    assert_eq!(names, vec![authoring.name.as_str(), shared.name.as_str()]);
+    assert_eq!(names, vec!["example.authoring", "example.shared"]);
+    assert!(author.tools().all(|tool| tool.permits("author")));
     assert!(registry
-        .for_profile("author")
         .tools()
-        .all(|tool| tool.permits("author")));
-    assert!(!unlisted.permits("author"));
+        .find(|tool| tool.name == "example.unlisted")
+        .is_some_and(|tool| tool.profiles() == Some(Vec::new())));
+    let narrowed = player.for_profile("author");
+    assert_eq!(
+        narrowed
+            .tools()
+            .map(|tool| tool.name.as_str())
+            .collect::<Vec<_>>(),
+        vec!["example.shared"]
+    );
+    let error = narrowed
+        .call(call("example.authoring", json!({"key": "selected"})))
+        .await
+        .unwrap_err();
+    assert_eq!(error.tool_code, Some(ToolCode::UnregisteredTool));
+    assert!(recorder.calls().is_empty());
+    assert_ne!(author.revision(), registry.revision());
+    assert_eq!(author.revision(), registry.for_profile("author").revision());
+}
+
+#[test]
+fn the_presented_record_states_every_hint_from_the_effect() {
+    for (effect, idempotent, read_only, destructive, idempotent_hint) in [
+        (Effect::Query, false, true, false, true),
+        (Effect::Mutation, true, false, false, true),
+        (Effect::Mutation, false, false, false, false),
+        (Effect::Administrative, false, false, false, false),
+        (Effect::Destructive, false, false, true, false),
+    ] {
+        let mut descriptor = lookup("example.lookup");
+        descriptor.effect = effect;
+        descriptor.idempotent = idempotent;
+        descriptor.open_world = true;
+        let tool = Tool::for_operation(&descriptor);
+        let annotations = tool.annotations.clone().unwrap();
+        assert_eq!(annotations.read_only_hint, Some(read_only));
+        assert_eq!(annotations.destructive_hint, Some(destructive));
+        assert_eq!(annotations.idempotent_hint, Some(idempotent_hint));
+        assert_eq!(annotations.open_world_hint, Some(true));
+        assert_eq!(
+            tool.meta
+                .get("io.github.thirtytwobits.clapham/effect")
+                .cloned(),
+            (effect == Effect::Administrative).then(|| json!("administrative"))
+        );
+    }
+    let mut streaming = lookup("example.watch");
+    streaming.streams = true;
+    assert_eq!(
+        Tool::for_operation(&streaming).meta["io.github.thirtytwobits.clapham/records"],
+        json!(true)
+    );
 }
 
 #[test]
 fn profiles_read_back_as_they_were_listed() {
     let profiles = ["author", "player"];
-    let tool = lookup("example.lookup").with_profiles(profiles);
+    let tool = Tool::new("example.lookup", keyed_schema()).with_profiles(profiles);
     assert_eq!(tool.profiles(), Some(profiles.to_vec()));
-    assert_eq!(lookup("example.lookup").profiles(), Some(Vec::new()));
+    assert_eq!(
+        Tool::new("example.lookup", keyed_schema()).profiles(),
+        Some(Vec::new())
+    );
 }
 
 #[test]
 fn an_unannotated_tool_takes_the_protocols_cautious_defaults() {
-    let effect = lookup("example.lookup").effect();
+    let effect = Tool::new("example.lookup", keyed_schema()).effect();
     assert!(!effect.read_only);
     assert!(effect.destructive);
     assert!(!effect.idempotent);
     assert!(effect.open_world);
-    let read_only = lookup("example.lookup")
+    let read_only = Tool::new("example.lookup", keyed_schema())
         .with_annotations(ToolAnnotations::read_only_closed_world())
         .effect();
     assert!(read_only.read_only && !read_only.destructive && read_only.idempotent);
@@ -384,11 +489,12 @@ fn the_published_schema_admits_every_record_the_crate_writes() {
     tool_schema.as_object_mut().unwrap().remove("properties");
     tool_schema.as_object_mut().unwrap().remove("required");
     let validator = jsonschema::validator_for(&tool_schema).unwrap();
-    let full = lookup("example.lookup")
-        .with_title("Look a key up")
-        .with_annotations(ToolAnnotations::read_only_closed_world())
-        .with_profiles(["author"]);
-    for tool in [Tool::new("example.lookup", keyed_schema()), full] {
+    let mut presented = lookup("example.lookup");
+    presented.title = Some("Look a key up".into());
+    presented.effect = Effect::Administrative;
+    let presented =
+        Tool::for_operation(&with_output(presented, json!(true))).with_profiles(["author"]);
+    for tool in [Tool::new("example.lookup", keyed_schema()), presented] {
         let record = serde_json::to_value(&tool).unwrap();
         assert!(validator.is_valid(&record), "{record}");
     }
