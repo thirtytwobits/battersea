@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.19.0 — 2026-10-26
+
+- `@battersea/editor` accepts `react` and `react-dom` 18.3 or 19, and `react-amnesia` 0.2 or
+  0.3. Its published declarations are the same under React 18 and React 19 types.
+- `@dnd-kit/core` 6.3.1 declares its components with the global `JSX` namespace that React 19's
+  types removed. A React 19 application type-checks those declarations only with
+  `skipLibCheck`.
+- Rust crates, public Rust APIs and stored formats are unchanged. See PR #42.
+
 ## 0.18.0 — 2026-10-25
 
 - Take [Clapham](https://github.com/thirtytwobits/clapham) v0.3.0, the operations contract of
