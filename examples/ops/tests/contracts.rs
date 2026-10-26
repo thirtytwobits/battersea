@@ -336,3 +336,55 @@ async fn a_cancelled_run_does_not_resume_its_approved_call() {
         .unwrap();
     assert_eq!(status["status"], "cancelled");
 }
+
+#[tokio::test]
+async fn a_cancellation_during_an_activation_stands() {
+    let daemon = Daemon::new();
+    // Fresh hosts hold runs 0 and 1, so the activation reserves run 2.
+    let set = daemon.0.clone();
+    let sink = RecordSink::new(move |_| {
+        let set = set.clone();
+        async move {
+            set.call(
+                &set.all(),
+                operator(),
+                "battersea.run.cancel",
+                json!({"run_id": "run-2"}),
+                RecordSink::default(),
+                Cancellation::new(),
+                false,
+            )
+            .await
+            .unwrap();
+            Ok(())
+        }
+    });
+    let activated = daemon
+        .0
+        .call(
+            &daemon.0.all(),
+            operator(),
+            "battersea.run.activate",
+            json!({"flow_key": "example", "node_id": "text", "parameters": {"text": "Record it."}}),
+            sink,
+            Cancellation::new(),
+            false,
+        )
+        .await
+        .unwrap()
+        .result
+        .unwrap();
+    assert_eq!(activated["run_id"], "run-2");
+    assert_eq!(activated["status"], "cancelled");
+    assert_eq!(activated["terminal"], true);
+    let status = daemon
+        .call("battersea.run.status", json!({"run_id": "run-2"}))
+        .await
+        .unwrap();
+    assert_eq!(status["status"], "cancelled");
+    let resumed = daemon
+        .call("battersea.run.resume", json!({"run_id": "run-2"}))
+        .await
+        .unwrap_err();
+    assert_eq!(resumed.code, "execution_terminal");
+}

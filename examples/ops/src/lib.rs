@@ -478,21 +478,22 @@ impl RunHost for Host {
         };
         let outcome = self.execute(&run_id, activation, events).await;
         let mut runs = self.runs.lock().unwrap();
+        let reserved = runs.get_mut(&run_id).expect("the reserved run");
+        // A cancellation that arrived during the activation stands.
+        let cancelled = reserved.terminal;
         match outcome {
+            Ok(run) if cancelled => {
+                reserved.events = run.events;
+                Ok(reserved.status(&run_id))
+            }
             Ok(run) => {
-                let status = run.status(&run_id);
-                runs.insert(run_id, run);
-                Ok(status)
+                *reserved = run;
+                Ok(reserved.status(&run_id))
             }
             Err(refusal) => {
-                runs.insert(
-                    run_id,
-                    Run {
-                        status: "failed".into(),
-                        terminal: true,
-                        events: Vec::new(),
-                    },
-                );
+                if !cancelled {
+                    (reserved.status, reserved.terminal) = ("failed".into(), true);
+                }
                 Err(refusal)
             }
         }
