@@ -21,6 +21,14 @@ The [MCP consumer](mcp.md) launches a controlled stdio child and local
 HTTP JSON/SSE servers, then delivers remote tool results through a provider conversation.
 Its tests inject lost replies, disconnects, cancellation and provider continuation retries.
 
+The operations example is a deterministic host for Battersea's [operations](contracts/operations.md)
+and the reference executable Clapham's conformance harness drives. Its tests run each operation
+through the CLI, the MCP server and the MCP client, over stdio and Streamable HTTP:
+
+```sh
+cargo test --locked -p ops-example
+```
+
 The [editor server](editor-server.md) joins installed npm packages to an independent Rust
 application. To try its API in an empty application directory:
 

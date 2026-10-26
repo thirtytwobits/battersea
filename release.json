@@ -35,6 +35,13 @@
       "NOTICE",
       "schemas/tools.schema.json"
     ],
+    "battersea-ops": [
+      "Cargo.toml",
+      "src/lib.rs",
+      "README.md",
+      "LICENSE",
+      "NOTICE"
+    ],
     "battersea-providers": [
       "Cargo.toml",
       "src/lib.rs",

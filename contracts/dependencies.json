@@ -8,6 +8,13 @@
     "battersea-model",
     "clapham"
   ],
+  "battersea-ops": [
+    "battersea-flow",
+    "battersea-model",
+    "battersea-runtime",
+    "battersea-tools",
+    "clapham"
+  ],
   "battersea-providers": [
     "battersea-model"
   ],

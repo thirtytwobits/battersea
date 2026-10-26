@@ -1,0 +1,33 @@
+[package]
+name = "ops-example"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish = false
+
+[lib]
+name = "ops_example"
+
+[[bin]]
+name = "ops-example"
+path = "src/main.rs"
+
+[dependencies]
+async-trait.workspace = true
+axum.workspace = true
+battersea-flow = { path = "../../crates/battersea-flow" }
+battersea-model = { path = "../../crates/battersea-model" }
+battersea-ops = { path = "../../crates/battersea-ops" }
+battersea-runtime = { path = "../../crates/battersea-runtime" }
+battersea-providers = { path = "../../crates/battersea-providers", default-features = false, features = ["mock"] }
+battersea-tools = { path = "../../crates/battersea-tools" }
+clapham.workspace = true
+clapham-cli.workspace = true
+clapham-conformance.workspace = true
+clapham-mcp-server.workspace = true
+futures-util.workspace = true
+schemars.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+tokio = { workspace = true, features = ["io-util", "io-std", "process", "signal"] }

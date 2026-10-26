@@ -1,0 +1,25 @@
+[package]
+name = "battersea-ops"
+description = "Battersea's flow, run, approval and MCP-connection operations, contributed to Clapham"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+readme = "../../README.md"
+publish = false
+include = ["src/**", "Cargo.toml", "LICENSE", "NOTICE"]
+
+[dependencies]
+battersea-flow = { path = "../battersea-flow", version = "0.17.0" }
+battersea-model = { path = "../battersea-model", version = "0.17.0" }
+battersea-runtime = { path = "../battersea-runtime", version = "0.17.0" }
+battersea-tools = { path = "../battersea-tools", version = "0.17.0" }
+clapham.workspace = true
+async-trait.workspace = true
+schemars.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+
+[dev-dependencies]
+tokio.workspace = true
