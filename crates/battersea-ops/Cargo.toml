@@ -11,10 +11,10 @@ publish = false
 include = ["src/**", "Cargo.toml", "LICENSE", "NOTICE"]
 
 [dependencies]
-battersea-flow = { path = "../battersea-flow", version = "0.19.1" }
-battersea-model = { path = "../battersea-model", version = "0.19.1" }
-battersea-runtime = { path = "../battersea-runtime", version = "0.19.1" }
-battersea-tools = { path = "../battersea-tools", version = "0.19.1" }
+battersea-flow = { path = "../battersea-flow", version = "0.20.0" }
+battersea-model = { path = "../battersea-model", version = "0.20.0" }
+battersea-runtime = { path = "../battersea-runtime", version = "0.20.0" }
+battersea-tools = { path = "../battersea-tools", version = "0.20.0" }
 clapham.workspace = true
 async-trait.workspace = true
 schemars.workspace = true

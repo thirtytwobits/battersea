@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.20.0 — 2026-10-27
+
+- Take [Clapham](https://github.com/thirtytwobits/clapham) v0.3.2. A host that depends on Clapham
+  pins the `v0.3.2` tag; Cargo treats each Git tag as a separate `clapham` crate, so the types
+  `battersea-tools` and `battersea-ops` accept come from that tag alone.
+- The MCP daemons of `examples/editor-server` and `examples/ops` answer every `resources/read`
+  with JSON-RPC `-32602` and the URI under `data.uri`, where they answered `-32002`. Neither
+  registers a resource template.
+- Public Rust APIs, `operation.schema.json` and stored formats are unchanged.
+
 ## 0.19.1 — 2026-10-26
 
 - `runtime.schema.json` no longer defines `FlowFailurePolicy`. The node state's `failure_policy`
