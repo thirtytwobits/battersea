@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.19.1 — 2026-10-26
+
+- `runtime.schema.json` no longer defines `FlowFailurePolicy`. The node state's `failure_policy`
+  writes the flow contract's failure policy in place, so a host composes the published schema
+  bundles into one document again. `@battersea/flow` exports `FlowFailurePolicy` from the flow
+  contract alone.
+- The bindings generator refuses published schema bundles that define the same name.
+- Public Rust APIs and stored formats are unchanged. See PR #44.
+
 ## 0.19.0 — 2026-10-26
 
 - `@battersea/editor` accepts `react` and `react-dom` 18.3 or 19, and `react-amnesia` 0.2 or
