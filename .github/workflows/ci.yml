@@ -3,7 +3,6 @@ on:
   push:
     branches: [main]
   pull_request:
-  workflow_call:
 permissions:
   contents: read
 jobs:
@@ -29,6 +28,13 @@ jobs:
           echo "$RUNNER_TEMP/no-node" >> "$GITHUB_PATH"
       - run: cargo xtask check
       - run: cargo xtask package
+      - if: github.event_name == 'push' && matrix.rust == '1.99.0'
+        uses: actions/upload-artifact@v7
+        with:
+          name: release-part-crates
+          path: target/package/*.crate
+          if-no-files-found: error
+          retention-days: 1
   typescript:
     runs-on: ubuntu-24.04
     timeout-minutes: 10
@@ -43,7 +49,14 @@ jobs:
           cache: npm
           cache-dependency-path: typescript/package-lock.json
       - run: npm ci --ignore-scripts
-      - run: npm run package:check
+      - run: npm run package:check -- "$RUNNER_TEMP/npm"
+      - if: github.event_name == 'push'
+        uses: actions/upload-artifact@v7
+        with:
+          name: release-part-npm
+          path: ${{ runner.temp }}/npm/*.tgz
+          if-no-files-found: error
+          retention-days: 1
   api:
     runs-on: ubuntu-24.04
     timeout-minutes: 20
@@ -74,7 +87,7 @@ jobs:
           echo "$RUNNER_TEMP/no-node" >> "$GITHUB_PATH"
       - run: cargo xtask docs
       - run: git diff --exit-code
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: documentation-part-rust
           path: target/documentation/site
@@ -96,7 +109,7 @@ jobs:
       - run: npm ci --ignore-scripts
       - run: npm run docs
       - run: git diff --exit-code
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: documentation-part-typescript
           path: target/documentation/site
@@ -111,19 +124,53 @@ jobs:
         run: |
           rustup toolchain install "$(jq -r .rust docs/toolchain.json)" --profile minimal
           rustup default "$(jq -r .rust docs/toolchain.json)"
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           pattern: documentation-part-*
           merge-multiple: true
           path: target/documentation/site
       - run: cargo test --locked -p xtask docs::tests
-      - run: cargo xtask docs-check
-      - uses: actions/upload-artifact@v4
+      - if: github.event_name != 'push'
+        run: cargo xtask docs-check
+      - name: Check and archive the documentation
+        if: github.event_name == 'push'
+        run: cargo xtask docs-archive
+      - if: github.event_name == 'push'
+        uses: actions/upload-artifact@v7
+        with:
+          name: release-part-docs
+          path: target/documentation/battersea-docs-*.tar.gz
+          if-no-files-found: error
+          retention-days: 1
+      - uses: actions/upload-artifact@v7
         with:
           name: documentation-preview
           path: target/documentation/site
           if-no-files-found: error
           include-hidden-files: true
+  release-files:
+    if: github.event_name == 'push'
+    needs: [rust, typescript, documentation]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: release-part-*
+          merge-multiple: true
+          path: release-files
+      - uses: actions/upload-artifact@v7
+        with:
+          name: release-files
+          path: release-files
+          if-no-files-found: error
+          retention-days: 90
+  release-form:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+      - run: python3 tools/release.py check
   editor-example:
     runs-on: ubuntu-24.04
     timeout-minutes: 20
@@ -141,7 +188,7 @@ jobs:
         working-directory: typescript
       - run: npm run build && npm run test:example
         working-directory: typescript
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: editor-browser

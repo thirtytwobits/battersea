@@ -72,9 +72,10 @@ CI builds and checks a complete site and uploads a downloadable `documentation-p
 artifact for review. Pull requests cannot deploy Pages. Rust and handbook generation run
 in a lane that refuses Node invocations; TypeScript documentation is built separately.
 
-A version tag runs all CI gates. The draft-release workflow downloads the verified site,
-archives it, and attaches the archive alongside Cargo and npm packages. `SHA256SUMS` covers
-every archive. Publishing the draft starts `docs-pages.yml` through `release: published`.
+The push to `main` archives the checked site and keeps it with the Cargo and npm packages as
+the build's release files. The Draft release workflow attaches them to the draft, and
+`SHA256SUMS` covers every archive. Publishing the draft starts `docs-pages.yml` through
+`release: published`.
 Documentation is not published merely because a tag or a draft exists.
 
 The Pages workflow reconstructs the entire site from published release assets. It verifies

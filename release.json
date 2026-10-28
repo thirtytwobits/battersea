@@ -3,6 +3,52 @@
   "repository": "https://github.com/thirtytwobits/battersea",
   "license": "MIT",
   "security_contact": "https://github.com/thirtytwobits/battersea/security/advisories/new",
+  "consumer": "battersea-ops",
+  "files": [
+    "*.crate",
+    "*.tgz",
+    "battersea-docs-v*.tar.gz"
+  ],
+  "steps": {
+    "prepare": [
+      [
+        "python3",
+        "tools/release_steps.py",
+        "npm-version",
+        "{previous}",
+        "{version}"
+      ]
+    ],
+    "gates": [
+      [
+        "cargo",
+        "xtask",
+        "check"
+      ],
+      [
+        "cargo",
+        "xtask",
+        "api"
+      ],
+      [
+        "cargo",
+        "xtask",
+        "release-check"
+      ],
+      [
+        "cargo",
+        "xtask",
+        "package"
+      ],
+      [
+        "npm",
+        "--prefix",
+        "typescript",
+        "run",
+        "package:check"
+      ]
+    ]
+  },
   "crates": {
     "battersea-flow": [
       "Cargo.toml",

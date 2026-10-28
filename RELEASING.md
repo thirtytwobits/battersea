@@ -1,24 +1,24 @@
-# Releasing
+# Releasing Battersea
 
 A release has one version across Cargo, npm and `release.json`. Rust consumers use its Git tag;
-npm consumers install tarballs attached to that release. Registry publication is a separate decision.
+npm consumers install the tarballs attached to it. Registry publication is a separate decision.
 
-`release.json` records the repository, MIT licence and private security-report route.
-`cargo xtask release-check` checks these against the package metadata before publication.
-Keep GitHub private vulnerability reporting enabled.
+`release.json` records the repository, MIT licence and private security-report route, and the
+files each crate and npm package must ship. Keep GitHub private vulnerability reporting enabled.
+Its `steps` add:
 
-Every release runs CI, both API gates and package-install checks before creating assets. The tag
-must match the checked version. The workflow creates a draft release containing npm tarballs,
-Cargo package archives and SHA-256 checksums for review, with the version's `CHANGELOG.md` entry
-as its notes. Publishing that draft is the final step.
+- to `prepare`: set the version of the npm workspace, its packages and their lockfile.
+- to `gates`: `cargo xtask check`, `api`, `release-check` and `package`, then the npm package
+  check. `release-check` checks the repository, licence and security contact against the
+  package metadata.
 
-CI also verifies a versioned documentation site. The draft includes its documentation archive
-in the SHA-256 manifest. Publishing the release deploys the checked archive to GitHub Pages,
-preserving earlier documented versions. Prereleases do not replace the stable landing page.
-See [documentation delivery](docs/README.md) for build commands and publication retries.
+The main build's release files are the Cargo package archives, the npm tarballs and the
+version's documentation archive, `battersea-docs-vVERSION.tar.gz`. Publishing the release
+deploys the documentation archive of every published release to GitHub Pages; see
+[documentation delivery](docs/README.md).
 
-API snapshots accompany intentional contract changes. Document the release scope in CHANGELOG.md;
-package versions do not authorise upgrading a stored flow or journal format.
+API snapshots accompany intentional contract changes. Package versions do not authorise
+upgrading a stored flow or journal format.
 
 <!-- newsletter:begin releasing · maintained in thirtytwobits/london -->
 

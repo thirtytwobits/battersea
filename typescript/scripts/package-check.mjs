@@ -7,11 +7,14 @@ import { fileURLToPath } from "node:url";
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const release = JSON.parse(fs.readFileSync(path.join(root, "../release.json")));
 const temp = fs.mkdtempSync(path.join(os.tmpdir(), "battersea-package-"));
+// The tarballs stay in the directory the first argument names; otherwise they are removed.
+const packs = process.argv[2] ? path.resolve(process.argv[2]) : temp;
+fs.mkdirSync(packs, { recursive: true });
 try {
   const archives = JSON.parse(
     execFileSync(
       "npm",
-      ["pack", "--workspaces", "--json", "--pack-destination", temp],
+      ["pack", "--workspaces", "--json", "--pack-destination", packs],
       { cwd: root, encoding: "utf8" },
     ),
   );
@@ -32,7 +35,7 @@ try {
         "--ignore-scripts",
         "--no-audit",
         "--no-fund",
-        ...archives.map((entry) => path.join(temp, entry.filename)),
+        ...archives.map((entry) => path.join(packs, entry.filename)),
         "react@^18.3.1",
         "react-dom@^18.3.1",
         "@types/react@^18.3.1",
