@@ -9,7 +9,8 @@ Keep GitHub private vulnerability reporting enabled.
 
 Every release runs CI, both API gates and package-install checks before creating assets. The tag
 must match the checked version. The workflow creates a draft release containing npm tarballs,
-Cargo package archives and SHA-256 checksums for review. Publishing that draft is the final step.
+Cargo package archives and SHA-256 checksums for review, with the version's `CHANGELOG.md` entry
+as its notes. Publishing that draft is the final step.
 
 CI also verifies a versioned documentation site. The draft includes its documentation archive
 in the SHA-256 manifest. Publishing the release deploys the checked archive to GitHub Pages,
