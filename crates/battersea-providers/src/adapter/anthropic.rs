@@ -153,23 +153,35 @@ impl EngineAdapter for AnthropicEngineAdapter {
                 async move {
                     match event {
                         Ok(event) => {
-                            let parsed: AnthropicStreamEvent = serde_json::from_str(&event.data)
-                                .map_err(|error| {
-                                    EngineAdapterRequestError::invalid_response(
-                                        "anthropic",
-                                        error.to_string(),
-                                    )
-                                })?;
+                            let invalid = |error: serde_json::Error| {
+                                EngineAdapterRequestError::invalid_response(
+                                    "anthropic",
+                                    error.to_string(),
+                                )
+                            };
+                            let raw: Value = serde_json::from_str(&event.data).map_err(invalid)?;
+                            let parsed: AnthropicStreamEvent =
+                                serde_json::from_value(raw.clone()).map_err(invalid)?;
+                            let (event_type, detail) = match parsed.event_type() {
+                                Some(event_type) => (
+                                    event_type,
+                                    serde_json::to_value(&parsed).unwrap_or_else(|_| json!({})),
+                                ),
+                                None => (
+                                    raw.get("type").and_then(Value::as_str).unwrap_or_default(),
+                                    raw.clone(),
+                                ),
+                            };
                             emit_stream_event(
                                 logger.as_ref(),
                                 &context,
                                 operation,
                                 if event.event.is_empty() {
-                                    parsed.event_type()
+                                    event_type
                                 } else {
                                     event.event.as_str()
                                 },
-                                serde_json::to_value(&parsed).unwrap_or_else(|_| json!({})),
+                                detail,
                             )
                             .await;
                             decoder
@@ -930,6 +942,9 @@ enum AnthropicStreamEvent {
         index: u32,
     },
     Ping {},
+    /// An event type the adapter does not model.
+    #[serde(other)]
+    Unmodelled,
 }
 
 #[derive(Default)]
@@ -1038,9 +1053,10 @@ impl AnthropicStreamDecoder {
 }
 
 impl AnthropicStreamEvent {
-    /// Returns the stable stream event label recorded for diagnostics.
-    fn event_type(&self) -> &'static str {
-        match self {
+    /// Returns the stable stream event label recorded for diagnostics, or `None` for an event
+    /// type the adapter does not model.
+    fn event_type(&self) -> Option<&'static str> {
+        Some(match self {
             Self::ContentBlockDelta { .. } => "content_block_delta",
             Self::Error { .. } => "error",
             Self::MessageDelta { .. } => "message_delta",
@@ -1049,7 +1065,8 @@ impl AnthropicStreamEvent {
             Self::ContentBlockStart { .. } => "content_block_start",
             Self::ContentBlockStop { .. } => "content_block_stop",
             Self::Ping { .. } => "ping",
-        }
+            Self::Unmodelled => return None,
+        })
     }
 
     fn token_usage(&self) -> Option<EngineTokenUsage> {
@@ -1940,7 +1957,7 @@ mod tests {
         )
         .expect("message_delta should parse");
 
-        assert_eq!(parsed.event_type(), "message_delta");
+        assert_eq!(parsed.event_type(), Some("message_delta"));
     }
 
     #[test]
@@ -1952,7 +1969,10 @@ mod tests {
         )
         .expect("content block start should parse");
 
-        assert_eq!(ping.event_type(), "ping");
-        assert_eq!(content_block_start.event_type(), "content_block_start");
+        assert_eq!(ping.event_type(), Some("ping"));
+        assert_eq!(
+            content_block_start.event_type(),
+            Some("content_block_start")
+        );
     }
 }

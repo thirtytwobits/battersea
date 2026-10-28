@@ -12,10 +12,10 @@ use battersea_model::engine::{
     EngineBackendCapabilities, EngineChatParameters, EngineChatToolChoiceMode,
 };
 use battersea_providers::{
-    adapter::EngineAuthConfig, EngineAdapter, EngineAdapterRequest, EngineAdapterRequestError,
-    EngineBackendConfig, EngineBackendOptions, EngineLocalToolCall, EngineLocalToolDefinition,
-    EngineLocalToolExecutor, EngineLocalToolResult, EngineOperation, EngineTextStreamEvent,
-    EngineTextStreamRequest,
+    adapter::EngineAuthConfig, EngineAdapter, EngineAdapterLogger, EngineAdapterRequest,
+    EngineAdapterRequestError, EngineAdapterStreamLog, EngineBackendConfig, EngineBackendOptions,
+    EngineLocalToolCall, EngineLocalToolDefinition, EngineLocalToolExecutor, EngineLocalToolResult,
+    EngineOperation, EngineTextStreamEvent, EngineTextStreamRequest,
 };
 use futures_util::StreamExt;
 use serde_json::{json, Value};
@@ -40,6 +40,25 @@ impl EngineLocalToolExecutor for RecordingExecutor {
             .1
             .clone()
             .unwrap_or_else(|| EngineLocalToolResult::json(json!({"found": call.arguments}))))
+    }
+}
+
+#[derive(Default)]
+struct StreamObserver(Mutex<Vec<String>>);
+#[async_trait]
+impl EngineAdapterLogger for StreamObserver {
+    async fn on_stream_event(&self, entry: EngineAdapterStreamLog) {
+        self.0.lock().unwrap().push(entry.event_type);
+    }
+}
+impl StreamObserver {
+    fn count(&self, event_type: &str) -> usize {
+        self.0
+            .lock()
+            .unwrap()
+            .iter()
+            .filter(|observed| *observed == event_type)
+            .count()
     }
 }
 
@@ -131,7 +150,13 @@ fn backend(provider: &str, url: &str, mode: &str) -> EngineBackendConfig {
         long_description: String::new(),
     }
 }
-fn adapter(mut backend: EngineBackendConfig) -> Arc<dyn EngineAdapter> {
+fn adapter(backend: EngineBackendConfig) -> Arc<dyn EngineAdapter> {
+    observed_adapter(backend, None)
+}
+fn observed_adapter(
+    mut backend: EngineBackendConfig,
+    observer: Option<Arc<StreamObserver>>,
+) -> Arc<dyn EngineAdapter> {
     let registry = battersea_providers::builtin_registry();
     backend
         .capabilities
@@ -143,7 +168,12 @@ fn adapter(mut backend: EngineBackendConfig) -> Arc<dyn EngineAdapter> {
                 .parameters
                 .contains(name)
         });
-    registry.create_chat(backend, None).unwrap()
+    registry
+        .create_chat(
+            backend,
+            observer.map(|observer| observer as Arc<dyn EngineAdapterLogger>),
+        )
+        .unwrap()
 }
 fn request(
     backend: &EngineBackendConfig,
@@ -249,17 +279,30 @@ async fn mock_stream_reports_cumulative_usage_as_text_arrives() {
     assert_eq!(output, input);
     assert!(usage_updates > 1, "usage must update during the stream");
 }
+/// Streams `response` with a keep-alive and an event type the SDK does not model before completion.
 fn sse(response: &Value, terminal: bool) -> String {
-    let mut events = String::new();
+    let mut events = Vec::new();
     if terminal {
-        events.push_str(&format!("data: {}\n\n", json!({"type":"response.output_text.delta", "sequence_number":1,
-            "item_id":"message-fixture", "output_index":0, "content_index":0, "delta":"Finished", "logprobs":[]})));
+        events.push(
+            json!({"type":"response.output_text.delta", "item_id":"message-fixture",
+            "output_index":0, "content_index":0, "delta":"Finished", "logprobs":[]}),
+        );
     }
-    events.push_str(&format!(
-        "data: {}\n\n",
-        json!({"type":"response.completed", "sequence_number":2, "response":response})
-    ));
+    events.push(json!({"type":"keepalive"}));
+    events.push(json!({"type":"response.unmodelled", "detail":{"future":"retained"}}));
+    events.push(json!({"type":"response.completed", "response":response}));
     events
+        .into_iter()
+        .enumerate()
+        .map(|(index, mut event)| {
+            event["sequence_number"] = json!(index + 1);
+            format!("data: {event}\n\n")
+        })
+        .collect()
+}
+fn openai_usage() -> Value {
+    json!({"input_tokens":5, "input_tokens_details":{"cached_tokens":0}, "output_tokens":3,
+        "output_tokens_details":{"reasoning_tokens":0}, "total_tokens":8})
 }
 
 async fn round_trip(provider: &str, mode: &str) {
@@ -269,7 +312,7 @@ async fn round_trip(provider: &str, mode: &str) {
 async fn round_trip_result(provider: &str, mode: &str, result: Option<EngineLocalToolResult>) {
     let is_error = result.as_ref().is_some_and(EngineLocalToolResult::is_error);
     let arguments = json!({"key":"active-session"});
-    let (first, last) = match provider {
+    let (first, mut last) = match provider {
         "anthropic" => (
             json!({"id":"message-first", "stop_reason":"tool_use", "content":[
             {"type":"thinking", "thinking":"Fixture progress", "signature":"opaque-signature", "extra":"preserve"},
@@ -294,6 +337,9 @@ async fn round_trip_result(provider: &str, mode: &str, result: Option<EngineLoca
         ),
         _ => unreachable!(),
     };
+    if provider == "openai" {
+        last["usage"] = openai_usage();
+    }
     let streamed = provider == "openai" && mode != "poll";
     let replies = if streamed {
         vec![
@@ -323,13 +369,27 @@ async fn round_trip_result(provider: &str, mode: &str, result: Option<EngineLoca
     );
     let history_len = history.len();
     let expected_schema = request.local_tools[0].input_schema.clone();
-    let mut stream = adapter(backend).stream_text(request).await.unwrap();
+    let observer = Arc::new(StreamObserver::default());
+    let mut stream = observed_adapter(backend, Some(observer.clone()))
+        .stream_text(request)
+        .await
+        .unwrap();
     let mut events = Vec::new();
     while let Some(event) = tokio::time::timeout(std::time::Duration::from_secs(5), stream.next())
         .await
         .unwrap()
     {
         events.push(event.unwrap());
+    }
+    if streamed {
+        assert_eq!(observer.count("keepalive"), 2);
+        assert_eq!(observer.count("response.unmodelled"), 2);
+    }
+    if provider == "openai" {
+        assert!(events.iter().any(|event| matches!(
+            event,
+            EngineTextStreamEvent::TokenUsage { usage } if usage.total_tokens == Some(8)
+        )));
     }
     let calls = executor.0.lock().unwrap();
     assert_eq!(calls.len(), 1);
@@ -923,6 +983,134 @@ async fn ambiguous_server_failure_and_partial_stream_never_replay_generation() {
             assert_eq!(state.requests.lock().unwrap().len(), 1);
             server.abort();
         }
+    }
+}
+
+fn stream_body(events: &[Value]) -> String {
+    events
+        .iter()
+        .map(|event| {
+            format!(
+                "event: {}\ndata: {event}\n\n",
+                event["type"].as_str().unwrap()
+            )
+        })
+        .collect()
+}
+
+async fn plain_stream(
+    provider: &str,
+    body: String,
+) -> (
+    Vec<Result<EngineTextStreamEvent, EngineAdapterRequestError>>,
+    Arc<StreamObserver>,
+) {
+    let (url, _, server) = server(vec![("text/event-stream", body)]).await;
+    let backend = backend(provider, &url, "stream");
+    let mut request = request(&backend, Arc::new(RecordingExecutor::default()));
+    request.local_tools.clear();
+    let observer = Arc::new(StreamObserver::default());
+    let events = observed_adapter(backend, Some(observer.clone()))
+        .stream_text(request)
+        .await
+        .unwrap()
+        .collect()
+        .await;
+    server.abort();
+    (events, observer)
+}
+
+#[tokio::test]
+async fn unmodelled_stream_events_are_observed_and_skipped() {
+    let delta = |sequence: u64, text: &str| {
+        json!({"type":"response.output_text.delta", "sequence_number":sequence, "item_id":"message-fixture",
+            "output_index":0, "content_index":0, "delta":text, "logprobs":[]})
+    };
+    let mut response = openai_response(json!([{"type":"message", "id":"message-fixture",
+        "status":"completed", "role":"assistant", "content":[{"type":"output_text", "text":"Finished", "annotations":[]}]}]));
+    response["usage"] = openai_usage();
+    let anthropic_delta = |text: &str| json!({"type":"content_block_delta", "index":0, "delta":{"type":"text_delta", "text":text}});
+    for (provider, keepalive, body) in [
+        (
+            "openai",
+            "keepalive",
+            stream_body(&[
+                delta(1, "Fin"),
+                json!({"type":"keepalive", "sequence_number":2}),
+                json!({"type":"response.unmodelled", "sequence_number":3, "detail":{}}),
+                delta(4, "ished"),
+                json!({"type":"response.completed", "sequence_number":5, "response":response}),
+            ]),
+        ),
+        (
+            "anthropic",
+            "ping",
+            stream_body(&[
+                json!({"type":"message_start", "message":{"usage":{"input_tokens":5, "output_tokens":0}}}),
+                anthropic_delta("Fin"),
+                json!({"type":"ping"}),
+                json!({"type":"response.unmodelled", "detail":{}}),
+                anthropic_delta("ished"),
+                json!({"type":"message_delta", "delta":{"stop_reason":"end_turn"}, "usage":{"output_tokens":3}}),
+                json!({"type":"message_stop"}),
+            ]),
+        ),
+    ] {
+        let (events, observer) = plain_stream(provider, body).await;
+        let events = events
+            .into_iter()
+            .collect::<Result<Vec<_>, _>>()
+            .unwrap_or_else(|error| panic!("{provider}: {error:?}"));
+        let text = events
+            .iter()
+            .filter_map(|event| match event {
+                EngineTextStreamEvent::TextDelta { text } => Some(text.as_str()),
+                _ => None,
+            })
+            .collect::<String>();
+        assert_eq!(text, "Finished", "{provider}");
+        assert!(
+            events.iter().any(|event| matches!(
+                event,
+                EngineTextStreamEvent::TokenUsage { usage } if usage.output_tokens == Some(3)
+            )),
+            "{provider}"
+        );
+        assert!(
+            events
+                .iter()
+                .any(|event| matches!(event, EngineTextStreamEvent::MessageStop { .. })),
+            "{provider}"
+        );
+        assert_eq!(observer.count(keepalive), 1, "{provider}");
+        assert_eq!(observer.count("response.unmodelled"), 1, "{provider}");
+    }
+}
+
+#[tokio::test]
+async fn malformed_modelled_stream_events_fail_as_invalid_response() {
+    for (provider, event) in [
+        (
+            "openai",
+            json!({"type":"response.output_text.delta", "sequence_number":1}),
+        ),
+        (
+            "openai",
+            json!({"type":"response.output_item.added", "sequence_number":1, "output_index":0,
+                "item":{"type":"unmodelled_item"}}),
+        ),
+        ("anthropic", json!({"type":"content_block_start"})),
+    ] {
+        let (events, _) = plain_stream(provider, stream_body(std::slice::from_ref(&event))).await;
+        let error = events
+            .into_iter()
+            .find_map(Result::err)
+            .unwrap_or_else(|| panic!("{event} must fail"));
+        assert_eq!(
+            error.classification,
+            battersea_model::ErrorKind::InvalidResponse,
+            "{event}"
+        );
     }
 }
 

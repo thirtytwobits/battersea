@@ -32,6 +32,9 @@ Each HTTP attempt sends one immutable prepared request. Only a connection failur
 HTTP dispatch or an HTTP 429 rejection permits another generation attempt. A timeout, connection
 loss after dispatch, server failure, malformed response or interrupted ordinary stream is
 ambiguous and cannot replay generation. Configuration, authentication and protocol errors stop.
+A stream event whose type the adapter does not model, such as a keep-alive, reaches the
+stream-event observer and is skipped. A modelled event that fails to decode is a malformed
+response.
 Read-only response retrieval may retry transport failures without creating another generation.
 
 Backoff uses explicit initial and maximum delays and a finite retry count. Retry-After is a lower
