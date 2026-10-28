@@ -371,6 +371,17 @@ impl EngineAdapter for OpenAiEngineAdapter {
                 async move {
                     match event {
                         Ok((event, event_value)) => {
+                            let Some(event) = event else {
+                                emit_stream_event(
+                                    logger.as_ref(),
+                                    &context,
+                                    operation,
+                                    stream_event_type(&event_value),
+                                    event_value.clone(),
+                                )
+                                .await;
+                                return Ok(Vec::new());
+                            };
                             // Per-event scratch: each ResponseStreamEvent variant maps to
                             // zero or more neutral text-stream events. Usage frames (which
                             // share variants with text frames at the protocol level) are
@@ -930,10 +941,13 @@ impl OpenAiToolConversation {
                 self.logger.as_ref(),
                 &self.context,
                 operation,
-                event.event_type(),
+                stream_event_type(&value),
                 value.clone(),
             )
             .await;
+            let Some(event) = event else {
+                continue;
+            };
             match &event {
                 ResponseStreamEvent::ResponseFailed(item) => {
                     return Err(EngineAdapterRequestError::invalid_response(
@@ -983,7 +997,7 @@ async fn open_response_stream(
 ) -> Result<
     futures_util::stream::BoxStream<
         'static,
-        Result<(ResponseStreamEvent, Value), EngineAdapterRequestError>,
+        Result<(Option<ResponseStreamEvent>, Value), EngineAdapterRequestError>,
     >,
     EngineAdapterRequestError,
 > {
@@ -1009,10 +1023,7 @@ async fn open_response_stream(
                             event.data.clone(),
                         ))
                     })?;
-                    let typed = serde_json::from_value(raw.clone()).map_err(|error| {
-                        normalize_openai_error(OpenAIError::JSONDeserialize(error, event.data))
-                    })?;
-                    Ok((typed, raw))
+                    Ok((decode_stream_event(&raw)?, raw))
                 })()),
                 Err(error) => Some(Err(EngineAdapterRequestError::transport(
                     "openai",
@@ -1021,6 +1032,36 @@ async fn open_response_stream(
             }
         })
         .boxed())
+}
+
+/// Decodes one Responses stream event, returning `None` for an event type the SDK does not model.
+/// An event of a modelled type that fails to decode is an error.
+fn decode_stream_event(
+    raw: &Value,
+) -> Result<Option<ResponseStreamEvent>, EngineAdapterRequestError> {
+    match serde_json::from_value(raw.clone()) {
+        Ok(event) => Ok(Some(event)),
+        Err(_) if !is_modelled_stream_event_type(raw) => Ok(None),
+        Err(error) => Err(normalize_openai_error(OpenAIError::JSONDeserialize(
+            error,
+            raw.to_string(),
+        ))),
+    }
+}
+
+/// Reports whether the SDK models the `type` of a Responses stream event. Decoding the tag alone
+/// separates an unknown event type from an unknown variant nested inside a modelled event.
+fn is_modelled_stream_event_type(raw: &Value) -> bool {
+    let Some(event_type) = raw.get("type").and_then(Value::as_str) else {
+        return true;
+    };
+    !serde_json::from_value::<ResponseStreamEvent>(json!({ "type": event_type }))
+        .is_err_and(|error| error.to_string().starts_with("unknown variant"))
+}
+
+/// Returns the `type` of a Responses stream event as received.
+fn stream_event_type(raw: &Value) -> &str {
+    raw.get("type").and_then(Value::as_str).unwrap_or_default()
 }
 
 /// Cancels server-side work when a provider turn is dropped by the shared runner.
@@ -1380,24 +1421,18 @@ async fn drive_background_stream(
                         }
                         guard.id = Some(id.to_string());
                     }
-                    let type_name = value
-                        .get("type")
-                        .and_then(Value::as_str)
-                        .unwrap_or_default()
-                        .to_string();
                     emit_stream_event(
                         logger.as_ref(),
                         context,
                         operation,
-                        &type_name,
+                        stream_event_type(&value),
                         value.clone(),
                     )
                     .await;
 
-                    let Ok(event) = serde_json::from_value::<ResponseStreamEvent>(value.clone())
-                    else {
-                        // An event type the SDK doesn't model — the cursor
-                        // has already advanced, so resume stays correct.
+                    // The cursor has already advanced past an event type the SDK does not
+                    // model, so resume stays correct.
+                    let Some(event) = decode_stream_event(&value)? else {
                         continue;
                     };
                     for text_event in openai_events(&event, &value) {
@@ -2941,7 +2976,7 @@ mod tests {
         let address = listener.local_addr().expect("local addr");
         let (req_tx, req_rx) = std::sync::mpsc::channel::<String>();
         let handle = thread::spawn(move || {
-            let sse = "data: {\"type\":\"response.created\",\"response\":{\"id\":\"resp_test\"},\"sequence_number\":2}\n\n";
+            let sse = r#"data: {"type":"response.created","response":{"id":"resp_test","created_at":1,"model":"fixture-model","object":"response","status":"in_progress","output":[]},"sequence_number":2}"#.to_string() + "\n\n";
             let http = format!(
                 "HTTP/1.1 200 OK\r\nContent-Type: text/event-stream\r\nConnection: close\r\n\r\n{sse}"
             );
