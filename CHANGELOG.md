@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+### Breaking
+
+- Battersea builds on Clapham 0.3.3. A host that also depends on Clapham takes the `v0.3.3` tag;
+  Cargo treats each Git tag as a separate `clapham` crate.
+
 ## 0.21.0
 
 ### Breaking
