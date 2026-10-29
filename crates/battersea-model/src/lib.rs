@@ -1,5 +1,7 @@
 //! Copyright (c) Scott A Dixon
 pub mod adapter;
+pub mod clock;
+pub use clock::*;
 pub mod engine;
 pub mod media;
 pub use adapter::error::*;

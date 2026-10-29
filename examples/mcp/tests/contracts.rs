@@ -185,6 +185,13 @@ async fn collect(
     }
     Ok(events)
 }
+/// The time each durable test starts at.
+const START_MS: u64 = 1_800_000_000_000;
+/// A clock standing at the start, so expiry depends on no real time.
+fn clock() -> Arc<battersea_model::ManualClock> {
+    Arc::new(battersea_model::ManualClock::new(START_MS))
+}
+
 fn temporary_ledger() -> (tempfile::TempDir, PathBuf) {
     let directory = tempfile::tempdir().unwrap();
     let ledger = directory.path().join("effects");
@@ -467,7 +474,6 @@ async fn durable_pending_calls_resume_from_disk_once_without_regenerating() {
         ToolApprovalJournalLimits,
     };
     use mcp_example::journal::FileApprovalStore;
-    use std::time::{SystemTime, UNIX_EPOCH};
     for transport in TRANSPORTS {
         let (directory, ledger) = temporary_ledger();
         let remote = Remote::start(transport, &ledger, Fault::None, Duration::from_secs(10))
@@ -477,11 +483,7 @@ async fn durable_pending_calls_resume_from_disk_once_without_regenerating() {
         let scope = DurableToolApprovalScope {
             run_id: "durable-run".into(),
             binding_revision: binding.revision().into(),
-            expires_at_unix_ms: SystemTime::now()
-                .duration_since(UNIX_EPOCH)
-                .unwrap()
-                .as_millis() as u64
-                + 60000,
+            expires_at_unix_ms: START_MS + 60000,
         };
         let store = || Arc::new(FileApprovalStore::new(directory.path().into()));
         let executor = DurableToolExecutor::create(
@@ -493,6 +495,7 @@ async fn durable_pending_calls_resume_from_disk_once_without_regenerating() {
                 max_bytes: 65536,
             },
             Duration::from_secs(5),
+            clock(),
         )
         .await
         .unwrap();
@@ -514,6 +517,7 @@ async fn durable_pending_calls_resume_from_disk_once_without_regenerating() {
             scope.clone(),
             65536,
             Duration::from_secs(5),
+            clock(),
         )
         .await
         .unwrap();
@@ -535,6 +539,7 @@ async fn durable_pending_calls_resume_from_disk_once_without_regenerating() {
             scope.clone(),
             65536,
             Duration::from_secs(5),
+            clock(),
         )
         .await
         .unwrap();
@@ -550,6 +555,7 @@ async fn durable_pending_calls_resume_from_disk_once_without_regenerating() {
             scope,
             65536,
             Duration::from_secs(5),
+            clock(),
         )
         .await
         .unwrap();
@@ -575,17 +581,12 @@ async fn file_approval_store_fences_competing_handles_and_bounds_read_only_loads
         ToolApprovalStore, ToolApprovalStoreError,
     };
     use mcp_example::journal::FileApprovalStore;
-    use std::time::{SystemTime, UNIX_EPOCH};
     let directory = tempfile::tempdir().unwrap();
     let store = Arc::new(FileApprovalStore::new(directory.path().into()));
     let scope = DurableToolApprovalScope {
         run_id: "file-race".into(),
         binding_revision: "binding-1".into(),
-        expires_at_unix_ms: SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .unwrap()
-            .as_millis() as u64
-            + 60000,
+        expires_at_unix_ms: START_MS + 60000,
     };
     let executor = DurableToolExecutor::create(
         store.clone(),
@@ -596,6 +597,7 @@ async fn file_approval_store_fences_competing_handles_and_bounds_read_only_loads
             max_bytes: 4096,
         },
         Duration::from_secs(5),
+        clock(),
     )
     .await
     .unwrap();
@@ -665,10 +667,7 @@ async fn durable_provider_continuation_reopens_both_journals_and_retries_the_sav
         ToolApprovalJournalLimits,
     };
     use mcp_example::{conversation_journal::FileConversationStore, journal::FileApprovalStore};
-    use std::{
-        sync::Mutex,
-        time::{SystemTime, UNIX_EPOCH},
-    };
+    use std::sync::Mutex;
 
     #[derive(Default)]
     struct Logs {
@@ -744,11 +743,7 @@ async fn durable_provider_continuation_reopens_both_journals_and_retries_the_sav
         let scope = ConversationScope {
             run_id: "durable-provider".into(),
             tool_binding_revision: binding.revision().into(),
-            expires_at_unix_ms: SystemTime::now()
-                .duration_since(UNIX_EPOCH)
-                .unwrap()
-                .as_millis() as u64
-                + 4000,
+            expires_at_unix_ms: START_MS + 4000,
         };
         let approval_scope = DurableToolApprovalScope {
             run_id: scope.run_id.clone(),
@@ -764,6 +759,7 @@ async fn durable_provider_continuation_reopens_both_journals_and_retries_the_sav
             request.clone(),
             65536,
             Duration::from_secs(1),
+            clock(),
         )
         .await
         .unwrap();
@@ -779,6 +775,7 @@ async fn durable_provider_continuation_reopens_both_journals_and_retries_the_sav
                 request.clone(),
                 65536,
                 Duration::from_secs(1),
+                clock(),
             )
             .await
             .unwrap();
@@ -796,6 +793,7 @@ async fn durable_provider_continuation_reopens_both_journals_and_retries_the_sav
                 max_bytes: 65536,
             },
             Duration::from_secs(1),
+            clock(),
         )
         .await
         .unwrap();
@@ -814,6 +812,7 @@ async fn durable_provider_continuation_reopens_both_journals_and_retries_the_sav
             request.clone(),
             65536,
             Duration::from_secs(1),
+            clock(),
         )
         .await
         .unwrap();
@@ -823,6 +822,7 @@ async fn durable_provider_continuation_reopens_both_journals_and_retries_the_sav
             approval_scope.clone(),
             65536,
             Duration::from_secs(1),
+            clock(),
         )
         .await
         .unwrap();
@@ -855,6 +855,7 @@ async fn durable_provider_continuation_reopens_both_journals_and_retries_the_sav
             request.clone(),
             65536,
             Duration::from_secs(1),
+            clock(),
         )
         .await
         .unwrap();
@@ -877,6 +878,7 @@ async fn durable_provider_continuation_reopens_both_journals_and_retries_the_sav
                 request.clone(),
                 65536,
                 Duration::from_secs(1),
+                clock(),
             )
             .await
             .unwrap();
@@ -953,6 +955,7 @@ async fn durable_provider_continuation_reopens_both_journals_and_retries_the_sav
             request,
             65536,
             Duration::from_secs(1),
+            clock(),
         )
         .await
         .unwrap();
@@ -966,6 +969,7 @@ async fn durable_provider_continuation_reopens_both_journals_and_retries_the_sav
             approval_scope,
             65536,
             Duration::from_secs(1),
+            clock(),
         )
         .await
         .unwrap();
@@ -1022,10 +1026,7 @@ async fn interrupted_or_invalid_provider_continuations_keep_the_tool_result_and_
         ConversationToolResult, DurableConversation, EngineLocalToolExecutor, ToolCode,
     };
     use mcp_example::conversation_journal::FileConversationStore;
-    use std::{
-        sync::atomic::Ordering,
-        time::{SystemTime, UNIX_EPOCH},
-    };
+    use std::sync::atomic::Ordering;
     for (responses, failure) in [false, true]
         .into_iter()
         .flat_map(|r| (0..3).map(move |f| (r, f)))
@@ -1073,11 +1074,7 @@ async fn interrupted_or_invalid_provider_continuations_keep_the_tool_result_and_
         let scope = ConversationScope {
             run_id: "failed-continuation".into(),
             tool_binding_revision: binding.revision().into(),
-            expires_at_unix_ms: SystemTime::now()
-                .duration_since(UNIX_EPOCH)
-                .unwrap()
-                .as_millis() as u64
-                + 4000,
+            expires_at_unix_ms: START_MS + 4000,
         };
         let store = || Arc::new(FileConversationStore::new(directory.path().into()));
         let conversation = DurableConversation::create(
@@ -1087,6 +1084,7 @@ async fn interrupted_or_invalid_provider_continuations_keep_the_tool_result_and_
             request.clone(),
             65536,
             Duration::from_secs(1),
+            clock(),
         )
         .await
         .unwrap();
@@ -1125,6 +1123,7 @@ async fn interrupted_or_invalid_provider_continuations_keep_the_tool_result_and_
             request.clone(),
             65536,
             Duration::from_secs(1),
+            clock(),
         )
         .await
         .unwrap();
@@ -1149,7 +1148,8 @@ async fn interrupted_or_invalid_provider_continuations_keep_the_tool_result_and_
             scope,
             request,
             65536,
-            Duration::from_secs(1)
+            Duration::from_secs(1),
+            clock()
         )
         .await
         .is_err());
@@ -1177,10 +1177,7 @@ async fn reconciled_and_reopened_calls_must_match_the_provider_transcript() {
         EngineLocalToolExecutor, ResponseFormat,
     };
     use mcp_example::conversation_journal::FileConversationStore;
-    use std::{
-        sync::Mutex,
-        time::{SystemTime, UNIX_EPOCH},
-    };
+    use std::sync::Mutex;
 
     // Retain the provider reply while simulating failure before turn publication.
     struct InterruptedPublication {
@@ -1260,11 +1257,7 @@ async fn reconciled_and_reopened_calls_must_match_the_provider_transcript() {
         let scope = ConversationScope {
             run_id: "recovered-provider".into(),
             tool_binding_revision: binding.revision().into(),
-            expires_at_unix_ms: SystemTime::now()
-                .duration_since(UNIX_EPOCH)
-                .unwrap()
-                .as_millis() as u64
-                + 4000,
+            expires_at_unix_ms: START_MS + 4000,
         };
         let store = Arc::new(InterruptedPublication {
             inner: FileConversationStore::new(directory.path().into()),
@@ -1277,6 +1270,7 @@ async fn reconciled_and_reopened_calls_must_match_the_provider_transcript() {
             request.clone(),
             65536,
             Duration::from_secs(1),
+            clock(),
         )
         .await
         .unwrap();
@@ -1375,7 +1369,8 @@ async fn reconciled_and_reopened_calls_must_match_the_provider_transcript() {
             scope.clone(),
             request.clone(),
             65536,
-            Duration::from_secs(1)
+            Duration::from_secs(1),
+            clock()
         )
         .await
         .is_err());
@@ -1588,7 +1583,8 @@ async fn reconciled_and_reopened_calls_must_match_the_provider_transcript() {
                     scope.clone(),
                     request.clone(),
                     65536,
-                    Duration::from_secs(1)
+                    Duration::from_secs(1),
+                    clock()
                 )
                 .await
                 .is_err(),
@@ -1617,6 +1613,7 @@ async fn reconciled_and_reopened_calls_must_match_the_provider_transcript() {
             request,
             65536,
             Duration::from_secs(1),
+            clock(),
         )
         .await
         .unwrap();
@@ -1639,10 +1636,7 @@ async fn background_retrieval_failures_preserve_identity_and_cancellation_is_exp
         background_fixture::{self, BackgroundFixture},
         conversation_journal::FileConversationStore,
     };
-    use std::{
-        sync::atomic::Ordering,
-        time::{SystemTime, UNIX_EPOCH},
-    };
+    use std::sync::atomic::Ordering;
     let (directory, _) = temporary_ledger();
     let fixture = BackgroundFixture::new(ProviderFixture::new(json!({"value":1}), false));
     let server = background_fixture::serve(fixture.clone()).await.unwrap();
@@ -1657,11 +1651,7 @@ async fn background_retrieval_failures_preserve_identity_and_cancellation_is_exp
     let scope = ConversationScope {
         run_id: "background-failure".into(),
         tool_binding_revision: "empty".into(),
-        expires_at_unix_ms: SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .unwrap()
-            .as_millis() as u64
-            + 4000,
+        expires_at_unix_ms: START_MS + 4000,
     };
     let store = || Arc::new(FileConversationStore::new(directory.path().into()));
     let conversation = DurableConversation::create(
@@ -1671,6 +1661,7 @@ async fn background_retrieval_failures_preserve_identity_and_cancellation_is_exp
         request.clone(),
         65536,
         Duration::from_secs(1),
+        clock(),
     )
     .await
     .unwrap();
@@ -1688,6 +1679,7 @@ async fn background_retrieval_failures_preserve_identity_and_cancellation_is_exp
         request.clone(),
         65536,
         Duration::from_secs(1),
+        clock(),
     )
     .await
     .unwrap();
@@ -1717,6 +1709,7 @@ async fn background_retrieval_failures_preserve_identity_and_cancellation_is_exp
         request.clone(),
         65536,
         Duration::from_secs(1),
+        clock(),
     )
     .await
     .unwrap();
@@ -1758,7 +1751,8 @@ async fn background_retrieval_failures_preserve_identity_and_cancellation_is_exp
             scope.clone(),
             request.clone(),
             65536,
-            Duration::from_secs(1)
+            Duration::from_secs(1),
+            clock()
         )
         .await
         .is_err());
@@ -1790,7 +1784,8 @@ async fn background_retrieval_failures_preserve_identity_and_cancellation_is_exp
                 scope.clone(),
                 request.clone(),
                 65536,
-                Duration::from_secs(1)
+                Duration::from_secs(1),
+                clock()
             )
             .await
             .is_err(),
@@ -1819,10 +1814,7 @@ async fn cancellation_recovers_a_matching_terminal_response_after_rejection() {
         background_fixture::{self, BackgroundFixture},
         conversation_journal::FileConversationStore,
     };
-    use std::{
-        sync::atomic::Ordering,
-        time::{SystemTime, UNIX_EPOCH},
-    };
+    use std::sync::atomic::Ordering;
     for failure in 0..4 {
         let (directory, _) = temporary_ledger();
         let fixture = BackgroundFixture::new(ProviderFixture::new(json!({"value":1}), false));
@@ -1838,11 +1830,7 @@ async fn cancellation_recovers_a_matching_terminal_response_after_rejection() {
         let scope = ConversationScope {
             run_id: "cancel-race".into(),
             tool_binding_revision: "empty".into(),
-            expires_at_unix_ms: SystemTime::now()
-                .duration_since(UNIX_EPOCH)
-                .unwrap()
-                .as_millis() as u64
-                + 4000,
+            expires_at_unix_ms: START_MS + 4000,
         };
         let store = || Arc::new(FileConversationStore::new(directory.path().into()));
         let conversation = DurableConversation::create(
@@ -1852,6 +1840,7 @@ async fn cancellation_recovers_a_matching_terminal_response_after_rejection() {
             request.clone(),
             65536,
             Duration::from_secs(1),
+            clock(),
         )
         .await
         .unwrap();
@@ -1883,6 +1872,7 @@ async fn cancellation_recovers_a_matching_terminal_response_after_rejection() {
             request,
             65536,
             Duration::from_secs(1),
+            clock(),
         )
         .await
         .unwrap();

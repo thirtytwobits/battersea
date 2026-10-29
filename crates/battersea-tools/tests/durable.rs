@@ -10,7 +10,7 @@ use std::{
         atomic::{AtomicUsize, Ordering},
         Arc, Mutex,
     },
-    time::{Duration, SystemTime, UNIX_EPOCH},
+    time::Duration,
 };
 
 #[derive(Default)]
@@ -105,15 +105,23 @@ fn operator(operation: clapham::Operation, effect: Arc<Effect>) -> ToolRegistry 
 fn registry(effect: Arc<Effect>) -> ToolRegistry {
     operator(write(), effect)
 }
+/// The time each test starts at.
+const START_MS: u64 = 1_800_000_000_000;
+/// A clock standing at the start.
+fn clock() -> Arc<ManualClock> {
+    Arc::new(ManualClock::new(START_MS))
+}
+/// A clock standing `ms` after the start.
+fn clock_after(ms: u64) -> Arc<ManualClock> {
+    let clock = clock();
+    clock.advance(Duration::from_millis(ms));
+    clock
+}
 fn scope() -> DurableToolApprovalScope {
     DurableToolApprovalScope {
         run_id: "run-1".into(),
         binding_revision: "binding-1".into(),
-        expires_at_unix_ms: SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .unwrap()
-            .as_millis() as u64
-            + 60000,
+        expires_at_unix_ms: START_MS + 60000,
     }
 }
 fn call(id: &str) -> EngineLocalToolCall {
@@ -137,6 +145,7 @@ async fn create(
             max_bytes: 8192,
         },
         Duration::from_secs(1),
+        clock(),
     )
     .await
     .unwrap()
@@ -146,9 +155,16 @@ async fn open(
     effect: Arc<Effect>,
     scope: DurableToolApprovalScope,
 ) -> DurableToolExecutor {
-    DurableToolExecutor::open(store, registry(effect), scope, 8192, Duration::from_secs(1))
-        .await
-        .unwrap()
+    DurableToolExecutor::open(
+        store,
+        registry(effect),
+        scope,
+        8192,
+        Duration::from_secs(1),
+        clock(),
+    )
+    .await
+    .unwrap()
 }
 async fn approve(executor: &DurableToolExecutor) -> u64 {
     let r = executor.submit(call("one"), 1).await.unwrap();
@@ -415,7 +431,8 @@ async fn invalid_calls_capacity_and_changed_bindings_never_dispatch() {
         registry(effect.clone()),
         changed,
         8192,
-        Duration::from_secs(1)
+        Duration::from_secs(1),
+        clock(),
     )
     .await
     .is_err());
@@ -444,7 +461,8 @@ async fn incompatible_or_corrupt_reads_do_not_write_or_upgrade() {
             registry(effect.clone()),
             scope,
             8192,
-            Duration::from_secs(1)
+            Duration::from_secs(1),
+            clock(),
         )
         .await
         .is_err());
@@ -465,8 +483,17 @@ async fn persisted_expiry_cannot_be_renewed_but_completed_results_remain_readabl
         if completed {
             e.resume("one", 3).await.unwrap();
         }
-        tokio::time::sleep(Duration::from_millis(550)).await;
-        let e = open(store.clone(), effect.clone(), scope.clone()).await;
+        let later = clock_after(550);
+        let e = DurableToolExecutor::open(
+            store.clone(),
+            registry(effect.clone()),
+            scope.clone(),
+            8192,
+            Duration::from_secs(1),
+            later.clone(),
+        )
+        .await
+        .unwrap();
         if completed {
             e.resume("one", 5).await.unwrap();
         } else {
@@ -481,7 +508,8 @@ async fn persisted_expiry_cannot_be_renewed_but_completed_results_remain_readabl
             registry(effect.clone()),
             scope,
             8192,
-            Duration::from_secs(1)
+            Duration::from_secs(1),
+            later,
         )
         .await
         .is_err());
@@ -534,6 +562,7 @@ async fn cancelled_intent_acknowledgement_is_reconciled_without_dispatch() {
             max_bytes: 8192,
         },
         Duration::from_secs(5),
+        clock(),
     )
     .await
     .unwrap();
@@ -579,9 +608,10 @@ async fn changed_definition_and_profile_reject_previously_approved_dispatch() {
             operation.description = "Changed contract".into();
             changed = operator(operation, effect.clone());
         }
-        let e = DurableToolExecutor::open(store, changed, scope, 8192, Duration::from_secs(1))
-            .await
-            .unwrap();
+        let e =
+            DurableToolExecutor::open(store, changed, scope, 8192, Duration::from_secs(1), clock())
+                .await
+                .unwrap();
         assert!(e.resume("one", 3).await.is_err());
         assert!(matches!(
             e.inspect().await.unwrap().calls["one"].state,
@@ -645,6 +675,7 @@ async fn oversized_results_retain_intent_and_reconciliation_enforces_output_sche
             max_bytes: 8192,
         },
         Duration::from_secs(1),
+        clock(),
     )
     .await
     .unwrap();
@@ -687,6 +718,7 @@ async fn acceptance_pending_and_decision_write_errors_are_recovered_by_inspectio
                     max_bytes: 8192,
                 },
                 Duration::from_secs(1),
+                clock(),
             )
             .await;
             if failed_revision == 1 {
@@ -787,7 +819,8 @@ async fn terminal_reconciliation_cannot_be_loaded_as_an_executable_call() {
             registry(effect.clone()),
             scope.clone(),
             8192,
-            Duration::from_secs(1)
+            Duration::from_secs(1),
+            clock(),
         )
         .await
         .is_err());
@@ -884,6 +917,7 @@ async fn a_journal_written_by_battersea_0_17_reads_unchanged() {
         journal.scope.clone(),
         8192,
         Duration::from_secs(1),
+        clock(),
     )
     .await
     .unwrap();

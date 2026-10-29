@@ -1,16 +1,16 @@
 //! Copyright (c) Scott A Dixon
 //! Durable provider turns and host-controlled continuation of tool conversations.
 use super::*;
-use crate::{configuration_digest, ErrorKind, ProviderContentOrigin, ToolCode};
+use crate::{configuration_digest, ErrorKind, ExpiryClock, ProviderContentOrigin, ToolCode};
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::{
     collections::{BTreeMap, HashSet},
     sync::Arc,
-    time::{Duration, SystemTime, UNIX_EPOCH},
+    time::Duration,
 };
-use tokio::time::{timeout, timeout_at, Instant};
+use tokio::time::{timeout, Instant};
 
 pub const CONVERSATION_CHECKPOINT_VERSION: u32 = 2;
 
@@ -194,14 +194,6 @@ pub(crate) fn unsupported() -> EngineAdapterRequestError {
         ToolCode::UnsupportedToolContinuation,
         "Adapter does not support durable tool conversations.",
     )
-}
-fn clock() -> Result<u64, EngineAdapterRequestError> {
-    SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .map_err(|_| invalid())?
-        .as_millis()
-        .try_into()
-        .map_err(|_| invalid())
 }
 fn bounded(value: &impl Serialize, max: usize) -> Result<(), EngineAdapterRequestError> {
     let bytes = payload::check_payload(value, "conversation")
@@ -449,6 +441,7 @@ pub struct DurableConversation {
     request: ConversationRequest,
     max_bytes: usize,
     store_timeout: Duration,
+    clock: Arc<dyn ExpiryClock>,
     deadline: Instant,
 }
 impl DurableConversation {
@@ -459,6 +452,7 @@ impl DurableConversation {
         request: ConversationRequest,
         max_bytes: usize,
         store_timeout: Duration,
+        clock: Arc<dyn ExpiryClock>,
     ) -> Result<Self, EngineAdapterRequestError> {
         if scope.run_id.trim().is_empty()
             || scope.tool_binding_revision.trim().is_empty()
@@ -471,9 +465,11 @@ impl DurableConversation {
         }
         bounded(&request, max_bytes)?;
         let binding = adapter.validate_conversation(&request, None)?;
-        let deadline = Instant::now()
+        let now = clock.unix_ms().ok_or_else(invalid)?;
+        let deadline = clock
+            .instant()
             .checked_add(Duration::from_millis(
-                scope.expires_at_unix_ms.saturating_sub(clock()?),
+                scope.expires_at_unix_ms.saturating_sub(now),
             ))
             .ok_or_else(invalid)?;
         Ok(Self {
@@ -484,10 +480,12 @@ impl DurableConversation {
             request,
             max_bytes,
             store_timeout,
+            clock,
             deadline,
         })
     }
     /// Persist acceptance before the first generation. Expiry must fit the backend operation timeout.
+    /// `clock` judges expiry.
     pub async fn create(
         store: Arc<dyn ConversationStore>,
         adapter: Arc<dyn EngineAdapter>,
@@ -495,6 +493,7 @@ impl DurableConversation {
         request: ConversationRequest,
         max_bytes: usize,
         store_timeout: Duration,
+        clock: Arc<dyn ExpiryClock>,
     ) -> Result<Self, EngineAdapterRequestError> {
         let this = Self::build(
             store,
@@ -503,8 +502,9 @@ impl DurableConversation {
             request.clone(),
             max_bytes,
             store_timeout,
+            clock,
         )?;
-        let now = clock()?;
+        let now = this.now()?;
         if scope.expires_at_unix_ms.saturating_sub(now) > this.binding.timeout_ms {
             return Err(invalid());
         }
@@ -529,6 +529,7 @@ impl DurableConversation {
         Ok(this)
     }
     /// Reopen with the original request, scope and configured adapter. Reads never renew expiry.
+    /// `clock` judges expiry.
     pub async fn open(
         store: Arc<dyn ConversationStore>,
         adapter: Arc<dyn EngineAdapter>,
@@ -536,8 +537,17 @@ impl DurableConversation {
         request: ConversationRequest,
         max_bytes: usize,
         store_timeout: Duration,
+        clock: Arc<dyn ExpiryClock>,
     ) -> Result<Self, EngineAdapterRequestError> {
-        let this = Self::build(store, adapter, scope, request, max_bytes, store_timeout)?;
+        let this = Self::build(
+            store,
+            adapter,
+            scope,
+            request,
+            max_bytes,
+            store_timeout,
+            clock,
+        )?;
         this.inspect().await?;
         Ok(this)
     }
@@ -641,12 +651,20 @@ impl DurableConversation {
         }
         Ok(r)
     }
+    fn now(&self) -> Result<u64, EngineAdapterRequestError> {
+        self.clock.unix_ms().ok_or_else(invalid)
+    }
+    /// The time left before expiry, by the monotonic clock.
+    fn remaining(&self) -> Duration {
+        self.deadline
+            .saturating_duration_since(self.clock.instant())
+    }
     fn live(&self, r: &ConversationCheckpoint) -> Result<(), EngineAdapterRequestError> {
-        let now = clock()?;
+        let now = self.now()?;
         if now < r.updated_at_unix_ms {
             return Err(invalid());
         }
-        if now >= self.scope.expires_at_unix_ms || Instant::now() >= self.deadline {
+        if now >= self.scope.expires_at_unix_ms || self.clock.instant() >= self.deadline {
             return Err(EngineAdapterRequestError::new(
                 "conversation",
                 "Conversation expired.",
@@ -657,8 +675,8 @@ impl DurableConversation {
         }
         Ok(())
     }
-    fn advance(r: &mut ConversationCheckpoint) -> Result<(), EngineAdapterRequestError> {
-        let now = clock()?;
+    fn advance(&self, r: &mut ConversationCheckpoint) -> Result<(), EngineAdapterRequestError> {
+        let now = self.now()?;
         if now < r.updated_at_unix_ms {
             return Err(invalid());
         }
@@ -712,7 +730,7 @@ impl DurableConversation {
             };
         }
         turn.results.insert(result.call.id.clone(), result);
-        Self::advance(&mut r)?;
+        self.advance(&mut r)?;
         self.write(Some(expected_revision), &mut r).await?;
         Ok(r)
     }
@@ -814,7 +832,7 @@ impl DurableConversation {
             state: record.pending.clone().ok_or_else(invalid)?,
         };
         record.phase = ConversationPhase::ProviderCancelling;
-        Self::advance(&mut record)?;
+        self.advance(&mut record)?;
         self.write(Some(expected_revision), &mut record).await?;
         let previous = record.turns.last();
         let step = timeout(
@@ -837,7 +855,8 @@ impl DurableConversation {
         self.retain_step(&mut record, &command, step)
             .map_err(|e| e.with_dispatch(crate::DispatchState::Unknown))?;
         let intent_revision = record.revision;
-        Self::advance(&mut record).map_err(|e| e.with_dispatch(crate::DispatchState::Unknown))?;
+        self.advance(&mut record)
+            .map_err(|e| e.with_dispatch(crate::DispatchState::Unknown))?;
         self.write(Some(intent_revision), &mut record)
             .await
             .map_err(|e| e.with_dispatch(crate::DispatchState::Unknown))?;
@@ -929,11 +948,11 @@ impl DurableConversation {
             r.phase = ConversationPhase::ProviderIntent;
             ConversationCommand::Start
         };
-        Self::advance(&mut r)?;
+        self.advance(&mut r)?;
         self.write(Some(expected_revision), &mut r).await?;
         self.live(&r)?;
-        let response = timeout_at(
-            self.deadline,
+        let response = timeout(
+            self.remaining(),
             self.adapter
                 .conversation_step(r.request.clone(), state, results, command.clone()),
         )
@@ -948,7 +967,8 @@ impl DurableConversation {
         self.retain_step(&mut r, &command, response)
             .map_err(|e| e.with_dispatch(crate::DispatchState::Unknown))?;
         let intent_revision = r.revision;
-        Self::advance(&mut r).map_err(|e| e.with_dispatch(crate::DispatchState::Unknown))?;
+        self.advance(&mut r)
+            .map_err(|e| e.with_dispatch(crate::DispatchState::Unknown))?;
         self.write(Some(intent_revision), &mut r)
             .await
             .map_err(|e| e.with_dispatch(crate::DispatchState::Unknown))?;
@@ -1001,7 +1021,7 @@ impl DurableConversation {
             evidence: evidence.into(),
             resolution,
         });
-        Self::advance(&mut r)?;
+        self.advance(&mut r)?;
         self.write(Some(expected_revision), &mut r).await?;
         Ok(r)
     }
