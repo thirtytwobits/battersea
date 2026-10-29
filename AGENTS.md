@@ -15,6 +15,7 @@ contract before changing behaviour. Reads cannot upgrade stored formats.
 `release.json` records release metadata. Keep the MIT licence and source notices in every
 package. Keep package versions synchronised; review public API snapshots when the contract changes.
 Registry publication is disabled; releases deliver tagged Cargo sources and npm tarballs.
+`RELEASING.md` holds the changelog and release rules.
 
 <!-- newsletter:begin shared · maintained in thirtytwobits/london -->
 

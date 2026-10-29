@@ -1,3 +1,8 @@
+# Using a Battersea release
+
+npm consumers install the `@battersea/flow` and `@battersea/editor` tarballs attached to the
+release; [installation](src/installation.md) gives the commands.
+
 <!-- newsletter:begin consuming · maintained in thirtytwobits/london -->
 
 ## Taking a release

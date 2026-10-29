@@ -40,11 +40,8 @@ enum Task {
     },
     /// Build crate archives and compile an independent consumer of each archive.
     Package,
-    /// Check publication decisions, require the tag to match all package versions and the
-    /// version to have a CHANGELOG.md entry.
-    ReleaseCheck { tag: String },
-    /// Print the CHANGELOG.md entry for the version the tag names.
-    ReleaseNotes { tag: String },
+    /// Check the repository, licence and security contact against the package metadata.
+    ReleaseCheck,
     /// Build the handbook and public Rust reference. Needs mdBook, but no Node.
     Docs,
     /// Check the assembled documentation, including links and anchors.
@@ -546,12 +543,9 @@ fn package(root: &Path) -> Result<()> {
     }
     Ok(())
 }
-fn release_check(root: &Path, tag: &str) -> Result<()> {
+fn release_check(root: &Path) -> Result<()> {
     boundaries(root)?;
     let release = json(root.join("release.json"))?;
-    if tag != format!("v{}", string(&release, "version")?) {
-        return Err("tag does not match the release version".into());
-    }
     let repository = string(&release, "repository")?;
     let license = string(&release, "license")?;
     let security = string(&release, "security_contact")?;
@@ -574,33 +568,7 @@ fn release_check(root: &Path, tag: &str) -> Result<()> {
             return Err("npm metadata must carry the confirmed licence".into());
         }
     }
-    release_notes(root, tag)?;
-    println!("{tag}");
     Ok(())
-}
-/// The CHANGELOG.md entry for the version `tag` names.
-fn release_notes(root: &Path, tag: &str) -> Result<String> {
-    let version = tag
-        .strip_prefix('v')
-        .ok_or_else(|| format!("{tag} is not a vX.Y.Z tag"))?;
-    changelog_entry(&fs::read_to_string(root.join("CHANGELOG.md"))?, version)
-        .ok_or_else(|| format!("CHANGELOG.md has no entry for {version}").into())
-}
-/// The text under the `## VERSION` heading of `changelog`, up to the next `## ` heading, or
-/// `None` when the heading is absent or the entry is empty. Text after VERSION in the heading,
-/// such as a date, is free.
-fn changelog_entry(changelog: &str, version: &str) -> Option<String> {
-    let heading = format!("## {version}");
-    let mut lines = changelog
-        .lines()
-        .skip_while(|line| *line != heading && !line.starts_with(&format!("{heading} ")));
-    lines.next()?;
-    let entry = lines
-        .take_while(|line| !line.starts_with("## "))
-        .collect::<Vec<_>>()
-        .join("\n");
-    let entry = entry.trim();
-    (!entry.is_empty()).then(|| format!("{entry}\n"))
 }
 fn scan_prompts(root: &Path) -> Result<()> {
     let policy = battersea_guard::PromptPolicy::new(
@@ -721,8 +689,7 @@ fn main() -> Result<()> {
         }
         Task::Api { update } => api(&root, update),
         Task::Package => package(&root),
-        Task::ReleaseCheck { tag } => release_check(&root, &tag),
-        Task::ReleaseNotes { tag } => release_notes(&root, &tag).map(|notes| print!("{notes}")),
+        Task::ReleaseCheck => release_check(&root),
     }
 }
 
@@ -730,44 +697,6 @@ fn main() -> Result<()> {
 mod tests {
     use super::*;
     use serde_json::json;
-    const CHANGELOG: &str = "# Changelog
-
-## 0.20.1 — 2026-11-02
-
-- Fix the second thing.
-
-## 0.20.0 — 2026-10-27
-
-- The first thing.
-  - In detail.
-
-## 0.19.0
-
-- The oldest thing.
-";
-    #[test]
-    fn a_changelog_entry_runs_from_its_heading_to_the_next() {
-        assert_eq!(
-            changelog_entry(CHANGELOG, "0.20.0").as_deref(),
-            Some("- The first thing.\n  - In detail.\n")
-        );
-    }
-    #[test]
-    fn the_last_changelog_entry_runs_to_the_end_and_its_heading_needs_no_date() {
-        assert_eq!(
-            changelog_entry(CHANGELOG, "0.19.0").as_deref(),
-            Some("- The oldest thing.\n")
-        );
-    }
-    #[test]
-    fn a_version_without_a_heading_or_with_an_empty_entry_has_no_changelog_entry() {
-        assert_eq!(changelog_entry(CHANGELOG, "0.20"), None);
-        assert_eq!(changelog_entry(CHANGELOG, "0.18.0"), None);
-        assert_eq!(
-            changelog_entry("## 0.21.0\n\n## 0.20.0\n- A.\n", "0.21.0"),
-            None
-        );
-    }
     fn metadata(dependency: &str, source: Value, path: &str) -> Value {
         json!({"packages":[
             {"id":"root","name":"battersea-flow","source":null,"manifest_path":"/repo/crates/flow/Cargo.toml"},

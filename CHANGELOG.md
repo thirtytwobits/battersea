@@ -1,6 +1,12 @@
 # Changelog
 
-## 0.20.0 — 2026-10-27
+## Unreleased
+
+### Documentation
+
+- `RELEASING.md` holds the release procedure the London Project shares among its pieces.
+
+## 0.20.0
 
 - Take [Clapham](https://github.com/thirtytwobits/clapham) v0.3.2. A host that depends on Clapham
   pins the `v0.3.2` tag; Cargo treats each Git tag as a separate `clapham` crate, so the types
@@ -10,7 +16,7 @@
   registers a resource template.
 - Public Rust APIs, `operation.schema.json` and stored formats are unchanged.
 
-## 0.19.1 — 2026-10-26
+## 0.19.1
 
 - `runtime.schema.json` no longer defines `FlowFailurePolicy`. The node state's `failure_policy`
   writes the flow contract's failure policy in place, so a host composes the published schema
@@ -19,7 +25,7 @@
 - The bindings generator refuses published schema bundles that define the same name.
 - Public Rust APIs and stored formats are unchanged. See PR #44.
 
-## 0.19.0 — 2026-10-26
+## 0.19.0
 
 - `@battersea/editor` accepts `react` and `react-dom` 18.3 or 19, and `react-amnesia` 0.2 or
   0.3. Its published declarations are the same under React 18 and React 19 types.
@@ -28,7 +34,7 @@
   `skipLibCheck`.
 - Rust crates, public Rust APIs and stored formats are unchanged. See PR #42.
 
-## 0.18.0 — 2026-10-25
+## 0.18.0
 
 - Take [Clapham](https://github.com/thirtytwobits/clapham) v0.3.0, the operations contract of
   the London set. Every crate requires Rust 1.88.
@@ -57,7 +63,7 @@
   back unchanged; its calls refuse to dispatch, because the registry presents a different tool
   record. See issues #31, #32 and #33, and PRs #38, #39 and #40.
 
-## 0.17.0 — 2026-10-22
+## 0.17.0
 
 - Add per-node `fail`, `emit` and `skip` policies for explicitly classified recoverable
   failures. Handled failures preserve admitted outputs and settled effects while independent
@@ -76,7 +82,7 @@
   `failure_ports`, and provider events include `RecoverableFailure`. Schemas, TypeScript
   bindings and API snapshots include these contracts. See issue #6 and PR #34.
 
-## 0.16.0 — 2026-10-22
+## 0.16.0
 
 - Add `battersea-mcp`, a Model Context Protocol 2026-07-28 client over rmcp 3.6.0 with `stdio`
   and `http` transports. It discovers a server's tools within finite limits, binds the selected
@@ -99,12 +105,12 @@
   and a conversation once `ConversationCheckpoint::is_settled`, each after its run has ended.
   See `contracts/recovery.md`, Retention.
 
-## 0.15.1 — 2026-10-21
+## 0.15.1
 
 - The scheduler runs an instrument only when a signal reaches one of its action ports. It ran
   instruments as inline nodes, which failed any activation that kept one in its flow.
 
-## 0.15.0 — 2026-10-19
+## 0.15.0
 
 - Add `battersea-tools`. `Tool` is the Model Context Protocol 2026-07-28 tool record, and a tool
   lists the agent profiles permitted to call it under `_meta`. `tools.schema.json` and the `Tools`
@@ -118,7 +124,7 @@
 - `NoLocalTools` refuses every call of a request offered no tools. The Chat Completions and mock
   adapters run with it when a request carries no executor.
 
-## 0.14.0 — 2026-10-16
+## 0.14.0
 
 - Bind versioned provider configurations to registered protocol adapters with explicit service identities, endpoints, authentication and capability restrictions.
 - Add a separate OpenAI Chat Completions adapter with streaming, structured output and local tool execution.
@@ -129,7 +135,7 @@
 - Deliver versioned Rust and TypeScript API documentation with release archives and GitHub Pages publication.
 - Breaking Rust API: backend structs carry an optional `ProviderBinding`, API keys use `SecretString`, prepared media carries a binding revision, and content has versioned native/reasoning variants. Legacy backend parsing remains explicit.
 
-## 0.13.0 — 2026-10-16
+## 0.13.0
 
 - Breaking contract change: `ExecutionError`'s `invalid_request`, `cancelled`, `interrupted` and
   `recovery_required` take a reason code, which `reason_code` reads back. `internal` reports a
@@ -148,7 +154,7 @@
   `battersea_model::ToolCode` in the new `EngineAdapterRequestError::tool_code` field; for
   example `ToolCode::UnofferedTool` for a call to a tool the model was not offered.
 
-## 0.12.0 — 2026-10-15
+## 0.12.0
 
 - Breaking contract change: `FlowValidationIssue` requires a `code` naming the failure.
   Consumers branch on the code; the message is for people.
@@ -157,26 +163,26 @@
 - Graph rules registered with `Registry::register_graph_validator` supply the host's own codes.
 - Add `FlowValidationIssue::new`, `with_node_id` and `with_edge_id`.
 
-## 0.11.3 — 2026-10-15
+## 0.11.3
 
 - Carry the provider's own message into the failure of a refused HTTP request, for example
   `Provider HTTP request failed with status 401: invalid x-api-key`. Only the `error.message`
   field of the JSON error body is read.
 
-## 0.11.2 — 2026-10-11
+## 0.11.2
 
 - Deliver provider events larger than the transport mailbox through bounded frames.
   Tool results arrive intact and in order; partial assembly and complete borrowed
   payloads remain charged to the node retention budget. Cancellation releases both.
 - Apply backpressure until the handler releases each complete provider event.
 
-## 0.11.1 — 2026-10-10
+## 0.11.1
 
 - Settle branches whose final-value input closes without a value, preserving independent completed outputs.
 - Propagate successful absence through joins and sinks without invoking handlers or emitting activation signals.
 - Preserve unresolved-dependency errors and checkpoint recovery across absence propagation.
 
-## 0.11.0 — 2026-10-10
+## 0.11.0
 
 - Parse and export versioned flow source with lossless graph, execution policy and editor layout round trips.
 - Reject unsupported versions, ambiguous identities and malformed source with location diagnostics.
@@ -184,7 +190,7 @@
 - Validate definition/handler identity during code-defined registration; execute parsed flows in the independent custom-node application.
 - Record the trust boundary and requirements for a separately designed sandbox ABI.
 
-## 0.10.0 — 2026-10-10
+## 0.10.0
 
 - Capture versioned scheduler and host state at resumable driver boundaries, with pinned graph, catalogue, configuration and handler versions.
 - Publish effect intents before driver segments and commit their results with checkpoints; retain interrupted segments for explicit resolution.
@@ -193,13 +199,13 @@
 - Preserve bounded queue accounting, closure state, temporary host resources and serialisable text buffers.
 - Attribute execution observations by run, resume attempt and sequence.
 
-## 0.9.0 — 2026-10-10
+## 0.9.0
 
 - Expose remote media snapshots, single polling operations, bounded retries, cancellation and repeatable output retrieval.
 - Add Replicate image/video/audio predictions with explicit model input mapping and signed, idempotent callbacks.
 - Move Runway onto the shared job lifecycle with strict identity/status validation and expiry-aware, bounded output downloads.
 - Preserve synchronous provider completion and application-owned asset storage.
-## 0.8.0 — 2026-10-10
+## 0.8.0
 
 - Preserve ordered multimodal conversations, native continuation signatures and provider capability declarations.
 - Request native JSON output and validate completed results before delivery.
@@ -207,7 +213,7 @@
 - Preserve tool effects across continuation retries, bound backoff by the operation deadline, and report retry observations.
 - Decode Gemini image and audio output and retain OpenAI and Anthropic continuation blocks.
 
-## 0.7.1 — 2026-10-10
+## 0.7.1
 
 - Publish typed runtime snapshots, contiguous deltas and bounded retention independently of tracing.
 - Export bounded OTLP GenAI spans and metrics, with opt-in masked content capture.
@@ -216,7 +222,7 @@
 - Bound Pianola execution capture and report lossless-capture failures.
 - Drive the independent editor from the runtime view with cursor resynchronisation.
 
-## 0.6.0 — 2026-10-09
+## 0.6.0
 
 - Require an explicit upgrade to version 2 with port modes, source order and finite limits.
 - Queue ordered token fan-out and control delivery with lossless admission and explicit lossy drops.
@@ -226,7 +232,7 @@
 - Author source priority, activation limits and connection capacity through shared editor controls.
 - Bound provider HTTP parsing and tool payloads; backpressure asynchronous media reporters.
 
-## 0.5.0 — 2026-10-09
+## 0.5.0
 
 - Publish an unstyled React editor with document, catalogue, validation and activation ports.
 - Extract graph primitives, parameter renderers, undo, diagnostics and lazy layout engines.
@@ -234,7 +240,7 @@
 - Publish generic Pianola grammar, lossless capture, registered assertions and grading hooks.
 - Ship an independent editor/server/CLI example and Chromium/WebKit package-consumer checks.
 
-## 0.4.0 — 2026-10-09
+## 0.4.0
 
 - Extract message contracts, open provider/tool registries and the shared tool runner.
 - Add explicit provider features, typed admission errors, request deadlines and stream watchdogs.
@@ -243,7 +249,7 @@
 - Extract backend configuration/schema composition, generic node handlers and declared-root prompt scanning.
 - Exercise mock chat, a registered tool and media from an independent packaged application.
 
-## 0.3.0 — 2026-10-08
+## 0.3.0
 
 - Add the public node SDK, immutable executable catalogues and host execution contract.
 - Extract token queues, source ordering, signal settlement and activation scheduling.
@@ -251,7 +257,7 @@
 - Convert automation values through registered parameter contracts.
 - Exercise an independent custom node and lifecycle failure cases against packaged crates.
 
-## 0.2.0 — 2026-10-08
+## 0.2.0
 
 - Extract flow documents, node catalogues, ports, template contracts and graph validation.
 - Register host handlers, nominal token and parameter schemas, and product validators.
@@ -261,7 +267,7 @@
   compatibility through `@battersea/flow`.
 - Validate an independent catalogue application against the packaged crate.
 
-## 0.1.0 — 2026-10-08
+## 0.1.0
 
 - Adopt the MIT licence for the project and distributed packages.
 - Establish the Cargo and TypeScript workspaces, dependency guards and package validation.
