@@ -7,7 +7,7 @@ use std::{
         atomic::{AtomicBool, AtomicUsize, Ordering},
         Arc, Mutex,
     },
-    time::{Duration, SystemTime, UNIX_EPOCH},
+    time::Duration,
 };
 
 #[derive(Default)]
@@ -205,15 +205,23 @@ fn result(id: &str) -> ConversationToolResult {
         result: EngineLocalToolResult::json(json!({"receipt":id})),
     }
 }
+/// The time each test starts at.
+const START_MS: u64 = 1_800_000_000_000;
+/// A clock standing at the start.
+fn clock() -> Arc<ManualClock> {
+    Arc::new(ManualClock::new(START_MS))
+}
+/// A clock standing `ms` after the start.
+fn clock_after(ms: u64) -> Arc<ManualClock> {
+    let clock = clock();
+    clock.advance(Duration::from_millis(ms));
+    clock
+}
 fn scope() -> ConversationScope {
     ConversationScope {
         run_id: "run-1".into(),
         tool_binding_revision: "tools-1".into(),
-        expires_at_unix_ms: SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .unwrap()
-            .as_millis() as u64
-            + 4000,
+        expires_at_unix_ms: START_MS + 4000,
     }
 }
 fn request() -> ConversationRequest {
@@ -244,6 +252,7 @@ async fn create(
         request(),
         65536,
         Duration::from_secs(1),
+        clock(),
     )
     .await
     .unwrap()
@@ -260,6 +269,7 @@ async fn open(
         request(),
         65536,
         Duration::from_secs(1),
+        clock(),
     )
     .await
     .unwrap()
@@ -474,7 +484,8 @@ async fn corrupt_or_changed_restore_never_writes_or_dispatches() {
             scope.clone(),
             request(),
             65536,
-            Duration::from_secs(1)
+            Duration::from_secs(1),
+            clock(),
         )
         .await
         .is_err());
@@ -489,7 +500,8 @@ async fn corrupt_or_changed_restore_never_writes_or_dispatches() {
         changed,
         request(),
         65536,
-        Duration::from_secs(1)
+        Duration::from_secs(1),
+        clock(),
     )
     .await
     .is_err());
@@ -501,7 +513,8 @@ async fn corrupt_or_changed_restore_never_writes_or_dispatches() {
         scope,
         changed,
         65536,
-        Duration::from_secs(1)
+        Duration::from_secs(1),
+        clock(),
     )
     .await
     .is_err());
@@ -516,8 +529,17 @@ async fn expiry_and_attempt_budgets_survive_reopen_and_reconciliation() {
     scope.expires_at_unix_ms -= 3800;
     let d = create(store.clone(), provider.clone(), scope.clone()).await;
     d.resume(1).await.unwrap();
-    tokio::time::sleep(Duration::from_millis(250)).await;
-    let d = open(store, provider.clone(), scope).await;
+    let d = DurableConversation::open(
+        store,
+        provider.clone(),
+        scope,
+        request(),
+        65536,
+        Duration::from_secs(1),
+        clock_after(250),
+    )
+    .await
+    .unwrap();
     d.record_tool_result(3, result("a")).await.unwrap();
     d.record_tool_result(4, result("b")).await.unwrap();
     let expired = d.resume(5).await.unwrap_err();
@@ -568,7 +590,8 @@ async fn acceptance_and_result_copy_failures_resume_from_the_committed_revision(
             scope.clone(),
             request(),
             65536,
-            Duration::from_secs(1)
+            Duration::from_secs(1),
+            clock(),
         )
         .await
         .is_err());
@@ -634,6 +657,7 @@ async fn recovered_turns_obey_final_output_admission() {
         request,
         65536,
         Duration::from_secs(1),
+        clock(),
     )
     .await
     .unwrap();

@@ -274,6 +274,7 @@ impl Host {
                 max_bytes: 64 * 1024,
             },
             Duration::from_secs(5),
+            Arc::new(SystemClock),
         )
         .await
         .expect("an empty journal");

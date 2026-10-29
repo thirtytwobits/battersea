@@ -5,17 +5,12 @@ use async_trait::async_trait;
 use battersea_model::{
     configuration_digest, EngineAdapterRequestError, EngineLocalToolCall,
     EngineLocalToolDefinition, EngineLocalToolExecutor, EngineLocalToolResult, ErrorKind,
-    ToolCallEvidence, ToolCallOutcome, ToolCode,
+    ExpiryClock, ToolCallEvidence, ToolCallOutcome, ToolCode,
 };
 use serde::{Deserialize, Serialize};
 use serde_json::json;
-use std::{
-    collections::BTreeMap,
-    io::Write,
-    sync::Arc,
-    time::{Duration, SystemTime, UNIX_EPOCH},
-};
-use tokio::time::{timeout, timeout_at, Instant};
+use std::{collections::BTreeMap, io::Write, sync::Arc, time::Duration};
+use tokio::time::{timeout, Instant};
 
 pub const TOOL_APPROVAL_JOURNAL_VERSION: u32 = 1;
 const MAX_CALLS: usize = 4096;
@@ -161,14 +156,6 @@ fn conflict() -> EngineAdapterRequestError {
         ToolCode::ToolApprovalConflict,
         "Tool approval revision changed.",
     )
-}
-fn now_ms() -> Result<u64, EngineAdapterRequestError> {
-    SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .map_err(|_| invalid())?
-        .as_millis()
-        .try_into()
-        .map_err(|_| invalid())
 }
 fn measure(value: &impl Serialize, limit: usize) -> Result<(), EngineAdapterRequestError> {
     struct Counter(usize);
@@ -343,6 +330,7 @@ pub struct DurableToolExecutor {
     scope: DurableToolApprovalScope,
     max_bytes: usize,
     store_timeout: Duration,
+    clock: Arc<dyn ExpiryClock>,
     deadline: Instant,
 }
 impl DurableToolExecutor {
@@ -352,6 +340,7 @@ impl DurableToolExecutor {
         scope: DurableToolApprovalScope,
         max_bytes: usize,
         store_timeout: Duration,
+        clock: Arc<dyn ExpiryClock>,
     ) -> Result<Self, EngineAdapterRequestError> {
         if scope.run_id.trim().is_empty()
             || scope.binding_revision.trim().is_empty()
@@ -362,9 +351,11 @@ impl DurableToolExecutor {
         {
             return Err(invalid());
         }
-        let deadline = Instant::now()
+        let now = clock.unix_ms().ok_or_else(invalid)?;
+        let deadline = clock
+            .instant()
             .checked_add(Duration::from_millis(
-                scope.expires_at_unix_ms.saturating_sub(now_ms()?),
+                scope.expires_at_unix_ms.saturating_sub(now),
             ))
             .ok_or_else(invalid)?;
         Ok(Self {
@@ -373,17 +364,20 @@ impl DurableToolExecutor {
             scope,
             max_bytes,
             store_timeout,
+            clock,
             deadline,
         })
     }
 
-    /// Create a journal exactly once. Store operations have a timeout in (0, 60s].
+    /// Create a journal exactly once. Store operations have a timeout in (0, 60s]. `clock` judges
+    /// expiry.
     pub async fn create(
         store: Arc<dyn ToolApprovalStore>,
         registry: ToolRegistry,
         scope: DurableToolApprovalScope,
         limits: ToolApprovalJournalLimits,
         store_timeout: Duration,
+        clock: Arc<dyn ExpiryClock>,
     ) -> Result<Self, EngineAdapterRequestError> {
         checked_limits(limits)?;
         measure(&scope, limits.max_bytes)?;
@@ -393,13 +387,14 @@ impl DurableToolExecutor {
             scope.clone(),
             limits.max_bytes,
             store_timeout,
+            clock,
         )?;
         let record = ToolApprovalJournal {
             version: TOOL_APPROVAL_JOURNAL_VERSION,
             revision: 1,
             scope,
             limits,
-            updated_at_unix_ms: now_ms()?,
+            updated_at_unix_ms: executor.now()?,
             calls: BTreeMap::new(),
         };
         executor.live(&record)?;
@@ -408,14 +403,16 @@ impl DurableToolExecutor {
     }
 
     /// Open without writing or extending expiry. `max_bytes` bounds host decoding and admission.
+    /// `clock` judges expiry.
     pub async fn open(
         store: Arc<dyn ToolApprovalStore>,
         registry: ToolRegistry,
         scope: DurableToolApprovalScope,
         max_bytes: usize,
         store_timeout: Duration,
+        clock: Arc<dyn ExpiryClock>,
     ) -> Result<Self, EngineAdapterRequestError> {
-        let executor = Self::build(store, registry, scope, max_bytes, store_timeout)?;
+        let executor = Self::build(store, registry, scope, max_bytes, store_timeout, clock)?;
         executor.inspect().await?;
         Ok(executor)
     }
@@ -468,12 +465,15 @@ impl DurableToolExecutor {
         .map_err(|_| Self::storage_error(ToolApprovalStoreError::Unavailable))?
         .map_err(Self::storage_error)
     }
+    fn now(&self) -> Result<u64, EngineAdapterRequestError> {
+        self.clock.unix_ms().ok_or_else(invalid)
+    }
     fn live(&self, record: &ToolApprovalJournal) -> Result<(), EngineAdapterRequestError> {
-        let now = now_ms()?;
+        let now = self.now()?;
         if now < record.updated_at_unix_ms {
             return Err(invalid());
         }
-        if now >= self.scope.expires_at_unix_ms || Instant::now() >= self.deadline {
+        if now >= self.scope.expires_at_unix_ms || self.clock.instant() >= self.deadline {
             return Err(EngineAdapterRequestError::new(
                 "tools",
                 "Tool approval expired.",
@@ -507,8 +507,8 @@ impl DurableToolExecutor {
         }
         Ok(record)
     }
-    fn advance(record: &mut ToolApprovalJournal) -> Result<(), EngineAdapterRequestError> {
-        let now = now_ms()?;
+    fn advance(&self, record: &mut ToolApprovalJournal) -> Result<(), EngineAdapterRequestError> {
+        let now = self.now()?;
         if now < record.updated_at_unix_ms {
             return Err(invalid());
         }
@@ -551,7 +551,7 @@ impl DurableToolExecutor {
                 resolutions: Vec::new(),
             };
             record.calls.insert(entry.call.id.clone(), entry);
-            Self::advance(&mut record)?;
+            self.advance(&mut record)?;
             self.write(Some(expected_revision), &record).await?;
             Ok(record)
         };
@@ -601,14 +601,14 @@ impl DurableToolExecutor {
             request_revision: request_revision.into(),
             action,
             actor: actor.into(),
-            at_unix_ms: now_ms()?,
+            at_unix_ms: self.now()?,
         });
         entry.state = match action {
             ToolApprovalAction::Allow => StoredToolCallState::Approved,
             ToolApprovalAction::Deny => StoredToolCallState::Denied,
             ToolApprovalAction::Cancel => StoredToolCallState::Cancelled,
         };
-        Self::advance(&mut record)?;
+        self.advance(&mut record)?;
         self.write(Some(expected_revision), &record).await?;
         Ok(record)
     }
@@ -677,14 +677,18 @@ impl DurableToolExecutor {
         let prepared = self.prepare(entry)?;
         let call = prepared.call.clone();
         record.calls.get_mut(call_id).unwrap().state = StoredToolCallState::Intent;
-        Self::advance(&mut record)?;
+        self.advance(&mut record)?;
         self.write(Some(expected_revision), &record)
             .await
             .map_err(|e| e.with_tool_call(evidence(&call, ToolCallOutcome::NotDispatched)))?;
         // Expiry after intent publication still forbids dispatch. The intent requires inspection.
         self.live(&record)
             .map_err(|e| e.with_tool_call(evidence(&call, ToolCallOutcome::NotDispatched)))?;
-        let result = timeout_at(self.deadline, prepared.execute())
+        // The time left before expiry, by the monotonic clock.
+        let remaining = self
+            .deadline
+            .saturating_duration_since(self.clock.instant());
+        let result = timeout(remaining, prepared.execute())
             .await
             .unwrap_or_else(|_| {
                 Err(EngineAdapterRequestError::new(
@@ -717,7 +721,8 @@ impl DurableToolExecutor {
                 error: error.clone(),
             },
         };
-        Self::advance(&mut record).map_err(|e| e.with_tool_call(observed.clone()))?;
+        self.advance(&mut record)
+            .map_err(|e| e.with_tool_call(observed.clone()))?;
         self.write(Some(intent_revision), &record)
             .await
             .map_err(|e| e.with_tool_call(observed))?;
@@ -753,7 +758,7 @@ impl DurableToolExecutor {
             },
             ToolApprovalReconciliation::Abandon => StoredToolCallState::Abandoned,
         };
-        Self::advance(&mut record)?;
+        self.advance(&mut record)?;
         record
             .calls
             .get_mut(call_id)

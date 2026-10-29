@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+### Breaking
+
+- `DurableConversation::create` and `open`, and `DurableToolExecutor::create` and `open`, take
+  an `Arc<dyn ExpiryClock>` that judges expiry. Pass `Arc::new(SystemClock)` for the system's
+  clocks.
+
+### Added
+
+- `battersea-model` provides `ExpiryClock`, `SystemClock` and `ManualClock`, a clock that moves
+  only when a test advances it.
+
 ### Documentation
 
 - `RELEASING.md` holds the release procedure the London Project shares among its pieces.
