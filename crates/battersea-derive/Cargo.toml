@@ -14,7 +14,7 @@ include = ["src/**", "Cargo.toml", "README.md", "LICENSE", "NOTICE"]
 proc-macro = true
 
 [dependencies]
-syn = { version = "2", features = ["full"] }
+syn = { version = "3", features = ["full"] }
 quote = "1"
 proc-macro2 = "1"
 serde_yaml = "0.9"
