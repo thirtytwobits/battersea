@@ -31,7 +31,7 @@ base64 = "0.22.1"
 chrono.workspace = true
 eventsource-stream.workspace = true
 futures-util.workspace = true
-png = { version = "0.17.16", optional = true }
+png = { version = "0.18.1", optional = true }
 reqwest.workspace = true
 url = "2.5"
 serde.workspace = true
