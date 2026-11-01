@@ -25,7 +25,7 @@ In `typescript/`, install the lockfile with `npm ci`, then run `npm run check` a
 Build `editor-server-example` with Cargo, then run `npm run test:example` in `typescript/` for the
 installed-package browser and CLI contract checks. They use an isolated application directory.
 
-Public Rust APIs are recorded by `cargo-public-api` 0.50.2 using `nightly-2025-08-02`; the pinned
+Public Rust APIs are recorded by `cargo-public-api` 0.52.0 using `nightly-2026-10-01`; the pinned
 toolchain is only needed for the API gate. `cargo xtask api` checks the snapshots. TypeScript's
 API record is the declaration output checked by its own gate. Follow tool help when deliberately
 updating a snapshot. See the [upstream API tool](https://github.com/cargo-public-api/cargo-public-api)
