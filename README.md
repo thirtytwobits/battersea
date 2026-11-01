@@ -33,7 +33,7 @@ operations through Clapham's MCP client. See the [tool contract](contracts/tools
 `battersea-ops` contributes Battersea's flow, run, approval and MCP-connection operations to
 Clapham over host capabilities the application supplies, for an operator's CLI and an agent
 host's MCP server. See the [operations contract](contracts/operations.md). All crates
-require Rust 1.88. `battersea-providers` supplies OpenAI, Anthropic,
+require Rust 1.95. `battersea-providers` supplies OpenAI, Anthropic,
 Google, Runway, Replicate and mock transports through individual Cargo features. Text admission accepts
 text blocks; provider-native tool continuation retains opaque signed fields.
 

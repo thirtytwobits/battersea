@@ -11,7 +11,7 @@ jobs:
     timeout-minutes: 20
     strategy:
       matrix:
-        rust: ['1.88.0', '1.99.0']
+        rust: ['1.95.0', '1.99.0']
     steps:
       - uses: actions/checkout@v7
       - name: Install Rust
@@ -62,10 +62,10 @@ jobs:
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v7
-      - run: rustup toolchain install nightly-2025-08-02 --profile minimal
+      - run: rustup toolchain install nightly-2026-10-01 --profile minimal
       - run: rustup toolchain install 1.99.0 --profile minimal
       - run: rustup default 1.99.0
-      - run: cargo install cargo-public-api --version 0.50.2 --locked
+      - run: cargo install cargo-public-api --version 0.52.0 --locked
       - run: cargo xtask api
   documentation-rust:
     runs-on: ubuntu-24.04

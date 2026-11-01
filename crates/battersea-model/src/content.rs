@@ -214,43 +214,39 @@ pub fn validate_messages(
                 ContentBlock::Native {
                     provider: owner,
                     payload,
-                } => {
-                    if owner != provider
-                        || !capabilities.native_continuation
-                        || message.role != Role::Assistant
-                        || !payload.is_object()
-                    {
-                        return Err(invalid("Native continuation requires its owning provider and an assistant object block."));
-                    }
+                } if owner != provider
+                    || !capabilities.native_continuation
+                    || message.role != Role::Assistant
+                    || !payload.is_object() =>
+                {
+                    return Err(invalid(
+                        "Native continuation requires its owning provider and an assistant object block.",
+                    ));
                 }
                 ContentBlock::Reasoning {
                     provider: owner,
                     signature,
                     ..
-                } => {
-                    if owner != provider
-                        || !capabilities.native_continuation
-                        || message.role != Role::Assistant
-                        || signature.as_deref().is_none_or(str::is_empty)
-                    {
-                        return Err(invalid(
-                            "Reasoning continuation requires its owning provider and signature.",
-                        ));
-                    }
+                } if owner != provider
+                    || !capabilities.native_continuation
+                    || message.role != Role::Assistant
+                    || signature.as_deref().is_none_or(str::is_empty) =>
+                {
+                    return Err(invalid(
+                        "Reasoning continuation requires its owning provider and signature.",
+                    ));
                 }
                 ContentBlock::ToolCall {
                     id,
                     name,
                     arguments,
-                } => {
-                    if message.role != Role::Assistant
-                        || id.is_empty()
-                        || name.is_empty()
-                        || !arguments.is_object()
-                        || calls.insert(id, name).is_some()
-                    {
-                        return Err(invalid("Invalid or duplicate conversation tool call."));
-                    }
+                } if message.role != Role::Assistant
+                    || id.is_empty()
+                    || name.is_empty()
+                    || !arguments.is_object()
+                    || calls.insert(id, name).is_some() =>
+                {
+                    return Err(invalid("Invalid or duplicate conversation tool call."));
                 }
                 ContentBlock::ToolResult { id, .. }
                     if !matches!(message.role, Role::Tool | Role::User)

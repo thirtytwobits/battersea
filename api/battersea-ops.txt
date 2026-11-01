@@ -11,31 +11,32 @@ pub const battersea_ops::codes::UNKNOWN_FLOW: &str
 pub const battersea_ops::codes::UNKNOWN_MCP_SERVER: &str
 pub const battersea_ops::codes::UNKNOWN_RUN: &str
 pub const battersea_ops::codes::UPGRADE_REVISION_REQUIRED: &str
-pub fn battersea_ops::codes::category(code: &str) -> core::option::Option<clapham::refusal::Category>
+pub fn battersea_ops::codes::category(&str) -> core::option::Option<clapham::refusal::Category>
 pub fn battersea_ops::codes::declared() -> alloc::collections::btree::map::BTreeMap<alloc::string::String, clapham::refusal::Category>
-pub fn battersea_ops::codes::refusal(code: &str, message: impl core::convert::Into<alloc::string::String>) -> clapham::refusal::Refusal
+pub fn battersea_ops::codes::refusal(&str, impl core::convert::Into<alloc::string::String>) -> clapham::refusal::Refusal
 pub enum battersea_ops::DecisionAction
 pub battersea_ops::DecisionAction::Allow
 pub battersea_ops::DecisionAction::Cancel
 pub battersea_ops::DecisionAction::Deny
 impl core::clone::Clone for battersea_ops::DecisionAction
-pub fn battersea_ops::DecisionAction::clone(&self) -> battersea_ops::DecisionAction
+pub fn battersea_ops::DecisionAction::clone(&self) -> Self
 impl core::fmt::Debug for battersea_ops::DecisionAction
-pub fn battersea_ops::DecisionAction::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn battersea_ops::DecisionAction::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 impl core::marker::Copy for battersea_ops::DecisionAction
 impl schemars::JsonSchema for battersea_ops::DecisionAction
 pub fn battersea_ops::DecisionAction::inline_schema() -> bool
-pub fn battersea_ops::DecisionAction::json_schema(generator: &mut schemars::generate::SchemaGenerator) -> schemars::schema::Schema
+pub fn battersea_ops::DecisionAction::json_schema(&mut schemars::generate::SchemaGenerator) -> schemars::schema::Schema
 pub fn battersea_ops::DecisionAction::schema_id() -> alloc::borrow::Cow<'static, str>
 pub fn battersea_ops::DecisionAction::schema_name() -> alloc::borrow::Cow<'static, str>
 impl serde_core::ser::Serialize for battersea_ops::DecisionAction
-pub fn battersea_ops::DecisionAction::serialize<__S>(&self, __serializer: __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+pub fn battersea_ops::DecisionAction::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
 impl<'de> serde_core::de::Deserialize<'de> for battersea_ops::DecisionAction
-pub fn battersea_ops::DecisionAction::deserialize<__D>(__deserializer: __D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+pub fn battersea_ops::DecisionAction::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
 impl core::marker::Freeze for battersea_ops::DecisionAction
 impl core::marker::Send for battersea_ops::DecisionAction
 impl core::marker::Sync for battersea_ops::DecisionAction
 impl core::marker::Unpin for battersea_ops::DecisionAction
+impl core::marker::UnsafeUnpin for battersea_ops::DecisionAction
 impl core::panic::unwind_safe::RefUnwindSafe for battersea_ops::DecisionAction
 impl core::panic::unwind_safe::UnwindSafe for battersea_ops::DecisionAction
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_ops::DecisionAction where ST: ?core::marker::Sized, DT: ?core::marker::Sized
@@ -43,14 +44,14 @@ impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::i
 impl<T, U> core::convert::Into<U> for battersea_ops::DecisionAction where U: core::convert::From<T>
 pub fn battersea_ops::DecisionAction::into(self) -> U
 impl<T, U> core::convert::TryFrom<U> for battersea_ops::DecisionAction where U: core::convert::Into<T>
-pub type battersea_ops::DecisionAction::Error = core::convert::Infallible
-pub fn battersea_ops::DecisionAction::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+pub type battersea_ops::DecisionAction::Error = never
+pub fn battersea_ops::DecisionAction::try_from(U) -> core::result::Result<T, never>
 impl<T, U> core::convert::TryInto<U> for battersea_ops::DecisionAction where U: core::convert::TryFrom<T>
 pub type battersea_ops::DecisionAction::Error = <U as core::convert::TryFrom<T>>::Error
 pub fn battersea_ops::DecisionAction::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
 impl<T> alloc::borrow::ToOwned for battersea_ops::DecisionAction where T: core::clone::Clone
 pub type battersea_ops::DecisionAction::Owned = T
-pub fn battersea_ops::DecisionAction::clone_into(&self, target: &mut T)
+pub fn battersea_ops::DecisionAction::clone_into(&self, &mut T)
 pub fn battersea_ops::DecisionAction::to_owned(&self) -> T
 impl<T> core::any::Any for battersea_ops::DecisionAction where T: 'static + ?core::marker::Sized
 pub fn battersea_ops::DecisionAction::type_id(&self) -> core::any::TypeId
@@ -59,11 +60,11 @@ pub fn battersea_ops::DecisionAction::borrow(&self) -> &T
 impl<T> core::borrow::BorrowMut<T> for battersea_ops::DecisionAction where T: ?core::marker::Sized
 pub fn battersea_ops::DecisionAction::borrow_mut(&mut self) -> &mut T
 impl<T> core::clone::CloneToUninit for battersea_ops::DecisionAction where T: core::clone::Clone
-pub unsafe fn battersea_ops::DecisionAction::clone_to_uninit(&self, dest: *mut u8)
+pub unsafe fn battersea_ops::DecisionAction::clone_to_uninit(&self, *mut u8)
 impl<T> core::convert::From<T> for battersea_ops::DecisionAction
-pub fn battersea_ops::DecisionAction::from(t: T) -> T
+pub fn battersea_ops::DecisionAction::from(T) -> T
 impl<T> dyn_clone::DynClone for battersea_ops::DecisionAction where T: core::clone::Clone
-pub fn battersea_ops::DecisionAction::__clone_box(&self, _: dyn_clone::sealed::Private) -> *mut ()
+pub fn battersea_ops::DecisionAction::__clone_box(&self, dyn_clone::sealed::Private) -> *mut ()
 impl<T> outref::AsOut<T> for battersea_ops::DecisionAction where T: core::marker::Copy
 pub fn battersea_ops::DecisionAction::as_out(&mut self) -> outref::Out<'_, T>
 impl<T> serde_core::de::DeserializeOwned for battersea_ops::DecisionAction where T: for<'de> serde_core::de::Deserialize<'de>
@@ -76,22 +77,23 @@ pub battersea_ops::Resolution::Completed
 pub battersea_ops::Resolution::Completed::result: serde_json::value::Value
 pub battersea_ops::Resolution::NotApplied
 impl core::clone::Clone for battersea_ops::Resolution
-pub fn battersea_ops::Resolution::clone(&self) -> battersea_ops::Resolution
+pub fn battersea_ops::Resolution::clone(&self) -> Self
 impl core::fmt::Debug for battersea_ops::Resolution
-pub fn battersea_ops::Resolution::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn battersea_ops::Resolution::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 impl schemars::JsonSchema for battersea_ops::Resolution
 pub fn battersea_ops::Resolution::inline_schema() -> bool
-pub fn battersea_ops::Resolution::json_schema(generator: &mut schemars::generate::SchemaGenerator) -> schemars::schema::Schema
+pub fn battersea_ops::Resolution::json_schema(&mut schemars::generate::SchemaGenerator) -> schemars::schema::Schema
 pub fn battersea_ops::Resolution::schema_id() -> alloc::borrow::Cow<'static, str>
 pub fn battersea_ops::Resolution::schema_name() -> alloc::borrow::Cow<'static, str>
 impl serde_core::ser::Serialize for battersea_ops::Resolution
-pub fn battersea_ops::Resolution::serialize<__S>(&self, __serializer: __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+pub fn battersea_ops::Resolution::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
 impl<'de> serde_core::de::Deserialize<'de> for battersea_ops::Resolution
-pub fn battersea_ops::Resolution::deserialize<__D>(__deserializer: __D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+pub fn battersea_ops::Resolution::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
 impl core::marker::Freeze for battersea_ops::Resolution
 impl core::marker::Send for battersea_ops::Resolution
 impl core::marker::Sync for battersea_ops::Resolution
 impl core::marker::Unpin for battersea_ops::Resolution
+impl core::marker::UnsafeUnpin for battersea_ops::Resolution
 impl core::panic::unwind_safe::RefUnwindSafe for battersea_ops::Resolution
 impl core::panic::unwind_safe::UnwindSafe for battersea_ops::Resolution
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_ops::Resolution where ST: ?core::marker::Sized, DT: ?core::marker::Sized
@@ -99,14 +101,14 @@ impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::i
 impl<T, U> core::convert::Into<U> for battersea_ops::Resolution where U: core::convert::From<T>
 pub fn battersea_ops::Resolution::into(self) -> U
 impl<T, U> core::convert::TryFrom<U> for battersea_ops::Resolution where U: core::convert::Into<T>
-pub type battersea_ops::Resolution::Error = core::convert::Infallible
-pub fn battersea_ops::Resolution::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+pub type battersea_ops::Resolution::Error = never
+pub fn battersea_ops::Resolution::try_from(U) -> core::result::Result<T, never>
 impl<T, U> core::convert::TryInto<U> for battersea_ops::Resolution where U: core::convert::TryFrom<T>
 pub type battersea_ops::Resolution::Error = <U as core::convert::TryFrom<T>>::Error
 pub fn battersea_ops::Resolution::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
 impl<T> alloc::borrow::ToOwned for battersea_ops::Resolution where T: core::clone::Clone
 pub type battersea_ops::Resolution::Owned = T
-pub fn battersea_ops::Resolution::clone_into(&self, target: &mut T)
+pub fn battersea_ops::Resolution::clone_into(&self, &mut T)
 pub fn battersea_ops::Resolution::to_owned(&self) -> T
 impl<T> core::any::Any for battersea_ops::Resolution where T: 'static + ?core::marker::Sized
 pub fn battersea_ops::Resolution::type_id(&self) -> core::any::TypeId
@@ -115,11 +117,11 @@ pub fn battersea_ops::Resolution::borrow(&self) -> &T
 impl<T> core::borrow::BorrowMut<T> for battersea_ops::Resolution where T: ?core::marker::Sized
 pub fn battersea_ops::Resolution::borrow_mut(&mut self) -> &mut T
 impl<T> core::clone::CloneToUninit for battersea_ops::Resolution where T: core::clone::Clone
-pub unsafe fn battersea_ops::Resolution::clone_to_uninit(&self, dest: *mut u8)
+pub unsafe fn battersea_ops::Resolution::clone_to_uninit(&self, *mut u8)
 impl<T> core::convert::From<T> for battersea_ops::Resolution
-pub fn battersea_ops::Resolution::from(t: T) -> T
+pub fn battersea_ops::Resolution::from(T) -> T
 impl<T> dyn_clone::DynClone for battersea_ops::Resolution where T: core::clone::Clone
-pub fn battersea_ops::Resolution::__clone_box(&self, _: dyn_clone::sealed::Private) -> *mut ()
+pub fn battersea_ops::Resolution::__clone_box(&self, dyn_clone::sealed::Private) -> *mut ()
 impl<T> serde_core::de::DeserializeOwned for battersea_ops::Resolution where T: for<'de> serde_core::de::Deserialize<'de>
 impl<T> typenum::type_operators::Same for battersea_ops::Resolution
 pub type battersea_ops::Resolution::Output = T
@@ -129,25 +131,26 @@ pub battersea_ops::Activation::flow_key: alloc::string::String
 pub battersea_ops::Activation::node_id: alloc::string::String
 pub battersea_ops::Activation::parameters: serde_json::map::Map<alloc::string::String, serde_json::value::Value>
 impl core::clone::Clone for battersea_ops::Activation
-pub fn battersea_ops::Activation::clone(&self) -> battersea_ops::Activation
+pub fn battersea_ops::Activation::clone(&self) -> Self
 impl core::cmp::PartialEq for battersea_ops::Activation
-pub fn battersea_ops::Activation::eq(&self, other: &battersea_ops::Activation) -> bool
+pub fn battersea_ops::Activation::eq(&self, &Self) -> bool
 impl core::fmt::Debug for battersea_ops::Activation
-pub fn battersea_ops::Activation::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn battersea_ops::Activation::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 impl core::marker::StructuralPartialEq for battersea_ops::Activation
 impl schemars::JsonSchema for battersea_ops::Activation
 pub fn battersea_ops::Activation::inline_schema() -> bool
-pub fn battersea_ops::Activation::json_schema(generator: &mut schemars::generate::SchemaGenerator) -> schemars::schema::Schema
+pub fn battersea_ops::Activation::json_schema(&mut schemars::generate::SchemaGenerator) -> schemars::schema::Schema
 pub fn battersea_ops::Activation::schema_id() -> alloc::borrow::Cow<'static, str>
 pub fn battersea_ops::Activation::schema_name() -> alloc::borrow::Cow<'static, str>
 impl serde_core::ser::Serialize for battersea_ops::Activation
-pub fn battersea_ops::Activation::serialize<__S>(&self, __serializer: __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+pub fn battersea_ops::Activation::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
 impl<'de> serde_core::de::Deserialize<'de> for battersea_ops::Activation
-pub fn battersea_ops::Activation::deserialize<__D>(__deserializer: __D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+pub fn battersea_ops::Activation::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
 impl core::marker::Freeze for battersea_ops::Activation
 impl core::marker::Send for battersea_ops::Activation
 impl core::marker::Sync for battersea_ops::Activation
 impl core::marker::Unpin for battersea_ops::Activation
+impl core::marker::UnsafeUnpin for battersea_ops::Activation
 impl core::panic::unwind_safe::RefUnwindSafe for battersea_ops::Activation
 impl core::panic::unwind_safe::UnwindSafe for battersea_ops::Activation
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_ops::Activation where ST: ?core::marker::Sized, DT: ?core::marker::Sized
@@ -155,14 +158,14 @@ impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::i
 impl<T, U> core::convert::Into<U> for battersea_ops::Activation where U: core::convert::From<T>
 pub fn battersea_ops::Activation::into(self) -> U
 impl<T, U> core::convert::TryFrom<U> for battersea_ops::Activation where U: core::convert::Into<T>
-pub type battersea_ops::Activation::Error = core::convert::Infallible
-pub fn battersea_ops::Activation::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+pub type battersea_ops::Activation::Error = never
+pub fn battersea_ops::Activation::try_from(U) -> core::result::Result<T, never>
 impl<T, U> core::convert::TryInto<U> for battersea_ops::Activation where U: core::convert::TryFrom<T>
 pub type battersea_ops::Activation::Error = <U as core::convert::TryFrom<T>>::Error
 pub fn battersea_ops::Activation::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
 impl<T> alloc::borrow::ToOwned for battersea_ops::Activation where T: core::clone::Clone
 pub type battersea_ops::Activation::Owned = T
-pub fn battersea_ops::Activation::clone_into(&self, target: &mut T)
+pub fn battersea_ops::Activation::clone_into(&self, &mut T)
 pub fn battersea_ops::Activation::to_owned(&self) -> T
 impl<T> core::any::Any for battersea_ops::Activation where T: 'static + ?core::marker::Sized
 pub fn battersea_ops::Activation::type_id(&self) -> core::any::TypeId
@@ -171,11 +174,11 @@ pub fn battersea_ops::Activation::borrow(&self) -> &T
 impl<T> core::borrow::BorrowMut<T> for battersea_ops::Activation where T: ?core::marker::Sized
 pub fn battersea_ops::Activation::borrow_mut(&mut self) -> &mut T
 impl<T> core::clone::CloneToUninit for battersea_ops::Activation where T: core::clone::Clone
-pub unsafe fn battersea_ops::Activation::clone_to_uninit(&self, dest: *mut u8)
+pub unsafe fn battersea_ops::Activation::clone_to_uninit(&self, *mut u8)
 impl<T> core::convert::From<T> for battersea_ops::Activation
-pub fn battersea_ops::Activation::from(t: T) -> T
+pub fn battersea_ops::Activation::from(T) -> T
 impl<T> dyn_clone::DynClone for battersea_ops::Activation where T: core::clone::Clone
-pub fn battersea_ops::Activation::__clone_box(&self, _: dyn_clone::sealed::Private) -> *mut ()
+pub fn battersea_ops::Activation::__clone_box(&self, dyn_clone::sealed::Private) -> *mut ()
 impl<T> serde_core::de::DeserializeOwned for battersea_ops::Activation where T: for<'de> serde_core::de::Deserialize<'de>
 impl<T> typenum::type_operators::Same for battersea_ops::Activation
 pub type battersea_ops::Activation::Output = T
@@ -187,22 +190,23 @@ pub battersea_ops::ApprovalCall::request_revision: alloc::string::String
 pub battersea_ops::ApprovalCall::state: alloc::string::String
 pub battersea_ops::ApprovalCall::tool_name: alloc::string::String
 impl core::clone::Clone for battersea_ops::ApprovalCall
-pub fn battersea_ops::ApprovalCall::clone(&self) -> battersea_ops::ApprovalCall
+pub fn battersea_ops::ApprovalCall::clone(&self) -> Self
 impl core::fmt::Debug for battersea_ops::ApprovalCall
-pub fn battersea_ops::ApprovalCall::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn battersea_ops::ApprovalCall::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 impl schemars::JsonSchema for battersea_ops::ApprovalCall
 pub fn battersea_ops::ApprovalCall::inline_schema() -> bool
-pub fn battersea_ops::ApprovalCall::json_schema(generator: &mut schemars::generate::SchemaGenerator) -> schemars::schema::Schema
+pub fn battersea_ops::ApprovalCall::json_schema(&mut schemars::generate::SchemaGenerator) -> schemars::schema::Schema
 pub fn battersea_ops::ApprovalCall::schema_id() -> alloc::borrow::Cow<'static, str>
 pub fn battersea_ops::ApprovalCall::schema_name() -> alloc::borrow::Cow<'static, str>
 impl serde_core::ser::Serialize for battersea_ops::ApprovalCall
-pub fn battersea_ops::ApprovalCall::serialize<__S>(&self, __serializer: __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+pub fn battersea_ops::ApprovalCall::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
 impl<'de> serde_core::de::Deserialize<'de> for battersea_ops::ApprovalCall
-pub fn battersea_ops::ApprovalCall::deserialize<__D>(__deserializer: __D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+pub fn battersea_ops::ApprovalCall::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
 impl core::marker::Freeze for battersea_ops::ApprovalCall
 impl core::marker::Send for battersea_ops::ApprovalCall
 impl core::marker::Sync for battersea_ops::ApprovalCall
 impl core::marker::Unpin for battersea_ops::ApprovalCall
+impl core::marker::UnsafeUnpin for battersea_ops::ApprovalCall
 impl core::panic::unwind_safe::RefUnwindSafe for battersea_ops::ApprovalCall
 impl core::panic::unwind_safe::UnwindSafe for battersea_ops::ApprovalCall
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_ops::ApprovalCall where ST: ?core::marker::Sized, DT: ?core::marker::Sized
@@ -210,14 +214,14 @@ impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::i
 impl<T, U> core::convert::Into<U> for battersea_ops::ApprovalCall where U: core::convert::From<T>
 pub fn battersea_ops::ApprovalCall::into(self) -> U
 impl<T, U> core::convert::TryFrom<U> for battersea_ops::ApprovalCall where U: core::convert::Into<T>
-pub type battersea_ops::ApprovalCall::Error = core::convert::Infallible
-pub fn battersea_ops::ApprovalCall::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+pub type battersea_ops::ApprovalCall::Error = never
+pub fn battersea_ops::ApprovalCall::try_from(U) -> core::result::Result<T, never>
 impl<T, U> core::convert::TryInto<U> for battersea_ops::ApprovalCall where U: core::convert::TryFrom<T>
 pub type battersea_ops::ApprovalCall::Error = <U as core::convert::TryFrom<T>>::Error
 pub fn battersea_ops::ApprovalCall::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
 impl<T> alloc::borrow::ToOwned for battersea_ops::ApprovalCall where T: core::clone::Clone
 pub type battersea_ops::ApprovalCall::Owned = T
-pub fn battersea_ops::ApprovalCall::clone_into(&self, target: &mut T)
+pub fn battersea_ops::ApprovalCall::clone_into(&self, &mut T)
 pub fn battersea_ops::ApprovalCall::to_owned(&self) -> T
 impl<T> core::any::Any for battersea_ops::ApprovalCall where T: 'static + ?core::marker::Sized
 pub fn battersea_ops::ApprovalCall::type_id(&self) -> core::any::TypeId
@@ -226,11 +230,11 @@ pub fn battersea_ops::ApprovalCall::borrow(&self) -> &T
 impl<T> core::borrow::BorrowMut<T> for battersea_ops::ApprovalCall where T: ?core::marker::Sized
 pub fn battersea_ops::ApprovalCall::borrow_mut(&mut self) -> &mut T
 impl<T> core::clone::CloneToUninit for battersea_ops::ApprovalCall where T: core::clone::Clone
-pub unsafe fn battersea_ops::ApprovalCall::clone_to_uninit(&self, dest: *mut u8)
+pub unsafe fn battersea_ops::ApprovalCall::clone_to_uninit(&self, *mut u8)
 impl<T> core::convert::From<T> for battersea_ops::ApprovalCall
-pub fn battersea_ops::ApprovalCall::from(t: T) -> T
+pub fn battersea_ops::ApprovalCall::from(T) -> T
 impl<T> dyn_clone::DynClone for battersea_ops::ApprovalCall where T: core::clone::Clone
-pub fn battersea_ops::ApprovalCall::__clone_box(&self, _: dyn_clone::sealed::Private) -> *mut ()
+pub fn battersea_ops::ApprovalCall::__clone_box(&self, dyn_clone::sealed::Private) -> *mut ()
 impl<T> serde_core::de::DeserializeOwned for battersea_ops::ApprovalCall where T: for<'de> serde_core::de::Deserialize<'de>
 impl<T> typenum::type_operators::Same for battersea_ops::ApprovalCall
 pub type battersea_ops::ApprovalCall::Output = T
@@ -240,22 +244,23 @@ pub battersea_ops::Approvals::calls: alloc::vec::Vec<battersea_ops::ApprovalCall
 pub battersea_ops::Approvals::revision: u64
 pub battersea_ops::Approvals::run_id: alloc::string::String
 impl core::clone::Clone for battersea_ops::Approvals
-pub fn battersea_ops::Approvals::clone(&self) -> battersea_ops::Approvals
+pub fn battersea_ops::Approvals::clone(&self) -> Self
 impl core::fmt::Debug for battersea_ops::Approvals
-pub fn battersea_ops::Approvals::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn battersea_ops::Approvals::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 impl schemars::JsonSchema for battersea_ops::Approvals
 pub fn battersea_ops::Approvals::inline_schema() -> bool
-pub fn battersea_ops::Approvals::json_schema(generator: &mut schemars::generate::SchemaGenerator) -> schemars::schema::Schema
+pub fn battersea_ops::Approvals::json_schema(&mut schemars::generate::SchemaGenerator) -> schemars::schema::Schema
 pub fn battersea_ops::Approvals::schema_id() -> alloc::borrow::Cow<'static, str>
 pub fn battersea_ops::Approvals::schema_name() -> alloc::borrow::Cow<'static, str>
 impl serde_core::ser::Serialize for battersea_ops::Approvals
-pub fn battersea_ops::Approvals::serialize<__S>(&self, __serializer: __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+pub fn battersea_ops::Approvals::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
 impl<'de> serde_core::de::Deserialize<'de> for battersea_ops::Approvals
-pub fn battersea_ops::Approvals::deserialize<__D>(__deserializer: __D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+pub fn battersea_ops::Approvals::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
 impl core::marker::Freeze for battersea_ops::Approvals
 impl core::marker::Send for battersea_ops::Approvals
 impl core::marker::Sync for battersea_ops::Approvals
 impl core::marker::Unpin for battersea_ops::Approvals
+impl core::marker::UnsafeUnpin for battersea_ops::Approvals
 impl core::panic::unwind_safe::RefUnwindSafe for battersea_ops::Approvals
 impl core::panic::unwind_safe::UnwindSafe for battersea_ops::Approvals
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_ops::Approvals where ST: ?core::marker::Sized, DT: ?core::marker::Sized
@@ -263,14 +268,14 @@ impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::i
 impl<T, U> core::convert::Into<U> for battersea_ops::Approvals where U: core::convert::From<T>
 pub fn battersea_ops::Approvals::into(self) -> U
 impl<T, U> core::convert::TryFrom<U> for battersea_ops::Approvals where U: core::convert::Into<T>
-pub type battersea_ops::Approvals::Error = core::convert::Infallible
-pub fn battersea_ops::Approvals::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+pub type battersea_ops::Approvals::Error = never
+pub fn battersea_ops::Approvals::try_from(U) -> core::result::Result<T, never>
 impl<T, U> core::convert::TryInto<U> for battersea_ops::Approvals where U: core::convert::TryFrom<T>
 pub type battersea_ops::Approvals::Error = <U as core::convert::TryFrom<T>>::Error
 pub fn battersea_ops::Approvals::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
 impl<T> alloc::borrow::ToOwned for battersea_ops::Approvals where T: core::clone::Clone
 pub type battersea_ops::Approvals::Owned = T
-pub fn battersea_ops::Approvals::clone_into(&self, target: &mut T)
+pub fn battersea_ops::Approvals::clone_into(&self, &mut T)
 pub fn battersea_ops::Approvals::to_owned(&self) -> T
 impl<T> core::any::Any for battersea_ops::Approvals where T: 'static + ?core::marker::Sized
 pub fn battersea_ops::Approvals::type_id(&self) -> core::any::TypeId
@@ -279,11 +284,11 @@ pub fn battersea_ops::Approvals::borrow(&self) -> &T
 impl<T> core::borrow::BorrowMut<T> for battersea_ops::Approvals where T: ?core::marker::Sized
 pub fn battersea_ops::Approvals::borrow_mut(&mut self) -> &mut T
 impl<T> core::clone::CloneToUninit for battersea_ops::Approvals where T: core::clone::Clone
-pub unsafe fn battersea_ops::Approvals::clone_to_uninit(&self, dest: *mut u8)
+pub unsafe fn battersea_ops::Approvals::clone_to_uninit(&self, *mut u8)
 impl<T> core::convert::From<T> for battersea_ops::Approvals
-pub fn battersea_ops::Approvals::from(t: T) -> T
+pub fn battersea_ops::Approvals::from(T) -> T
 impl<T> dyn_clone::DynClone for battersea_ops::Approvals where T: core::clone::Clone
-pub fn battersea_ops::Approvals::__clone_box(&self, _: dyn_clone::sealed::Private) -> *mut ()
+pub fn battersea_ops::Approvals::__clone_box(&self, dyn_clone::sealed::Private) -> *mut ()
 impl<T> serde_core::de::DeserializeOwned for battersea_ops::Approvals where T: for<'de> serde_core::de::Deserialize<'de>
 impl<T> typenum::type_operators::Same for battersea_ops::Approvals
 pub type battersea_ops::Approvals::Output = T
@@ -292,18 +297,19 @@ pub struct battersea_ops::BatterseaOps
 impl battersea_ops::BatterseaOps
 pub fn battersea_ops::BatterseaOps::contribution(&self) -> clapham::composition::Contribution
 pub fn battersea_ops::BatterseaOps::new() -> Self
-pub fn battersea_ops::BatterseaOps::with_approvals(self, approvals: alloc::sync::Arc<dyn battersea_ops::ApprovalHost>) -> Self
-pub fn battersea_ops::BatterseaOps::with_flows(self, flows: alloc::sync::Arc<dyn battersea_ops::FlowHost>) -> Self
-pub fn battersea_ops::BatterseaOps::with_mcp(self, mcp: alloc::sync::Arc<dyn battersea_ops::McpHost>) -> Self
-pub fn battersea_ops::BatterseaOps::with_runs(self, runs: alloc::sync::Arc<dyn battersea_ops::RunHost>) -> Self
+pub fn battersea_ops::BatterseaOps::with_approvals(self, alloc::rcs::arc::Arc<dyn battersea_ops::ApprovalHost>) -> Self
+pub fn battersea_ops::BatterseaOps::with_flows(self, alloc::rcs::arc::Arc<dyn battersea_ops::FlowHost>) -> Self
+pub fn battersea_ops::BatterseaOps::with_mcp(self, alloc::rcs::arc::Arc<dyn battersea_ops::McpHost>) -> Self
+pub fn battersea_ops::BatterseaOps::with_runs(self, alloc::rcs::arc::Arc<dyn battersea_ops::RunHost>) -> Self
 impl core::clone::Clone for battersea_ops::BatterseaOps
-pub fn battersea_ops::BatterseaOps::clone(&self) -> battersea_ops::BatterseaOps
+pub fn battersea_ops::BatterseaOps::clone(&self) -> Self
 impl core::default::Default for battersea_ops::BatterseaOps
-pub fn battersea_ops::BatterseaOps::default() -> battersea_ops::BatterseaOps
+pub fn battersea_ops::BatterseaOps::default() -> Self
 impl core::marker::Freeze for battersea_ops::BatterseaOps
 impl core::marker::Send for battersea_ops::BatterseaOps
 impl core::marker::Sync for battersea_ops::BatterseaOps
 impl core::marker::Unpin for battersea_ops::BatterseaOps
+impl core::marker::UnsafeUnpin for battersea_ops::BatterseaOps
 impl !core::panic::unwind_safe::RefUnwindSafe for battersea_ops::BatterseaOps
 impl !core::panic::unwind_safe::UnwindSafe for battersea_ops::BatterseaOps
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_ops::BatterseaOps where ST: ?core::marker::Sized, DT: ?core::marker::Sized
@@ -311,14 +317,14 @@ impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::i
 impl<T, U> core::convert::Into<U> for battersea_ops::BatterseaOps where U: core::convert::From<T>
 pub fn battersea_ops::BatterseaOps::into(self) -> U
 impl<T, U> core::convert::TryFrom<U> for battersea_ops::BatterseaOps where U: core::convert::Into<T>
-pub type battersea_ops::BatterseaOps::Error = core::convert::Infallible
-pub fn battersea_ops::BatterseaOps::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+pub type battersea_ops::BatterseaOps::Error = never
+pub fn battersea_ops::BatterseaOps::try_from(U) -> core::result::Result<T, never>
 impl<T, U> core::convert::TryInto<U> for battersea_ops::BatterseaOps where U: core::convert::TryFrom<T>
 pub type battersea_ops::BatterseaOps::Error = <U as core::convert::TryFrom<T>>::Error
 pub fn battersea_ops::BatterseaOps::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
 impl<T> alloc::borrow::ToOwned for battersea_ops::BatterseaOps where T: core::clone::Clone
 pub type battersea_ops::BatterseaOps::Owned = T
-pub fn battersea_ops::BatterseaOps::clone_into(&self, target: &mut T)
+pub fn battersea_ops::BatterseaOps::clone_into(&self, &mut T)
 pub fn battersea_ops::BatterseaOps::to_owned(&self) -> T
 impl<T> core::any::Any for battersea_ops::BatterseaOps where T: 'static + ?core::marker::Sized
 pub fn battersea_ops::BatterseaOps::type_id(&self) -> core::any::TypeId
@@ -327,11 +333,11 @@ pub fn battersea_ops::BatterseaOps::borrow(&self) -> &T
 impl<T> core::borrow::BorrowMut<T> for battersea_ops::BatterseaOps where T: ?core::marker::Sized
 pub fn battersea_ops::BatterseaOps::borrow_mut(&mut self) -> &mut T
 impl<T> core::clone::CloneToUninit for battersea_ops::BatterseaOps where T: core::clone::Clone
-pub unsafe fn battersea_ops::BatterseaOps::clone_to_uninit(&self, dest: *mut u8)
+pub unsafe fn battersea_ops::BatterseaOps::clone_to_uninit(&self, *mut u8)
 impl<T> core::convert::From<T> for battersea_ops::BatterseaOps
-pub fn battersea_ops::BatterseaOps::from(t: T) -> T
+pub fn battersea_ops::BatterseaOps::from(T) -> T
 impl<T> dyn_clone::DynClone for battersea_ops::BatterseaOps where T: core::clone::Clone
-pub fn battersea_ops::BatterseaOps::__clone_box(&self, _: dyn_clone::sealed::Private) -> *mut ()
+pub fn battersea_ops::BatterseaOps::__clone_box(&self, dyn_clone::sealed::Private) -> *mut ()
 impl<T> typenum::type_operators::Same for battersea_ops::BatterseaOps
 pub type battersea_ops::BatterseaOps::Output = T
 impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_ops::BatterseaOps where T: ?core::marker::Sized
@@ -342,22 +348,23 @@ pub battersea_ops::Decision::expected_revision: u64
 pub battersea_ops::Decision::request_revision: alloc::string::String
 pub battersea_ops::Decision::run_id: alloc::string::String
 impl core::clone::Clone for battersea_ops::Decision
-pub fn battersea_ops::Decision::clone(&self) -> battersea_ops::Decision
+pub fn battersea_ops::Decision::clone(&self) -> Self
 impl core::fmt::Debug for battersea_ops::Decision
-pub fn battersea_ops::Decision::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn battersea_ops::Decision::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 impl schemars::JsonSchema for battersea_ops::Decision
 pub fn battersea_ops::Decision::inline_schema() -> bool
-pub fn battersea_ops::Decision::json_schema(generator: &mut schemars::generate::SchemaGenerator) -> schemars::schema::Schema
+pub fn battersea_ops::Decision::json_schema(&mut schemars::generate::SchemaGenerator) -> schemars::schema::Schema
 pub fn battersea_ops::Decision::schema_id() -> alloc::borrow::Cow<'static, str>
 pub fn battersea_ops::Decision::schema_name() -> alloc::borrow::Cow<'static, str>
 impl serde_core::ser::Serialize for battersea_ops::Decision
-pub fn battersea_ops::Decision::serialize<__S>(&self, __serializer: __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+pub fn battersea_ops::Decision::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
 impl<'de> serde_core::de::Deserialize<'de> for battersea_ops::Decision
-pub fn battersea_ops::Decision::deserialize<__D>(__deserializer: __D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+pub fn battersea_ops::Decision::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
 impl core::marker::Freeze for battersea_ops::Decision
 impl core::marker::Send for battersea_ops::Decision
 impl core::marker::Sync for battersea_ops::Decision
 impl core::marker::Unpin for battersea_ops::Decision
+impl core::marker::UnsafeUnpin for battersea_ops::Decision
 impl core::panic::unwind_safe::RefUnwindSafe for battersea_ops::Decision
 impl core::panic::unwind_safe::UnwindSafe for battersea_ops::Decision
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_ops::Decision where ST: ?core::marker::Sized, DT: ?core::marker::Sized
@@ -365,14 +372,14 @@ impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::i
 impl<T, U> core::convert::Into<U> for battersea_ops::Decision where U: core::convert::From<T>
 pub fn battersea_ops::Decision::into(self) -> U
 impl<T, U> core::convert::TryFrom<U> for battersea_ops::Decision where U: core::convert::Into<T>
-pub type battersea_ops::Decision::Error = core::convert::Infallible
-pub fn battersea_ops::Decision::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+pub type battersea_ops::Decision::Error = never
+pub fn battersea_ops::Decision::try_from(U) -> core::result::Result<T, never>
 impl<T, U> core::convert::TryInto<U> for battersea_ops::Decision where U: core::convert::TryFrom<T>
 pub type battersea_ops::Decision::Error = <U as core::convert::TryFrom<T>>::Error
 pub fn battersea_ops::Decision::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
 impl<T> alloc::borrow::ToOwned for battersea_ops::Decision where T: core::clone::Clone
 pub type battersea_ops::Decision::Owned = T
-pub fn battersea_ops::Decision::clone_into(&self, target: &mut T)
+pub fn battersea_ops::Decision::clone_into(&self, &mut T)
 pub fn battersea_ops::Decision::to_owned(&self) -> T
 impl<T> core::any::Any for battersea_ops::Decision where T: 'static + ?core::marker::Sized
 pub fn battersea_ops::Decision::type_id(&self) -> core::any::TypeId
@@ -381,11 +388,11 @@ pub fn battersea_ops::Decision::borrow(&self) -> &T
 impl<T> core::borrow::BorrowMut<T> for battersea_ops::Decision where T: ?core::marker::Sized
 pub fn battersea_ops::Decision::borrow_mut(&mut self) -> &mut T
 impl<T> core::clone::CloneToUninit for battersea_ops::Decision where T: core::clone::Clone
-pub unsafe fn battersea_ops::Decision::clone_to_uninit(&self, dest: *mut u8)
+pub unsafe fn battersea_ops::Decision::clone_to_uninit(&self, *mut u8)
 impl<T> core::convert::From<T> for battersea_ops::Decision
-pub fn battersea_ops::Decision::from(t: T) -> T
+pub fn battersea_ops::Decision::from(T) -> T
 impl<T> dyn_clone::DynClone for battersea_ops::Decision where T: core::clone::Clone
-pub fn battersea_ops::Decision::__clone_box(&self, _: dyn_clone::sealed::Private) -> *mut ()
+pub fn battersea_ops::Decision::__clone_box(&self, dyn_clone::sealed::Private) -> *mut ()
 impl<T> serde_core::de::DeserializeOwned for battersea_ops::Decision where T: for<'de> serde_core::de::Deserialize<'de>
 impl<T> typenum::type_operators::Same for battersea_ops::Decision
 pub type battersea_ops::Decision::Output = T
@@ -393,22 +400,23 @@ impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusi
 pub struct battersea_ops::FlowKey
 pub battersea_ops::FlowKey::flow_key: alloc::string::String
 impl core::clone::Clone for battersea_ops::FlowKey
-pub fn battersea_ops::FlowKey::clone(&self) -> battersea_ops::FlowKey
+pub fn battersea_ops::FlowKey::clone(&self) -> Self
 impl core::fmt::Debug for battersea_ops::FlowKey
-pub fn battersea_ops::FlowKey::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn battersea_ops::FlowKey::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 impl schemars::JsonSchema for battersea_ops::FlowKey
 pub fn battersea_ops::FlowKey::inline_schema() -> bool
-pub fn battersea_ops::FlowKey::json_schema(generator: &mut schemars::generate::SchemaGenerator) -> schemars::schema::Schema
+pub fn battersea_ops::FlowKey::json_schema(&mut schemars::generate::SchemaGenerator) -> schemars::schema::Schema
 pub fn battersea_ops::FlowKey::schema_id() -> alloc::borrow::Cow<'static, str>
 pub fn battersea_ops::FlowKey::schema_name() -> alloc::borrow::Cow<'static, str>
 impl serde_core::ser::Serialize for battersea_ops::FlowKey
-pub fn battersea_ops::FlowKey::serialize<__S>(&self, __serializer: __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+pub fn battersea_ops::FlowKey::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
 impl<'de> serde_core::de::Deserialize<'de> for battersea_ops::FlowKey
-pub fn battersea_ops::FlowKey::deserialize<__D>(__deserializer: __D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+pub fn battersea_ops::FlowKey::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
 impl core::marker::Freeze for battersea_ops::FlowKey
 impl core::marker::Send for battersea_ops::FlowKey
 impl core::marker::Sync for battersea_ops::FlowKey
 impl core::marker::Unpin for battersea_ops::FlowKey
+impl core::marker::UnsafeUnpin for battersea_ops::FlowKey
 impl core::panic::unwind_safe::RefUnwindSafe for battersea_ops::FlowKey
 impl core::panic::unwind_safe::UnwindSafe for battersea_ops::FlowKey
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_ops::FlowKey where ST: ?core::marker::Sized, DT: ?core::marker::Sized
@@ -416,14 +424,14 @@ impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::i
 impl<T, U> core::convert::Into<U> for battersea_ops::FlowKey where U: core::convert::From<T>
 pub fn battersea_ops::FlowKey::into(self) -> U
 impl<T, U> core::convert::TryFrom<U> for battersea_ops::FlowKey where U: core::convert::Into<T>
-pub type battersea_ops::FlowKey::Error = core::convert::Infallible
-pub fn battersea_ops::FlowKey::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+pub type battersea_ops::FlowKey::Error = never
+pub fn battersea_ops::FlowKey::try_from(U) -> core::result::Result<T, never>
 impl<T, U> core::convert::TryInto<U> for battersea_ops::FlowKey where U: core::convert::TryFrom<T>
 pub type battersea_ops::FlowKey::Error = <U as core::convert::TryFrom<T>>::Error
 pub fn battersea_ops::FlowKey::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
 impl<T> alloc::borrow::ToOwned for battersea_ops::FlowKey where T: core::clone::Clone
 pub type battersea_ops::FlowKey::Owned = T
-pub fn battersea_ops::FlowKey::clone_into(&self, target: &mut T)
+pub fn battersea_ops::FlowKey::clone_into(&self, &mut T)
 pub fn battersea_ops::FlowKey::to_owned(&self) -> T
 impl<T> core::any::Any for battersea_ops::FlowKey where T: 'static + ?core::marker::Sized
 pub fn battersea_ops::FlowKey::type_id(&self) -> core::any::TypeId
@@ -432,11 +440,11 @@ pub fn battersea_ops::FlowKey::borrow(&self) -> &T
 impl<T> core::borrow::BorrowMut<T> for battersea_ops::FlowKey where T: ?core::marker::Sized
 pub fn battersea_ops::FlowKey::borrow_mut(&mut self) -> &mut T
 impl<T> core::clone::CloneToUninit for battersea_ops::FlowKey where T: core::clone::Clone
-pub unsafe fn battersea_ops::FlowKey::clone_to_uninit(&self, dest: *mut u8)
+pub unsafe fn battersea_ops::FlowKey::clone_to_uninit(&self, *mut u8)
 impl<T> core::convert::From<T> for battersea_ops::FlowKey
-pub fn battersea_ops::FlowKey::from(t: T) -> T
+pub fn battersea_ops::FlowKey::from(T) -> T
 impl<T> dyn_clone::DynClone for battersea_ops::FlowKey where T: core::clone::Clone
-pub fn battersea_ops::FlowKey::__clone_box(&self, _: dyn_clone::sealed::Private) -> *mut ()
+pub fn battersea_ops::FlowKey::__clone_box(&self, dyn_clone::sealed::Private) -> *mut ()
 impl<T> serde_core::de::DeserializeOwned for battersea_ops::FlowKey where T: for<'de> serde_core::de::Deserialize<'de>
 impl<T> typenum::type_operators::Same for battersea_ops::FlowKey
 pub type battersea_ops::FlowKey::Output = T
@@ -446,25 +454,26 @@ pub battersea_ops::FlowSummary::flow_key: alloc::string::String
 pub battersea_ops::FlowSummary::title: alloc::string::String
 pub battersea_ops::FlowSummary::unavailable_reason: core::option::Option<alloc::string::String>
 impl core::clone::Clone for battersea_ops::FlowSummary
-pub fn battersea_ops::FlowSummary::clone(&self) -> battersea_ops::FlowSummary
+pub fn battersea_ops::FlowSummary::clone(&self) -> Self
 impl core::cmp::PartialEq for battersea_ops::FlowSummary
-pub fn battersea_ops::FlowSummary::eq(&self, other: &battersea_ops::FlowSummary) -> bool
+pub fn battersea_ops::FlowSummary::eq(&self, &Self) -> bool
 impl core::fmt::Debug for battersea_ops::FlowSummary
-pub fn battersea_ops::FlowSummary::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn battersea_ops::FlowSummary::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 impl core::marker::StructuralPartialEq for battersea_ops::FlowSummary
 impl schemars::JsonSchema for battersea_ops::FlowSummary
 pub fn battersea_ops::FlowSummary::inline_schema() -> bool
-pub fn battersea_ops::FlowSummary::json_schema(generator: &mut schemars::generate::SchemaGenerator) -> schemars::schema::Schema
+pub fn battersea_ops::FlowSummary::json_schema(&mut schemars::generate::SchemaGenerator) -> schemars::schema::Schema
 pub fn battersea_ops::FlowSummary::schema_id() -> alloc::borrow::Cow<'static, str>
 pub fn battersea_ops::FlowSummary::schema_name() -> alloc::borrow::Cow<'static, str>
 impl serde_core::ser::Serialize for battersea_ops::FlowSummary
-pub fn battersea_ops::FlowSummary::serialize<__S>(&self, __serializer: __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+pub fn battersea_ops::FlowSummary::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
 impl<'de> serde_core::de::Deserialize<'de> for battersea_ops::FlowSummary
-pub fn battersea_ops::FlowSummary::deserialize<__D>(__deserializer: __D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+pub fn battersea_ops::FlowSummary::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
 impl core::marker::Freeze for battersea_ops::FlowSummary
 impl core::marker::Send for battersea_ops::FlowSummary
 impl core::marker::Sync for battersea_ops::FlowSummary
 impl core::marker::Unpin for battersea_ops::FlowSummary
+impl core::marker::UnsafeUnpin for battersea_ops::FlowSummary
 impl core::panic::unwind_safe::RefUnwindSafe for battersea_ops::FlowSummary
 impl core::panic::unwind_safe::UnwindSafe for battersea_ops::FlowSummary
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_ops::FlowSummary where ST: ?core::marker::Sized, DT: ?core::marker::Sized
@@ -472,14 +481,14 @@ impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::i
 impl<T, U> core::convert::Into<U> for battersea_ops::FlowSummary where U: core::convert::From<T>
 pub fn battersea_ops::FlowSummary::into(self) -> U
 impl<T, U> core::convert::TryFrom<U> for battersea_ops::FlowSummary where U: core::convert::Into<T>
-pub type battersea_ops::FlowSummary::Error = core::convert::Infallible
-pub fn battersea_ops::FlowSummary::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+pub type battersea_ops::FlowSummary::Error = never
+pub fn battersea_ops::FlowSummary::try_from(U) -> core::result::Result<T, never>
 impl<T, U> core::convert::TryInto<U> for battersea_ops::FlowSummary where U: core::convert::TryFrom<T>
 pub type battersea_ops::FlowSummary::Error = <U as core::convert::TryFrom<T>>::Error
 pub fn battersea_ops::FlowSummary::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
 impl<T> alloc::borrow::ToOwned for battersea_ops::FlowSummary where T: core::clone::Clone
 pub type battersea_ops::FlowSummary::Owned = T
-pub fn battersea_ops::FlowSummary::clone_into(&self, target: &mut T)
+pub fn battersea_ops::FlowSummary::clone_into(&self, &mut T)
 pub fn battersea_ops::FlowSummary::to_owned(&self) -> T
 impl<T> core::any::Any for battersea_ops::FlowSummary where T: 'static + ?core::marker::Sized
 pub fn battersea_ops::FlowSummary::type_id(&self) -> core::any::TypeId
@@ -488,11 +497,11 @@ pub fn battersea_ops::FlowSummary::borrow(&self) -> &T
 impl<T> core::borrow::BorrowMut<T> for battersea_ops::FlowSummary where T: ?core::marker::Sized
 pub fn battersea_ops::FlowSummary::borrow_mut(&mut self) -> &mut T
 impl<T> core::clone::CloneToUninit for battersea_ops::FlowSummary where T: core::clone::Clone
-pub unsafe fn battersea_ops::FlowSummary::clone_to_uninit(&self, dest: *mut u8)
+pub unsafe fn battersea_ops::FlowSummary::clone_to_uninit(&self, *mut u8)
 impl<T> core::convert::From<T> for battersea_ops::FlowSummary
-pub fn battersea_ops::FlowSummary::from(t: T) -> T
+pub fn battersea_ops::FlowSummary::from(T) -> T
 impl<T> dyn_clone::DynClone for battersea_ops::FlowSummary where T: core::clone::Clone
-pub fn battersea_ops::FlowSummary::__clone_box(&self, _: dyn_clone::sealed::Private) -> *mut ()
+pub fn battersea_ops::FlowSummary::__clone_box(&self, dyn_clone::sealed::Private) -> *mut ()
 impl<T> serde_core::de::DeserializeOwned for battersea_ops::FlowSummary where T: for<'de> serde_core::de::Deserialize<'de>
 impl<T> typenum::type_operators::Same for battersea_ops::FlowSummary
 pub type battersea_ops::FlowSummary::Output = T
@@ -503,25 +512,26 @@ pub battersea_ops::FlowUpgrade::document: battersea_flow::types::FlowDocument
 pub battersea_ops::FlowUpgrade::flow_key: alloc::string::String
 pub battersea_ops::FlowUpgrade::source_revision: alloc::string::String
 impl core::clone::Clone for battersea_ops::FlowUpgrade
-pub fn battersea_ops::FlowUpgrade::clone(&self) -> battersea_ops::FlowUpgrade
+pub fn battersea_ops::FlowUpgrade::clone(&self) -> Self
 impl core::cmp::PartialEq for battersea_ops::FlowUpgrade
-pub fn battersea_ops::FlowUpgrade::eq(&self, other: &battersea_ops::FlowUpgrade) -> bool
+pub fn battersea_ops::FlowUpgrade::eq(&self, &Self) -> bool
 impl core::fmt::Debug for battersea_ops::FlowUpgrade
-pub fn battersea_ops::FlowUpgrade::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn battersea_ops::FlowUpgrade::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 impl core::marker::StructuralPartialEq for battersea_ops::FlowUpgrade
 impl schemars::JsonSchema for battersea_ops::FlowUpgrade
 pub fn battersea_ops::FlowUpgrade::inline_schema() -> bool
-pub fn battersea_ops::FlowUpgrade::json_schema(generator: &mut schemars::generate::SchemaGenerator) -> schemars::schema::Schema
+pub fn battersea_ops::FlowUpgrade::json_schema(&mut schemars::generate::SchemaGenerator) -> schemars::schema::Schema
 pub fn battersea_ops::FlowUpgrade::schema_id() -> alloc::borrow::Cow<'static, str>
 pub fn battersea_ops::FlowUpgrade::schema_name() -> alloc::borrow::Cow<'static, str>
 impl serde_core::ser::Serialize for battersea_ops::FlowUpgrade
-pub fn battersea_ops::FlowUpgrade::serialize<__S>(&self, __serializer: __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+pub fn battersea_ops::FlowUpgrade::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
 impl<'de> serde_core::de::Deserialize<'de> for battersea_ops::FlowUpgrade
-pub fn battersea_ops::FlowUpgrade::deserialize<__D>(__deserializer: __D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+pub fn battersea_ops::FlowUpgrade::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
 impl core::marker::Freeze for battersea_ops::FlowUpgrade
 impl core::marker::Send for battersea_ops::FlowUpgrade
 impl core::marker::Sync for battersea_ops::FlowUpgrade
 impl core::marker::Unpin for battersea_ops::FlowUpgrade
+impl core::marker::UnsafeUnpin for battersea_ops::FlowUpgrade
 impl core::panic::unwind_safe::RefUnwindSafe for battersea_ops::FlowUpgrade
 impl core::panic::unwind_safe::UnwindSafe for battersea_ops::FlowUpgrade
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_ops::FlowUpgrade where ST: ?core::marker::Sized, DT: ?core::marker::Sized
@@ -529,14 +539,14 @@ impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::i
 impl<T, U> core::convert::Into<U> for battersea_ops::FlowUpgrade where U: core::convert::From<T>
 pub fn battersea_ops::FlowUpgrade::into(self) -> U
 impl<T, U> core::convert::TryFrom<U> for battersea_ops::FlowUpgrade where U: core::convert::Into<T>
-pub type battersea_ops::FlowUpgrade::Error = core::convert::Infallible
-pub fn battersea_ops::FlowUpgrade::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+pub type battersea_ops::FlowUpgrade::Error = never
+pub fn battersea_ops::FlowUpgrade::try_from(U) -> core::result::Result<T, never>
 impl<T, U> core::convert::TryInto<U> for battersea_ops::FlowUpgrade where U: core::convert::TryFrom<T>
 pub type battersea_ops::FlowUpgrade::Error = <U as core::convert::TryFrom<T>>::Error
 pub fn battersea_ops::FlowUpgrade::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
 impl<T> alloc::borrow::ToOwned for battersea_ops::FlowUpgrade where T: core::clone::Clone
 pub type battersea_ops::FlowUpgrade::Owned = T
-pub fn battersea_ops::FlowUpgrade::clone_into(&self, target: &mut T)
+pub fn battersea_ops::FlowUpgrade::clone_into(&self, &mut T)
 pub fn battersea_ops::FlowUpgrade::to_owned(&self) -> T
 impl<T> core::any::Any for battersea_ops::FlowUpgrade where T: 'static + ?core::marker::Sized
 pub fn battersea_ops::FlowUpgrade::type_id(&self) -> core::any::TypeId
@@ -545,11 +555,11 @@ pub fn battersea_ops::FlowUpgrade::borrow(&self) -> &T
 impl<T> core::borrow::BorrowMut<T> for battersea_ops::FlowUpgrade where T: ?core::marker::Sized
 pub fn battersea_ops::FlowUpgrade::borrow_mut(&mut self) -> &mut T
 impl<T> core::clone::CloneToUninit for battersea_ops::FlowUpgrade where T: core::clone::Clone
-pub unsafe fn battersea_ops::FlowUpgrade::clone_to_uninit(&self, dest: *mut u8)
+pub unsafe fn battersea_ops::FlowUpgrade::clone_to_uninit(&self, *mut u8)
 impl<T> core::convert::From<T> for battersea_ops::FlowUpgrade
-pub fn battersea_ops::FlowUpgrade::from(t: T) -> T
+pub fn battersea_ops::FlowUpgrade::from(T) -> T
 impl<T> dyn_clone::DynClone for battersea_ops::FlowUpgrade where T: core::clone::Clone
-pub fn battersea_ops::FlowUpgrade::__clone_box(&self, _: dyn_clone::sealed::Private) -> *mut ()
+pub fn battersea_ops::FlowUpgrade::__clone_box(&self, dyn_clone::sealed::Private) -> *mut ()
 impl<T> serde_core::de::DeserializeOwned for battersea_ops::FlowUpgrade where T: for<'de> serde_core::de::Deserialize<'de>
 impl<T> typenum::type_operators::Same for battersea_ops::FlowUpgrade
 pub type battersea_ops::FlowUpgrade::Output = T
@@ -557,22 +567,23 @@ impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusi
 pub struct battersea_ops::Flows
 pub battersea_ops::Flows::flows: alloc::vec::Vec<battersea_ops::FlowSummary>
 impl core::clone::Clone for battersea_ops::Flows
-pub fn battersea_ops::Flows::clone(&self) -> battersea_ops::Flows
+pub fn battersea_ops::Flows::clone(&self) -> Self
 impl core::fmt::Debug for battersea_ops::Flows
-pub fn battersea_ops::Flows::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn battersea_ops::Flows::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 impl schemars::JsonSchema for battersea_ops::Flows
 pub fn battersea_ops::Flows::inline_schema() -> bool
-pub fn battersea_ops::Flows::json_schema(generator: &mut schemars::generate::SchemaGenerator) -> schemars::schema::Schema
+pub fn battersea_ops::Flows::json_schema(&mut schemars::generate::SchemaGenerator) -> schemars::schema::Schema
 pub fn battersea_ops::Flows::schema_id() -> alloc::borrow::Cow<'static, str>
 pub fn battersea_ops::Flows::schema_name() -> alloc::borrow::Cow<'static, str>
 impl serde_core::ser::Serialize for battersea_ops::Flows
-pub fn battersea_ops::Flows::serialize<__S>(&self, __serializer: __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+pub fn battersea_ops::Flows::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
 impl<'de> serde_core::de::Deserialize<'de> for battersea_ops::Flows
-pub fn battersea_ops::Flows::deserialize<__D>(__deserializer: __D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+pub fn battersea_ops::Flows::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
 impl core::marker::Freeze for battersea_ops::Flows
 impl core::marker::Send for battersea_ops::Flows
 impl core::marker::Sync for battersea_ops::Flows
 impl core::marker::Unpin for battersea_ops::Flows
+impl core::marker::UnsafeUnpin for battersea_ops::Flows
 impl core::panic::unwind_safe::RefUnwindSafe for battersea_ops::Flows
 impl core::panic::unwind_safe::UnwindSafe for battersea_ops::Flows
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_ops::Flows where ST: ?core::marker::Sized, DT: ?core::marker::Sized
@@ -580,14 +591,14 @@ impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::i
 impl<T, U> core::convert::Into<U> for battersea_ops::Flows where U: core::convert::From<T>
 pub fn battersea_ops::Flows::into(self) -> U
 impl<T, U> core::convert::TryFrom<U> for battersea_ops::Flows where U: core::convert::Into<T>
-pub type battersea_ops::Flows::Error = core::convert::Infallible
-pub fn battersea_ops::Flows::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+pub type battersea_ops::Flows::Error = never
+pub fn battersea_ops::Flows::try_from(U) -> core::result::Result<T, never>
 impl<T, U> core::convert::TryInto<U> for battersea_ops::Flows where U: core::convert::TryFrom<T>
 pub type battersea_ops::Flows::Error = <U as core::convert::TryFrom<T>>::Error
 pub fn battersea_ops::Flows::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
 impl<T> alloc::borrow::ToOwned for battersea_ops::Flows where T: core::clone::Clone
 pub type battersea_ops::Flows::Owned = T
-pub fn battersea_ops::Flows::clone_into(&self, target: &mut T)
+pub fn battersea_ops::Flows::clone_into(&self, &mut T)
 pub fn battersea_ops::Flows::to_owned(&self) -> T
 impl<T> core::any::Any for battersea_ops::Flows where T: 'static + ?core::marker::Sized
 pub fn battersea_ops::Flows::type_id(&self) -> core::any::TypeId
@@ -596,11 +607,11 @@ pub fn battersea_ops::Flows::borrow(&self) -> &T
 impl<T> core::borrow::BorrowMut<T> for battersea_ops::Flows where T: ?core::marker::Sized
 pub fn battersea_ops::Flows::borrow_mut(&mut self) -> &mut T
 impl<T> core::clone::CloneToUninit for battersea_ops::Flows where T: core::clone::Clone
-pub unsafe fn battersea_ops::Flows::clone_to_uninit(&self, dest: *mut u8)
+pub unsafe fn battersea_ops::Flows::clone_to_uninit(&self, *mut u8)
 impl<T> core::convert::From<T> for battersea_ops::Flows
-pub fn battersea_ops::Flows::from(t: T) -> T
+pub fn battersea_ops::Flows::from(T) -> T
 impl<T> dyn_clone::DynClone for battersea_ops::Flows where T: core::clone::Clone
-pub fn battersea_ops::Flows::__clone_box(&self, _: dyn_clone::sealed::Private) -> *mut ()
+pub fn battersea_ops::Flows::__clone_box(&self, dyn_clone::sealed::Private) -> *mut ()
 impl<T> serde_core::de::DeserializeOwned for battersea_ops::Flows where T: for<'de> serde_core::de::Deserialize<'de>
 impl<T> typenum::type_operators::Same for battersea_ops::Flows
 pub type battersea_ops::Flows::Output = T
@@ -610,45 +621,46 @@ pub battersea_ops::GrantIdentity::client_id: core::option::Option<alloc::string:
 pub battersea_ops::GrantIdentity::issuer: alloc::string::String
 pub battersea_ops::GrantIdentity::subject: alloc::string::String
 impl battersea_ops::GrantIdentity
-pub fn battersea_ops::GrantIdentity::of(auth: &clapham::auth::OAuthContext) -> Self
+pub fn battersea_ops::GrantIdentity::of(&clapham::auth::OAuthContext) -> Self
 impl core::clone::Clone for battersea_ops::GrantIdentity
-pub fn battersea_ops::GrantIdentity::clone(&self) -> battersea_ops::GrantIdentity
+pub fn battersea_ops::GrantIdentity::clone(&self) -> Self
 impl core::cmp::Eq for battersea_ops::GrantIdentity
 impl core::cmp::PartialEq for battersea_ops::GrantIdentity
-pub fn battersea_ops::GrantIdentity::eq(&self, other: &battersea_ops::GrantIdentity) -> bool
+pub fn battersea_ops::GrantIdentity::eq(&self, &Self) -> bool
 impl core::fmt::Debug for battersea_ops::GrantIdentity
-pub fn battersea_ops::GrantIdentity::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn battersea_ops::GrantIdentity::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 impl core::marker::StructuralPartialEq for battersea_ops::GrantIdentity
 impl schemars::JsonSchema for battersea_ops::GrantIdentity
 pub fn battersea_ops::GrantIdentity::inline_schema() -> bool
-pub fn battersea_ops::GrantIdentity::json_schema(generator: &mut schemars::generate::SchemaGenerator) -> schemars::schema::Schema
+pub fn battersea_ops::GrantIdentity::json_schema(&mut schemars::generate::SchemaGenerator) -> schemars::schema::Schema
 pub fn battersea_ops::GrantIdentity::schema_id() -> alloc::borrow::Cow<'static, str>
 pub fn battersea_ops::GrantIdentity::schema_name() -> alloc::borrow::Cow<'static, str>
 impl serde_core::ser::Serialize for battersea_ops::GrantIdentity
-pub fn battersea_ops::GrantIdentity::serialize<__S>(&self, __serializer: __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+pub fn battersea_ops::GrantIdentity::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
 impl<'de> serde_core::de::Deserialize<'de> for battersea_ops::GrantIdentity
-pub fn battersea_ops::GrantIdentity::deserialize<__D>(__deserializer: __D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+pub fn battersea_ops::GrantIdentity::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
 impl core::marker::Freeze for battersea_ops::GrantIdentity
 impl core::marker::Send for battersea_ops::GrantIdentity
 impl core::marker::Sync for battersea_ops::GrantIdentity
 impl core::marker::Unpin for battersea_ops::GrantIdentity
+impl core::marker::UnsafeUnpin for battersea_ops::GrantIdentity
 impl core::panic::unwind_safe::RefUnwindSafe for battersea_ops::GrantIdentity
 impl core::panic::unwind_safe::UnwindSafe for battersea_ops::GrantIdentity
 impl<Q, K> equivalent::Equivalent<K> for battersea_ops::GrantIdentity where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
-pub fn battersea_ops::GrantIdentity::equivalent(&self, key: &K) -> bool
+pub fn battersea_ops::GrantIdentity::equivalent(&self, &K) -> bool
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_ops::GrantIdentity where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_ops::GrantIdentity where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<T, U> core::convert::Into<U> for battersea_ops::GrantIdentity where U: core::convert::From<T>
 pub fn battersea_ops::GrantIdentity::into(self) -> U
 impl<T, U> core::convert::TryFrom<U> for battersea_ops::GrantIdentity where U: core::convert::Into<T>
-pub type battersea_ops::GrantIdentity::Error = core::convert::Infallible
-pub fn battersea_ops::GrantIdentity::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+pub type battersea_ops::GrantIdentity::Error = never
+pub fn battersea_ops::GrantIdentity::try_from(U) -> core::result::Result<T, never>
 impl<T, U> core::convert::TryInto<U> for battersea_ops::GrantIdentity where U: core::convert::TryFrom<T>
 pub type battersea_ops::GrantIdentity::Error = <U as core::convert::TryFrom<T>>::Error
 pub fn battersea_ops::GrantIdentity::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
 impl<T> alloc::borrow::ToOwned for battersea_ops::GrantIdentity where T: core::clone::Clone
 pub type battersea_ops::GrantIdentity::Owned = T
-pub fn battersea_ops::GrantIdentity::clone_into(&self, target: &mut T)
+pub fn battersea_ops::GrantIdentity::clone_into(&self, &mut T)
 pub fn battersea_ops::GrantIdentity::to_owned(&self) -> T
 impl<T> core::any::Any for battersea_ops::GrantIdentity where T: 'static + ?core::marker::Sized
 pub fn battersea_ops::GrantIdentity::type_id(&self) -> core::any::TypeId
@@ -657,11 +669,11 @@ pub fn battersea_ops::GrantIdentity::borrow(&self) -> &T
 impl<T> core::borrow::BorrowMut<T> for battersea_ops::GrantIdentity where T: ?core::marker::Sized
 pub fn battersea_ops::GrantIdentity::borrow_mut(&mut self) -> &mut T
 impl<T> core::clone::CloneToUninit for battersea_ops::GrantIdentity where T: core::clone::Clone
-pub unsafe fn battersea_ops::GrantIdentity::clone_to_uninit(&self, dest: *mut u8)
+pub unsafe fn battersea_ops::GrantIdentity::clone_to_uninit(&self, *mut u8)
 impl<T> core::convert::From<T> for battersea_ops::GrantIdentity
-pub fn battersea_ops::GrantIdentity::from(t: T) -> T
+pub fn battersea_ops::GrantIdentity::from(T) -> T
 impl<T> dyn_clone::DynClone for battersea_ops::GrantIdentity where T: core::clone::Clone
-pub fn battersea_ops::GrantIdentity::__clone_box(&self, _: dyn_clone::sealed::Private) -> *mut ()
+pub fn battersea_ops::GrantIdentity::__clone_box(&self, dyn_clone::sealed::Private) -> *mut ()
 impl<T> serde_core::de::DeserializeOwned for battersea_ops::GrantIdentity where T: for<'de> serde_core::de::Deserialize<'de>
 impl<T> typenum::type_operators::Same for battersea_ops::GrantIdentity
 pub type battersea_ops::GrantIdentity::Output = T
@@ -671,43 +683,44 @@ pub battersea_ops::McpServer::binding_revision: alloc::string::String
 pub battersea_ops::McpServer::credential_scope_revision: alloc::string::String
 pub battersea_ops::McpServer::server_id: alloc::string::String
 impl core::clone::Clone for battersea_ops::McpServer
-pub fn battersea_ops::McpServer::clone(&self) -> battersea_ops::McpServer
+pub fn battersea_ops::McpServer::clone(&self) -> Self
 impl core::cmp::Eq for battersea_ops::McpServer
 impl core::cmp::PartialEq for battersea_ops::McpServer
-pub fn battersea_ops::McpServer::eq(&self, other: &battersea_ops::McpServer) -> bool
+pub fn battersea_ops::McpServer::eq(&self, &Self) -> bool
 impl core::fmt::Debug for battersea_ops::McpServer
-pub fn battersea_ops::McpServer::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn battersea_ops::McpServer::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 impl core::marker::StructuralPartialEq for battersea_ops::McpServer
 impl schemars::JsonSchema for battersea_ops::McpServer
 pub fn battersea_ops::McpServer::inline_schema() -> bool
-pub fn battersea_ops::McpServer::json_schema(generator: &mut schemars::generate::SchemaGenerator) -> schemars::schema::Schema
+pub fn battersea_ops::McpServer::json_schema(&mut schemars::generate::SchemaGenerator) -> schemars::schema::Schema
 pub fn battersea_ops::McpServer::schema_id() -> alloc::borrow::Cow<'static, str>
 pub fn battersea_ops::McpServer::schema_name() -> alloc::borrow::Cow<'static, str>
 impl serde_core::ser::Serialize for battersea_ops::McpServer
-pub fn battersea_ops::McpServer::serialize<__S>(&self, __serializer: __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+pub fn battersea_ops::McpServer::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
 impl<'de> serde_core::de::Deserialize<'de> for battersea_ops::McpServer
-pub fn battersea_ops::McpServer::deserialize<__D>(__deserializer: __D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+pub fn battersea_ops::McpServer::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
 impl core::marker::Freeze for battersea_ops::McpServer
 impl core::marker::Send for battersea_ops::McpServer
 impl core::marker::Sync for battersea_ops::McpServer
 impl core::marker::Unpin for battersea_ops::McpServer
+impl core::marker::UnsafeUnpin for battersea_ops::McpServer
 impl core::panic::unwind_safe::RefUnwindSafe for battersea_ops::McpServer
 impl core::panic::unwind_safe::UnwindSafe for battersea_ops::McpServer
 impl<Q, K> equivalent::Equivalent<K> for battersea_ops::McpServer where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
-pub fn battersea_ops::McpServer::equivalent(&self, key: &K) -> bool
+pub fn battersea_ops::McpServer::equivalent(&self, &K) -> bool
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_ops::McpServer where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_ops::McpServer where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<T, U> core::convert::Into<U> for battersea_ops::McpServer where U: core::convert::From<T>
 pub fn battersea_ops::McpServer::into(self) -> U
 impl<T, U> core::convert::TryFrom<U> for battersea_ops::McpServer where U: core::convert::Into<T>
-pub type battersea_ops::McpServer::Error = core::convert::Infallible
-pub fn battersea_ops::McpServer::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+pub type battersea_ops::McpServer::Error = never
+pub fn battersea_ops::McpServer::try_from(U) -> core::result::Result<T, never>
 impl<T, U> core::convert::TryInto<U> for battersea_ops::McpServer where U: core::convert::TryFrom<T>
 pub type battersea_ops::McpServer::Error = <U as core::convert::TryFrom<T>>::Error
 pub fn battersea_ops::McpServer::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
 impl<T> alloc::borrow::ToOwned for battersea_ops::McpServer where T: core::clone::Clone
 pub type battersea_ops::McpServer::Owned = T
-pub fn battersea_ops::McpServer::clone_into(&self, target: &mut T)
+pub fn battersea_ops::McpServer::clone_into(&self, &mut T)
 pub fn battersea_ops::McpServer::to_owned(&self) -> T
 impl<T> core::any::Any for battersea_ops::McpServer where T: 'static + ?core::marker::Sized
 pub fn battersea_ops::McpServer::type_id(&self) -> core::any::TypeId
@@ -716,11 +729,11 @@ pub fn battersea_ops::McpServer::borrow(&self) -> &T
 impl<T> core::borrow::BorrowMut<T> for battersea_ops::McpServer where T: ?core::marker::Sized
 pub fn battersea_ops::McpServer::borrow_mut(&mut self) -> &mut T
 impl<T> core::clone::CloneToUninit for battersea_ops::McpServer where T: core::clone::Clone
-pub unsafe fn battersea_ops::McpServer::clone_to_uninit(&self, dest: *mut u8)
+pub unsafe fn battersea_ops::McpServer::clone_to_uninit(&self, *mut u8)
 impl<T> core::convert::From<T> for battersea_ops::McpServer
-pub fn battersea_ops::McpServer::from(t: T) -> T
+pub fn battersea_ops::McpServer::from(T) -> T
 impl<T> dyn_clone::DynClone for battersea_ops::McpServer where T: core::clone::Clone
-pub fn battersea_ops::McpServer::__clone_box(&self, _: dyn_clone::sealed::Private) -> *mut ()
+pub fn battersea_ops::McpServer::__clone_box(&self, dyn_clone::sealed::Private) -> *mut ()
 impl<T> serde_core::de::DeserializeOwned for battersea_ops::McpServer where T: for<'de> serde_core::de::Deserialize<'de>
 impl<T> typenum::type_operators::Same for battersea_ops::McpServer
 pub type battersea_ops::McpServer::Output = T
@@ -728,22 +741,23 @@ impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusi
 pub struct battersea_ops::McpServerId
 pub battersea_ops::McpServerId::server_id: alloc::string::String
 impl core::clone::Clone for battersea_ops::McpServerId
-pub fn battersea_ops::McpServerId::clone(&self) -> battersea_ops::McpServerId
+pub fn battersea_ops::McpServerId::clone(&self) -> Self
 impl core::fmt::Debug for battersea_ops::McpServerId
-pub fn battersea_ops::McpServerId::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn battersea_ops::McpServerId::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 impl schemars::JsonSchema for battersea_ops::McpServerId
 pub fn battersea_ops::McpServerId::inline_schema() -> bool
-pub fn battersea_ops::McpServerId::json_schema(generator: &mut schemars::generate::SchemaGenerator) -> schemars::schema::Schema
+pub fn battersea_ops::McpServerId::json_schema(&mut schemars::generate::SchemaGenerator) -> schemars::schema::Schema
 pub fn battersea_ops::McpServerId::schema_id() -> alloc::borrow::Cow<'static, str>
 pub fn battersea_ops::McpServerId::schema_name() -> alloc::borrow::Cow<'static, str>
 impl serde_core::ser::Serialize for battersea_ops::McpServerId
-pub fn battersea_ops::McpServerId::serialize<__S>(&self, __serializer: __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+pub fn battersea_ops::McpServerId::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
 impl<'de> serde_core::de::Deserialize<'de> for battersea_ops::McpServerId
-pub fn battersea_ops::McpServerId::deserialize<__D>(__deserializer: __D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+pub fn battersea_ops::McpServerId::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
 impl core::marker::Freeze for battersea_ops::McpServerId
 impl core::marker::Send for battersea_ops::McpServerId
 impl core::marker::Sync for battersea_ops::McpServerId
 impl core::marker::Unpin for battersea_ops::McpServerId
+impl core::marker::UnsafeUnpin for battersea_ops::McpServerId
 impl core::panic::unwind_safe::RefUnwindSafe for battersea_ops::McpServerId
 impl core::panic::unwind_safe::UnwindSafe for battersea_ops::McpServerId
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_ops::McpServerId where ST: ?core::marker::Sized, DT: ?core::marker::Sized
@@ -751,14 +765,14 @@ impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::i
 impl<T, U> core::convert::Into<U> for battersea_ops::McpServerId where U: core::convert::From<T>
 pub fn battersea_ops::McpServerId::into(self) -> U
 impl<T, U> core::convert::TryFrom<U> for battersea_ops::McpServerId where U: core::convert::Into<T>
-pub type battersea_ops::McpServerId::Error = core::convert::Infallible
-pub fn battersea_ops::McpServerId::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+pub type battersea_ops::McpServerId::Error = never
+pub fn battersea_ops::McpServerId::try_from(U) -> core::result::Result<T, never>
 impl<T, U> core::convert::TryInto<U> for battersea_ops::McpServerId where U: core::convert::TryFrom<T>
 pub type battersea_ops::McpServerId::Error = <U as core::convert::TryFrom<T>>::Error
 pub fn battersea_ops::McpServerId::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
 impl<T> alloc::borrow::ToOwned for battersea_ops::McpServerId where T: core::clone::Clone
 pub type battersea_ops::McpServerId::Owned = T
-pub fn battersea_ops::McpServerId::clone_into(&self, target: &mut T)
+pub fn battersea_ops::McpServerId::clone_into(&self, &mut T)
 pub fn battersea_ops::McpServerId::to_owned(&self) -> T
 impl<T> core::any::Any for battersea_ops::McpServerId where T: 'static + ?core::marker::Sized
 pub fn battersea_ops::McpServerId::type_id(&self) -> core::any::TypeId
@@ -767,11 +781,11 @@ pub fn battersea_ops::McpServerId::borrow(&self) -> &T
 impl<T> core::borrow::BorrowMut<T> for battersea_ops::McpServerId where T: ?core::marker::Sized
 pub fn battersea_ops::McpServerId::borrow_mut(&mut self) -> &mut T
 impl<T> core::clone::CloneToUninit for battersea_ops::McpServerId where T: core::clone::Clone
-pub unsafe fn battersea_ops::McpServerId::clone_to_uninit(&self, dest: *mut u8)
+pub unsafe fn battersea_ops::McpServerId::clone_to_uninit(&self, *mut u8)
 impl<T> core::convert::From<T> for battersea_ops::McpServerId
-pub fn battersea_ops::McpServerId::from(t: T) -> T
+pub fn battersea_ops::McpServerId::from(T) -> T
 impl<T> dyn_clone::DynClone for battersea_ops::McpServerId where T: core::clone::Clone
-pub fn battersea_ops::McpServerId::__clone_box(&self, _: dyn_clone::sealed::Private) -> *mut ()
+pub fn battersea_ops::McpServerId::__clone_box(&self, dyn_clone::sealed::Private) -> *mut ()
 impl<T> serde_core::de::DeserializeOwned for battersea_ops::McpServerId where T: for<'de> serde_core::de::Deserialize<'de>
 impl<T> typenum::type_operators::Same for battersea_ops::McpServerId
 pub type battersea_ops::McpServerId::Output = T
@@ -779,22 +793,23 @@ impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusi
 pub struct battersea_ops::McpServers
 pub battersea_ops::McpServers::servers: alloc::vec::Vec<battersea_ops::McpServer>
 impl core::clone::Clone for battersea_ops::McpServers
-pub fn battersea_ops::McpServers::clone(&self) -> battersea_ops::McpServers
+pub fn battersea_ops::McpServers::clone(&self) -> Self
 impl core::fmt::Debug for battersea_ops::McpServers
-pub fn battersea_ops::McpServers::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn battersea_ops::McpServers::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 impl schemars::JsonSchema for battersea_ops::McpServers
 pub fn battersea_ops::McpServers::inline_schema() -> bool
-pub fn battersea_ops::McpServers::json_schema(generator: &mut schemars::generate::SchemaGenerator) -> schemars::schema::Schema
+pub fn battersea_ops::McpServers::json_schema(&mut schemars::generate::SchemaGenerator) -> schemars::schema::Schema
 pub fn battersea_ops::McpServers::schema_id() -> alloc::borrow::Cow<'static, str>
 pub fn battersea_ops::McpServers::schema_name() -> alloc::borrow::Cow<'static, str>
 impl serde_core::ser::Serialize for battersea_ops::McpServers
-pub fn battersea_ops::McpServers::serialize<__S>(&self, __serializer: __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+pub fn battersea_ops::McpServers::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
 impl<'de> serde_core::de::Deserialize<'de> for battersea_ops::McpServers
-pub fn battersea_ops::McpServers::deserialize<__D>(__deserializer: __D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+pub fn battersea_ops::McpServers::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
 impl core::marker::Freeze for battersea_ops::McpServers
 impl core::marker::Send for battersea_ops::McpServers
 impl core::marker::Sync for battersea_ops::McpServers
 impl core::marker::Unpin for battersea_ops::McpServers
+impl core::marker::UnsafeUnpin for battersea_ops::McpServers
 impl core::panic::unwind_safe::RefUnwindSafe for battersea_ops::McpServers
 impl core::panic::unwind_safe::UnwindSafe for battersea_ops::McpServers
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_ops::McpServers where ST: ?core::marker::Sized, DT: ?core::marker::Sized
@@ -802,14 +817,14 @@ impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::i
 impl<T, U> core::convert::Into<U> for battersea_ops::McpServers where U: core::convert::From<T>
 pub fn battersea_ops::McpServers::into(self) -> U
 impl<T, U> core::convert::TryFrom<U> for battersea_ops::McpServers where U: core::convert::Into<T>
-pub type battersea_ops::McpServers::Error = core::convert::Infallible
-pub fn battersea_ops::McpServers::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+pub type battersea_ops::McpServers::Error = never
+pub fn battersea_ops::McpServers::try_from(U) -> core::result::Result<T, never>
 impl<T, U> core::convert::TryInto<U> for battersea_ops::McpServers where U: core::convert::TryFrom<T>
 pub type battersea_ops::McpServers::Error = <U as core::convert::TryFrom<T>>::Error
 pub fn battersea_ops::McpServers::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
 impl<T> alloc::borrow::ToOwned for battersea_ops::McpServers where T: core::clone::Clone
 pub type battersea_ops::McpServers::Owned = T
-pub fn battersea_ops::McpServers::clone_into(&self, target: &mut T)
+pub fn battersea_ops::McpServers::clone_into(&self, &mut T)
 pub fn battersea_ops::McpServers::to_owned(&self) -> T
 impl<T> core::any::Any for battersea_ops::McpServers where T: 'static + ?core::marker::Sized
 pub fn battersea_ops::McpServers::type_id(&self) -> core::any::TypeId
@@ -818,33 +833,34 @@ pub fn battersea_ops::McpServers::borrow(&self) -> &T
 impl<T> core::borrow::BorrowMut<T> for battersea_ops::McpServers where T: ?core::marker::Sized
 pub fn battersea_ops::McpServers::borrow_mut(&mut self) -> &mut T
 impl<T> core::clone::CloneToUninit for battersea_ops::McpServers where T: core::clone::Clone
-pub unsafe fn battersea_ops::McpServers::clone_to_uninit(&self, dest: *mut u8)
+pub unsafe fn battersea_ops::McpServers::clone_to_uninit(&self, *mut u8)
 impl<T> core::convert::From<T> for battersea_ops::McpServers
-pub fn battersea_ops::McpServers::from(t: T) -> T
+pub fn battersea_ops::McpServers::from(T) -> T
 impl<T> dyn_clone::DynClone for battersea_ops::McpServers where T: core::clone::Clone
-pub fn battersea_ops::McpServers::__clone_box(&self, _: dyn_clone::sealed::Private) -> *mut ()
+pub fn battersea_ops::McpServers::__clone_box(&self, dyn_clone::sealed::Private) -> *mut ()
 impl<T> serde_core::de::DeserializeOwned for battersea_ops::McpServers where T: for<'de> serde_core::de::Deserialize<'de>
 impl<T> typenum::type_operators::Same for battersea_ops::McpServers
 pub type battersea_ops::McpServers::Output = T
 impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_ops::McpServers where T: ?core::marker::Sized
 pub struct battersea_ops::Nothing
 impl core::clone::Clone for battersea_ops::Nothing
-pub fn battersea_ops::Nothing::clone(&self) -> battersea_ops::Nothing
+pub fn battersea_ops::Nothing::clone(&self) -> Self
 impl core::fmt::Debug for battersea_ops::Nothing
-pub fn battersea_ops::Nothing::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn battersea_ops::Nothing::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 impl schemars::JsonSchema for battersea_ops::Nothing
 pub fn battersea_ops::Nothing::inline_schema() -> bool
-pub fn battersea_ops::Nothing::json_schema(generator: &mut schemars::generate::SchemaGenerator) -> schemars::schema::Schema
+pub fn battersea_ops::Nothing::json_schema(&mut schemars::generate::SchemaGenerator) -> schemars::schema::Schema
 pub fn battersea_ops::Nothing::schema_id() -> alloc::borrow::Cow<'static, str>
 pub fn battersea_ops::Nothing::schema_name() -> alloc::borrow::Cow<'static, str>
 impl serde_core::ser::Serialize for battersea_ops::Nothing
-pub fn battersea_ops::Nothing::serialize<__S>(&self, __serializer: __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+pub fn battersea_ops::Nothing::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
 impl<'de> serde_core::de::Deserialize<'de> for battersea_ops::Nothing
-pub fn battersea_ops::Nothing::deserialize<__D>(__deserializer: __D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+pub fn battersea_ops::Nothing::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
 impl core::marker::Freeze for battersea_ops::Nothing
 impl core::marker::Send for battersea_ops::Nothing
 impl core::marker::Sync for battersea_ops::Nothing
 impl core::marker::Unpin for battersea_ops::Nothing
+impl core::marker::UnsafeUnpin for battersea_ops::Nothing
 impl core::panic::unwind_safe::RefUnwindSafe for battersea_ops::Nothing
 impl core::panic::unwind_safe::UnwindSafe for battersea_ops::Nothing
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_ops::Nothing where ST: ?core::marker::Sized, DT: ?core::marker::Sized
@@ -852,14 +868,14 @@ impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::i
 impl<T, U> core::convert::Into<U> for battersea_ops::Nothing where U: core::convert::From<T>
 pub fn battersea_ops::Nothing::into(self) -> U
 impl<T, U> core::convert::TryFrom<U> for battersea_ops::Nothing where U: core::convert::Into<T>
-pub type battersea_ops::Nothing::Error = core::convert::Infallible
-pub fn battersea_ops::Nothing::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+pub type battersea_ops::Nothing::Error = never
+pub fn battersea_ops::Nothing::try_from(U) -> core::result::Result<T, never>
 impl<T, U> core::convert::TryInto<U> for battersea_ops::Nothing where U: core::convert::TryFrom<T>
 pub type battersea_ops::Nothing::Error = <U as core::convert::TryFrom<T>>::Error
 pub fn battersea_ops::Nothing::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
 impl<T> alloc::borrow::ToOwned for battersea_ops::Nothing where T: core::clone::Clone
 pub type battersea_ops::Nothing::Owned = T
-pub fn battersea_ops::Nothing::clone_into(&self, target: &mut T)
+pub fn battersea_ops::Nothing::clone_into(&self, &mut T)
 pub fn battersea_ops::Nothing::to_owned(&self) -> T
 impl<T> core::any::Any for battersea_ops::Nothing where T: 'static + ?core::marker::Sized
 pub fn battersea_ops::Nothing::type_id(&self) -> core::any::TypeId
@@ -868,11 +884,11 @@ pub fn battersea_ops::Nothing::borrow(&self) -> &T
 impl<T> core::borrow::BorrowMut<T> for battersea_ops::Nothing where T: ?core::marker::Sized
 pub fn battersea_ops::Nothing::borrow_mut(&mut self) -> &mut T
 impl<T> core::clone::CloneToUninit for battersea_ops::Nothing where T: core::clone::Clone
-pub unsafe fn battersea_ops::Nothing::clone_to_uninit(&self, dest: *mut u8)
+pub unsafe fn battersea_ops::Nothing::clone_to_uninit(&self, *mut u8)
 impl<T> core::convert::From<T> for battersea_ops::Nothing
-pub fn battersea_ops::Nothing::from(t: T) -> T
+pub fn battersea_ops::Nothing::from(T) -> T
 impl<T> dyn_clone::DynClone for battersea_ops::Nothing where T: core::clone::Clone
-pub fn battersea_ops::Nothing::__clone_box(&self, _: dyn_clone::sealed::Private) -> *mut ()
+pub fn battersea_ops::Nothing::__clone_box(&self, dyn_clone::sealed::Private) -> *mut ()
 impl<T> serde_core::de::DeserializeOwned for battersea_ops::Nothing where T: for<'de> serde_core::de::Deserialize<'de>
 impl<T> typenum::type_operators::Same for battersea_ops::Nothing
 pub type battersea_ops::Nothing::Output = T
@@ -884,22 +900,23 @@ pub battersea_ops::Reconciliation::proof: alloc::string::String
 pub battersea_ops::Reconciliation::resolution: battersea_ops::Resolution
 pub battersea_ops::Reconciliation::run_id: alloc::string::String
 impl core::clone::Clone for battersea_ops::Reconciliation
-pub fn battersea_ops::Reconciliation::clone(&self) -> battersea_ops::Reconciliation
+pub fn battersea_ops::Reconciliation::clone(&self) -> Self
 impl core::fmt::Debug for battersea_ops::Reconciliation
-pub fn battersea_ops::Reconciliation::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn battersea_ops::Reconciliation::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 impl schemars::JsonSchema for battersea_ops::Reconciliation
 pub fn battersea_ops::Reconciliation::inline_schema() -> bool
-pub fn battersea_ops::Reconciliation::json_schema(generator: &mut schemars::generate::SchemaGenerator) -> schemars::schema::Schema
+pub fn battersea_ops::Reconciliation::json_schema(&mut schemars::generate::SchemaGenerator) -> schemars::schema::Schema
 pub fn battersea_ops::Reconciliation::schema_id() -> alloc::borrow::Cow<'static, str>
 pub fn battersea_ops::Reconciliation::schema_name() -> alloc::borrow::Cow<'static, str>
 impl serde_core::ser::Serialize for battersea_ops::Reconciliation
-pub fn battersea_ops::Reconciliation::serialize<__S>(&self, __serializer: __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+pub fn battersea_ops::Reconciliation::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
 impl<'de> serde_core::de::Deserialize<'de> for battersea_ops::Reconciliation
-pub fn battersea_ops::Reconciliation::deserialize<__D>(__deserializer: __D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+pub fn battersea_ops::Reconciliation::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
 impl core::marker::Freeze for battersea_ops::Reconciliation
 impl core::marker::Send for battersea_ops::Reconciliation
 impl core::marker::Sync for battersea_ops::Reconciliation
 impl core::marker::Unpin for battersea_ops::Reconciliation
+impl core::marker::UnsafeUnpin for battersea_ops::Reconciliation
 impl core::panic::unwind_safe::RefUnwindSafe for battersea_ops::Reconciliation
 impl core::panic::unwind_safe::UnwindSafe for battersea_ops::Reconciliation
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_ops::Reconciliation where ST: ?core::marker::Sized, DT: ?core::marker::Sized
@@ -907,14 +924,14 @@ impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::i
 impl<T, U> core::convert::Into<U> for battersea_ops::Reconciliation where U: core::convert::From<T>
 pub fn battersea_ops::Reconciliation::into(self) -> U
 impl<T, U> core::convert::TryFrom<U> for battersea_ops::Reconciliation where U: core::convert::Into<T>
-pub type battersea_ops::Reconciliation::Error = core::convert::Infallible
-pub fn battersea_ops::Reconciliation::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+pub type battersea_ops::Reconciliation::Error = never
+pub fn battersea_ops::Reconciliation::try_from(U) -> core::result::Result<T, never>
 impl<T, U> core::convert::TryInto<U> for battersea_ops::Reconciliation where U: core::convert::TryFrom<T>
 pub type battersea_ops::Reconciliation::Error = <U as core::convert::TryFrom<T>>::Error
 pub fn battersea_ops::Reconciliation::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
 impl<T> alloc::borrow::ToOwned for battersea_ops::Reconciliation where T: core::clone::Clone
 pub type battersea_ops::Reconciliation::Owned = T
-pub fn battersea_ops::Reconciliation::clone_into(&self, target: &mut T)
+pub fn battersea_ops::Reconciliation::clone_into(&self, &mut T)
 pub fn battersea_ops::Reconciliation::to_owned(&self) -> T
 impl<T> core::any::Any for battersea_ops::Reconciliation where T: 'static + ?core::marker::Sized
 pub fn battersea_ops::Reconciliation::type_id(&self) -> core::any::TypeId
@@ -923,11 +940,11 @@ pub fn battersea_ops::Reconciliation::borrow(&self) -> &T
 impl<T> core::borrow::BorrowMut<T> for battersea_ops::Reconciliation where T: ?core::marker::Sized
 pub fn battersea_ops::Reconciliation::borrow_mut(&mut self) -> &mut T
 impl<T> core::clone::CloneToUninit for battersea_ops::Reconciliation where T: core::clone::Clone
-pub unsafe fn battersea_ops::Reconciliation::clone_to_uninit(&self, dest: *mut u8)
+pub unsafe fn battersea_ops::Reconciliation::clone_to_uninit(&self, *mut u8)
 impl<T> core::convert::From<T> for battersea_ops::Reconciliation
-pub fn battersea_ops::Reconciliation::from(t: T) -> T
+pub fn battersea_ops::Reconciliation::from(T) -> T
 impl<T> dyn_clone::DynClone for battersea_ops::Reconciliation where T: core::clone::Clone
-pub fn battersea_ops::Reconciliation::__clone_box(&self, _: dyn_clone::sealed::Private) -> *mut ()
+pub fn battersea_ops::Reconciliation::__clone_box(&self, dyn_clone::sealed::Private) -> *mut ()
 impl<T> serde_core::de::DeserializeOwned for battersea_ops::Reconciliation where T: for<'de> serde_core::de::Deserialize<'de>
 impl<T> typenum::type_operators::Same for battersea_ops::Reconciliation
 pub type battersea_ops::Reconciliation::Output = T
@@ -935,22 +952,23 @@ impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusi
 pub struct battersea_ops::RunId
 pub battersea_ops::RunId::run_id: alloc::string::String
 impl core::clone::Clone for battersea_ops::RunId
-pub fn battersea_ops::RunId::clone(&self) -> battersea_ops::RunId
+pub fn battersea_ops::RunId::clone(&self) -> Self
 impl core::fmt::Debug for battersea_ops::RunId
-pub fn battersea_ops::RunId::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn battersea_ops::RunId::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 impl schemars::JsonSchema for battersea_ops::RunId
 pub fn battersea_ops::RunId::inline_schema() -> bool
-pub fn battersea_ops::RunId::json_schema(generator: &mut schemars::generate::SchemaGenerator) -> schemars::schema::Schema
+pub fn battersea_ops::RunId::json_schema(&mut schemars::generate::SchemaGenerator) -> schemars::schema::Schema
 pub fn battersea_ops::RunId::schema_id() -> alloc::borrow::Cow<'static, str>
 pub fn battersea_ops::RunId::schema_name() -> alloc::borrow::Cow<'static, str>
 impl serde_core::ser::Serialize for battersea_ops::RunId
-pub fn battersea_ops::RunId::serialize<__S>(&self, __serializer: __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+pub fn battersea_ops::RunId::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
 impl<'de> serde_core::de::Deserialize<'de> for battersea_ops::RunId
-pub fn battersea_ops::RunId::deserialize<__D>(__deserializer: __D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+pub fn battersea_ops::RunId::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
 impl core::marker::Freeze for battersea_ops::RunId
 impl core::marker::Send for battersea_ops::RunId
 impl core::marker::Sync for battersea_ops::RunId
 impl core::marker::Unpin for battersea_ops::RunId
+impl core::marker::UnsafeUnpin for battersea_ops::RunId
 impl core::panic::unwind_safe::RefUnwindSafe for battersea_ops::RunId
 impl core::panic::unwind_safe::UnwindSafe for battersea_ops::RunId
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_ops::RunId where ST: ?core::marker::Sized, DT: ?core::marker::Sized
@@ -958,14 +976,14 @@ impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::i
 impl<T, U> core::convert::Into<U> for battersea_ops::RunId where U: core::convert::From<T>
 pub fn battersea_ops::RunId::into(self) -> U
 impl<T, U> core::convert::TryFrom<U> for battersea_ops::RunId where U: core::convert::Into<T>
-pub type battersea_ops::RunId::Error = core::convert::Infallible
-pub fn battersea_ops::RunId::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+pub type battersea_ops::RunId::Error = never
+pub fn battersea_ops::RunId::try_from(U) -> core::result::Result<T, never>
 impl<T, U> core::convert::TryInto<U> for battersea_ops::RunId where U: core::convert::TryFrom<T>
 pub type battersea_ops::RunId::Error = <U as core::convert::TryFrom<T>>::Error
 pub fn battersea_ops::RunId::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
 impl<T> alloc::borrow::ToOwned for battersea_ops::RunId where T: core::clone::Clone
 pub type battersea_ops::RunId::Owned = T
-pub fn battersea_ops::RunId::clone_into(&self, target: &mut T)
+pub fn battersea_ops::RunId::clone_into(&self, &mut T)
 pub fn battersea_ops::RunId::to_owned(&self) -> T
 impl<T> core::any::Any for battersea_ops::RunId where T: 'static + ?core::marker::Sized
 pub fn battersea_ops::RunId::type_id(&self) -> core::any::TypeId
@@ -974,11 +992,11 @@ pub fn battersea_ops::RunId::borrow(&self) -> &T
 impl<T> core::borrow::BorrowMut<T> for battersea_ops::RunId where T: ?core::marker::Sized
 pub fn battersea_ops::RunId::borrow_mut(&mut self) -> &mut T
 impl<T> core::clone::CloneToUninit for battersea_ops::RunId where T: core::clone::Clone
-pub unsafe fn battersea_ops::RunId::clone_to_uninit(&self, dest: *mut u8)
+pub unsafe fn battersea_ops::RunId::clone_to_uninit(&self, *mut u8)
 impl<T> core::convert::From<T> for battersea_ops::RunId
-pub fn battersea_ops::RunId::from(t: T) -> T
+pub fn battersea_ops::RunId::from(T) -> T
 impl<T> dyn_clone::DynClone for battersea_ops::RunId where T: core::clone::Clone
-pub fn battersea_ops::RunId::__clone_box(&self, _: dyn_clone::sealed::Private) -> *mut ()
+pub fn battersea_ops::RunId::__clone_box(&self, dyn_clone::sealed::Private) -> *mut ()
 impl<T> serde_core::de::DeserializeOwned for battersea_ops::RunId where T: for<'de> serde_core::de::Deserialize<'de>
 impl<T> typenum::type_operators::Same for battersea_ops::RunId
 pub type battersea_ops::RunId::Output = T
@@ -989,25 +1007,26 @@ pub battersea_ops::RunStatus::run_id: alloc::string::String
 pub battersea_ops::RunStatus::status: alloc::string::String
 pub battersea_ops::RunStatus::terminal: bool
 impl core::clone::Clone for battersea_ops::RunStatus
-pub fn battersea_ops::RunStatus::clone(&self) -> battersea_ops::RunStatus
+pub fn battersea_ops::RunStatus::clone(&self) -> Self
 impl core::cmp::PartialEq for battersea_ops::RunStatus
-pub fn battersea_ops::RunStatus::eq(&self, other: &battersea_ops::RunStatus) -> bool
+pub fn battersea_ops::RunStatus::eq(&self, &Self) -> bool
 impl core::fmt::Debug for battersea_ops::RunStatus
-pub fn battersea_ops::RunStatus::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn battersea_ops::RunStatus::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 impl core::marker::StructuralPartialEq for battersea_ops::RunStatus
 impl schemars::JsonSchema for battersea_ops::RunStatus
 pub fn battersea_ops::RunStatus::inline_schema() -> bool
-pub fn battersea_ops::RunStatus::json_schema(generator: &mut schemars::generate::SchemaGenerator) -> schemars::schema::Schema
+pub fn battersea_ops::RunStatus::json_schema(&mut schemars::generate::SchemaGenerator) -> schemars::schema::Schema
 pub fn battersea_ops::RunStatus::schema_id() -> alloc::borrow::Cow<'static, str>
 pub fn battersea_ops::RunStatus::schema_name() -> alloc::borrow::Cow<'static, str>
 impl serde_core::ser::Serialize for battersea_ops::RunStatus
-pub fn battersea_ops::RunStatus::serialize<__S>(&self, __serializer: __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+pub fn battersea_ops::RunStatus::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
 impl<'de> serde_core::de::Deserialize<'de> for battersea_ops::RunStatus
-pub fn battersea_ops::RunStatus::deserialize<__D>(__deserializer: __D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+pub fn battersea_ops::RunStatus::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
 impl core::marker::Freeze for battersea_ops::RunStatus
 impl core::marker::Send for battersea_ops::RunStatus
 impl core::marker::Sync for battersea_ops::RunStatus
 impl core::marker::Unpin for battersea_ops::RunStatus
+impl core::marker::UnsafeUnpin for battersea_ops::RunStatus
 impl core::panic::unwind_safe::RefUnwindSafe for battersea_ops::RunStatus
 impl core::panic::unwind_safe::UnwindSafe for battersea_ops::RunStatus
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_ops::RunStatus where ST: ?core::marker::Sized, DT: ?core::marker::Sized
@@ -1015,14 +1034,14 @@ impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::i
 impl<T, U> core::convert::Into<U> for battersea_ops::RunStatus where U: core::convert::From<T>
 pub fn battersea_ops::RunStatus::into(self) -> U
 impl<T, U> core::convert::TryFrom<U> for battersea_ops::RunStatus where U: core::convert::Into<T>
-pub type battersea_ops::RunStatus::Error = core::convert::Infallible
-pub fn battersea_ops::RunStatus::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+pub type battersea_ops::RunStatus::Error = never
+pub fn battersea_ops::RunStatus::try_from(U) -> core::result::Result<T, never>
 impl<T, U> core::convert::TryInto<U> for battersea_ops::RunStatus where U: core::convert::TryFrom<T>
 pub type battersea_ops::RunStatus::Error = <U as core::convert::TryFrom<T>>::Error
 pub fn battersea_ops::RunStatus::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
 impl<T> alloc::borrow::ToOwned for battersea_ops::RunStatus where T: core::clone::Clone
 pub type battersea_ops::RunStatus::Owned = T
-pub fn battersea_ops::RunStatus::clone_into(&self, target: &mut T)
+pub fn battersea_ops::RunStatus::clone_into(&self, &mut T)
 pub fn battersea_ops::RunStatus::to_owned(&self) -> T
 impl<T> core::any::Any for battersea_ops::RunStatus where T: 'static + ?core::marker::Sized
 pub fn battersea_ops::RunStatus::type_id(&self) -> core::any::TypeId
@@ -1031,11 +1050,11 @@ pub fn battersea_ops::RunStatus::borrow(&self) -> &T
 impl<T> core::borrow::BorrowMut<T> for battersea_ops::RunStatus where T: ?core::marker::Sized
 pub fn battersea_ops::RunStatus::borrow_mut(&mut self) -> &mut T
 impl<T> core::clone::CloneToUninit for battersea_ops::RunStatus where T: core::clone::Clone
-pub unsafe fn battersea_ops::RunStatus::clone_to_uninit(&self, dest: *mut u8)
+pub unsafe fn battersea_ops::RunStatus::clone_to_uninit(&self, *mut u8)
 impl<T> core::convert::From<T> for battersea_ops::RunStatus
-pub fn battersea_ops::RunStatus::from(t: T) -> T
+pub fn battersea_ops::RunStatus::from(T) -> T
 impl<T> dyn_clone::DynClone for battersea_ops::RunStatus where T: core::clone::Clone
-pub fn battersea_ops::RunStatus::__clone_box(&self, _: dyn_clone::sealed::Private) -> *mut ()
+pub fn battersea_ops::RunStatus::__clone_box(&self, dyn_clone::sealed::Private) -> *mut ()
 impl<T> serde_core::de::DeserializeOwned for battersea_ops::RunStatus where T: for<'de> serde_core::de::Deserialize<'de>
 impl<T> typenum::type_operators::Same for battersea_ops::RunStatus
 pub type battersea_ops::RunStatus::Output = T
@@ -1044,22 +1063,23 @@ pub struct battersea_ops::UpgradeRequest
 pub battersea_ops::UpgradeRequest::expected_revision: core::option::Option<alloc::string::String>
 pub battersea_ops::UpgradeRequest::flow_key: alloc::string::String
 impl core::clone::Clone for battersea_ops::UpgradeRequest
-pub fn battersea_ops::UpgradeRequest::clone(&self) -> battersea_ops::UpgradeRequest
+pub fn battersea_ops::UpgradeRequest::clone(&self) -> Self
 impl core::fmt::Debug for battersea_ops::UpgradeRequest
-pub fn battersea_ops::UpgradeRequest::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn battersea_ops::UpgradeRequest::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 impl schemars::JsonSchema for battersea_ops::UpgradeRequest
 pub fn battersea_ops::UpgradeRequest::inline_schema() -> bool
-pub fn battersea_ops::UpgradeRequest::json_schema(generator: &mut schemars::generate::SchemaGenerator) -> schemars::schema::Schema
+pub fn battersea_ops::UpgradeRequest::json_schema(&mut schemars::generate::SchemaGenerator) -> schemars::schema::Schema
 pub fn battersea_ops::UpgradeRequest::schema_id() -> alloc::borrow::Cow<'static, str>
 pub fn battersea_ops::UpgradeRequest::schema_name() -> alloc::borrow::Cow<'static, str>
 impl serde_core::ser::Serialize for battersea_ops::UpgradeRequest
-pub fn battersea_ops::UpgradeRequest::serialize<__S>(&self, __serializer: __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+pub fn battersea_ops::UpgradeRequest::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
 impl<'de> serde_core::de::Deserialize<'de> for battersea_ops::UpgradeRequest
-pub fn battersea_ops::UpgradeRequest::deserialize<__D>(__deserializer: __D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+pub fn battersea_ops::UpgradeRequest::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
 impl core::marker::Freeze for battersea_ops::UpgradeRequest
 impl core::marker::Send for battersea_ops::UpgradeRequest
 impl core::marker::Sync for battersea_ops::UpgradeRequest
 impl core::marker::Unpin for battersea_ops::UpgradeRequest
+impl core::marker::UnsafeUnpin for battersea_ops::UpgradeRequest
 impl core::panic::unwind_safe::RefUnwindSafe for battersea_ops::UpgradeRequest
 impl core::panic::unwind_safe::UnwindSafe for battersea_ops::UpgradeRequest
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_ops::UpgradeRequest where ST: ?core::marker::Sized, DT: ?core::marker::Sized
@@ -1067,14 +1087,14 @@ impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::i
 impl<T, U> core::convert::Into<U> for battersea_ops::UpgradeRequest where U: core::convert::From<T>
 pub fn battersea_ops::UpgradeRequest::into(self) -> U
 impl<T, U> core::convert::TryFrom<U> for battersea_ops::UpgradeRequest where U: core::convert::Into<T>
-pub type battersea_ops::UpgradeRequest::Error = core::convert::Infallible
-pub fn battersea_ops::UpgradeRequest::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+pub type battersea_ops::UpgradeRequest::Error = never
+pub fn battersea_ops::UpgradeRequest::try_from(U) -> core::result::Result<T, never>
 impl<T, U> core::convert::TryInto<U> for battersea_ops::UpgradeRequest where U: core::convert::TryFrom<T>
 pub type battersea_ops::UpgradeRequest::Error = <U as core::convert::TryFrom<T>>::Error
 pub fn battersea_ops::UpgradeRequest::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
 impl<T> alloc::borrow::ToOwned for battersea_ops::UpgradeRequest where T: core::clone::Clone
 pub type battersea_ops::UpgradeRequest::Owned = T
-pub fn battersea_ops::UpgradeRequest::clone_into(&self, target: &mut T)
+pub fn battersea_ops::UpgradeRequest::clone_into(&self, &mut T)
 pub fn battersea_ops::UpgradeRequest::to_owned(&self) -> T
 impl<T> core::any::Any for battersea_ops::UpgradeRequest where T: 'static + ?core::marker::Sized
 pub fn battersea_ops::UpgradeRequest::type_id(&self) -> core::any::TypeId
@@ -1083,31 +1103,31 @@ pub fn battersea_ops::UpgradeRequest::borrow(&self) -> &T
 impl<T> core::borrow::BorrowMut<T> for battersea_ops::UpgradeRequest where T: ?core::marker::Sized
 pub fn battersea_ops::UpgradeRequest::borrow_mut(&mut self) -> &mut T
 impl<T> core::clone::CloneToUninit for battersea_ops::UpgradeRequest where T: core::clone::Clone
-pub unsafe fn battersea_ops::UpgradeRequest::clone_to_uninit(&self, dest: *mut u8)
+pub unsafe fn battersea_ops::UpgradeRequest::clone_to_uninit(&self, *mut u8)
 impl<T> core::convert::From<T> for battersea_ops::UpgradeRequest
-pub fn battersea_ops::UpgradeRequest::from(t: T) -> T
+pub fn battersea_ops::UpgradeRequest::from(T) -> T
 impl<T> dyn_clone::DynClone for battersea_ops::UpgradeRequest where T: core::clone::Clone
-pub fn battersea_ops::UpgradeRequest::__clone_box(&self, _: dyn_clone::sealed::Private) -> *mut ()
+pub fn battersea_ops::UpgradeRequest::__clone_box(&self, dyn_clone::sealed::Private) -> *mut ()
 impl<T> serde_core::de::DeserializeOwned for battersea_ops::UpgradeRequest where T: for<'de> serde_core::de::Deserialize<'de>
 impl<T> typenum::type_operators::Same for battersea_ops::UpgradeRequest
 pub type battersea_ops::UpgradeRequest::Output = T
 impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_ops::UpgradeRequest where T: ?core::marker::Sized
 pub const battersea_ops::NAMESPACE: &str
 pub trait battersea_ops::ApprovalHost: core::marker::Send + core::marker::Sync
-pub fn battersea_ops::ApprovalHost::agent<'life0, 'life1, 'async_trait>(&'life0 self, run_id: &'life1 str) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<battersea_ops::GrantIdentity, clapham::refusal::Refusal>> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait, 'life1: 'async_trait
-pub fn battersea_ops::ApprovalHost::approvals<'life0, 'life1, 'async_trait>(&'life0 self, run_id: &'life1 str) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<alloc::sync::Arc<battersea_tools::durable::DurableToolExecutor>, clapham::refusal::Refusal>> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait, 'life1: 'async_trait
+pub fn battersea_ops::ApprovalHost::agent<'life0, 'life1, 'async_trait>(&'life0 self, &'life1 str) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<battersea_ops::GrantIdentity, clapham::refusal::Refusal>> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait, 'life1: 'async_trait
+pub fn battersea_ops::ApprovalHost::approvals<'life0, 'life1, 'async_trait>(&'life0 self, &'life1 str) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<alloc::rcs::arc::Arc<battersea_tools::durable::DurableToolExecutor>, clapham::refusal::Refusal>> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait, 'life1: 'async_trait
 pub trait battersea_ops::FlowHost: core::marker::Send + core::marker::Sync
-pub fn battersea_ops::FlowHost::apply_upgrade<'life0, 'life1, 'life2, 'async_trait>(&'life0 self, flow_key: &'life1 str, expected_revision: &'life2 str) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<battersea_ops::FlowUpgrade, clapham::refusal::Refusal>> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait, 'life1: 'async_trait, 'life2: 'async_trait
-pub fn battersea_ops::FlowHost::get<'life0, 'life1, 'async_trait>(&'life0 self, flow_key: &'life1 str) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<battersea_flow::types::FlowDocument, clapham::refusal::Refusal>> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait, 'life1: 'async_trait
+pub fn battersea_ops::FlowHost::apply_upgrade<'life0, 'life1, 'life2, 'async_trait>(&'life0 self, &'life1 str, &'life2 str) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<battersea_ops::FlowUpgrade, clapham::refusal::Refusal>> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait, 'life1: 'async_trait, 'life2: 'async_trait
+pub fn battersea_ops::FlowHost::get<'life0, 'life1, 'async_trait>(&'life0 self, &'life1 str) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<battersea_flow::types::FlowDocument, clapham::refusal::Refusal>> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait, 'life1: 'async_trait
 pub fn battersea_ops::FlowHost::list<'life0, 'async_trait>(&'life0 self) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<alloc::vec::Vec<battersea_ops::FlowSummary>, clapham::refusal::Refusal>> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait
-pub fn battersea_ops::FlowHost::plan_upgrade<'life0, 'life1, 'async_trait>(&'life0 self, flow_key: &'life1 str) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<battersea_ops::FlowUpgrade, clapham::refusal::Refusal>> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait, 'life1: 'async_trait
-pub fn battersea_ops::FlowHost::validate<'life0, 'life1, 'async_trait>(&'life0 self, flow_key: &'life1 str) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<battersea_flow::types::FlowValidationResult, clapham::refusal::Refusal>> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait, 'life1: 'async_trait
+pub fn battersea_ops::FlowHost::plan_upgrade<'life0, 'life1, 'async_trait>(&'life0 self, &'life1 str) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<battersea_ops::FlowUpgrade, clapham::refusal::Refusal>> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait, 'life1: 'async_trait
+pub fn battersea_ops::FlowHost::validate<'life0, 'life1, 'async_trait>(&'life0 self, &'life1 str) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<battersea_flow::types::FlowValidationResult, clapham::refusal::Refusal>> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait, 'life1: 'async_trait
 pub trait battersea_ops::McpHost: core::marker::Send + core::marker::Sync
-pub fn battersea_ops::McpHost::refresh<'life0, 'life1, 'async_trait>(&'life0 self, server_id: &'life1 str) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<battersea_ops::McpServer, clapham::refusal::Refusal>> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait, 'life1: 'async_trait
+pub fn battersea_ops::McpHost::refresh<'life0, 'life1, 'async_trait>(&'life0 self, &'life1 str) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<battersea_ops::McpServer, clapham::refusal::Refusal>> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait, 'life1: 'async_trait
 pub fn battersea_ops::McpHost::servers<'life0, 'async_trait>(&'life0 self) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<alloc::vec::Vec<battersea_ops::McpServer>, clapham::refusal::Refusal>> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait
 pub trait battersea_ops::RunHost: core::marker::Send + core::marker::Sync
-pub fn battersea_ops::RunHost::activate<'life0, 'life1, 'life2, 'async_trait>(&'life0 self, auth: &'life1 clapham::auth::OAuthContext, activation: battersea_ops::Activation, events: &'life2 clapham::call::RecordSink) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<battersea_ops::RunStatus, clapham::refusal::Refusal>> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait, 'life1: 'async_trait, 'life2: 'async_trait
-pub fn battersea_ops::RunHost::cancel<'life0, 'life1, 'async_trait>(&'life0 self, run_id: &'life1 str) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<battersea_ops::RunStatus, clapham::refusal::Refusal>> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait, 'life1: 'async_trait
-pub fn battersea_ops::RunHost::resume<'life0, 'life1, 'async_trait>(&'life0 self, run_id: &'life1 str) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<battersea_ops::RunStatus, clapham::refusal::Refusal>> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait, 'life1: 'async_trait
-pub fn battersea_ops::RunHost::status<'life0, 'life1, 'async_trait>(&'life0 self, run_id: &'life1 str) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<battersea_ops::RunStatus, clapham::refusal::Refusal>> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait, 'life1: 'async_trait
-pub fn battersea_ops::RunHost::watch<'life0, 'life1, 'life2, 'async_trait>(&'life0 self, run_id: &'life1 str, events: &'life2 clapham::call::RecordSink) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<battersea_ops::RunStatus, clapham::refusal::Refusal>> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait, 'life1: 'async_trait, 'life2: 'async_trait
+pub fn battersea_ops::RunHost::activate<'life0, 'life1, 'life2, 'async_trait>(&'life0 self, &'life1 clapham::auth::OAuthContext, battersea_ops::Activation, &'life2 clapham::call::RecordSink) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<battersea_ops::RunStatus, clapham::refusal::Refusal>> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait, 'life1: 'async_trait, 'life2: 'async_trait
+pub fn battersea_ops::RunHost::cancel<'life0, 'life1, 'async_trait>(&'life0 self, &'life1 str) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<battersea_ops::RunStatus, clapham::refusal::Refusal>> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait, 'life1: 'async_trait
+pub fn battersea_ops::RunHost::resume<'life0, 'life1, 'async_trait>(&'life0 self, &'life1 str) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<battersea_ops::RunStatus, clapham::refusal::Refusal>> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait, 'life1: 'async_trait
+pub fn battersea_ops::RunHost::status<'life0, 'life1, 'async_trait>(&'life0 self, &'life1 str) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<battersea_ops::RunStatus, clapham::refusal::Refusal>> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait, 'life1: 'async_trait
+pub fn battersea_ops::RunHost::watch<'life0, 'life1, 'life2, 'async_trait>(&'life0 self, &'life1 str, &'life2 clapham::call::RecordSink) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<battersea_ops::RunStatus, clapham::refusal::Refusal>> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait, 'life1: 'async_trait, 'life2: 'async_trait

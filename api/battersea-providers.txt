@@ -9,14 +9,15 @@ pub use battersea_providers::media::<<battersea_model::media::*>>
 pub struct battersea_providers::media::MediaTimingRecorder
 impl battersea_providers::media::MediaTimingRecorder
 pub fn battersea_providers::media::MediaTimingRecorder::finish_client_estimate(self) -> battersea_providers::media::MediaRenderTiming
-pub fn battersea_providers::media::MediaTimingRecorder::record_phase(&mut self, name: impl core::convert::Into<alloc::string::String>, category: impl core::convert::Into<alloc::string::String>, included_in_model_processing: bool, started_at: chrono::datetime::DateTime<chrono::offset::utc::Utc>, started_instant: std::time::Instant)
+pub fn battersea_providers::media::MediaTimingRecorder::record_phase(&mut self, impl core::convert::Into<alloc::string::String>, impl core::convert::Into<alloc::string::String>, bool, chrono::datetime::DateTime<chrono::offset::utc::Utc>, std::time::Instant)
 pub fn battersea_providers::media::MediaTimingRecorder::start() -> Self
 impl core::fmt::Debug for battersea_providers::media::MediaTimingRecorder
-pub fn battersea_providers::media::MediaTimingRecorder::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn battersea_providers::media::MediaTimingRecorder::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 impl core::marker::Freeze for battersea_providers::media::MediaTimingRecorder
 impl core::marker::Send for battersea_providers::media::MediaTimingRecorder
 impl core::marker::Sync for battersea_providers::media::MediaTimingRecorder
 impl core::marker::Unpin for battersea_providers::media::MediaTimingRecorder
+impl core::marker::UnsafeUnpin for battersea_providers::media::MediaTimingRecorder
 impl core::panic::unwind_safe::RefUnwindSafe for battersea_providers::media::MediaTimingRecorder
 impl core::panic::unwind_safe::UnwindSafe for battersea_providers::media::MediaTimingRecorder
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_providers::media::MediaTimingRecorder where ST: ?core::marker::Sized, DT: ?core::marker::Sized
@@ -24,8 +25,8 @@ impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::i
 impl<T, U> core::convert::Into<U> for battersea_providers::media::MediaTimingRecorder where U: core::convert::From<T>
 pub fn battersea_providers::media::MediaTimingRecorder::into(self) -> U
 impl<T, U> core::convert::TryFrom<U> for battersea_providers::media::MediaTimingRecorder where U: core::convert::Into<T>
-pub type battersea_providers::media::MediaTimingRecorder::Error = core::convert::Infallible
-pub fn battersea_providers::media::MediaTimingRecorder::try_from(value: U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+pub type battersea_providers::media::MediaTimingRecorder::Error = never
+pub fn battersea_providers::media::MediaTimingRecorder::try_from(U) -> core::result::Result<T, never>
 impl<T, U> core::convert::TryInto<U> for battersea_providers::media::MediaTimingRecorder where U: core::convert::TryFrom<T>
 pub type battersea_providers::media::MediaTimingRecorder::Error = <U as core::convert::TryFrom<T>>::Error
 pub fn battersea_providers::media::MediaTimingRecorder::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
@@ -36,10 +37,10 @@ pub fn battersea_providers::media::MediaTimingRecorder::borrow(&self) -> &T
 impl<T> core::borrow::BorrowMut<T> for battersea_providers::media::MediaTimingRecorder where T: ?core::marker::Sized
 pub fn battersea_providers::media::MediaTimingRecorder::borrow_mut(&mut self) -> &mut T
 impl<T> core::convert::From<T> for battersea_providers::media::MediaTimingRecorder
-pub fn battersea_providers::media::MediaTimingRecorder::from(t: T) -> T
+pub fn battersea_providers::media::MediaTimingRecorder::from(T) -> T
 impl<T> tower_http::follow_redirect::policy::PolicyExt for battersea_providers::media::MediaTimingRecorder where T: ?core::marker::Sized
-pub fn battersea_providers::media::MediaTimingRecorder::and<P, B, E>(self, other: P) -> tower_http::follow_redirect::policy::and::And<T, P> where T: tower_http::follow_redirect::policy::Policy<B, E>, P: tower_http::follow_redirect::policy::Policy<B, E>
-pub fn battersea_providers::media::MediaTimingRecorder::or<P, B, E>(self, other: P) -> tower_http::follow_redirect::policy::or::Or<T, P> where T: tower_http::follow_redirect::policy::Policy<B, E>, P: tower_http::follow_redirect::policy::Policy<B, E>
+pub fn battersea_providers::media::MediaTimingRecorder::and<P, B, E>(self, P) -> tower_http::follow_redirect::policy::and::And<T, P> where T: core::marker::Sized + tower_http::follow_redirect::policy::Policy<B, E>, P: tower_http::follow_redirect::policy::Policy<B, E>
+pub fn battersea_providers::media::MediaTimingRecorder::or<P, B, E>(self, P) -> tower_http::follow_redirect::policy::or::Or<T, P> where T: core::marker::Sized + tower_http::follow_redirect::policy::Policy<B, E>, P: tower_http::follow_redirect::policy::Policy<B, E>
 impl<T> tracing::instrument::Instrument for battersea_providers::media::MediaTimingRecorder
 impl<T> tracing::instrument::WithSubscriber for battersea_providers::media::MediaTimingRecorder
 impl<T> typenum::type_operators::Same for battersea_providers::media::MediaTimingRecorder
@@ -47,17 +48,17 @@ pub type battersea_providers::media::MediaTimingRecorder::Output = T
 impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_providers::media::MediaTimingRecorder where T: ?core::marker::Sized
 impl<V, T> ppv_lite86::types::VZip<V> for battersea_providers::media::MediaTimingRecorder where V: ppv_lite86::types::MultiLane<T>
 pub fn battersea_providers::media::MediaTimingRecorder::vzip(self) -> V
-pub fn battersea_providers::media::accepts_aspect_ratio(provider: &str, model: &str, value: &str) -> bool
-pub fn battersea_providers::media::accepts_size(provider: &str, model: &str, value: &str) -> bool
-pub fn battersea_providers::media::duration_ms(duration: core::time::Duration) -> u64
-pub fn battersea_providers::media::prepare_media_request(backend: &battersea_model::media::MediaBackendConfig, request: battersea_model::media::MediaRenderRequest) -> core::result::Result<battersea_model::media::PreparedMediaRequest, battersea_model::adapter::error::EngineAdapterRequestError>
-pub fn battersea_providers::media::resolve_estimated_generation_ms(backend: &battersea_model::media::MediaBackendConfig) -> u64
-pub async fn battersea_providers::media::with_estimated_generation_progress<T>(backend: &battersea_model::media::MediaBackendConfig, slot_count: usize, activity_reporter: core::option::Option<alloc::sync::Arc<dyn battersea_model::media::MediaGenerationActivityReporter>>, cancellation: tokio_util::sync::cancellation_token::CancellationToken, work: impl core::future::future::Future<Output = core::result::Result<T, battersea_model::adapter::error::EngineAdapterRequestError>>) -> core::result::Result<T, battersea_model::adapter::error::EngineAdapterRequestError>
+pub fn battersea_providers::media::accepts_aspect_ratio(&str, &str, &str) -> bool
+pub fn battersea_providers::media::accepts_size(&str, &str, &str) -> bool
+pub fn battersea_providers::media::duration_ms(core::time::Duration) -> u64
+pub fn battersea_providers::media::prepare_media_request(&battersea_model::media::MediaBackendConfig, battersea_model::media::MediaRenderRequest) -> core::result::Result<battersea_model::media::PreparedMediaRequest, battersea_model::adapter::error::EngineAdapterRequestError>
+pub fn battersea_providers::media::resolve_estimated_generation_ms(&battersea_model::media::MediaBackendConfig) -> u64
+pub async fn battersea_providers::media::with_estimated_generation_progress<T>(&battersea_model::media::MediaBackendConfig, usize, core::option::Option<alloc::rcs::arc::Arc<dyn battersea_model::media::MediaGenerationActivityReporter>>, tokio_util::sync::cancellation_token::CancellationToken, impl core::future::future::Future<Output = core::result::Result<T, battersea_model::adapter::error::EngineAdapterRequestError>>) -> core::result::Result<T, battersea_model::adapter::error::EngineAdapterRequestError>
 pub type battersea_providers::media::MediaRenderTiming = battersea_model::media::MediaProvenanceTiming
 pub mod battersea_providers::registry
 pub fn battersea_providers::registry::builtin_registry() -> &'static battersea_model::registry::ProviderRegistry
-pub fn battersea_providers::registry::register_builtin_providers(registry: &mut battersea_model::registry::ProviderRegistry) -> core::result::Result<(), battersea_model::adapter::error::EngineAdapterRequestError>
+pub fn battersea_providers::registry::register_builtin_providers(&mut battersea_model::registry::ProviderRegistry) -> core::result::Result<(), battersea_model::adapter::error::EngineAdapterRequestError>
 pub fn battersea_providers::builtin_registry() -> &'static battersea_model::registry::ProviderRegistry
-pub fn battersea_providers::estimate_mock_token_count(text: &str) -> u64
-pub fn battersea_providers::register_builtin_adapters(registry: &mut battersea_model::protocol::ProtocolRegistry) -> core::result::Result<(), battersea_model::protocol::ProviderConfigurationError>
-pub fn battersea_providers::register_builtin_providers(registry: &mut battersea_model::registry::ProviderRegistry) -> core::result::Result<(), battersea_model::adapter::error::EngineAdapterRequestError>
+pub fn battersea_providers::estimate_mock_token_count(&str) -> u64
+pub fn battersea_providers::register_builtin_adapters(&mut battersea_model::protocol::ProtocolRegistry) -> core::result::Result<(), battersea_model::protocol::ProviderConfigurationError>
+pub fn battersea_providers::register_builtin_providers(&mut battersea_model::registry::ProviderRegistry) -> core::result::Result<(), battersea_model::adapter::error::EngineAdapterRequestError>
