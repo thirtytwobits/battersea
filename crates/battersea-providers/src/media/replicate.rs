@@ -323,20 +323,23 @@ impl MediaGenerationAdapter for Replicate {
     ) -> Result<MediaSubmission, EngineAdapterRequestError> {
         let timing = MediaTimingRecorder::start(self.clock.clone());
         let work = async {
-            let response = self
-                .request(reqwest::Method::POST, &prepared.path)
-                .json(&prepared.body)
-                .send()
-                .await
-                .map_err(|error| {
-                    EngineAdapterRequestError::transport("replicate", error.to_string())
-                        .with_dispatch(if error.is_connect() {
-                            DispatchState::NotSent
-                        } else {
-                            DispatchState::Unknown
-                        })
-                })?;
-            let raw = json_response("replicate", response, self.clock.as_ref()).await?;
+            let raw = within_request_deadline(&self.backend, self.clock.as_ref(), async {
+                let response = self
+                    .request(reqwest::Method::POST, &prepared.path)
+                    .json(&prepared.body)
+                    .send()
+                    .await
+                    .map_err(|error| {
+                        EngineAdapterRequestError::transport("replicate", error.to_string())
+                            .with_dispatch(if error.is_connect() {
+                                DispatchState::NotSent
+                            } else {
+                                DispatchState::Unknown
+                            })
+                    })?;
+                json_response("replicate", response, self.clock.as_ref()).await
+            })
+            .await?;
             let job = RemoteJob::new(
                 Arc::new(self.clone()),
                 raw,
@@ -383,21 +386,28 @@ impl JobTransport for Replicate {
         self.decode(raw)
     }
     async fn poll(&self, id: &str) -> Result<RemoteUpdate, EngineAdapterRequestError> {
-        let response = self
-            .request(reqwest::Method::GET, &format!("predictions/{id}"))
-            .send()
-            .await
-            .map_err(|e| EngineAdapterRequestError::transport("replicate", e.to_string()))?;
-        self.decode(json_response("replicate", response, self.clock.as_ref()).await?)
+        let raw = within_request_deadline(&self.backend, self.clock.as_ref(), async {
+            let response = self
+                .request(reqwest::Method::GET, &format!("predictions/{id}"))
+                .send()
+                .await
+                .map_err(|e| EngineAdapterRequestError::transport("replicate", e.to_string()))?;
+            json_response("replicate", response, self.clock.as_ref()).await
+        })
+        .await?;
+        self.decode(raw)
     }
     async fn cancel(&self, id: &str) -> Result<MediaJobStatus, EngineAdapterRequestError> {
-        let response = self
-            .request(reqwest::Method::POST, &format!("predictions/{id}/cancel"))
-            .send()
-            .await
-            .map_err(|e| EngineAdapterRequestError::transport("replicate", e.to_string()))?;
-        let update =
-            self.decode(json_response("replicate", response, self.clock.as_ref()).await?)?;
+        let raw = within_request_deadline(&self.backend, self.clock.as_ref(), async {
+            let response = self
+                .request(reqwest::Method::POST, &format!("predictions/{id}/cancel"))
+                .send()
+                .await
+                .map_err(|e| EngineAdapterRequestError::transport("replicate", e.to_string()))?;
+            json_response("replicate", response, self.clock.as_ref()).await
+        })
+        .await?;
+        let update = self.decode(raw)?;
         if update.id != id {
             return Err(EngineAdapterRequestError::invalid_response(
                 "replicate",

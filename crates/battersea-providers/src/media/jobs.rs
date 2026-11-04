@@ -293,120 +293,131 @@ impl RemoteJob {
                     "Media job outputs expired before retrieval.",
                 ));
             }
-            let mut url = Url::parse(&asset.url)
-                .map_err(|_| self.error(ErrorKind::InvalidResponse, "Invalid media output URL."))?;
-            let mut redirects = 0;
-            let response = loop {
-                if !matches!(url.scheme(), "https" | "http")
-                    || !url.username().is_empty()
-                    || url.password().is_some()
-                {
+            let clock = self.transport.clock();
+            let download = async {
+                let mut url = Url::parse(&asset.url).map_err(|_| {
+                    self.error(ErrorKind::InvalidResponse, "Invalid media output URL.")
+                })?;
+                let mut redirects = 0;
+                let response = loop {
+                    if !matches!(url.scheme(), "https" | "http")
+                        || !url.username().is_empty()
+                        || url.password().is_some()
+                    {
+                        return Err(self.error(
+                            ErrorKind::InvalidResponse,
+                            "Media outputs require HTTP(S) URLs without embedded credentials.",
+                        ));
+                    }
+                    let mut request = client.get(url.clone());
+                    if let Some(binding) = &self.transport.backend().binding {
+                        let base = reqwest::Url::parse(&binding.connection.base_url)
+                            .expect("validated base");
+                        if url.origin() == base.origin()
+                            || binding
+                                .connection
+                                .delivery_origins
+                                .contains(&url.origin().ascii_serialization())
+                        {
+                            request = crate::connection::authenticate(
+                                request,
+                                Some(binding),
+                                &self.transport.backend().auth,
+                            )?;
+                        }
+                    } else if let Some(key) = self.transport.asset_auth(&url) {
+                        request = request.bearer_auth(key);
+                    }
+                    let response = request
+                        .send()
+                        .await
+                        .map_err(|error| self.error(ErrorKind::Retrieval, error.to_string()))?;
+                    if response.status().is_redirection() {
+                        if redirects >= 5 {
+                            return Err(
+                                self.error(ErrorKind::Retrieval, "Too many output redirects.")
+                            );
+                        }
+                        let location = response
+                            .headers()
+                            .get(reqwest::header::LOCATION)
+                            .and_then(|v| v.to_str().ok())
+                            .ok_or_else(|| {
+                                self.error(ErrorKind::Retrieval, "Output redirect has no location.")
+                            })?;
+                        let next = url.join(location).map_err(|_| {
+                            self.error(ErrorKind::Retrieval, "Invalid output redirect.")
+                        })?;
+                        if url.scheme() == "https" && next.scheme() != "https" {
+                            return Err(
+                                self.error(ErrorKind::Retrieval, "Insecure output redirect.")
+                            );
+                        }
+                        url = next;
+                        redirects += 1;
+                        continue;
+                    }
+                    break response;
+                };
+                if !response.status().is_success() {
+                    return Err(self
+                        .error(
+                            if matches!(response.status().as_u16(), 404 | 410) {
+                                ErrorKind::Expired
+                            } else {
+                                ErrorKind::Retrieval
+                            },
+                            format!(
+                                "Media output retrieval failed with HTTP {}.",
+                                response.status().as_u16()
+                            ),
+                        )
+                        .with_status_code(response.status().as_u16()));
+                }
+                let mime = response
+                    .headers()
+                    .get(CONTENT_TYPE)
+                    .and_then(|v| v.to_str().ok())
+                    .and_then(|v| v.split(';').next())
+                    .map(str::to_owned)
+                    .or_else(|| asset.mime_type.clone())
+                    .ok_or_else(|| {
+                        self.error(ErrorKind::InvalidResponse, "Media output has no MIME type.")
+                    })?;
+                let prefix = match asset.media_type {
+                    MediaRenderType::Image => "image/",
+                    MediaRenderType::Video => "video/",
+                    MediaRenderType::Audio => "audio/",
+                };
+                if !mime.starts_with(prefix) {
                     return Err(self.error(
                         ErrorKind::InvalidResponse,
-                        "Media outputs require HTTP(S) URLs without embedded credentials.",
+                        "Media output MIME type conflicts with requested kind.",
                     ));
                 }
-                let mut request = client.get(url.clone());
-                if let Some(binding) = &self.transport.backend().binding {
-                    let base =
-                        reqwest::Url::parse(&binding.connection.base_url).expect("validated base");
-                    if url.origin() == base.origin()
-                        || binding
-                            .connection
-                            .delivery_origins
-                            .contains(&url.origin().ascii_serialization())
+                let mut bytes = Vec::new();
+                let mut stream = response.bytes_stream();
+                while let Some(chunk) = stream.next().await {
+                    let chunk = chunk
+                        .map_err(|error| self.error(ErrorKind::Retrieval, error.to_string()))?;
+                    // Reserve enough space for the returned base64 representation before retaining bytes.
+                    if bytes.len().saturating_add(chunk.len()).saturating_add(2) / 3 * 4
+                        > remaining.saturating_sub(mime.len() + 13)
                     {
-                        request = crate::connection::authenticate(
-                            request,
-                            Some(binding),
-                            &self.transport.backend().auth,
-                        )?;
+                        return Err(self.error(
+                            ErrorKind::Retrieval,
+                            "Media outputs exceed the aggregate byte limit.",
+                        ));
                     }
-                } else if let Some(key) = self.transport.asset_auth(&url) {
-                    request = request.bearer_auth(key);
+                    bytes.extend_from_slice(&chunk);
                 }
-                let response = request
-                    .send()
-                    .await
-                    .map_err(|error| self.error(ErrorKind::Retrieval, error.to_string()))?;
-                if response.status().is_redirection() {
-                    if redirects >= 5 {
-                        return Err(self.error(ErrorKind::Retrieval, "Too many output redirects."));
-                    }
-                    let location = response
-                        .headers()
-                        .get(reqwest::header::LOCATION)
-                        .and_then(|v| v.to_str().ok())
-                        .ok_or_else(|| {
-                            self.error(ErrorKind::Retrieval, "Output redirect has no location.")
-                        })?;
-                    let next = url.join(location).map_err(|_| {
-                        self.error(ErrorKind::Retrieval, "Invalid output redirect.")
-                    })?;
-                    if url.scheme() == "https" && next.scheme() != "https" {
-                        return Err(self.error(ErrorKind::Retrieval, "Insecure output redirect."));
-                    }
-                    url = next;
-                    redirects += 1;
-                    continue;
+                if bytes.is_empty() {
+                    return Err(self.error(ErrorKind::Retrieval, "Media output is empty."));
                 }
-                break response;
+                Ok((mime, bytes))
             };
-            if !response.status().is_success() {
-                return Err(self
-                    .error(
-                        if matches!(response.status().as_u16(), 404 | 410) {
-                            ErrorKind::Expired
-                        } else {
-                            ErrorKind::Retrieval
-                        },
-                        format!(
-                            "Media output retrieval failed with HTTP {}.",
-                            response.status().as_u16()
-                        ),
-                    )
-                    .with_status_code(response.status().as_u16()));
-            }
-            let mime = response
-                .headers()
-                .get(CONTENT_TYPE)
-                .and_then(|v| v.to_str().ok())
-                .and_then(|v| v.split(';').next())
-                .map(str::to_owned)
-                .or_else(|| asset.mime_type.clone())
-                .ok_or_else(|| {
-                    self.error(ErrorKind::InvalidResponse, "Media output has no MIME type.")
-                })?;
-            let prefix = match asset.media_type {
-                MediaRenderType::Image => "image/",
-                MediaRenderType::Video => "video/",
-                MediaRenderType::Audio => "audio/",
-            };
-            if !mime.starts_with(prefix) {
-                return Err(self.error(
-                    ErrorKind::InvalidResponse,
-                    "Media output MIME type conflicts with requested kind.",
-                ));
-            }
-            let mut bytes = Vec::new();
-            let mut stream = response.bytes_stream();
-            while let Some(chunk) = stream.next().await {
-                let chunk =
-                    chunk.map_err(|error| self.error(ErrorKind::Retrieval, error.to_string()))?;
-                // Reserve enough space for the returned base64 representation before retaining bytes.
-                if bytes.len().saturating_add(chunk.len()).saturating_add(2) / 3 * 4
-                    > remaining.saturating_sub(mime.len() + 13)
-                {
-                    return Err(self.error(
-                        ErrorKind::Retrieval,
-                        "Media outputs exceed the aggregate byte limit.",
-                    ));
-                }
-                bytes.extend_from_slice(&chunk);
-            }
-            if bytes.is_empty() {
-                return Err(self.error(ErrorKind::Retrieval, "Media output is empty."));
-            }
+            let (mime, bytes) =
+                within_request_deadline(self.transport.backend(), clock.as_ref(), download).await?;
             let mut retained = asset.clone();
             retained.url = format!(
                 "data:{mime};base64,{}",

@@ -472,6 +472,7 @@ pub trait MediaJob: Send + Sync {
                         && matches!(
                             error.classification,
                             crate::ErrorKind::Transport
+                                | crate::ErrorKind::Timeout
                                 | crate::ErrorKind::RateLimit
                                 | crate::ErrorKind::Server
                         )

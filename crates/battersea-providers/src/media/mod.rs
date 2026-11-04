@@ -198,6 +198,33 @@ pub async fn with_estimated_generation_progress<T>(
     }
 }
 
+/// Bounds one provider request, including its response body, by the backend's
+/// `options.timeoutMs` on `clock`.
+#[cfg(any(
+    feature = "openai",
+    feature = "google",
+    feature = "runway",
+    feature = "replicate"
+))]
+pub(crate) async fn within_request_deadline<T>(
+    backend: &MediaBackendConfig,
+    clock: &dyn Clock,
+    request: impl std::future::Future<Output = Result<T, EngineAdapterRequestError>>,
+) -> Result<T, EngineAdapterRequestError> {
+    let Some(timeout_ms) = backend.options.timeout_ms else {
+        return request.await;
+    };
+    battersea_model::clock::timeout(clock, Duration::from_millis(timeout_ms), request)
+        .await
+        .unwrap_or_else(|_| {
+            Err(EngineAdapterRequestError::new(
+                &backend.provider,
+                "Media request deadline exceeded.",
+                battersea_model::ErrorKind::Timeout,
+            ))
+        })
+}
+
 /// Normalises a configured base URL before provider-specific suffix trimming.
 ///
 /// This helper strips only trailing `/` characters and otherwise preserves the input verbatim.

@@ -302,3 +302,56 @@ async fn credential_free_capture_matches_every_image_transport_submit() {
         }
     }
 }
+
+#[tokio::test]
+async fn a_submit_without_a_reply_fails_at_the_backend_timeout_on_the_adapter_clock() {
+    for (provider, count) in [("openai", 1), ("openai", 2), ("google", 1), ("runway", 1)] {
+        let listener = tokio::net::TcpListener::bind(crate::test_endpoints::TEST_BIND_ADDRESS)
+            .await
+            .unwrap();
+        let mut backend = backend(provider);
+        backend.endpoint = format!("http://{}", listener.local_addr().unwrap());
+        backend.auth.api_key = Some("local-test-key".into());
+        backend.auth.has_api_key = true;
+        let clock = battersea_model::ManualClock::new(0);
+        let adapter = match provider {
+            "openai" => create_openai_media_generator(backend, Arc::new(clock.clone())),
+            "google" => create_google_media_generator(backend, Arc::new(clock.clone())),
+            "runway" => create_runway_media_generator(backend, Arc::new(clock.clone())),
+            _ => unreachable!(),
+        }
+        .unwrap();
+        let prepared = adapter
+            .prepare(MediaRenderRequest {
+                kind: MediaKind::Image,
+                prompt_text: "A lantern in the snow.".into(),
+                negative_prompt: None,
+                references: Vec::new(),
+                options: MediaGenerationHints {
+                    count: (provider != "google").then_some(count),
+                    ..Default::default()
+                },
+            })
+            .unwrap();
+        let submit = adapter.submit(prepared, CancellationToken::new(), None, None);
+        let unanswered = async {
+            // The fixture holds the connection open and never replies.
+            let (connection, _) = listener.accept().await.unwrap();
+            assert_eq!(
+                clock
+                    .advance_to_timer_within(Duration::from_millis(2000))
+                    .await,
+                Duration::from_millis(2000)
+            );
+            connection
+        };
+        let (result, _connection) = tokio::join!(submit, unanswered);
+        let error = result.err().expect("an unanswered submit fails");
+        assert_eq!(
+            error.classification,
+            battersea_model::ErrorKind::Timeout,
+            "{provider} count {count}: {}",
+            error.message
+        );
+    }
+}

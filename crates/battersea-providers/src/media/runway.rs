@@ -135,39 +135,44 @@ impl MediaGenerationAdapter for RunwayMediaGenerator {
         let submit_path = prepared.path;
         let mut timing = MediaTimingRecorder::start(self.clock.clone());
         let (submit_started_at, submit_started_instant) = timing.now();
-        let submit = crate::connection::authenticate(
+        let submit_request = crate::connection::authenticate(
             self.client
                 .post(format!("{}/{}", self.base_url, submit_path)),
             self.backend.binding.as_ref(),
             &self.backend.auth,
         )?
-        .json(&submit_body)
-        .send();
-        let submit_response = tokio::select! {
+        .json(&submit_body);
+        let submit = super::within_request_deadline(&self.backend, self.clock.as_ref(), async {
+            let submit_response = submit_request.send().await.map_err(|error| {
+                EngineAdapterRequestError::transport("runway", error.to_string())
+            })?;
+            let submit_status = submit_response.status().as_u16();
+            if !submit_response.status().is_success() {
+                let error_body = submit_response.bounded_text().await.unwrap_or_default();
+                return Err(EngineAdapterRequestError::new(
+                    "runway",
+                    if error_body.trim().is_empty() {
+                        format!("Runway task submission failed with HTTP {submit_status}.")
+                    } else {
+                        error_body
+                    },
+                    classify_http_status(submit_status),
+                )
+                .with_status_code(submit_status));
+            }
+            submit_response
+                .bounded_json::<Value>()
+                .await
+                .map_err(|error| {
+                    EngineAdapterRequestError::invalid_response("runway", error.to_string())
+                })
+        });
+        let raw = tokio::select! {
             _ = cancellation.cancelled() => {
                 return Err(EngineAdapterRequestError::new("runway", "Media generation cancelled.", "cancelled"));
             }
-            result = submit => result.map_err(|error| EngineAdapterRequestError::transport("runway", error.to_string()))?
+            result = submit => result?
         };
-
-        let submit_status = submit_response.status().as_u16();
-        if !submit_response.status().is_success() {
-            let error_body = submit_response.bounded_text().await.unwrap_or_default();
-            return Err(EngineAdapterRequestError::new(
-                "runway",
-                if error_body.trim().is_empty() {
-                    format!("Runway task submission failed with HTTP {submit_status}.")
-                } else {
-                    error_body
-                },
-                classify_http_status(submit_status),
-            )
-            .with_status_code(submit_status));
-        }
-
-        let raw: Value = submit_response.bounded_json().await.map_err(|error| {
-            EngineAdapterRequestError::invalid_response("runway", error.to_string())
-        })?;
         timing.record_phase(
             "submit task",
             "provider-call",
@@ -192,15 +197,19 @@ impl MediaGenerationAdapter for RunwayMediaGenerator {
 
     async fn cancel(&self, provider_job_id: &str) -> Result<(), crate::EngineAdapterRequestError> {
         super::jobs::validate_id("runway", provider_job_id)?;
-        let response = crate::connection::authenticate(
+        let request = crate::connection::authenticate(
             self.client
                 .delete(format!("{}/tasks/{}", self.base_url, provider_job_id)),
             self.backend.binding.as_ref(),
             &self.backend.auth,
-        )?
-        .send()
-        .await
-        .map_err(|error| EngineAdapterRequestError::transport("runway", error.to_string()))?;
+        )?;
+        let response = super::within_request_deadline(&self.backend, self.clock.as_ref(), async {
+            request
+                .send()
+                .await
+                .map_err(|error| EngineAdapterRequestError::transport("runway", error.to_string()))
+        })
+        .await?;
         if !response.status().is_success() {
             return Err(EngineAdapterRequestError::new(
                 "runway",
@@ -603,18 +612,24 @@ impl super::jobs::JobTransport for RunwayTransport {
         decode_task(raw, self.kind.clone(), submission, now)
     }
     async fn poll(&self, id: &str) -> Result<super::jobs::RemoteUpdate, EngineAdapterRequestError> {
-        let response = crate::connection::authenticate(
+        let request = crate::connection::authenticate(
             self.adapter
                 .client
                 .get(format!("{}/tasks/{}", self.adapter.base_url, id)),
             self.adapter.backend.binding.as_ref(),
             &self.adapter.backend.auth,
-        )?
-        .send()
-        .await
-        .map_err(|e| EngineAdapterRequestError::transport("runway", e.to_string()))?;
+        )?;
+        let clock = self.adapter.clock.as_ref();
+        let raw = super::within_request_deadline(&self.adapter.backend, clock, async {
+            let response = request
+                .send()
+                .await
+                .map_err(|e| EngineAdapterRequestError::transport("runway", e.to_string()))?;
+            super::jobs::json_response("runway", response, clock).await
+        })
+        .await?;
         decode_task(
-            super::jobs::json_response("runway", response, self.adapter.clock.as_ref()).await?,
+            raw,
             self.kind.clone(),
             false,
             battersea_model::clock::utc_now(self.adapter.clock.as_ref()),

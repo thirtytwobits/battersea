@@ -114,7 +114,8 @@ struct ManualInner {
     start: Instant,
     elapsed: watch::Sender<Duration>,
     timers: Mutex<Timers>,
-    registered: Notify,
+    /// Signals timer observers when a timer registers or the clock advances.
+    changed: Notify,
 }
 
 #[derive(Debug, Default)]
@@ -152,7 +153,7 @@ impl ManualClock {
                 start: Instant::now(),
                 elapsed: watch::Sender::new(Duration::ZERO),
                 timers: Mutex::default(),
-                registered: Notify::new(),
+                changed: Notify::new(),
             }),
         }
     }
@@ -161,6 +162,7 @@ impl ManualClock {
         self.inner
             .elapsed
             .send_modify(|elapsed| *elapsed = elapsed.saturating_add(by));
+        self.inner.changed.notify_waiters();
     }
     /// The time remaining for each pending timer, shortest first. Elapsed timers read zero.
     pub fn pending_timers(&self) -> Vec<Duration> {
@@ -176,13 +178,14 @@ impl ManualClock {
         remaining
     }
     /// Waits until a timer that an advance must reach is pending within `window` of the current
-    /// time, and returns its remaining time. The wait is a signal from the timer's registration,
-    /// not a timer. Elapsed timers complete without an advance and are not reported.
+    /// time, and returns its remaining time. The wait ends on a signal from a timer registration
+    /// or a clock advance, not on a timer. Elapsed timers complete without an advance and are not
+    /// reported.
     pub async fn timer_within(&self, window: Duration) -> Duration {
         loop {
-            let registered = self.inner.registered.notified();
-            tokio::pin!(registered);
-            registered.as_mut().enable();
+            let changed = self.inner.changed.notified();
+            tokio::pin!(changed);
+            changed.as_mut().enable();
             if let Some(remaining) = self
                 .pending_timers()
                 .into_iter()
@@ -190,7 +193,7 @@ impl ManualClock {
             {
                 return remaining;
             }
-            registered.await;
+            changed.await;
         }
     }
     /// Waits for a timer within `window`, then advances exactly to it.
@@ -223,7 +226,7 @@ impl Clock for ManualClock {
                     id,
                 }
             };
-            inner.registered.notify_waiters();
+            inner.changed.notify_waiters();
             while inner.start + *elapsed.borrow_and_update() < deadline {
                 // The sender lives as long as `inner`, which this future holds.
                 let _ = elapsed.changed().await;
@@ -328,6 +331,20 @@ mod tests {
         let mut forever = Box::pin(sleep(&clock, Duration::MAX));
         clock.advance(Duration::from_secs(u32::MAX.into()));
         assert!(poll(forever.as_mut()).is_pending());
+    }
+
+    #[test]
+    fn an_advance_that_brings_a_timer_into_the_window_wakes_its_observer() {
+        let clock = ManualClock::new(0);
+        let mut timer = clock.sleep_until(clock.instant() + Duration::from_millis(100));
+        assert!(poll(timer.as_mut()).is_pending());
+        let mut observer = Box::pin(clock.timer_within(Duration::from_millis(10)));
+        assert!(poll(observer.as_mut()).is_pending());
+        clock.advance(Duration::from_millis(90));
+        assert_eq!(
+            poll(observer.as_mut()),
+            Poll::Ready(Duration::from_millis(10))
+        );
     }
 
     #[tokio::test]

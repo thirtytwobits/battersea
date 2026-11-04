@@ -8,8 +8,10 @@ performs one status request. Queued/running jobs may become succeeded, failed, c
 expired. Unknown statuses and mismatched identities fail. Terminal updates are idempotent.
 
 `wait` retries only status reads, using bounded exponential delays and Retry-After. `generate`
-applies one deadline across submission, polling and retrieval. Delays, deadlines and output expiry
-are judged by the adapter's `Clock`. A failed wait cancels active
+applies one deadline across submission, polling and retrieval. Each provider request, including
+its response body, fails with `timeout` once the backend's `timeoutMs` elapses; `wait` retries a
+status read that fails this way. Delays, deadlines and output expiry are judged by the adapter's
+`Clock`. A failed wait cancels active
 remote work within a separate five-second cleanup window. Dropping an active job schedules the
 same bounded cleanup while the Tokio runtime remains alive. Cleanup failure preserves the job
 identity and reports uncertainty. Applications needing crash recovery must retain their own

@@ -1,7 +1,8 @@
 use super::{
     read_u64_option_opt, resolve_openai_base_url, with_estimated_generation_progress,
-    MediaBackendConfig, MediaGenerationActivityReporter, MediaGenerationActivityUpdate,
-    MediaGenerationAdapter, MediaRenderRequest, MediaRenderResult, MediaTimingRecorder,
+    within_request_deadline, MediaBackendConfig, MediaGenerationActivityReporter,
+    MediaGenerationActivityUpdate, MediaGenerationAdapter, MediaRenderRequest, MediaRenderResult,
+    MediaTimingRecorder,
 };
 use crate::adapter::error::EngineAdapterRequestError;
 use crate::http_payload::BoundedResponse as _;
@@ -161,14 +162,18 @@ impl OpenAiMediaGenerator {
         let mut timing = MediaTimingRecorder::start(self.clock.clone());
         let (phase_started_at, phase_started_instant) = timing.now();
         let response = if stream_partial_images {
-            let request_future = send_image_generation_stream_request(
-                &self.http_client,
+            let request_future = within_request_deadline(
                 &self.backend,
-                provider_request.clone(),
-                target_asset_count,
-                partial_images,
-                activity_reporter.clone(),
-                cancellation.clone(),
+                self.clock.as_ref(),
+                send_image_generation_stream_request(
+                    &self.http_client,
+                    &self.backend,
+                    provider_request.clone(),
+                    target_asset_count,
+                    partial_images,
+                    activity_reporter.clone(),
+                    cancellation.clone(),
+                ),
             );
             tokio::select! {
                 _ = cancellation.cancelled() => {
@@ -183,10 +188,14 @@ impl OpenAiMediaGenerator {
                 activity_reporter.clone(),
                 cancellation.clone(),
                 self.clock.as_ref(),
-                send_image_generation_json_request(
-                    &self.http_client,
+                within_request_deadline(
                     &self.backend,
-                    provider_request.clone(),
+                    self.clock.as_ref(),
+                    send_image_generation_json_request(
+                        &self.http_client,
+                        &self.backend,
+                        provider_request.clone(),
+                    ),
                 ),
             )
             .await?

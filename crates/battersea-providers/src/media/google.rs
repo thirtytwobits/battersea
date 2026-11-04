@@ -138,7 +138,7 @@ impl GoogleMediaGenerator {
             activity_reporter,
             cancellation.clone(),
             self.clock.as_ref(),
-            async {
+            super::within_request_deadline(&self.backend, self.clock.as_ref(), async {
                 let request = self.client.post(self.build_interaction_url()).json(&body);
                 let request = if self.backend.binding.is_some() {
                     crate::connection::authenticate(
@@ -161,7 +161,7 @@ impl GoogleMediaGenerator {
                 response.bounded_json().await.map_err(|error| {
                     EngineAdapterRequestError::invalid_response(PROVIDER, error.to_string())
                 })
-            },
+            }),
         )
         .await?;
         timing.record_phase(

@@ -11,7 +11,8 @@
 - `ProviderRegistry::create_chat` and `create_media`, chat and media factories, and
   `ValidatedProviderConfiguration::bind` take an `Arc<dyn Clock>`. Adapters run deadlines, retry
   backoff, Retry-After dates, polling and idle watchdogs on it; their HTTP clients apply no timeout
-  of their own. Pass `Arc::new(SystemClock)` in production.
+  of their own. Media adapters bound each provider request by `timeoutMs` on the clock. Pass
+  `Arc::new(SystemClock)` in production.
 - `MediaGenerationAdapter` and `MediaJob` provide `clock`. `with_stream_idle_watchdog`,
   `run_tool_loop`, `with_estimated_generation_progress` and `MediaTimingRecorder::start` take a
   clock.

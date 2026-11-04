@@ -33,6 +33,8 @@ struct Reply {
     mime: &'static str,
     retry: Option<String>,
     location: Option<String>,
+    /// The fixture records the request and never answers it.
+    stall: bool,
 }
 impl Reply {
     fn json(value: Value) -> Self {
@@ -42,6 +44,7 @@ impl Reply {
             mime: "application/json",
             retry: None,
             location: None,
+            stall: false,
         }
     }
     fn bytes(mime: &'static str, bytes: &[u8]) -> Self {
@@ -51,6 +54,13 @@ impl Reply {
             mime,
             retry: None,
             location: None,
+            stall: false,
+        }
+    }
+    fn stall() -> Self {
+        Self {
+            stall: true,
+            ..Self::json(json!({}))
         }
     }
     fn error(status: StatusCode) -> Self {
@@ -81,6 +91,9 @@ async fn handle(State(state): State<Server>, request: Request) -> impl IntoRespo
         .unwrap()
         .pop_front()
         .unwrap_or_else(|| Reply::error(StatusCode::INTERNAL_SERVER_ERROR));
+    if reply.stall {
+        std::future::pending::<()>().await;
+    }
     let mut headers = HeaderMap::new();
     headers.insert("content-type", reply.mime.parse().unwrap());
     if let Some(retry) = reply.retry {
@@ -403,6 +416,199 @@ async fn cancellation_deadline_and_drop_cleanup_target_the_accepted_job_once() {
         );
         task.abort();
     }
+}
+
+/// Runs `operation` until the fixture has received `calls` requests, then advances `clock` to
+/// the stalled request's deadline, which must be the backend's `timeoutMs`.
+async fn past_the_request_deadline<T>(
+    clock: &ManualClock,
+    state: &Server,
+    calls: usize,
+    operation: impl std::future::Future<Output = T>,
+) -> T {
+    let advance = async {
+        while state.calls.lock().unwrap().len() < calls {
+            tokio::task::yield_now().await;
+        }
+        assert_eq!(
+            clock
+                .advance_to_timer_within(Duration::from_millis(1000))
+                .await,
+            Duration::from_millis(1000)
+        );
+    };
+    tokio::join!(operation, advance).0
+}
+
+#[tokio::test]
+async fn each_staged_request_fails_at_the_backend_timeout_on_the_adapter_clock() {
+    let (url, state, task) = server().await;
+    let clock = ManualClock::new(START_MS);
+    let adapter = battersea_providers::builtin_registry()
+        .create_media(
+            backend("replicate", &url, MediaKind::Image),
+            Arc::new(clock.clone()),
+        )
+        .unwrap();
+    let timed_out = |error: battersea_model::adapter::error::EngineAdapterRequestError| {
+        assert_eq!(
+            error.classification,
+            ErrorKind::Timeout,
+            "{}",
+            error.message
+        );
+        error
+    };
+
+    enqueue(&state, [Reply::stall()]);
+    let submission = adapter.submit(
+        adapter.prepare(request(MediaKind::Image)).unwrap(),
+        CancellationToken::new(),
+        None,
+        None,
+    );
+    let error = timed_out(
+        past_the_request_deadline(&clock, &state, 1, submission)
+            .await
+            .err()
+            .unwrap(),
+    );
+    assert_eq!(
+        error.dispatch,
+        battersea_model::adapter::error::DispatchState::Unknown
+    );
+
+    enqueue(
+        &state,
+        [
+            Reply::json(update("replicate", "starting", Value::Null)),
+            Reply::stall(),
+            Reply::stall(),
+        ],
+    );
+    let MediaSubmission::Pending(mut job) = adapter
+        .submit(
+            adapter.prepare(request(MediaKind::Image)).unwrap(),
+            CancellationToken::new(),
+            None,
+            None,
+        )
+        .await
+        .unwrap()
+    else {
+        panic!("remote job expected");
+    };
+    let error = timed_out(
+        past_the_request_deadline(&clock, &state, 3, job.poll(CancellationToken::new()))
+            .await
+            .unwrap_err(),
+    );
+    assert_eq!(error.request_id.as_deref(), Some("accepted-job"));
+    timed_out(
+        past_the_request_deadline(&clock, &state, 4, job.cancel())
+            .await
+            .unwrap_err(),
+    );
+
+    enqueue(&state, [Reply::stall()]);
+    timed_out(
+        past_the_request_deadline(&clock, &state, 5, adapter.cancel("accepted-job"))
+            .await
+            .unwrap_err(),
+    );
+
+    enqueue(
+        &state,
+        [
+            Reply::json(update(
+                "replicate",
+                "succeeded",
+                json!([format!("{url}/asset")]),
+            )),
+            Reply::stall(),
+        ],
+    );
+    let mut job = match adapter
+        .submit(
+            adapter.prepare(request(MediaKind::Image)).unwrap(),
+            CancellationToken::new(),
+            None,
+            None,
+        )
+        .await
+        .unwrap()
+    {
+        MediaSubmission::Pending(job) => job,
+        _ => panic!("remote job expected"),
+    };
+    timed_out(
+        past_the_request_deadline(&clock, &state, 7, job.retrieve(CancellationToken::new()))
+            .await
+            .unwrap_err(),
+    );
+    task.abort();
+}
+
+#[tokio::test]
+async fn a_status_read_past_its_request_deadline_is_retried() {
+    let (url, state, task) = server().await;
+    enqueue(
+        &state,
+        [
+            Reply::json(update("replicate", "starting", Value::Null)),
+            Reply::stall(),
+            Reply::json(update(
+                "replicate",
+                "succeeded",
+                json!([format!("{url}/asset")]),
+            )),
+            Reply::bytes("image/png", b"image"),
+        ],
+    );
+    let clock = polling_clock();
+    let adapter = battersea_providers::builtin_registry()
+        .create_media(
+            backend("replicate", &url, MediaKind::Image),
+            Arc::new(clock.clone()),
+        )
+        .unwrap();
+    let MediaSubmission::Pending(job) = adapter
+        .submit(
+            adapter.prepare(request(MediaKind::Image)).unwrap(),
+            CancellationToken::new(),
+            None,
+            None,
+        )
+        .await
+        .unwrap()
+    else {
+        panic!("remote job expected");
+    };
+    let result = past_the_request_deadline(
+        &clock,
+        &state,
+        2,
+        MediaSubmission::Pending(job).wait(CancellationToken::new(), None),
+    )
+    .await
+    .unwrap();
+    assert_eq!(result.assets.len(), 1);
+    assert_eq!(
+        state
+            .calls
+            .lock()
+            .unwrap()
+            .iter()
+            .map(|call| (call.0.as_str(), call.1.as_str()))
+            .collect::<Vec<_>>(),
+        [
+            ("POST", "/v1/models/owner/model/predictions"),
+            ("GET", "/v1/predictions/accepted-job"),
+            ("GET", "/v1/predictions/accepted-job"),
+            ("GET", "/asset"),
+        ]
+    );
+    task.abort();
 }
 
 #[tokio::test]
