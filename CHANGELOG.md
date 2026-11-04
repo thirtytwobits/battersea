@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### Added
+
+- `DurableConversation` continues Anthropic Messages tool conversations after approval and
+  restart. Checkpoints retain signed thinking and native tool use.
+
 ### Fixed
 
 - The deserialisation schemas of the `battersea-flow` types mark the optional fields optional.
