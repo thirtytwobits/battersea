@@ -96,7 +96,8 @@ requires an application-authored prompt and is not a fallback for unsupported na
 Chat Completions supports ordinary and streaming responses. OpenAI Responses supports foreground
 streaming and background polling with `contextOverflow=error`. Background streaming returns
 `unsupported_tool_continuation`: recovery requires a retained event cursor. Anthropic Messages
-supports `contextOverflow=error` and sends each durable turn as a non-streaming request.
+and Gemini `generateContent` support `contextOverflow=error` and send each durable turn as a
+non-streaming request.
 Other adapters return `unsupported_tool_continuation` from the default interface.
 
 Acceptance pins the original request, tool definitions, provider binding, safe backend
@@ -157,6 +158,17 @@ is the stop reason exactly when the message requests tools. Durable text, reason
 and usage events are derived from the completed message. Other stop reasons and block types, and a
 final message without text, are rejected before publication and on recovery. A request without
 `maxOutputTokens` fails before I/O.
+
+Gemini checkpoint codec version 1 retains the exact contents sent and the native response.
+Continuation appends the model content unchanged, including thought signatures and opaque part
+fields, then one user content with the ordered `functionResponse` projections. Each projection
+carries the native function name, and the call ID only where Gemini assigned one. The correlation
+ID of a call without a native ID derives from its part position in the retained response, so it
+survives restart. An HTTP 429 retry sends the same prepared request. Durable turns admit one
+candidate with `finishReason` `STOP` and text, thought text and `functionCall` parts. Durable text,
+reasoning, native content and usage events are derived from the completed response. A blocked
+prompt, other finish reasons and part types, and a final response without text are rejected
+before publication and on recovery. A request for non-text output fails before I/O.
 
 An interrupted provider task, ambiguous response or failed turn publication can leave an intent.
 `resume` refuses that intent as `tool_continuation_unresolved`. After fencing the original task,

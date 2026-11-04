@@ -167,6 +167,21 @@ pub fn anthropic_provider(
     configured_provider(endpoint, "anthropic-messages", true, false, logger, clock)
 }
 
+pub fn google_provider(
+    endpoint: &str,
+    logger: Option<Arc<dyn EngineAdapterLogger>>,
+    clock: Arc<dyn Clock>,
+) -> Result<(Arc<dyn EngineAdapter>, EngineChatParameters)> {
+    configured_provider(
+        endpoint,
+        "google-generate-content",
+        true,
+        false,
+        logger,
+        clock,
+    )
+}
+
 fn configured_provider(
     endpoint: &str,
     adapter: &str,

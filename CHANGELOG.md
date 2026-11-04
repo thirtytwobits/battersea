@@ -24,6 +24,8 @@
 
 - `DurableConversation` continues Anthropic Messages tool conversations after approval and
   restart. Checkpoints retain signed thinking and native tool use.
+- `DurableConversation` continues Gemini `generateContent` tool conversations after approval and
+  restart. Checkpoints retain thought signatures and native function-call IDs.
 
 ### Fixed
 

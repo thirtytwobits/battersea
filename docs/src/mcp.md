@@ -77,10 +77,11 @@ and explicitly requests the next provider turn. Each boundary can be reopened us
 handles and the original configured binding.
 
 The consumer exercises ordinary and streaming Chat Completions, foreground streaming Responses,
-background polling Responses and Anthropic Messages over all three MCP transports. Responses
-retains native reasoning and function-call items across reopen, and Anthropic retains signed and
-redacted thinking and tool-use blocks, including their opaque fields. An Anthropic parallel call
-batch continues once every result is recorded. A rejected
+background polling Responses, Anthropic Messages and Gemini `generateContent` over all three MCP
+transports. Responses retains native reasoning and function-call items across reopen, Anthropic
+retains signed and redacted thinking and tool-use blocks, and Gemini retains thought signatures
+and native call IDs, including their opaque fields. A generated Gemini correlation ID stays out
+of provider requests. A parallel call batch continues once every result is recorded. A rejected
 continuation reuses the saved transcript, the tool effect occurs once, and the remote result's
 `_meta` stays out of provider requests. Failed, cancelled and invalid provider continuations retain an
 unresolved intent and the preceding tool result. The host fences the original task before resolving
