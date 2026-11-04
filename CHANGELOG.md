@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+### Fixed
+
+- The deserialisation schemas of the `battersea-flow` types mark the optional fields optional.
+  The 33 affected fields include `FlowDocument`'s `description`, `layout` and `metadata`.
+
 ## 0.23.0
 
 ### Breaking

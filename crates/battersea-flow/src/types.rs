@@ -95,18 +95,18 @@ pub enum FlowParameterEditorKind {
 #[serde(deny_unknown_fields)]
 pub struct FlowParameterEditor {
     pub kind: FlowParameterEditorKind,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     #[schemars(with = "u32")]
     pub min: Option<u32>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     #[schemars(with = "u32")]
     pub max: Option<u32>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub values: Vec<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     #[schemars(with = "String")]
     pub source: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     #[schemars(with = "Value")]
     pub default_value: Option<Value>,
 }
@@ -139,10 +139,10 @@ pub enum FlowPortFormatterKind {
 pub struct FlowControllerOutputDefinition {
     pub name: String,
     pub kind: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     #[schemars(with = "String")]
     pub short_description: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     #[schemars(with = "String")]
     pub long_description: Option<String>,
 }
@@ -152,10 +152,10 @@ pub struct FlowControllerOutputDefinition {
 pub struct FlowControllerActionDefinition {
     pub name: String,
     pub kind: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     #[schemars(with = "String")]
     pub short_description: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     #[schemars(with = "String")]
     pub long_description: Option<String>,
 }
@@ -171,13 +171,13 @@ pub enum FlowEdgeKind {
 #[serde(deny_unknown_fields)]
 pub struct FlowActionPortDefinition {
     pub name: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     #[schemars(with = "FlowPortDisplayClass")]
     pub display_class: Option<FlowPortDisplayClass>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     #[schemars(with = "String")]
     pub short_description: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     #[schemars(with = "String")]
     pub long_description: Option<String>,
 }
@@ -186,13 +186,13 @@ pub struct FlowActionPortDefinition {
 #[serde(deny_unknown_fields)]
 pub struct FlowSignalPortDefinition {
     pub name: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     #[schemars(with = "FlowPortDisplayClass")]
     pub display_class: Option<FlowPortDisplayClass>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     #[schemars(with = "String")]
     pub short_description: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     #[schemars(with = "String")]
     pub long_description: Option<String>,
 }
@@ -211,13 +211,13 @@ pub struct FlowAutomationPortDefinition {
     pub token_type: String,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub accepted_token_types: Vec<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     #[schemars(with = "FlowPortDisplayClass")]
     pub display_class: Option<FlowPortDisplayClass>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     #[schemars(with = "String")]
     pub short_description: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     #[schemars(with = "String")]
     pub long_description: Option<String>,
 }
@@ -276,7 +276,7 @@ pub struct FlowPromptTemplateDefinition {
 #[serde(deny_unknown_fields)]
 pub struct FlowPortFormatter {
     pub kind: FlowPortFormatterKind,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     #[schemars(with = "FlowPromptTemplateDefinition")]
     pub default: Option<FlowPromptTemplateDefinition>,
     #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
@@ -291,18 +291,18 @@ pub struct FlowPort {
     pub token_type: String,
     pub mode: FlowPortMode,
     pub phase: FlowPortPhase,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     #[schemars(with = "FlowPortDisplayClass")]
     pub display_class: Option<FlowPortDisplayClass>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub accepted_token_types: Vec<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     #[schemars(with = "String")]
     pub short_description: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     #[schemars(with = "String")]
     pub long_description: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     #[schemars(with = "FlowPortFormatter")]
     pub formatter: Option<FlowPortFormatter>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
@@ -317,15 +317,15 @@ pub struct FlowDynamicPortGroup {
     pub token_type: String,
     pub mode: FlowPortMode,
     pub phase: FlowPortPhase,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     #[schemars(with = "FlowPortDisplayClass")]
     pub display_class: Option<FlowPortDisplayClass>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub accepted_token_types: Vec<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     #[schemars(with = "String")]
     pub short_description: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     #[schemars(with = "String")]
     pub long_description: Option<String>,
     /// Per-port parameter editors. Each port expanded from this group inherits
@@ -341,13 +341,13 @@ pub struct FlowDynamicPortGroup {
 pub struct FlowDynamicSignalPortGroup {
     pub count_parameter: String,
     pub name_template: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     #[schemars(with = "FlowPortDisplayClass")]
     pub display_class: Option<FlowPortDisplayClass>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     #[schemars(with = "String")]
     pub short_description: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     #[schemars(with = "String")]
     pub long_description: Option<String>,
 }
@@ -482,7 +482,7 @@ pub struct FlowDocument {
     pub execution: FlowExecutionPolicy,
     pub flow_key: String,
     pub title: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     #[schemars(with = "String")]
     pub description: Option<String>,
     /// Flow-wide rendering encoding for nodes whose `output_encoding`
@@ -513,10 +513,10 @@ pub struct FlowDocument {
     pub edges: Vec<FlowEdge>,
     /// Opaque per-client canvas state, keyed by writer namespace.
     /// Each client controls its own namespace.
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     #[schemars(with = "ClientLayoutState")]
     pub layout: Option<ClientLayoutState>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     #[schemars(with = "Value")]
     pub metadata: Option<Value>,
 }
@@ -549,10 +549,10 @@ pub struct FlowValidationIssue {
     /// Battersea's; host graph rules supply their own.
     pub code: String,
     pub message: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     #[schemars(with = "String")]
     pub node_id: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     #[schemars(with = "String")]
     pub edge_id: Option<String>,
 }
