@@ -307,6 +307,7 @@ async fn otlp_collector_receives_masked_typed_spans_and_metrics_and_rejection_is
         &format!("http://{address}"),
         std::time::Duration::from_secs(2),
         65536,
+        std::sync::Arc::new(battersea_model::ManualClock::new(0)),
     )
     .unwrap();
     assert!(matches!(
@@ -702,4 +703,48 @@ fn signal_observations_preserve_the_output_and_input_port_identities() {
             .unwrap();
         assert!(view.records().any(|r| matches!(&r.state, State::Port { port, direction: observed, token_type, .. } if port == expected && observed == &direction && !token_type.is_empty())));
     }
+}
+
+#[tokio::test]
+async fn otlp_export_fails_when_its_deadline_elapses_on_the_exporter_clock() {
+    use axum::{routing::post, Router};
+    use battersea_telemetry::otlp::{Batch, Exporter};
+    let arrived = std::sync::Arc::new(tokio::sync::Notify::new());
+    let router = Router::new().route(
+        "/v1/traces",
+        post({
+            let arrived = arrived.clone();
+            move || async move {
+                arrived.notify_one();
+                std::future::pending::<()>().await
+            }
+        }),
+    );
+    let socket = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let address = socket.local_addr().unwrap();
+    let server = tokio::spawn(async move { axum::serve(socket, router).await.unwrap() });
+    let clock = battersea_model::ManualClock::new(0);
+    let exporter = Exporter::new(
+        &format!("http://{address}"),
+        std::time::Duration::from_secs(2),
+        65536,
+        std::sync::Arc::new(clock.clone()),
+    )
+    .unwrap();
+    let batch = Batch::from_records("test", &[record("request:test", 10)], 0, 25).unwrap();
+    let export = tokio::spawn(async move { exporter.export(&batch).await });
+    arrived.notified().await;
+    assert_eq!(
+        clock.timer_within(std::time::Duration::from_secs(2)).await,
+        std::time::Duration::from_secs(2)
+    );
+    clock.advance(std::time::Duration::from_millis(1_999));
+    tokio::task::yield_now().await;
+    assert!(!export.is_finished());
+    clock.advance(std::time::Duration::from_millis(1));
+    assert!(matches!(
+        export.await.unwrap(),
+        Err(Error::Delivery(message)) if message.contains("deadline exceeded")
+    ));
+    server.abort();
 }

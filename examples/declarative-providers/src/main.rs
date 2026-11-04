@@ -13,6 +13,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             scope_revision: "example-account-1".into(),
         },
         None,
+        std::sync::Arc::new(battersea_model::SystemClock),
     )?;
     for (id, backend) in &configuration.backends {
         let adapter = providers.chat(id).expect("configured backend");

@@ -18,7 +18,7 @@ server identity. Compose that contribution with the application's own, select th
 agent may call, and create a `ToolRegistry` under the run's verified grant. Name the host's profiles
 with `ToolRegistry::with_profile` and apply `ToolRegistry::for_profile`. Create an
 `ApprovedToolExecutor` with the host policy, conversation identity, the profile registry's
-revision, an absolute deadline and a call capacity. Pass its definitions and executor to
+revision, an absolute deadline on the host's clock and a call capacity. Pass its definitions and executor to
 `EngineTextStreamRequest`.
 
 `ToolCallCompleted` retains content and completion evidence. Provider projections preserve text

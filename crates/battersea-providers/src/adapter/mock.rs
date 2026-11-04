@@ -9,12 +9,18 @@ use tokio_stream::wrappers::ReceiverStream;
 pub(crate) fn create_mock_adapter(
     backend: EngineBackendConfig,
     logger: Option<Arc<dyn EngineAdapterLogger>>,
+    clock: Arc<dyn battersea_model::Clock>,
 ) -> Result<Arc<dyn EngineAdapter>, EngineAdapterRequestError> {
-    Ok(Arc::new(MockAdapter { backend, logger }))
+    Ok(Arc::new(MockAdapter {
+        backend,
+        logger,
+        clock,
+    }))
 }
 struct MockAdapter {
     backend: EngineBackendConfig,
     logger: Option<Arc<dyn EngineAdapterLogger>>,
+    clock: Arc<dyn battersea_model::Clock>,
 }
 #[async_trait]
 impl EngineAdapter for MockAdapter {
@@ -80,6 +86,7 @@ impl EngineAdapter for MockAdapter {
             prompt: request.shared.text_for_role(Role::User),
             round: 0,
             logger: self.logger.clone(),
+            clock: self.clock.clone(),
             context: context.clone(),
         };
         let executor = request
@@ -94,6 +101,7 @@ impl EngineAdapter for MockAdapter {
             executor,
             logger,
             context,
+            self.clock.clone(),
             tx,
         ));
         Ok(Box::pin(ReceiverStream::new(rx)))
@@ -104,6 +112,7 @@ struct MockConversation {
     prompt: String,
     round: u32,
     logger: Option<Arc<dyn EngineAdapterLogger>>,
+    clock: Arc<dyn battersea_model::Clock>,
     context: EngineAdapterDebugContext,
 }
 #[async_trait]
@@ -182,7 +191,11 @@ impl ToolConversation for MockConversation {
             let delay =
                 mock_stream_delay_ms(&text, index, self.options.mock_stream_delay_multiplier());
             if delay > 0 {
-                tokio::time::sleep(std::time::Duration::from_millis(delay)).await;
+                battersea_model::clock::sleep(
+                    self.clock.as_ref(),
+                    std::time::Duration::from_millis(delay),
+                )
+                .await;
             }
             emit_stream_event(
                 self.logger.as_ref(),

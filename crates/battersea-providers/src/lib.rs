@@ -26,3 +26,9 @@ pub use registry::{builtin_registry, register_builtin_providers};
 
 mod protocols;
 pub use protocols::register_builtin_adapters;
+
+/// A clock no unit test advances unless it exercises a deadline.
+#[cfg(test)]
+pub(crate) fn test_clock() -> std::sync::Arc<dyn battersea_model::Clock> {
+    std::sync::Arc::new(battersea_model::ManualClock::new(0))
+}

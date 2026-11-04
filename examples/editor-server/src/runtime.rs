@@ -7,7 +7,7 @@ use std::{
     collections::{HashMap, HashSet},
     ops::{Deref, DerefMut},
     path::PathBuf,
-    sync::Mutex,
+    sync::{Arc, Mutex},
 };
 use tokio_util::sync::CancellationToken;
 
@@ -95,6 +95,8 @@ pub struct Application {
     pub acceptance: Mutex<HashMap<String, tokio::sync::oneshot::Sender<Result<(), String>>>>,
     /// Signalled after each observed execution event and each change of an activation's status.
     pub changed: tokio::sync::Notify,
+    /// Timestamps observations and captures, and times telemetry export.
+    clock: Arc<dyn battersea_model::Clock>,
 }
 struct TextSource;
 struct Output;
@@ -124,11 +126,16 @@ impl NodeHandler<Application> for TextSource {
             .and_then(Value::as_u64)
             .unwrap_or(0);
         let text = text.to_uppercase();
+        let clock = host.clock.clone();
         host.start_provider(
             run,
             &node.id,
             futures_util::stream::once(async move {
-                tokio::time::sleep(std::time::Duration::from_millis(delay)).await;
+                battersea_model::clock::sleep(
+                    clock.as_ref(),
+                    std::time::Duration::from_millis(delay),
+                )
+                .await;
                 ProviderEvent::Token {
                     port: "text".into(),
                     value: Token {
@@ -165,7 +172,7 @@ impl NodeHandler<Application> for Output {
     }
 }
 impl Application {
-    pub fn new(root: PathBuf) -> Result<Self, Error> {
+    pub fn new(root: PathBuf, clock: Arc<dyn battersea_model::Clock>) -> Result<Self, Error> {
         let mut builder = RegistryBuilder::default();
         builder.register(TextSource).map_err(Error::internal)?;
         builder.register(Output).map_err(Error::internal)?;
@@ -216,12 +223,14 @@ impl Application {
                         &endpoint,
                         std::time::Duration::from_secs(5),
                         1024 * 1024,
+                        clock.clone(),
                     )
                     .map_err(|e| Error::invalid_request(codes::INVALID_EXPORTER, e.to_string()))
                 })
                 .transpose()?,
             acceptance: Mutex::default(),
             changed: tokio::sync::Notify::new(),
+            clock,
         })
     }
     pub async fn publish_retained_outcome(&self, run: &Run) -> Result<(), Error> {
@@ -291,10 +300,7 @@ impl Application {
                     view.in_flight_requests() as u64,
                 )
             };
-            let now = std::time::SystemTime::now()
-                .duration_since(std::time::UNIX_EPOCH)
-                .unwrap()
-                .as_millis() as u64;
+            let now = self.clock.unix_ms().expect("wall clock");
             match battersea_telemetry::otlp::Batch::from_records(
                 "battersea-example",
                 &records,
@@ -324,6 +330,7 @@ impl Application {
                     port: "text".into(),
                 }],
                 16 * 1024 * 1024,
+                self.clock.clone(),
             )),
         })
     }
@@ -359,10 +366,7 @@ impl ExecutionHost for Application {
         &self.handlers
     }
     async fn execution_event(&self, _: &Run, event: ExecutionEvent) {
-        let now = std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .expect("wall clock")
-            .as_millis() as u64;
+        let now = self.clock.unix_ms().expect("wall clock");
         if let Err(error) =
             self.view
                 .lock()

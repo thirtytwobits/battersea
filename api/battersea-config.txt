@@ -241,7 +241,7 @@ pub type battersea_config::ProviderFile::Output = T
 impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_config::ProviderFile where T: ?core::marker::Sized
 pub struct battersea_config::providers::ValidatedProviderConfiguration
 impl battersea_config::ValidatedProviderConfiguration
-pub fn battersea_config::ValidatedProviderConfiguration::bind(&self, &dyn battersea_model::protocol::CredentialResolver, core::option::Option<alloc::rcs::arc::Arc<dyn battersea_model::adapter::EngineAdapterLogger>>) -> core::result::Result<battersea_config::ConfiguredProviders, battersea_model::protocol::ProviderConfigurationError>
+pub fn battersea_config::ValidatedProviderConfiguration::bind(&self, &dyn battersea_model::protocol::CredentialResolver, core::option::Option<alloc::rcs::arc::Arc<dyn battersea_model::adapter::EngineAdapterLogger>>, alloc::rcs::arc::Arc<dyn battersea_model::clock::Clock>) -> core::result::Result<battersea_config::ConfiguredProviders, battersea_model::protocol::ProviderConfigurationError>
 pub fn battersea_config::ValidatedProviderConfiguration::configuration(&self) -> &battersea_config::ProviderConfiguration
 impl core::marker::Freeze for battersea_config::ValidatedProviderConfiguration
 impl core::marker::Send for battersea_config::ValidatedProviderConfiguration
@@ -761,7 +761,7 @@ pub type battersea_config::ProviderFile::Output = T
 impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_config::ProviderFile where T: ?core::marker::Sized
 pub struct battersea_config::ValidatedProviderConfiguration
 impl battersea_config::ValidatedProviderConfiguration
-pub fn battersea_config::ValidatedProviderConfiguration::bind(&self, &dyn battersea_model::protocol::CredentialResolver, core::option::Option<alloc::rcs::arc::Arc<dyn battersea_model::adapter::EngineAdapterLogger>>) -> core::result::Result<battersea_config::ConfiguredProviders, battersea_model::protocol::ProviderConfigurationError>
+pub fn battersea_config::ValidatedProviderConfiguration::bind(&self, &dyn battersea_model::protocol::CredentialResolver, core::option::Option<alloc::rcs::arc::Arc<dyn battersea_model::adapter::EngineAdapterLogger>>, alloc::rcs::arc::Arc<dyn battersea_model::clock::Clock>) -> core::result::Result<battersea_config::ConfiguredProviders, battersea_model::protocol::ProviderConfigurationError>
 pub fn battersea_config::ValidatedProviderConfiguration::configuration(&self) -> &battersea_config::ProviderConfiguration
 impl core::marker::Freeze for battersea_config::ValidatedProviderConfiguration
 impl core::marker::Send for battersea_config::ValidatedProviderConfiguration

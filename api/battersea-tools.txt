@@ -335,7 +335,7 @@ impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusi
 pub struct battersea_tools::ApprovedToolExecutor
 impl battersea_tools::ApprovedToolExecutor
 pub fn battersea_tools::ApprovedToolExecutor::definitions(&self) -> alloc::vec::Vec<battersea_model::adapter::EngineLocalToolDefinition>
-pub fn battersea_tools::ApprovedToolExecutor::new(battersea_tools::ToolRegistry, battersea_tools::ToolApprovalScope, alloc::rcs::arc::Arc<dyn battersea_tools::ToolApprovalPolicy>, usize) -> core::result::Result<Self, battersea_model::adapter::error::EngineAdapterRequestError>
+pub fn battersea_tools::ApprovedToolExecutor::new(battersea_tools::ToolRegistry, battersea_tools::ToolApprovalScope, alloc::rcs::arc::Arc<dyn battersea_tools::ToolApprovalPolicy>, usize, alloc::rcs::arc::Arc<dyn battersea_model::clock::Clock>) -> core::result::Result<Self, battersea_model::adapter::error::EngineAdapterRequestError>
 impl battersea_model::adapter::EngineLocalToolExecutor for battersea_tools::ApprovedToolExecutor
 pub fn battersea_tools::ApprovedToolExecutor::call<'life0, 'async_trait>(&'life0 self, battersea_model::adapter::EngineLocalToolCall) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<battersea_model::adapter::tool_result::EngineLocalToolResult, battersea_model::adapter::error::EngineAdapterRequestError>> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait
 impl core::clone::Clone for battersea_tools::ApprovedToolExecutor
@@ -433,11 +433,11 @@ pub type battersea_tools::DurableToolApprovalScope::Output = T
 impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_tools::DurableToolApprovalScope where T: ?core::marker::Sized
 pub struct battersea_tools::DurableToolExecutor
 impl battersea_tools::DurableToolExecutor
-pub async fn battersea_tools::DurableToolExecutor::create(alloc::rcs::arc::Arc<dyn battersea_tools::ToolApprovalStore>, battersea_tools::ToolRegistry, battersea_tools::DurableToolApprovalScope, battersea_tools::ToolApprovalJournalLimits, core::time::Duration, alloc::rcs::arc::Arc<dyn battersea_model::clock::ExpiryClock>) -> core::result::Result<Self, battersea_model::adapter::error::EngineAdapterRequestError>
+pub async fn battersea_tools::DurableToolExecutor::create(alloc::rcs::arc::Arc<dyn battersea_tools::ToolApprovalStore>, battersea_tools::ToolRegistry, battersea_tools::DurableToolApprovalScope, battersea_tools::ToolApprovalJournalLimits, core::time::Duration, alloc::rcs::arc::Arc<dyn battersea_model::clock::Clock>) -> core::result::Result<Self, battersea_model::adapter::error::EngineAdapterRequestError>
 pub async fn battersea_tools::DurableToolExecutor::decide(&self, &str, &str, u64, battersea_tools::ToolApprovalAction, &str) -> core::result::Result<battersea_tools::ToolApprovalJournal, battersea_model::adapter::error::EngineAdapterRequestError>
 pub fn battersea_tools::DurableToolExecutor::definitions(&self) -> alloc::vec::Vec<battersea_model::adapter::EngineLocalToolDefinition>
 pub async fn battersea_tools::DurableToolExecutor::inspect(&self) -> core::result::Result<battersea_tools::ToolApprovalJournal, battersea_model::adapter::error::EngineAdapterRequestError>
-pub async fn battersea_tools::DurableToolExecutor::open(alloc::rcs::arc::Arc<dyn battersea_tools::ToolApprovalStore>, battersea_tools::ToolRegistry, battersea_tools::DurableToolApprovalScope, usize, core::time::Duration, alloc::rcs::arc::Arc<dyn battersea_model::clock::ExpiryClock>) -> core::result::Result<Self, battersea_model::adapter::error::EngineAdapterRequestError>
+pub async fn battersea_tools::DurableToolExecutor::open(alloc::rcs::arc::Arc<dyn battersea_tools::ToolApprovalStore>, battersea_tools::ToolRegistry, battersea_tools::DurableToolApprovalScope, usize, core::time::Duration, alloc::rcs::arc::Arc<dyn battersea_model::clock::Clock>) -> core::result::Result<Self, battersea_model::adapter::error::EngineAdapterRequestError>
 pub async fn battersea_tools::DurableToolExecutor::reconcile(&self, &str, u64, battersea_tools::ToolApprovalReconciliation, &str, &str) -> core::result::Result<battersea_tools::ToolApprovalJournal, battersea_model::adapter::error::EngineAdapterRequestError>
 pub async fn battersea_tools::DurableToolExecutor::resume(&self, &str, u64) -> core::result::Result<battersea_model::adapter::tool_result::EngineLocalToolResult, battersea_model::adapter::error::EngineAdapterRequestError>
 pub async fn battersea_tools::DurableToolExecutor::submit(&self, battersea_model::adapter::EngineLocalToolCall, u64) -> core::result::Result<battersea_tools::ToolApprovalJournal, battersea_model::adapter::error::EngineAdapterRequestError>
@@ -981,7 +981,7 @@ pub type battersea_tools::ToolApprovalResolution::Output = T
 impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_tools::ToolApprovalResolution where T: ?core::marker::Sized
 pub struct battersea_tools::ToolApprovalScope
 pub battersea_tools::ToolApprovalScope::binding_revision: alloc::string::String
-pub battersea_tools::ToolApprovalScope::deadline: std::time::Instant
+pub battersea_tools::ToolApprovalScope::deadline: tokio::time::instant::Instant
 pub battersea_tools::ToolApprovalScope::run_id: alloc::string::String
 impl core::clone::Clone for battersea_tools::ToolApprovalScope
 pub fn battersea_tools::ToolApprovalScope::clone(&self) -> Self

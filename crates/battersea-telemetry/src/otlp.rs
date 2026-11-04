@@ -5,9 +5,10 @@ use crate::{
     view::{Record, State, Status},
     Error, Result,
 };
+use battersea_model::Clock;
 use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
-use std::time::Duration;
+use std::{sync::Arc, time::Duration};
 
 /// GenAI conventions are Development; every exported resource carries this pin.
 pub const GEN_AI_CONVENTIONS: &str = "6fd0d763a092db245a54104fc1124031eb3c51d2";
@@ -292,14 +293,26 @@ pub fn node_record_id(activation: &str, node: &str) -> String {
     format!("node:{activation}:{node}")
 }
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct Exporter {
     client: reqwest::Client,
     endpoint: String,
+    timeout: Duration,
     max_batch_bytes: usize,
+    clock: Arc<dyn Clock>,
+}
+impl std::fmt::Debug for Exporter {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Exporter")
+            .field("endpoint", &self.endpoint)
+            .field("timeout", &self.timeout)
+            .field("max_batch_bytes", &self.max_batch_bytes)
+            .finish_non_exhaustive()
+    }
 }
 impl Exporter {
-    pub fn new(endpoint: &str, timeout: Duration, max_batch_bytes: usize) -> Result<Self> {
+    /// Checks an exporter configuration without constructing a client.
+    pub fn validate(endpoint: &str, timeout: Duration, max_batch_bytes: usize) -> Result<()> {
         let url = reqwest::Url::parse(endpoint).map_err(|e| Error::Invalid(e.to_string()))?;
         if !matches!(url.scheme(), "http" | "https")
             || !url.username().is_empty()
@@ -309,15 +322,26 @@ impl Exporter {
         {
             return Err(Error::Invalid("Invalid OTLP endpoint or capacity".into()));
         }
+        Ok(())
+    }
+    /// `timeout` bounds each signal's request and response on `clock`.
+    pub fn new(
+        endpoint: &str,
+        timeout: Duration,
+        max_batch_bytes: usize,
+        clock: Arc<dyn Clock>,
+    ) -> Result<Self> {
+        Self::validate(endpoint, timeout, max_batch_bytes)?;
         let client = reqwest::Client::builder()
-            .timeout(timeout)
             .redirect(reqwest::redirect::Policy::none())
             .build()
             .map_err(|e| Error::Invalid(e.to_string()))?;
         Ok(Self {
             client,
             endpoint: endpoint.trim_end_matches('/').into(),
+            timeout,
             max_batch_bytes,
+            clock,
         })
     }
     /// No detached work and no implicit retry: the owner observes both partial
@@ -334,6 +358,15 @@ impl Exporter {
         self.send("metrics", metrics).await
     }
     async fn send(&self, signal: &str, body: Vec<u8>) -> Result<()> {
+        battersea_model::clock::timeout(
+            self.clock.as_ref(),
+            self.timeout,
+            self.deliver(signal, body),
+        )
+        .await
+        .map_err(|_| Error::Delivery(format!("OTLP {signal}: deadline exceeded")))?
+    }
+    async fn deliver(&self, signal: &str, body: Vec<u8>) -> Result<()> {
         let mut response = self
             .client
             .post(format!("{}/v1/{signal}", self.endpoint))

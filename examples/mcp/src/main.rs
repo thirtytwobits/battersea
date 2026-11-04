@@ -46,7 +46,20 @@ async fn conversation(connection: &McpConnection, run_id: &str) -> Result<()> {
     let (binding, registry) = host::bind(connection).await?;
     let fixture = fixture::ProviderFixture::new(serde_json::json!({"value":1}), true);
     let provider = fixture::provider_http(fixture).await?;
-    let (adapter, chat) = host::provider(&provider.endpoint)?;
+    // The demonstration's time is explicit: retry backoff completes once it is scheduled, and the
+    // operation and approval deadlines never elapse.
+    let clock = battersea_model::ManualClock::new(1_800_000_000_000);
+    let backoff = {
+        let clock = clock.clone();
+        tokio::spawn(async move {
+            loop {
+                clock
+                    .advance_to_timer_within(std::time::Duration::from_millis(20))
+                    .await;
+            }
+        })
+    };
+    let (adapter, chat) = host::provider(&provider.endpoint, Arc::new(clock.clone()))?;
     println!("MCP binding {}", binding.revision());
     let mut stream = adapter
         .stream_text(host::approved_request(
@@ -54,6 +67,7 @@ async fn conversation(connection: &McpConnection, run_id: &str) -> Result<()> {
             chat,
             run_id,
             Arc::new(FixturePolicy),
+            Arc::new(clock),
         )?)
         .await?;
     let mut completed = false;
@@ -69,6 +83,7 @@ async fn conversation(connection: &McpConnection, run_id: &str) -> Result<()> {
         }
     }
     assert!(completed);
+    backoff.abort();
     Ok(())
 }
 #[tokio::main(flavor = "current_thread")]

@@ -107,7 +107,7 @@ without a completion event.
 ## Host approval
 
 `ApprovedToolExecutor` pins a profile's registry, host policy, run identity, binding revision
-and absolute deadline. Validation precedes policy evaluation. The policy receives
+and absolute deadline, an instant of the host's `Clock`. Validation precedes policy evaluation. The policy receives
 the complete tool record and canonical call, including validated arguments. The request
 revision binds the run, host binding revision, record and call. Retained host decisions must
 match that revision. Tool effect annotations remain author claims; the host determines trust.
@@ -137,7 +137,8 @@ belongs to one conversation: its scope pins the run, binding revision and absolu
 The binding revision covers the registry's revision, credentials and grant. Each request digest
 binds that scope, the complete presented record and the canonical call. A stored record that
 differs from the one the registry presents is refused before dispatch.
-Opening requires the same scope and never extends expiry. In-process deadlines are monotonic;
+Opening requires the same scope and never extends expiry. In-process deadlines are monotonic
+instants of the host's `Clock`;
 the host supplies a trusted wall clock across restarts. Clock regression behind the journal's
 last update rejects mutation.
 

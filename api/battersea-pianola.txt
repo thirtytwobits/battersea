@@ -49,7 +49,11 @@ impl<T> core::clone::CloneToUninit for battersea_pianola::AllowedError where T: 
 pub unsafe fn battersea_pianola::AllowedError::clone_to_uninit(&self, *mut u8)
 impl<T> core::convert::From<T> for battersea_pianola::AllowedError
 pub fn battersea_pianola::AllowedError::from(T) -> T
+impl<T> dyn_clone::DynClone for battersea_pianola::AllowedError where T: core::clone::Clone
+pub fn battersea_pianola::AllowedError::__clone_box(&self, dyn_clone::sealed::Private) -> *mut ()
 impl<T> serde_core::de::DeserializeOwned for battersea_pianola::AllowedError where T: for<'de> serde_core::de::Deserialize<'de>
+impl<T> typenum::type_operators::Same for battersea_pianola::AllowedError
+pub type battersea_pianola::AllowedError::Output = T
 impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_pianola::AllowedError where T: ?core::marker::Sized
 pub enum battersea_pianola::Expectation<D>
 pub battersea_pianola::Expectation::Domain(D)
@@ -99,7 +103,11 @@ impl<T> core::clone::CloneToUninit for battersea_pianola::Expectation<D> where T
 pub unsafe fn battersea_pianola::Expectation<D>::clone_to_uninit(&self, *mut u8)
 impl<T> core::convert::From<T> for battersea_pianola::Expectation<D>
 pub fn battersea_pianola::Expectation<D>::from(T) -> T
+impl<T> dyn_clone::DynClone for battersea_pianola::Expectation<D> where T: core::clone::Clone
+pub fn battersea_pianola::Expectation<D>::__clone_box(&self, dyn_clone::sealed::Private) -> *mut ()
 impl<T> serde_core::de::DeserializeOwned for battersea_pianola::Expectation<D> where T: for<'de> serde_core::de::Deserialize<'de>
+impl<T> typenum::type_operators::Same for battersea_pianola::Expectation<D>
+pub type battersea_pianola::Expectation<D>::Output = T
 impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_pianola::Expectation<D> where T: ?core::marker::Sized
 pub enum battersea_pianola::GenericExpectation
 pub battersea_pianola::GenericExpectation::AgentGrade
@@ -178,7 +186,11 @@ impl<T> core::clone::CloneToUninit for battersea_pianola::GenericExpectation whe
 pub unsafe fn battersea_pianola::GenericExpectation::clone_to_uninit(&self, *mut u8)
 impl<T> core::convert::From<T> for battersea_pianola::GenericExpectation
 pub fn battersea_pianola::GenericExpectation::from(T) -> T
+impl<T> dyn_clone::DynClone for battersea_pianola::GenericExpectation where T: core::clone::Clone
+pub fn battersea_pianola::GenericExpectation::__clone_box(&self, dyn_clone::sealed::Private) -> *mut ()
 impl<T> serde_core::de::DeserializeOwned for battersea_pianola::GenericExpectation where T: for<'de> serde_core::de::Deserialize<'de>
+impl<T> typenum::type_operators::Same for battersea_pianola::GenericExpectation
+pub type battersea_pianola::GenericExpectation::Output = T
 impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_pianola::GenericExpectation where T: ?core::marker::Sized
 pub enum battersea_pianola::Severity
 pub battersea_pianola::Severity::Advisory
@@ -234,9 +246,13 @@ impl<T> core::clone::CloneToUninit for battersea_pianola::Severity where T: core
 pub unsafe fn battersea_pianola::Severity::clone_to_uninit(&self, *mut u8)
 impl<T> core::convert::From<T> for battersea_pianola::Severity
 pub fn battersea_pianola::Severity::from(T) -> T
+impl<T> dyn_clone::DynClone for battersea_pianola::Severity where T: core::clone::Clone
+pub fn battersea_pianola::Severity::__clone_box(&self, dyn_clone::sealed::Private) -> *mut ()
 impl<T> outref::AsOut<T> for battersea_pianola::Severity where T: core::marker::Copy
 pub fn battersea_pianola::Severity::as_out(&mut self) -> outref::Out<'_, T>
 impl<T> serde_core::de::DeserializeOwned for battersea_pianola::Severity where T: for<'de> serde_core::de::Deserialize<'de>
+impl<T> typenum::type_operators::Same for battersea_pianola::Severity
+pub type battersea_pianola::Severity::Output = T
 impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_pianola::Severity where T: ?core::marker::Sized
 pub enum battersea_pianola::TextMatch
 pub battersea_pianola::TextMatch::Absent(bool)
@@ -286,7 +302,11 @@ impl<T> core::clone::CloneToUninit for battersea_pianola::TextMatch where T: cor
 pub unsafe fn battersea_pianola::TextMatch::clone_to_uninit(&self, *mut u8)
 impl<T> core::convert::From<T> for battersea_pianola::TextMatch
 pub fn battersea_pianola::TextMatch::from(T) -> T
+impl<T> dyn_clone::DynClone for battersea_pianola::TextMatch where T: core::clone::Clone
+pub fn battersea_pianola::TextMatch::__clone_box(&self, dyn_clone::sealed::Private) -> *mut ()
 impl<T> serde_core::de::DeserializeOwned for battersea_pianola::TextMatch where T: for<'de> serde_core::de::Deserialize<'de>
+impl<T> typenum::type_operators::Same for battersea_pianola::TextMatch
+pub type battersea_pianola::TextMatch::Output = T
 impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_pianola::TextMatch where T: ?core::marker::Sized
 pub enum battersea_pianola::ToolCallStatusMatch
 pub battersea_pianola::ToolCallStatusMatch::Cancelled
@@ -340,9 +360,13 @@ impl<T> core::clone::CloneToUninit for battersea_pianola::ToolCallStatusMatch wh
 pub unsafe fn battersea_pianola::ToolCallStatusMatch::clone_to_uninit(&self, *mut u8)
 impl<T> core::convert::From<T> for battersea_pianola::ToolCallStatusMatch
 pub fn battersea_pianola::ToolCallStatusMatch::from(T) -> T
+impl<T> dyn_clone::DynClone for battersea_pianola::ToolCallStatusMatch where T: core::clone::Clone
+pub fn battersea_pianola::ToolCallStatusMatch::__clone_box(&self, dyn_clone::sealed::Private) -> *mut ()
 impl<T> outref::AsOut<T> for battersea_pianola::ToolCallStatusMatch where T: core::marker::Copy
 pub fn battersea_pianola::ToolCallStatusMatch::as_out(&mut self) -> outref::Out<'_, T>
 impl<T> serde_core::de::DeserializeOwned for battersea_pianola::ToolCallStatusMatch where T: for<'de> serde_core::de::Deserialize<'de>
+impl<T> typenum::type_operators::Same for battersea_pianola::ToolCallStatusMatch
+pub type battersea_pianola::ToolCallStatusMatch::Output = T
 impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_pianola::ToolCallStatusMatch where T: ?core::marker::Sized
 pub struct battersea_pianola::AgentGradeGrader
 pub battersea_pianola::AgentGradeGrader::kind: alloc::string::String
@@ -395,7 +419,11 @@ impl<T> core::clone::CloneToUninit for battersea_pianola::AgentGradeGrader where
 pub unsafe fn battersea_pianola::AgentGradeGrader::clone_to_uninit(&self, *mut u8)
 impl<T> core::convert::From<T> for battersea_pianola::AgentGradeGrader
 pub fn battersea_pianola::AgentGradeGrader::from(T) -> T
+impl<T> dyn_clone::DynClone for battersea_pianola::AgentGradeGrader where T: core::clone::Clone
+pub fn battersea_pianola::AgentGradeGrader::__clone_box(&self, dyn_clone::sealed::Private) -> *mut ()
 impl<T> serde_core::de::DeserializeOwned for battersea_pianola::AgentGradeGrader where T: for<'de> serde_core::de::Deserialize<'de>
+impl<T> typenum::type_operators::Same for battersea_pianola::AgentGradeGrader
+pub type battersea_pianola::AgentGradeGrader::Output = T
 impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_pianola::AgentGradeGrader where T: ?core::marker::Sized
 pub struct battersea_pianola::AgentGradeSubject
 pub battersea_pianola::AgentGradeSubject::port: alloc::string::String
@@ -441,7 +469,11 @@ impl<T> core::clone::CloneToUninit for battersea_pianola::AgentGradeSubject wher
 pub unsafe fn battersea_pianola::AgentGradeSubject::clone_to_uninit(&self, *mut u8)
 impl<T> core::convert::From<T> for battersea_pianola::AgentGradeSubject
 pub fn battersea_pianola::AgentGradeSubject::from(T) -> T
+impl<T> dyn_clone::DynClone for battersea_pianola::AgentGradeSubject where T: core::clone::Clone
+pub fn battersea_pianola::AgentGradeSubject::__clone_box(&self, dyn_clone::sealed::Private) -> *mut ()
 impl<T> serde_core::de::DeserializeOwned for battersea_pianola::AgentGradeSubject where T: for<'de> serde_core::de::Deserialize<'de>
+impl<T> typenum::type_operators::Same for battersea_pianola::AgentGradeSubject
+pub type battersea_pianola::AgentGradeSubject::Output = T
 impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_pianola::AgentGradeSubject where T: ?core::marker::Sized
 pub struct battersea_pianola::AssertionRegistry<D, C>
 impl<D: battersea_pianola::DomainCriterion, C: battersea_pianola::Observation> battersea_pianola::AssertionRegistry<D, C>
@@ -474,6 +506,8 @@ impl<T> core::borrow::BorrowMut<T> for battersea_pianola::AssertionRegistry<D, C
 pub fn battersea_pianola::AssertionRegistry<D, C>::borrow_mut(&mut self) -> &mut T
 impl<T> core::convert::From<T> for battersea_pianola::AssertionRegistry<D, C>
 pub fn battersea_pianola::AssertionRegistry<D, C>::from(T) -> T
+impl<T> typenum::type_operators::Same for battersea_pianola::AssertionRegistry<D, C>
+pub type battersea_pianola::AssertionRegistry<D, C>::Output = T
 impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_pianola::AssertionRegistry<D, C> where T: ?core::marker::Sized
 pub struct battersea_pianola::EventRef
 pub battersea_pianola::EventRef::port: core::option::Option<alloc::string::String>
@@ -521,7 +555,11 @@ impl<T> core::clone::CloneToUninit for battersea_pianola::EventRef where T: core
 pub unsafe fn battersea_pianola::EventRef::clone_to_uninit(&self, *mut u8)
 impl<T> core::convert::From<T> for battersea_pianola::EventRef
 pub fn battersea_pianola::EventRef::from(T) -> T
+impl<T> dyn_clone::DynClone for battersea_pianola::EventRef where T: core::clone::Clone
+pub fn battersea_pianola::EventRef::__clone_box(&self, dyn_clone::sealed::Private) -> *mut ()
 impl<T> serde_core::de::DeserializeOwned for battersea_pianola::EventRef where T: for<'de> serde_core::de::Deserialize<'de>
+impl<T> typenum::type_operators::Same for battersea_pianola::EventRef
+pub type battersea_pianola::EventRef::Output = T
 impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_pianola::EventRef where T: ?core::marker::Sized
 pub struct battersea_pianola::ExpectationReport
 pub battersea_pianola::ExpectationReport::all_criteria_held: bool
@@ -576,6 +614,10 @@ impl<T> core::clone::CloneToUninit for battersea_pianola::ExpectationReport wher
 pub unsafe fn battersea_pianola::ExpectationReport::clone_to_uninit(&self, *mut u8)
 impl<T> core::convert::From<T> for battersea_pianola::ExpectationReport
 pub fn battersea_pianola::ExpectationReport::from(T) -> T
+impl<T> dyn_clone::DynClone for battersea_pianola::ExpectationReport where T: core::clone::Clone
+pub fn battersea_pianola::ExpectationReport::__clone_box(&self, dyn_clone::sealed::Private) -> *mut ()
+impl<T> typenum::type_operators::Same for battersea_pianola::ExpectationReport
+pub type battersea_pianola::ExpectationReport::Output = T
 impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_pianola::ExpectationReport where T: ?core::marker::Sized
 pub struct battersea_pianola::NodeSelector
 pub battersea_pianola::NodeSelector::definition: alloc::string::String
@@ -622,7 +664,11 @@ impl<T> core::clone::CloneToUninit for battersea_pianola::NodeSelector where T: 
 pub unsafe fn battersea_pianola::NodeSelector::clone_to_uninit(&self, *mut u8)
 impl<T> core::convert::From<T> for battersea_pianola::NodeSelector
 pub fn battersea_pianola::NodeSelector::from(T) -> T
+impl<T> dyn_clone::DynClone for battersea_pianola::NodeSelector where T: core::clone::Clone
+pub fn battersea_pianola::NodeSelector::__clone_box(&self, dyn_clone::sealed::Private) -> *mut ()
 impl<T> serde_core::de::DeserializeOwned for battersea_pianola::NodeSelector where T: for<'de> serde_core::de::Deserialize<'de>
+impl<T> typenum::type_operators::Same for battersea_pianola::NodeSelector
+pub type battersea_pianola::NodeSelector::Output = T
 impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_pianola::NodeSelector where T: ?core::marker::Sized
 pub struct battersea_pianola::PianolaTap
 impl battersea_pianola::PianolaTap
@@ -630,7 +676,7 @@ pub fn battersea_pianola::PianolaTap::capture(&mut self, &str, &str, &str, &str,
 pub fn battersea_pianola::PianolaTap::captured_len(&self) -> usize
 pub fn battersea_pianola::PianolaTap::emissions_from(&self, usize) -> alloc::vec::Vec<battersea_pianola::TappedEmission>
 pub fn battersea_pianola::PianolaTap::error(&self) -> core::option::Option<&str>
-pub fn battersea_pianola::PianolaTap::new(alloc::vec::Vec<battersea_pianola::PianolaTapTarget>, usize) -> Self
+pub fn battersea_pianola::PianolaTap::new(alloc::vec::Vec<battersea_pianola::PianolaTapTarget>, usize, alloc::rcs::arc::Arc<dyn battersea_model::clock::Clock>) -> Self
 impl core::fmt::Debug for battersea_pianola::PianolaTap
 pub fn battersea_pianola::PianolaTap::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 impl core::marker::Freeze for battersea_pianola::PianolaTap
@@ -638,8 +684,8 @@ impl core::marker::Send for battersea_pianola::PianolaTap
 impl core::marker::Sync for battersea_pianola::PianolaTap
 impl core::marker::Unpin for battersea_pianola::PianolaTap
 impl core::marker::UnsafeUnpin for battersea_pianola::PianolaTap
-impl core::panic::unwind_safe::RefUnwindSafe for battersea_pianola::PianolaTap
-impl core::panic::unwind_safe::UnwindSafe for battersea_pianola::PianolaTap
+impl !core::panic::unwind_safe::RefUnwindSafe for battersea_pianola::PianolaTap
+impl !core::panic::unwind_safe::UnwindSafe for battersea_pianola::PianolaTap
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_pianola::PianolaTap where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_pianola::PianolaTap where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<T, U> core::convert::Into<U> for battersea_pianola::PianolaTap where U: core::convert::From<T>
@@ -658,6 +704,8 @@ impl<T> core::borrow::BorrowMut<T> for battersea_pianola::PianolaTap where T: ?c
 pub fn battersea_pianola::PianolaTap::borrow_mut(&mut self) -> &mut T
 impl<T> core::convert::From<T> for battersea_pianola::PianolaTap
 pub fn battersea_pianola::PianolaTap::from(T) -> T
+impl<T> typenum::type_operators::Same for battersea_pianola::PianolaTap
+pub type battersea_pianola::PianolaTap::Output = T
 impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_pianola::PianolaTap where T: ?core::marker::Sized
 pub struct battersea_pianola::PianolaTapTarget
 pub battersea_pianola::PianolaTapTarget::flow_key: alloc::string::String
@@ -698,6 +746,10 @@ impl<T> core::clone::CloneToUninit for battersea_pianola::PianolaTapTarget where
 pub unsafe fn battersea_pianola::PianolaTapTarget::clone_to_uninit(&self, *mut u8)
 impl<T> core::convert::From<T> for battersea_pianola::PianolaTapTarget
 pub fn battersea_pianola::PianolaTapTarget::from(T) -> T
+impl<T> dyn_clone::DynClone for battersea_pianola::PianolaTapTarget where T: core::clone::Clone
+pub fn battersea_pianola::PianolaTapTarget::__clone_box(&self, dyn_clone::sealed::Private) -> *mut ()
+impl<T> typenum::type_operators::Same for battersea_pianola::PianolaTapTarget
+pub type battersea_pianola::PianolaTapTarget::Output = T
 impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_pianola::PianolaTapTarget where T: ?core::marker::Sized
 pub struct battersea_pianola::PortEmission
 pub battersea_pianola::PortEmission::at: core::option::Option<chrono::datetime::DateTime<chrono::offset::utc::Utc>>
@@ -738,6 +790,10 @@ impl<T> core::clone::CloneToUninit for battersea_pianola::PortEmission where T: 
 pub unsafe fn battersea_pianola::PortEmission::clone_to_uninit(&self, *mut u8)
 impl<T> core::convert::From<T> for battersea_pianola::PortEmission
 pub fn battersea_pianola::PortEmission::from(T) -> T
+impl<T> dyn_clone::DynClone for battersea_pianola::PortEmission where T: core::clone::Clone
+pub fn battersea_pianola::PortEmission::__clone_box(&self, dyn_clone::sealed::Private) -> *mut ()
+impl<T> typenum::type_operators::Same for battersea_pianola::PortEmission
+pub type battersea_pianola::PortEmission::Output = T
 impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_pianola::PortEmission where T: ?core::marker::Sized
 pub struct battersea_pianola::RawAssertion
 pub battersea_pianola::RawAssertion::detail: core::option::Option<alloc::string::String>
@@ -768,6 +824,8 @@ impl<T> core::borrow::BorrowMut<T> for battersea_pianola::RawAssertion where T: 
 pub fn battersea_pianola::RawAssertion::borrow_mut(&mut self) -> &mut T
 impl<T> core::convert::From<T> for battersea_pianola::RawAssertion
 pub fn battersea_pianola::RawAssertion::from(T) -> T
+impl<T> typenum::type_operators::Same for battersea_pianola::RawAssertion
+pub type battersea_pianola::RawAssertion::Output = T
 impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_pianola::RawAssertion where T: ?core::marker::Sized
 pub struct battersea_pianola::Roll<S, A, E>
 pub battersea_pianola::Roll::criteria: core::option::Option<battersea_pianola::RollCriteria>
@@ -820,7 +878,11 @@ impl<T> core::clone::CloneToUninit for battersea_pianola::Roll<S, A, E> where T:
 pub unsafe fn battersea_pianola::Roll<S, A, E>::clone_to_uninit(&self, *mut u8)
 impl<T> core::convert::From<T> for battersea_pianola::Roll<S, A, E>
 pub fn battersea_pianola::Roll<S, A, E>::from(T) -> T
+impl<T> dyn_clone::DynClone for battersea_pianola::Roll<S, A, E> where T: core::clone::Clone
+pub fn battersea_pianola::Roll<S, A, E>::__clone_box(&self, dyn_clone::sealed::Private) -> *mut ()
 impl<T> serde_core::de::DeserializeOwned for battersea_pianola::Roll<S, A, E> where T: for<'de> serde_core::de::Deserialize<'de>
+impl<T> typenum::type_operators::Same for battersea_pianola::Roll<S, A, E>
+pub type battersea_pianola::Roll<S, A, E>::Output = T
 impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_pianola::Roll<S, A, E> where T: ?core::marker::Sized
 pub struct battersea_pianola::RollCriteria
 pub battersea_pianola::RollCriteria::allowed_errors: alloc::vec::Vec<battersea_pianola::AllowedError>
@@ -867,7 +929,11 @@ impl<T> core::clone::CloneToUninit for battersea_pianola::RollCriteria where T: 
 pub unsafe fn battersea_pianola::RollCriteria::clone_to_uninit(&self, *mut u8)
 impl<T> core::convert::From<T> for battersea_pianola::RollCriteria
 pub fn battersea_pianola::RollCriteria::from(T) -> T
+impl<T> dyn_clone::DynClone for battersea_pianola::RollCriteria where T: core::clone::Clone
+pub fn battersea_pianola::RollCriteria::__clone_box(&self, dyn_clone::sealed::Private) -> *mut ()
 impl<T> serde_core::de::DeserializeOwned for battersea_pianola::RollCriteria where T: for<'de> serde_core::de::Deserialize<'de>
+impl<T> typenum::type_operators::Same for battersea_pianola::RollCriteria
+pub type battersea_pianola::RollCriteria::Output = T
 impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_pianola::RollCriteria where T: ?core::marker::Sized
 pub struct battersea_pianola::RollDefaults
 pub battersea_pianola::RollDefaults::flow_binding: core::option::Option<alloc::string::String>
@@ -914,7 +980,11 @@ impl<T> core::clone::CloneToUninit for battersea_pianola::RollDefaults where T: 
 pub unsafe fn battersea_pianola::RollDefaults::clone_to_uninit(&self, *mut u8)
 impl<T> core::convert::From<T> for battersea_pianola::RollDefaults
 pub fn battersea_pianola::RollDefaults::from(T) -> T
+impl<T> dyn_clone::DynClone for battersea_pianola::RollDefaults where T: core::clone::Clone
+pub fn battersea_pianola::RollDefaults::__clone_box(&self, dyn_clone::sealed::Private) -> *mut ()
 impl<T> serde_core::de::DeserializeOwned for battersea_pianola::RollDefaults where T: for<'de> serde_core::de::Deserialize<'de>
+impl<T> typenum::type_operators::Same for battersea_pianola::RollDefaults
+pub type battersea_pianola::RollDefaults::Output = T
 impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_pianola::RollDefaults where T: ?core::marker::Sized
 pub struct battersea_pianola::RollRecordingEntry
 pub battersea_pianola::RollRecordingEntry::node_id: alloc::string::String
@@ -962,6 +1032,10 @@ impl<T> core::clone::CloneToUninit for battersea_pianola::RollRecordingEntry whe
 pub unsafe fn battersea_pianola::RollRecordingEntry::clone_to_uninit(&self, *mut u8)
 impl<T> core::convert::From<T> for battersea_pianola::RollRecordingEntry
 pub fn battersea_pianola::RollRecordingEntry::from(T) -> T
+impl<T> dyn_clone::DynClone for battersea_pianola::RollRecordingEntry where T: core::clone::Clone
+pub fn battersea_pianola::RollRecordingEntry::__clone_box(&self, dyn_clone::sealed::Private) -> *mut ()
+impl<T> typenum::type_operators::Same for battersea_pianola::RollRecordingEntry
+pub type battersea_pianola::RollRecordingEntry::Output = T
 impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_pianola::RollRecordingEntry where T: ?core::marker::Sized
 pub struct battersea_pianola::RollReport
 pub battersea_pianola::RollReport::all_criteria_held: bool
@@ -1011,6 +1085,10 @@ impl<T> core::clone::CloneToUninit for battersea_pianola::RollReport where T: co
 pub unsafe fn battersea_pianola::RollReport::clone_to_uninit(&self, *mut u8)
 impl<T> core::convert::From<T> for battersea_pianola::RollReport
 pub fn battersea_pianola::RollReport::from(T) -> T
+impl<T> dyn_clone::DynClone for battersea_pianola::RollReport where T: core::clone::Clone
+pub fn battersea_pianola::RollReport::__clone_box(&self, dyn_clone::sealed::Private) -> *mut ()
+impl<T> typenum::type_operators::Same for battersea_pianola::RollReport
+pub type battersea_pianola::RollReport::Output = T
 impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_pianola::RollReport where T: ?core::marker::Sized
 pub struct battersea_pianola::RollStep<A, E>
 pub battersea_pianola::RollStep::action: A
@@ -1060,7 +1138,11 @@ impl<T> core::clone::CloneToUninit for battersea_pianola::RollStep<A, E> where T
 pub unsafe fn battersea_pianola::RollStep<A, E>::clone_to_uninit(&self, *mut u8)
 impl<T> core::convert::From<T> for battersea_pianola::RollStep<A, E>
 pub fn battersea_pianola::RollStep<A, E>::from(T) -> T
+impl<T> dyn_clone::DynClone for battersea_pianola::RollStep<A, E> where T: core::clone::Clone
+pub fn battersea_pianola::RollStep<A, E>::__clone_box(&self, dyn_clone::sealed::Private) -> *mut ()
 impl<T> serde_core::de::DeserializeOwned for battersea_pianola::RollStep<A, E> where T: for<'de> serde_core::de::Deserialize<'de>
+impl<T> typenum::type_operators::Same for battersea_pianola::RollStep<A, E>
+pub type battersea_pianola::RollStep<A, E>::Output = T
 impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_pianola::RollStep<A, E> where T: ?core::marker::Sized
 pub struct battersea_pianola::RollSuccessPolicy
 pub battersea_pianola::RollSuccessPolicy::min_grade: core::option::Option<f64>
@@ -1107,7 +1189,11 @@ impl<T> core::clone::CloneToUninit for battersea_pianola::RollSuccessPolicy wher
 pub unsafe fn battersea_pianola::RollSuccessPolicy::clone_to_uninit(&self, *mut u8)
 impl<T> core::convert::From<T> for battersea_pianola::RollSuccessPolicy
 pub fn battersea_pianola::RollSuccessPolicy::from(T) -> T
+impl<T> dyn_clone::DynClone for battersea_pianola::RollSuccessPolicy where T: core::clone::Clone
+pub fn battersea_pianola::RollSuccessPolicy::__clone_box(&self, dyn_clone::sealed::Private) -> *mut ()
 impl<T> serde_core::de::DeserializeOwned for battersea_pianola::RollSuccessPolicy where T: for<'de> serde_core::de::Deserialize<'de>
+impl<T> typenum::type_operators::Same for battersea_pianola::RollSuccessPolicy
+pub type battersea_pianola::RollSuccessPolicy::Output = T
 impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_pianola::RollSuccessPolicy where T: ?core::marker::Sized
 pub struct battersea_pianola::RollTee
 pub battersea_pianola::RollTee::output: alloc::string::String
@@ -1154,7 +1240,11 @@ impl<T> core::clone::CloneToUninit for battersea_pianola::RollTee where T: core:
 pub unsafe fn battersea_pianola::RollTee::clone_to_uninit(&self, *mut u8)
 impl<T> core::convert::From<T> for battersea_pianola::RollTee
 pub fn battersea_pianola::RollTee::from(T) -> T
+impl<T> dyn_clone::DynClone for battersea_pianola::RollTee where T: core::clone::Clone
+pub fn battersea_pianola::RollTee::__clone_box(&self, dyn_clone::sealed::Private) -> *mut ()
 impl<T> serde_core::de::DeserializeOwned for battersea_pianola::RollTee where T: for<'de> serde_core::de::Deserialize<'de>
+impl<T> typenum::type_operators::Same for battersea_pianola::RollTee
+pub type battersea_pianola::RollTee::Output = T
 impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_pianola::RollTee where T: ?core::marker::Sized
 pub struct battersea_pianola::RollTeePort
 pub battersea_pianola::RollTeePort::node: core::option::Option<battersea_pianola::NodeSelector>
@@ -1201,7 +1291,11 @@ impl<T> core::clone::CloneToUninit for battersea_pianola::RollTeePort where T: c
 pub unsafe fn battersea_pianola::RollTeePort::clone_to_uninit(&self, *mut u8)
 impl<T> core::convert::From<T> for battersea_pianola::RollTeePort
 pub fn battersea_pianola::RollTeePort::from(T) -> T
+impl<T> dyn_clone::DynClone for battersea_pianola::RollTeePort where T: core::clone::Clone
+pub fn battersea_pianola::RollTeePort::__clone_box(&self, dyn_clone::sealed::Private) -> *mut ()
 impl<T> serde_core::de::DeserializeOwned for battersea_pianola::RollTeePort where T: for<'de> serde_core::de::Deserialize<'de>
+impl<T> typenum::type_operators::Same for battersea_pianola::RollTeePort
+pub type battersea_pianola::RollTeePort::Output = T
 impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_pianola::RollTeePort where T: ?core::marker::Sized
 pub struct battersea_pianola::StepReport
 pub battersea_pianola::StepReport::all_criteria_held: bool
@@ -1248,6 +1342,10 @@ impl<T> core::clone::CloneToUninit for battersea_pianola::StepReport where T: co
 pub unsafe fn battersea_pianola::StepReport::clone_to_uninit(&self, *mut u8)
 impl<T> core::convert::From<T> for battersea_pianola::StepReport
 pub fn battersea_pianola::StepReport::from(T) -> T
+impl<T> dyn_clone::DynClone for battersea_pianola::StepReport where T: core::clone::Clone
+pub fn battersea_pianola::StepReport::__clone_box(&self, dyn_clone::sealed::Private) -> *mut ()
+impl<T> typenum::type_operators::Same for battersea_pianola::StepReport
+pub type battersea_pianola::StepReport::Output = T
 impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_pianola::StepReport where T: ?core::marker::Sized
 pub struct battersea_pianola::TappedEmission
 pub battersea_pianola::TappedEmission::at: chrono::datetime::DateTime<chrono::offset::utc::Utc>
@@ -1291,6 +1389,10 @@ impl<T> core::clone::CloneToUninit for battersea_pianola::TappedEmission where T
 pub unsafe fn battersea_pianola::TappedEmission::clone_to_uninit(&self, *mut u8)
 impl<T> core::convert::From<T> for battersea_pianola::TappedEmission
 pub fn battersea_pianola::TappedEmission::from(T) -> T
+impl<T> dyn_clone::DynClone for battersea_pianola::TappedEmission where T: core::clone::Clone
+pub fn battersea_pianola::TappedEmission::__clone_box(&self, dyn_clone::sealed::Private) -> *mut ()
+impl<T> typenum::type_operators::Same for battersea_pianola::TappedEmission
+pub type battersea_pianola::TappedEmission::Output = T
 impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_pianola::TappedEmission where T: ?core::marker::Sized
 pub struct battersea_pianola::Timeline
 pub battersea_pianola::Timeline::ports: alloc::vec::Vec<battersea_pianola::PortEmission>
@@ -1338,6 +1440,10 @@ impl<T> core::clone::CloneToUninit for battersea_pianola::Timeline where T: core
 pub unsafe fn battersea_pianola::Timeline::clone_to_uninit(&self, *mut u8)
 impl<T> core::convert::From<T> for battersea_pianola::Timeline
 pub fn battersea_pianola::Timeline::from(T) -> T
+impl<T> dyn_clone::DynClone for battersea_pianola::Timeline where T: core::clone::Clone
+pub fn battersea_pianola::Timeline::__clone_box(&self, dyn_clone::sealed::Private) -> *mut ()
+impl<T> typenum::type_operators::Same for battersea_pianola::Timeline
+pub type battersea_pianola::Timeline::Output = T
 impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_pianola::Timeline where T: ?core::marker::Sized
 pub struct battersea_pianola::ToolObservation
 pub battersea_pianola::ToolObservation::arguments_json: alloc::string::String
@@ -1379,6 +1485,10 @@ impl<T> core::clone::CloneToUninit for battersea_pianola::ToolObservation where 
 pub unsafe fn battersea_pianola::ToolObservation::clone_to_uninit(&self, *mut u8)
 impl<T> core::convert::From<T> for battersea_pianola::ToolObservation
 pub fn battersea_pianola::ToolObservation::from(T) -> T
+impl<T> dyn_clone::DynClone for battersea_pianola::ToolObservation where T: core::clone::Clone
+pub fn battersea_pianola::ToolObservation::__clone_box(&self, dyn_clone::sealed::Private) -> *mut ()
+impl<T> typenum::type_operators::Same for battersea_pianola::ToolObservation
+pub type battersea_pianola::ToolObservation::Output = T
 impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_pianola::ToolObservation where T: ?core::marker::Sized
 pub trait battersea_pianola::DomainCriterion
 pub fn battersea_pianola::DomainCriterion::kind(&self) -> &str

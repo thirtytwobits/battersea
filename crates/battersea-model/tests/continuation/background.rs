@@ -260,15 +260,9 @@ async fn interrupted_poll_and_cancel_resume_the_same_remote_operation() {
                 d.resume(3).await
             }
         });
-        tokio::time::timeout(Duration::from_secs(2), async {
-            while provider.polls.load(Ordering::SeqCst) + provider.cancels.load(Ordering::SeqCst)
-                == 0
-            {
-                tokio::task::yield_now().await;
-            }
-        })
-        .await
-        .unwrap();
+        while provider.polls.load(Ordering::SeqCst) + provider.cancels.load(Ordering::SeqCst) == 0 {
+            tokio::task::yield_now().await;
+        }
         task.abort();
         assert!(task.await.unwrap_err().is_cancelled());
         provider.pause_poll.store(false, Ordering::SeqCst);

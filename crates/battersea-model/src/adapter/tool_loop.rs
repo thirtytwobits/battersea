@@ -76,6 +76,7 @@ pub async fn run_tool_loop(
     executor: Arc<dyn EngineLocalToolExecutor>,
     logger: Option<Arc<dyn EngineAdapterLogger>>,
     context: EngineAdapterDebugContext,
+    clock: Arc<dyn crate::Clock>,
     events: ToolEventSender,
 ) {
     let mut active_tool = None;
@@ -85,9 +86,9 @@ pub async fn run_tool_loop(
         biased;
         _ = events.closed() => {},
         result = async {
-            let run = drive_tool_loop(&mut conversation, &request, executor.as_ref(), &logger, &context, &events, &mut active_tool);
+            let run = drive_tool_loop(&mut conversation, &request, executor.as_ref(), &logger, &context, clock.as_ref(), &events, &mut active_tool);
             match context.timeout_ms {
-                Some(ms) => tokio::time::timeout(std::time::Duration::from_millis(ms), run).await
+                Some(ms) => crate::clock::timeout(clock.as_ref(), std::time::Duration::from_millis(ms), run).await
                     .map_err(|_| {
                         let mut error = EngineAdapterRequestError::new(&context.provider, "Request deadline exceeded during tool orchestration.", super::error::ErrorKind::Timeout);
                         error.tool_call = active_tool.clone().map(Box::new);
@@ -132,12 +133,14 @@ async fn forward_turn_event(
     send_event(events, event).await
 }
 
+#[allow(clippy::too_many_arguments)]
 async fn drive_tool_loop(
     conversation: &mut impl ToolConversation,
     request: &EngineTextStreamRequest,
     executor: &dyn EngineLocalToolExecutor,
     logger: &Option<Arc<dyn EngineAdapterLogger>>,
     context: &EngineAdapterDebugContext,
+    clock: &dyn crate::Clock,
     events: &ToolEventSender,
     active_tool: &mut Option<crate::ToolCallEvidence>,
 ) -> Result<(), EngineAdapterRequestError> {
@@ -231,7 +234,7 @@ async fn drive_tool_loop(
                     id: call.id.clone(),
                     name: call.name.clone(),
                     arguments: call.arguments.clone(),
-                    started_at: chrono::Utc::now().to_rfc3339(),
+                    started_at: crate::clock::utc_now(clock).to_rfc3339(),
                 },
             )
             .await?;
@@ -316,7 +319,7 @@ async fn drive_tool_loop(
                     error_classification: classification,
                     tool_result: host_result,
                     tool_call: Some(evidence.clone()),
-                    finished_at: chrono::Utc::now().to_rfc3339(),
+                    finished_at: crate::clock::utc_now(clock).to_rfc3339(),
                 },
             )
             .await
@@ -492,6 +495,10 @@ mod tests {
             })
         }
     }
+    /// A clock no test advances unless it exercises a deadline.
+    fn clock() -> Arc<dyn crate::Clock> {
+        Arc::new(crate::ManualClock::new(0))
+    }
     fn context() -> EngineAdapterDebugContext {
         EngineAdapterDebugContext {
             provider: "test".into(),
@@ -537,7 +544,7 @@ mod tests {
         executor: Arc<dyn EngineLocalToolExecutor>,
     ) -> Vec<Result<EngineTextStreamEvent, EngineAdapterRequestError>> {
         let (tx, mut rx) = mpsc::channel(64);
-        run_tool_loop(script, request, executor, None, context(), tx).await;
+        run_tool_loop(script, request, executor, None, context(), clock(), tx).await;
         let mut events = Vec::new();
         while let Some(event) = rx.recv().await {
             // These tests specify tool effects and lifecycle ordering. Usage
@@ -719,6 +726,7 @@ mod tests {
             Arc::new(Answer(Mutex::new(Some(Ok(result.clone()))))),
             Some(logs.clone()),
             context(),
+            clock(),
             tx,
         )
         .await;
@@ -826,8 +834,9 @@ mod tests {
             let executor = Arc::new(Executor::default());
             let mut context = context();
             context.timeout_ms = Some(200);
+            let clock = Arc::new(crate::ManualClock::new(0));
             let (tx, mut rx) = mpsc::channel(64);
-            run_tool_loop(
+            let task = tokio::spawn(run_tool_loop(
                 Delivery {
                     calls_returned: false,
                     failure,
@@ -836,20 +845,25 @@ mod tests {
                 executor.clone(),
                 None,
                 context,
+                clock.clone(),
                 tx,
-            )
-            .await;
+            ));
             let mut completed = Vec::new();
             let mut failure = None;
             while let Some(event) = rx.recv().await {
                 match event {
                     Ok(EngineTextStreamEvent::ToolCallCompleted { id, ok: true, .. }) => {
                         completed.push(id);
+                        if deadline && completed.len() == 2 {
+                            // The provider never answers the continuation; the deadline ends it.
+                            clock.advance(std::time::Duration::from_millis(200));
+                        }
                     }
                     Err(error) => failure = Some(error),
                     _ => {}
                 }
             }
+            task.await.unwrap();
             assert_eq!(completed, ["first", "second"]);
             assert_eq!(executor.calls.lock().unwrap().len(), 2);
             let error = failure.expect("delivery failed");
@@ -1044,14 +1058,12 @@ mod tests {
             Arc::new(Executor::default()),
             None,
             context(),
+            clock(),
             tx,
         ));
         started.notified().await;
         drop(rx);
-        tokio::time::timeout(std::time::Duration::from_secs(1), task)
-            .await
-            .expect("cancelled promptly")
-            .unwrap();
+        task.await.unwrap();
     }
     struct PendingExecutor {
         started: Arc<tokio::sync::Notify>,
@@ -1082,14 +1094,12 @@ mod tests {
             }),
             None,
             context(),
+            clock(),
             tx,
         ));
         started.notified().await;
         drop(rx);
-        tokio::time::timeout(std::time::Duration::from_secs(1), task)
-            .await
-            .expect("cancelled promptly")
-            .unwrap();
+        task.await.unwrap();
     }
     #[tokio::test]
     async fn invalid_arguments_in_a_later_call_prevent_all_batch_effects() {
@@ -1130,6 +1140,7 @@ mod tests {
         };
         let mut context = context();
         context.timeout_ms = Some(20);
+        let clock = Arc::new(crate::ManualClock::new(0));
         let (tx, mut rx) = mpsc::channel(64);
         let task = tokio::spawn(run_tool_loop(
             script,
@@ -1137,16 +1148,20 @@ mod tests {
             Arc::new(Waiting),
             None,
             context,
+            clock.clone(),
             tx,
         ));
         let mut events = Vec::new();
-        tokio::time::timeout(std::time::Duration::from_secs(3), async {
-            while let Some(event) = rx.recv().await {
-                events.push(event);
+        while let Some(event) = rx.recv().await {
+            if matches!(event, Ok(EngineTextStreamEvent::ToolCallStarted { .. })) {
+                // The tool never returns; one millisecond short of the deadline it is still running.
+                clock.advance(std::time::Duration::from_millis(19));
+                tokio::task::yield_now().await;
+                assert!(!task.is_finished());
+                clock.advance(std::time::Duration::from_millis(1));
             }
-        })
-        .await
-        .expect("deadline must terminate the run");
+            events.push(event);
+        }
         task.await.unwrap();
         assert!(events.iter().any(|event| matches!(event, Err(error) if error.classification == super::super::error::ErrorKind::Timeout)));
         let evidence = events

@@ -15,6 +15,7 @@ use tokio_util::sync::CancellationToken;
 
 pub(crate) fn create_mock_media_generator(
     backend: MediaBackendConfig,
+    clock: Arc<dyn battersea_model::Clock>,
 ) -> Result<Arc<dyn MediaGenerationAdapter>, EngineAdapterRequestError> {
     let configured_url = backend
         .options
@@ -37,6 +38,7 @@ pub(crate) fn create_mock_media_generator(
 
     Ok(Arc::new(MockMediaGenerator {
         backend,
+        clock,
         configured_url,
         prompt_preview_font,
     }))
@@ -44,6 +46,7 @@ pub(crate) fn create_mock_media_generator(
 
 struct MockMediaGenerator {
     backend: MediaBackendConfig,
+    clock: Arc<dyn battersea_model::Clock>,
     configured_url: Option<String>,
     prompt_preview_font: Option<FontArc>,
 }
@@ -52,6 +55,9 @@ struct MockMediaGenerator {
 impl MediaGenerationAdapter for MockMediaGenerator {
     fn backend(&self) -> &MediaBackendConfig {
         &self.backend
+    }
+    fn clock(&self) -> Arc<dyn battersea_model::Clock> {
+        self.clock.clone()
     }
 
     fn prepare(
@@ -107,9 +113,8 @@ impl MockMediaGenerator {
         // resolved render request plus the mock-specific knobs; the
         // response envelope is filled in just before we return.
         let provider_request = prepared.body;
-        let mut timing = MediaTimingRecorder::start();
-        let phase_started_at = chrono::Utc::now();
-        let phase_started_instant = std::time::Instant::now();
+        let mut timing = MediaTimingRecorder::start(self.clock.clone());
+        let (phase_started_at, phase_started_instant) = timing.now();
         let sequence = self
             .backend
             .options
@@ -144,13 +149,19 @@ impl MockMediaGenerator {
                     progress_duration_ms,
                     progress_step_count,
                     &cancellation,
+                    self.clock.as_ref(),
                 )
                 .await?;
                 if delay_ms > progress_duration_ms {
-                    sleep_with_cancellation(delay_ms - progress_duration_ms, &cancellation).await?;
+                    sleep_with_cancellation(
+                        delay_ms - progress_duration_ms,
+                        &cancellation,
+                        self.clock.as_ref(),
+                    )
+                    .await?;
                 }
             } else {
-                sleep_with_cancellation(delay_ms, &cancellation).await?;
+                sleep_with_cancellation(delay_ms, &cancellation, self.clock.as_ref()).await?;
             }
             let assets: Vec<MediaAsset> = (0..target_asset_count)
                 .map(|index| build_mock_asset(self, &request, None, index))
@@ -181,7 +192,7 @@ impl MockMediaGenerator {
                 .get("delayMs")
                 .and_then(serde_json::Value::as_u64)
                 .unwrap_or_else(|| read_u64_option(&self.backend.options.extra, "mockDelayMs", 0));
-            sleep_with_cancellation(delay_ms, &cancellation).await?;
+            sleep_with_cancellation(delay_ms, &cancellation, self.clock.as_ref()).await?;
             let remaining = target_asset_count.saturating_sub(all_assets.len());
             let mut assets = step
                 .get("frames")
@@ -341,6 +352,7 @@ fn read_mock_progress_step_count(
 async fn sleep_with_cancellation(
     delay_ms: u64,
     cancellation: &CancellationToken,
+    clock: &dyn battersea_model::Clock,
 ) -> Result<(), crate::EngineAdapterRequestError> {
     if delay_ms == 0 {
         if cancellation.is_cancelled() {
@@ -356,7 +368,7 @@ async fn sleep_with_cancellation(
         _ = cancellation.cancelled() => {
             Err(EngineAdapterRequestError::new("mock", "Media generation cancelled.", "cancelled"))
         }
-        _ = tokio::time::sleep(std::time::Duration::from_millis(delay_ms)) => Ok(())
+        _ = battersea_model::clock::sleep(clock, std::time::Duration::from_millis(delay_ms)) => Ok(())
     }
 }
 
@@ -373,6 +385,7 @@ async fn emit_mock_progress_ticks(
     duration_ms: u64,
     step_count: u64,
     cancellation: &CancellationToken,
+    clock: &dyn battersea_model::Clock,
 ) -> Result<(), crate::EngineAdapterRequestError> {
     let Some(reporter) = activity_reporter else {
         return Ok(());
@@ -384,7 +397,7 @@ async fn emit_mock_progress_ticks(
     let step_ms = duration_ms / steps;
     let addressable_slots = slot_count.min(u8::MAX as usize);
     for step in 1..=steps {
-        sleep_with_cancellation(step_ms, cancellation).await?;
+        sleep_with_cancellation(step_ms, cancellation, clock).await?;
         let progress = (step as f32) / (steps as f32) * 0.9;
         let remaining_ms = duration_ms.saturating_sub(step * step_ms);
         for index in 0..addressable_slots {
@@ -916,10 +929,13 @@ mod tests {
 
     #[tokio::test]
     async fn mock_image_generator_respects_requested_count() {
-        let generator = create_mock_media_generator(mock_image_backend(BTreeMap::from([(
-            "mockUrl".to_string(),
-            json!("data:image/png;base64,AA=="),
-        )])))
+        let generator = create_mock_media_generator(
+            mock_image_backend(BTreeMap::from([(
+                "mockUrl".to_string(),
+                json!("data:image/png;base64,AA=="),
+            )])),
+            crate::test_clock(),
+        )
         .expect("mock generator");
 
         let rendered = generator
@@ -945,17 +961,20 @@ mod tests {
 
     #[tokio::test]
     async fn mock_image_sequence_is_truncated_to_requested_count() {
-        let generator = create_mock_media_generator(mock_image_backend(BTreeMap::from([
-            (
-                "mockSequence".to_string(),
-                json!([
-                    {"url": "data:image/png;base64,AA=="},
-                    {"url": "data:image/png;base64,AA=="},
-                    {"url": "data:image/png;base64,AA=="}
-                ]),
-            ),
-            ("mockUrl".to_string(), json!("data:image/png;base64,AA==")),
-        ])))
+        let generator = create_mock_media_generator(
+            mock_image_backend(BTreeMap::from([
+                (
+                    "mockSequence".to_string(),
+                    json!([
+                        {"url": "data:image/png;base64,AA=="},
+                        {"url": "data:image/png;base64,AA=="},
+                        {"url": "data:image/png;base64,AA=="}
+                    ]),
+                ),
+                ("mockUrl".to_string(), json!("data:image/png;base64,AA==")),
+            ])),
+            crate::test_clock(),
+        )
         .expect("mock generator");
 
         let rendered = generator
@@ -973,10 +992,13 @@ mod tests {
 
     #[tokio::test]
     async fn mock_render_emits_deterministic_provider_envelopes() {
-        let generator = create_mock_media_generator(mock_image_backend(BTreeMap::from([(
-            "mockUrl".to_string(),
-            json!("data:image/png;base64,AA=="),
-        )])))
+        let generator = create_mock_media_generator(
+            mock_image_backend(BTreeMap::from([(
+                "mockUrl".to_string(),
+                json!("data:image/png;base64,AA=="),
+            )])),
+            crate::test_clock(),
+        )
         .expect("mock generator");
 
         let mut request = render_request(Some(1));
@@ -1043,10 +1065,13 @@ mod tests {
 
     #[tokio::test]
     async fn mock_render_emits_provider_progress_for_each_requested_slot() {
-        let generator = create_mock_media_generator(mock_image_backend(BTreeMap::from([
-            ("mockUrl".to_string(), json!("data:image/png;base64,AA==")),
-            ("mockDelayMs".to_string(), json!(0)),
-        ])))
+        let generator = create_mock_media_generator(
+            mock_image_backend(BTreeMap::from([
+                ("mockUrl".to_string(), json!("data:image/png;base64,AA==")),
+                ("mockDelayMs".to_string(), json!(0)),
+            ])),
+            crate::test_clock(),
+        )
         .expect("mock generator");
         let reporter = Arc::new(RecordingActivityReporter::default());
 
@@ -1087,11 +1112,14 @@ mod tests {
 
     #[tokio::test]
     async fn mock_render_honours_configured_progress_step_count() {
-        let generator = create_mock_media_generator(mock_image_backend(BTreeMap::from([
-            ("mockUrl".to_string(), json!("data:image/png;base64,AA==")),
-            ("mockDelayMs".to_string(), json!(0)),
-            ("mockProgressStepCount".to_string(), json!(5)),
-        ])))
+        let generator = create_mock_media_generator(
+            mock_image_backend(BTreeMap::from([
+                ("mockUrl".to_string(), json!("data:image/png;base64,AA==")),
+                ("mockDelayMs".to_string(), json!(0)),
+                ("mockProgressStepCount".to_string(), json!(5)),
+            ])),
+            crate::test_clock(),
+        )
         .expect("mock generator");
         let reporter = Arc::new(RecordingActivityReporter::default());
 
@@ -1121,25 +1149,32 @@ mod tests {
 
     #[tokio::test]
     async fn mock_render_with_delay_records_client_estimate_timing() {
-        let generator = create_mock_media_generator(mock_image_backend(BTreeMap::from([
-            ("mockUrl".to_string(), json!("data:image/png;base64,AA==")),
-            ("mockDelayMs".to_string(), json!(5)),
-        ])))
+        let clock = battersea_model::ManualClock::new(0);
+        let generator = create_mock_media_generator(
+            mock_image_backend(BTreeMap::from([
+                ("mockUrl".to_string(), json!("data:image/png;base64,AA==")),
+                ("mockDelayMs".to_string(), json!(5)),
+            ])),
+            Arc::new(clock.clone()),
+        )
         .expect("mock generator");
 
-        let rendered = generator
-            .generate(
+        let (rendered, delay) = tokio::join!(
+            generator.generate(
                 render_request(Some(1)),
                 CancellationToken::new(),
                 None,
                 None,
-            )
-            .await
-            .expect("mock render");
+            ),
+            clock.advance_to_timer_within(std::time::Duration::from_millis(5))
+        );
+        assert_eq!(delay, std::time::Duration::from_millis(5));
+        let rendered = rendered.expect("mock render");
 
+        // The recorded timing is the configured delay, measured by the generator's clock.
         let timing = rendered.timing.expect("timing");
-        assert!(timing.elapsed_ms >= 1);
-        assert!(timing.model_processing_ms.unwrap_or_default() >= 1);
+        assert_eq!(timing.elapsed_ms, 5);
+        assert_eq!(timing.model_processing_ms, Some(5));
         assert_eq!(
             timing.model_processing_source,
             MediaProvenanceTimingSource::ClientEstimate

@@ -17,6 +17,7 @@ use battersea_model::engine::{
     EngineChatToolChoiceMode, EngineContextOverflow, EnginePromptCacheRetention,
     EngineReasoningSummary, EngineResponseVerbosity, EngineTemperatureDispatch,
 };
+use battersea_model::Clock;
 use eventsource_stream::Eventsource;
 use futures_util::{stream, StreamExt};
 use reqwest::header::{HeaderMap, HeaderName, HeaderValue};
@@ -32,6 +33,7 @@ mod continuation;
 pub(crate) fn create_openai_adapter(
     backend: EngineBackendConfig,
     logger: Option<Arc<dyn EngineAdapterLogger>>,
+    clock: Arc<dyn Clock>,
 ) -> Result<Arc<dyn EngineAdapter>, EngineAdapterRequestError> {
     crate::retry::validate(&backend)?;
     validate_stream_mode(&backend, backend.chat.stream)?;
@@ -126,13 +128,13 @@ pub(crate) fn create_openai_adapter(
     let http_client = reqwest::Client::builder()
         .retry(reqwest::retry::never())
         .redirect(reqwest::redirect::Policy::none())
-        .timeout(std::time::Duration::from_millis(timeout_ms))
         .build()
         .map_err(|error| EngineAdapterRequestError::transport("openai", error.to_string()))?;
 
     Ok(Arc::new(OpenAiEngineAdapter {
         http_client,
         logger,
+        clock,
         backend,
         base_url: base_url.clone(),
         stream_idle_timeout_ms,
@@ -174,6 +176,7 @@ fn validate_stream_mode(
 struct OpenAiEngineAdapter {
     http_client: reqwest::Client,
     logger: Option<Arc<dyn EngineAdapterLogger>>,
+    clock: Arc<dyn Clock>,
     backend: EngineBackendConfig,
     base_url: String,
     stream_idle_timeout_ms: u64,
@@ -342,6 +345,7 @@ impl EngineAdapter for OpenAiEngineAdapter {
             &self.backend,
             &body,
             &self.logger,
+            self.clock.as_ref(),
         )
         .await?;
         emit_response(
@@ -463,6 +467,7 @@ impl EngineAdapter for OpenAiEngineAdapter {
             Box::pin(mapped),
             std::time::Duration::from_millis(self.stream_idle_timeout_ms),
             "openai",
+            self.clock.clone(),
         ))
     }
 
@@ -480,6 +485,7 @@ impl EngineAdapter for OpenAiEngineAdapter {
                 .json(&body),
             &self.backend,
             self.logger.as_ref(),
+            self.clock.as_ref(),
         )
         .await?;
         let payload: Value = response.bounded_json().await.map_err(|error| {
@@ -515,6 +521,7 @@ impl OpenAiEngineAdapter {
             base_url: self.base_url.clone(),
             backend: self.backend.clone(),
             logger: self.logger.clone(),
+            clock: self.clock.clone(),
             context: self.context.clone(),
             input: crate::content::messages(
                 "openai",
@@ -544,6 +551,7 @@ impl OpenAiEngineAdapter {
             executor,
             self.logger.clone(),
             self.context.clone(),
+            self.clock.clone(),
             tx,
         ));
         Ok(Box::pin(ReceiverStream::new(rx)))
@@ -579,6 +587,7 @@ impl OpenAiEngineAdapter {
         let operation = request.shared.operation;
         let poll = self.background_poll_interval_ms;
         let max_wait = self.background_max_wait_ms;
+        let clock = self.clock.clone();
 
         tokio::spawn(async move {
             let response = tokio::select! {
@@ -591,6 +600,7 @@ impl OpenAiEngineAdapter {
                 &logger,
                 poll,
                 max_wait,
+                &clock,
                 &tx,
             )
                 => response,
@@ -639,6 +649,7 @@ impl OpenAiEngineAdapter {
         let reconnect_idle = self.background_reconnect_idle_ms;
         let max_reconnects = self.background_max_reconnects;
         let max_wait = self.background_max_wait_ms;
+        let clock = self.clock.clone();
 
         tokio::spawn(async move {
             let response = tokio::select! {
@@ -654,6 +665,7 @@ impl OpenAiEngineAdapter {
                 &logger,
                 &context,
                 operation,
+                &clock,
                 &tx,
             )
                 => response,
@@ -774,6 +786,7 @@ struct OpenAiToolConversation {
     base_url: String,
     backend: EngineBackendConfig,
     logger: Option<Arc<dyn EngineAdapterLogger>>,
+    clock: Arc<dyn Clock>,
     context: EngineAdapterDebugContext,
     input: Vec<Value>,
     transport: OpenAiTurnTransport,
@@ -822,6 +835,7 @@ impl ToolConversation for OpenAiToolConversation {
                     &self.logger,
                     poll_ms,
                     max_wait_ms,
+                    &self.clock,
                     events,
                 )
                 .await?
@@ -842,6 +856,7 @@ impl ToolConversation for OpenAiToolConversation {
                     &self.logger,
                     &self.context,
                     request.shared.operation,
+                    &self.clock,
                     events,
                 )
                 .await?
@@ -919,24 +934,28 @@ impl OpenAiToolConversation {
             &self.backend,
             body,
             &self.logger,
+            self.clock.as_ref(),
         )
         .await?;
         loop {
-            let (event, value) =
-                tokio::time::timeout(std::time::Duration::from_millis(idle_ms), stream.next())
-                    .await
-                    .map_err(|_| {
-                        EngineAdapterRequestError::transport(
-                            "openai",
-                            format!("OpenAI stream stalled for {idle_ms}ms."),
-                        )
-                    })?
-                    .ok_or_else(|| {
-                        EngineAdapterRequestError::invalid_response(
-                            "openai",
-                            "OpenAI tool stream ended without ResponseCompleted.",
-                        )
-                    })??;
+            let (event, value) = battersea_model::clock::timeout(
+                self.clock.as_ref(),
+                std::time::Duration::from_millis(idle_ms),
+                stream.next(),
+            )
+            .await
+            .map_err(|_| {
+                EngineAdapterRequestError::transport(
+                    "openai",
+                    format!("OpenAI stream stalled for {idle_ms}ms."),
+                )
+            })?
+            .ok_or_else(|| {
+                EngineAdapterRequestError::invalid_response(
+                    "openai",
+                    "OpenAI tool stream ended without ResponseCompleted.",
+                )
+            })??;
             emit_stream_event(
                 self.logger.as_ref(),
                 &self.context,
@@ -994,6 +1013,7 @@ async fn open_response_stream(
     backend: &EngineBackendConfig,
     body: &Value,
     logger: &Option<Arc<dyn EngineAdapterLogger>>,
+    clock: &dyn Clock,
 ) -> Result<
     futures_util::stream::BoxStream<
         'static,
@@ -1009,6 +1029,7 @@ async fn open_response_stream(
             .json(body),
         backend,
         logger.as_ref(),
+        clock,
     )
     .await?;
     Ok(crate::http_payload::bounded_stream(response)
@@ -1070,6 +1091,7 @@ struct BackgroundResponseGuard {
     base_url: String,
     headers: reqwest::header::HeaderMap,
     backend: EngineBackendConfig,
+    clock: Arc<dyn Clock>,
     id: Option<String>,
 }
 
@@ -1086,9 +1108,11 @@ impl BackgroundResponseGuard {
             let base_url = self.base_url.clone();
             let headers = self.headers.clone();
             let backend = self.backend.clone();
+            let clock = self.clock.clone();
             // The cleanup owns the response ID even if its caller is cancelled while awaiting it.
             tokio::spawn(async move {
-                cancel_background_response(&client, &base_url, &headers, &backend, &id).await;
+                cancel_background_response(&client, &base_url, &headers, &backend, &id, &*clock)
+                    .await;
             })
         })
     }
@@ -1106,6 +1130,7 @@ async fn cancel_background_response(
     headers: &reqwest::header::HeaderMap,
     backend: &EngineBackendConfig,
     id: &str,
+    clock: &dyn Clock,
 ) {
     let id = crate::connection::segment(id);
     if let Ok(request) = crate::connection::authenticate(
@@ -1115,7 +1140,12 @@ async fn cancel_background_response(
         backend.binding.as_ref(),
         &backend.auth,
     ) {
-        let _ = tokio::time::timeout(std::time::Duration::from_secs(5), request.send()).await;
+        let _ = battersea_model::clock::timeout(
+            clock,
+            std::time::Duration::from_secs(5),
+            request.send(),
+        )
+        .await;
     }
 }
 
@@ -1135,6 +1165,7 @@ async fn create_and_poll_background(
     logger: &Option<Arc<dyn EngineAdapterLogger>>,
     poll_interval_ms: u64,
     max_wait_ms: u64,
+    clock: &Arc<dyn Clock>,
     tx: &mpsc::Sender<Result<EngineTextStreamEvent, EngineAdapterRequestError>>,
 ) -> Result<Value, EngineAdapterRequestError> {
     let headers = build_openai_headers(backend)?;
@@ -1146,6 +1177,7 @@ async fn create_and_poll_background(
             .json(body),
         backend,
         logger.as_ref(),
+        clock.as_ref(),
     )
     .await?;
     let response: Value = created.bounded_json().await.map_err(|error| {
@@ -1175,9 +1207,10 @@ async fn create_and_poll_background(
         base_url: base_url.to_string(),
         headers: headers.clone(),
         backend: backend.clone(),
+        clock: clock.clone(),
         id: Some(id.clone()),
     };
-    let started = tokio::time::Instant::now();
+    let started = clock.instant();
     loop {
         if tx.is_closed() {
             guard.cancel().await;
@@ -1186,7 +1219,9 @@ async fn create_and_poll_background(
                 "OpenAI background response cancelled — consumer dropped the stream.".to_string(),
             ));
         }
-        if started.elapsed() >= std::time::Duration::from_millis(max_wait_ms) {
+        if clock.instant().saturating_duration_since(started)
+            >= std::time::Duration::from_millis(max_wait_ms)
+        {
             guard.cancel().await;
             return Err(EngineAdapterRequestError::transport(
                 "openai",
@@ -1196,7 +1231,11 @@ async fn create_and_poll_background(
                 ),
             ));
         }
-        tokio::time::sleep(std::time::Duration::from_millis(poll_interval_ms)).await;
+        battersea_model::clock::sleep(
+            clock.as_ref(),
+            std::time::Duration::from_millis(poll_interval_ms),
+        )
+        .await;
         let polled = crate::retry::send(
             http_client
                 .get(format!(
@@ -1206,6 +1245,7 @@ async fn create_and_poll_background(
                 .headers(headers.clone()),
             backend,
             logger.as_ref(),
+            clock.as_ref(),
         )
         .await?;
         let response: Value = polled.bounded_json().await.map_err(|error| {
@@ -1339,15 +1379,17 @@ async fn drive_background_stream(
     logger: &Option<Arc<dyn EngineAdapterLogger>>,
     context: &EngineAdapterDebugContext,
     operation: super::EngineOperation,
+    clock: &Arc<dyn Clock>,
     tx: &mpsc::Sender<Result<EngineTextStreamEvent, EngineAdapterRequestError>>,
 ) -> Result<Value, EngineAdapterRequestError> {
     let headers = build_openai_headers(backend)?;
-    let deadline = tokio::time::Instant::now() + std::time::Duration::from_millis(max_wait_ms);
+    let deadline = clock.instant() + std::time::Duration::from_millis(max_wait_ms);
     let mut guard = BackgroundResponseGuard {
         client: http_client.clone(),
         base_url: base_url.to_string(),
         headers: headers.clone(),
         backend: backend.clone(),
+        clock: clock.clone(),
         id: None,
     };
     let mut cursor: i64 = -1;
@@ -1360,6 +1402,7 @@ async fn drive_background_stream(
             .json(body),
         backend,
         logger.as_ref(),
+        clock.as_ref(),
     )
     .await?;
     let mut sse = Box::pin(crate::http_payload::bounded_stream(created).eventsource());
@@ -1373,7 +1416,7 @@ async fn drive_background_stream(
                     "OpenAI background stream cancelled — consumer dropped the stream.".to_string(),
                 ));
             }
-            if tokio::time::Instant::now() >= deadline {
+            if clock.instant() >= deadline {
                 guard.cancel().await;
                 return Err(EngineAdapterRequestError::transport(
                     "openai",
@@ -1383,7 +1426,8 @@ async fn drive_background_stream(
                     ),
                 ));
             }
-            match tokio::time::timeout(
+            match battersea_model::clock::timeout(
+                clock.as_ref(),
                 std::time::Duration::from_millis(reconnect_idle_ms),
                 sse.next(),
             )
@@ -1525,7 +1569,7 @@ async fn drive_background_stream(
                 ),
             ));
         }
-        if tokio::time::Instant::now() >= deadline {
+        if clock.instant() >= deadline {
             guard.cancel().await;
             return Err(EngineAdapterRequestError::transport(
                 "openai",
@@ -1555,6 +1599,7 @@ async fn drive_background_stream(
                 .headers(headers.clone()),
             backend,
             logger.as_ref(),
+            clock.as_ref(),
         )
         .await?;
         sse = Box::pin(crate::http_payload::bounded_stream(resumed).eventsource());
@@ -2112,6 +2157,7 @@ mod tests {
             base_url,
             headers: Default::default(),
             backend: sample_backend(),
+            clock: crate::test_clock(),
             id: Some("response-1".into()),
         };
         {
@@ -2119,9 +2165,8 @@ mod tests {
             assert!(futures_util::poll!(&mut cancellation).is_pending());
         }
         drop(guard);
-        tokio::time::timeout(std::time::Duration::from_secs(2), received.notified())
-            .await
-            .expect("cleanup survives cancellation of its caller");
+        // The cleanup survives cancellation of its caller.
+        received.notified().await;
         assert_eq!(requests.load(Ordering::SeqCst), 1);
         server.abort();
     }
@@ -2331,7 +2376,8 @@ mod tests {
 
     #[test]
     fn create_openai_adapter_derives_debug_context_defaults() {
-        let adapter = create_openai_adapter(sample_backend(), None).expect("create adapter");
+        let adapter = create_openai_adapter(sample_backend(), None, crate::test_clock())
+            .expect("create adapter");
         let context = adapter.describe_debug_context();
 
         assert_eq!(
@@ -2352,11 +2398,11 @@ mod tests {
     fn create_openai_adapter_accepts_custom_non_authorization_header_and_rejects_invalid_names() {
         let mut custom = sample_backend();
         custom.auth.header = Some("x-openai-key".to_string());
-        assert!(create_openai_adapter(custom, None).is_ok());
+        assert!(create_openai_adapter(custom, None, crate::test_clock()).is_ok());
 
         let mut invalid = sample_backend();
         invalid.auth.header = Some("bad header".to_string());
-        let error = match create_openai_adapter(invalid, None) {
+        let error = match create_openai_adapter(invalid, None, crate::test_clock()) {
             Ok(_) => panic!("invalid header name should fail"),
             Err(error) => error,
         };
@@ -2477,7 +2523,7 @@ mod tests {
         let (url, handle) = spawn_input_token_count_server();
         let mut backend = sample_backend();
         backend.endpoint = url;
-        let adapter = create_openai_adapter(backend, None).expect("adapter");
+        let adapter = create_openai_adapter(backend, None, crate::test_clock()).expect("adapter");
 
         let count = adapter
             .count_text_stream_input_tokens(sample_stream_request())
@@ -2732,7 +2778,10 @@ mod tests {
             backend.options.timeout_ms = Some(timeout);
             backend.options.background_max_wait_ms = Some(maximum);
             backend.options.background_poll_interval_ms = Some(interval);
-            assert_eq!(create_openai_adapter(backend, None).is_ok(), allowed);
+            assert_eq!(
+                create_openai_adapter(backend, None, crate::test_clock()).is_ok(),
+                allowed
+            );
         }
     }
 
@@ -2807,7 +2856,7 @@ mod tests {
         missing.options.background = Some(true);
         missing.options.background_mode = Some("poll".to_string());
         missing.options.background_max_wait_ms = Some(1_800_000);
-        let error = match create_openai_adapter(missing, None) {
+        let error = match create_openai_adapter(missing, None, crate::test_clock()) {
             Ok(_) => panic!("poll mode without poll interval should fail"),
             Err(error) => error,
         };
@@ -2816,17 +2865,17 @@ mod tests {
         // background: true but no mode at all -> hard error naming backgroundMode.
         let mut no_mode = sample_backend();
         no_mode.options.background = Some(true);
-        let error = match create_openai_adapter(no_mode, None) {
+        let error = match create_openai_adapter(no_mode, None, crate::test_clock()) {
             Ok(_) => panic!("background without a mode should fail"),
             Err(error) => error,
         };
         assert!(error.message.contains("backgroundMode"));
 
         // Fully configured background backend constructs fine.
-        assert!(create_openai_adapter(background_backend(), None).is_ok());
+        assert!(create_openai_adapter(background_backend(), None, crate::test_clock()).is_ok());
 
         // A backend without background stays valid (regression guard).
-        assert!(create_openai_adapter(sample_backend(), None).is_ok());
+        assert!(create_openai_adapter(sample_backend(), None, crate::test_clock()).is_ok());
     }
 
     fn test_debug_context() -> EngineAdapterDebugContext {
@@ -2938,7 +2987,7 @@ mod tests {
         // Unknown mode is rejected.
         let mut bad_mode = background_backend();
         bad_mode.options.background_mode = Some("teleport".to_string());
-        let error = match create_openai_adapter(bad_mode, None) {
+        let error = match create_openai_adapter(bad_mode, None, crate::test_clock()) {
             Ok(_) => panic!("unknown backgroundMode should fail"),
             Err(error) => error,
         };
@@ -2948,7 +2997,7 @@ mod tests {
         let mut missing = background_backend();
         missing.options.background_mode = Some("stream".to_string());
         missing.options.background_reconnect_idle_ms = None;
-        let error = match create_openai_adapter(missing, None) {
+        let error = match create_openai_adapter(missing, None, crate::test_clock()) {
             Ok(_) => panic!("stream mode without reconnect idle should fail"),
             Err(error) => error,
         };
@@ -2959,7 +3008,7 @@ mod tests {
         stream_ok.options.background_mode = Some("stream".to_string());
         stream_ok.options.background_reconnect_idle_ms = Some(120_000);
         stream_ok.options.background_max_reconnects = Some(30);
-        assert!(create_openai_adapter(stream_ok, None).is_ok());
+        assert!(create_openai_adapter(stream_ok, None, crate::test_clock()).is_ok());
     }
 
     /// Mock server that serves two SSE connections. Each connection sends
@@ -3020,6 +3069,7 @@ mod tests {
             &None,
             &test_debug_context(),
             EngineOperation::FlowTextStream,
+            &crate::test_clock(),
             &tx,
         )
         .await;

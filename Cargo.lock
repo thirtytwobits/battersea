@@ -384,6 +384,7 @@ dependencies = [
 name = "battersea-pianola"
 version = "0.23.0"
 dependencies = [
+ "battersea-model",
  "chrono",
  "jsonschema 0.30.0",
  "regex-lite",
@@ -975,6 +976,7 @@ dependencies = [
  "async-trait",
  "axum",
  "battersea-flow",
+ "battersea-model",
  "battersea-nodes",
  "battersea-ops",
  "battersea-pianola",

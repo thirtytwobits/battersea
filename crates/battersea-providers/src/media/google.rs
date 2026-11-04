@@ -23,8 +23,9 @@ const PROVIDER: &str = "google";
 
 pub(crate) fn create_google_media_generator(
     backend: MediaBackendConfig,
+    clock: Arc<dyn battersea_model::Clock>,
 ) -> Result<Arc<dyn MediaGenerationAdapter>, EngineAdapterRequestError> {
-    let timeout_ms = backend
+    backend
         .options
         .timeout_ms
         .ok_or_else(|| missing_google_media("options.timeoutMs"))?;
@@ -34,11 +35,11 @@ pub(crate) fn create_google_media_generator(
     let client = reqwest::Client::builder()
         .retry(reqwest::retry::never())
         .redirect(reqwest::redirect::Policy::none())
-        .timeout(std::time::Duration::from_millis(timeout_ms))
         .build()
         .map_err(|error| EngineAdapterRequestError::transport(PROVIDER, error.to_string()))?;
     Ok(Arc::new(GoogleMediaGenerator {
         client,
+        clock,
         base_url: resolve_google_base_url(&backend.endpoint),
         api_key: if backend.binding.is_some() {
             String::new()
@@ -51,6 +52,7 @@ pub(crate) fn create_google_media_generator(
 
 struct GoogleMediaGenerator {
     client: reqwest::Client,
+    clock: Arc<dyn battersea_model::Clock>,
     base_url: String,
     api_key: String,
     backend: MediaBackendConfig,
@@ -60,6 +62,9 @@ struct GoogleMediaGenerator {
 impl MediaGenerationAdapter for GoogleMediaGenerator {
     fn backend(&self) -> &MediaBackendConfig {
         &self.backend
+    }
+    fn clock(&self) -> Arc<dyn battersea_model::Clock> {
+        self.clock.clone()
     }
 
     fn prepare(
@@ -125,15 +130,15 @@ impl GoogleMediaGenerator {
         let default_mime_type =
             read_string_option_opt(&self.backend.options.extra, "defaultMimeType")
                 .ok_or_else(|| missing_google_media("options.defaultMimeType"))?;
-        let mut timing = MediaTimingRecorder::start();
-        let phase_started_at = chrono::Utc::now();
-        let phase_started_instant = std::time::Instant::now();
+        let mut timing = MediaTimingRecorder::start(self.clock.clone());
+        let (phase_started_at, phase_started_instant) = timing.now();
         let payload: GeminiInteractionResponse = with_estimated_generation_progress(
             &self.backend,
             1,
             activity_reporter,
             cancellation.clone(),
-            async {
+            self.clock.as_ref(),
+            super::within_request_deadline(&self.backend, self.clock.as_ref(), async {
                 let request = self.client.post(self.build_interaction_url()).json(&body);
                 let request = if self.backend.binding.is_some() {
                     crate::connection::authenticate(
@@ -156,7 +161,7 @@ impl GoogleMediaGenerator {
                 response.bounded_json().await.map_err(|error| {
                     EngineAdapterRequestError::invalid_response(PROVIDER, error.to_string())
                 })
-            },
+            }),
         )
         .await?;
         timing.record_phase(
@@ -438,7 +443,7 @@ mod tests {
     fn native_adapter_requires_an_available_key() {
         let mut configured = backend();
         configured.auth.api_key = None;
-        let error = match create_google_media_generator(configured) {
+        let error = match create_google_media_generator(configured, crate::test_clock()) {
             Ok(_) => panic!("missing key should fail"),
             Err(error) => error,
         };

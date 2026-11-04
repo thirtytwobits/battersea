@@ -68,6 +68,8 @@ pub fn agent() -> OAuthContext {
 
 /// A fixed expiry, so request revisions are the same in every fresh host.
 const EXPIRES_AT_UNIX_MS: u64 = 4_102_444_800_000;
+/// The host's fixed time. Its clock never advances, so deadlines and expiry never elapse.
+const HOST_UNIX_MS: u64 = 1_800_000_000_000;
 
 /// The seeded run whose tool call waits for a decision.
 pub const PENDING_RUN: &str = "run-1";
@@ -126,6 +128,7 @@ pub struct Host {
     journals: tokio::sync::Mutex<BTreeMap<String, Arc<DurableToolExecutor>>>,
     servers: Mutex<BTreeMap<String, McpServer>>,
     tools: ToolRegistry,
+    clock: Arc<dyn Clock>,
 }
 
 /// The operation the mock provider's tool call reaches, which writes the value it is given.
@@ -248,6 +251,7 @@ impl Host {
             journals: Default::default(),
             servers: Mutex::new(servers),
             tools: tools(),
+            clock: Arc::new(ManualClock::new(HOST_UNIX_MS)),
         })
     }
 
@@ -274,7 +278,7 @@ impl Host {
                 max_bytes: 64 * 1024,
             },
             Duration::from_secs(5),
-            Arc::new(SystemClock),
+            self.clock.clone(),
         )
         .await
         .expect("an empty journal");
@@ -324,7 +328,7 @@ impl Host {
             .map_err(|error| codes::refusal(codes::HOST_FAILURE, error.to_string()))?;
         let backend = backend();
         let adapter = providers
-            .create_chat(backend.clone(), None)
+            .create_chat(backend.clone(), None, self.clock.clone())
             .map_err(|error| codes::refusal(codes::HOST_FAILURE, error.to_string()))?;
         let text = activation
             .parameters

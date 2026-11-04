@@ -303,13 +303,9 @@ async fn cancellation_after_dispatch_preserves_intent_across_restart() {
     let e = create(store.clone(), effect.clone(), scope.clone()).await;
     approve(&e).await;
     let task = tokio::spawn(async move { e.resume("one", 3).await });
-    tokio::time::timeout(Duration::from_secs(2), async {
-        while effect.calls.load(Ordering::SeqCst) == 0 {
-            tokio::task::yield_now().await;
-        }
-    })
-    .await
-    .unwrap();
+    while effect.calls.load(Ordering::SeqCst) == 0 {
+        tokio::task::yield_now().await;
+    }
     task.abort();
     assert!(task.await.unwrap_err().is_cancelled());
     let e = open(store, effect.clone(), scope).await;
@@ -568,9 +564,7 @@ async fn cancelled_intent_acknowledgement_is_reconciled_without_dispatch() {
     .unwrap();
     approve(&e).await;
     let task = tokio::spawn(async move { e.resume("one", 3).await });
-    tokio::time::timeout(Duration::from_secs(2), parked.committed.notified())
-        .await
-        .unwrap();
+    parked.committed.notified().await;
     task.abort();
     assert!(task.await.unwrap_err().is_cancelled());
     let e = open(store, effect.clone(), scope).await;
@@ -927,4 +921,92 @@ async fn a_journal_written_by_battersea_0_17_reads_unchanged() {
     );
     assert!(e.resume("two", journal.revision).await.is_err());
     assert_eq!(effect.calls.load(Ordering::SeqCst), 0);
+}
+
+/// Never acknowledges the write of one revision.
+struct Hanging {
+    inner: Store,
+    revision: u64,
+}
+#[async_trait]
+impl ToolApprovalStore for Hanging {
+    async fn load(
+        &self,
+        run: &str,
+        max: usize,
+    ) -> Result<Option<ToolApprovalJournal>, ToolApprovalStoreError> {
+        self.inner.load(run, max).await
+    }
+    async fn compare_exchange(
+        &self,
+        run: &str,
+        expected: Option<u64>,
+        next: &ToolApprovalJournal,
+    ) -> Result<(), ToolApprovalStoreError> {
+        if next.revision == self.revision {
+            return std::future::pending().await;
+        }
+        self.inner.compare_exchange(run, expected, next).await
+    }
+}
+#[tokio::test]
+async fn a_store_write_that_never_completes_fails_at_the_store_deadline() {
+    let store = Arc::new(Hanging {
+        inner: Store::default(),
+        revision: 2,
+    });
+    let clock = clock();
+    let e = DurableToolExecutor::create(
+        store,
+        registry(Arc::new(Effect::default())),
+        scope(),
+        ToolApprovalJournalLimits {
+            max_calls: 2,
+            max_bytes: 8192,
+        },
+        Duration::from_secs(1),
+        clock.clone(),
+    )
+    .await
+    .unwrap();
+    let (submitted, remaining) = tokio::join!(
+        e.submit(call("one"), 1),
+        clock.advance_to_timer_within(Duration::from_secs(1))
+    );
+    assert_eq!(remaining, Duration::from_secs(1));
+    code(submitted.unwrap_err(), ToolCode::ToolApprovalStorage);
+}
+#[tokio::test]
+async fn a_tool_still_running_at_expiry_is_reported_uncertain() {
+    let effect = Arc::new(Effect {
+        wait: true,
+        ..Effect::default()
+    });
+    let clock = clock();
+    let e = DurableToolExecutor::create(
+        Arc::new(Store::default()),
+        registry(effect.clone()),
+        scope(),
+        ToolApprovalJournalLimits {
+            max_calls: 2,
+            max_bytes: 8192,
+        },
+        Duration::from_secs(1),
+        clock.clone(),
+    )
+    .await
+    .unwrap();
+    approve(&e).await;
+    // The scope expires 60s after the start; the executing tool never returns.
+    let expire = async {
+        while effect.calls.load(Ordering::SeqCst) == 0 {
+            tokio::task::yield_now().await;
+        }
+        clock.advance_to_timer_within(Duration::from_secs(60)).await
+    };
+    let (resumed, remaining) = tokio::join!(e.resume("one", 3), expire);
+    assert_eq!(remaining, Duration::from_secs(60));
+    let error = resumed.unwrap_err();
+    assert_eq!(error.classification, battersea_model::ErrorKind::Timeout);
+    assert_eq!(error.tool_call.unwrap().outcome, ToolCallOutcome::Uncertain);
 }

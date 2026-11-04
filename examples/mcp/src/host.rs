@@ -7,12 +7,7 @@ use clapham::{
     compose_with_options, Bounds, ComposeOptions, Contribution, ExecutionMode, OAuthContext,
 };
 use clapham_mcp_client::{McpConfig, McpConnection, McpSelection, McpToolBinding};
-use std::{
-    path::Path,
-    process::Stdio,
-    sync::Arc,
-    time::{Duration, Instant},
-};
+use std::{path::Path, process::Stdio, sync::Arc, time::Duration};
 use tokio_util::sync::CancellationToken;
 
 pub fn mcp_config(timeout: Duration) -> McpConfig {
@@ -118,36 +113,58 @@ pub async fn bind(connection: &McpConnection) -> Result<(McpToolBinding, ToolReg
     Ok((binding, registry))
 }
 
-pub fn provider(endpoint: &str) -> Result<(Arc<dyn EngineAdapter>, EngineChatParameters)> {
-    configured_provider(endpoint, "openai-chat-completions", false, false, None)
+/// Each provider runs its deadlines, backoff and polling on `clock`.
+pub fn provider(
+    endpoint: &str,
+    clock: Arc<dyn Clock>,
+) -> Result<(Arc<dyn EngineAdapter>, EngineChatParameters)> {
+    configured_provider(
+        endpoint,
+        "openai-chat-completions",
+        false,
+        false,
+        None,
+        clock,
+    )
 }
 
 pub fn responses_provider(
     endpoint: &str,
+    clock: Arc<dyn Clock>,
 ) -> Result<(Arc<dyn EngineAdapter>, EngineChatParameters)> {
-    configured_provider(endpoint, "openai-responses", true, false, None)
+    configured_provider(endpoint, "openai-responses", true, false, None, clock)
 }
 
 pub fn responses_provider_with_logger(
     endpoint: &str,
     logger: Arc<dyn EngineAdapterLogger>,
+    clock: Arc<dyn Clock>,
 ) -> Result<(Arc<dyn EngineAdapter>, EngineChatParameters)> {
-    configured_provider(endpoint, "openai-responses", true, false, Some(logger))
+    configured_provider(
+        endpoint,
+        "openai-responses",
+        true,
+        false,
+        Some(logger),
+        clock,
+    )
 }
 
 pub fn background_responses_provider(
     endpoint: &str,
     stream: bool,
     logger: Option<Arc<dyn EngineAdapterLogger>>,
+    clock: Arc<dyn Clock>,
 ) -> Result<(Arc<dyn EngineAdapter>, EngineChatParameters)> {
-    configured_provider(endpoint, "openai-responses", stream, true, logger)
+    configured_provider(endpoint, "openai-responses", stream, true, logger, clock)
 }
 
 pub fn anthropic_provider(
     endpoint: &str,
     logger: Option<Arc<dyn EngineAdapterLogger>>,
+    clock: Arc<dyn Clock>,
 ) -> Result<(Arc<dyn EngineAdapter>, EngineChatParameters)> {
-    configured_provider(endpoint, "anthropic-messages", true, false, logger)
+    configured_provider(endpoint, "anthropic-messages", true, false, logger, clock)
 }
 
 fn configured_provider(
@@ -156,6 +173,7 @@ fn configured_provider(
     stream: bool,
     background: bool,
     logger: Option<Arc<dyn EngineAdapterLogger>>,
+    clock: Arc<dyn Clock>,
 ) -> Result<(Arc<dyn EngineAdapter>, EngineChatParameters)> {
     let mut protocols = ProtocolRegistry::default();
     battersea_providers::register_builtin_adapters(&mut protocols)?;
@@ -189,6 +207,7 @@ fn configured_provider(
             scope_revision: "example-account-1".into(),
         },
         logger,
+        clock,
     )?;
     Ok((configured.chat("chat").unwrap().clone(), parameters))
 }
@@ -217,11 +236,13 @@ pub fn request(
 }
 
 /// Apply the host's decision policy to this run's selection, which includes its MCP binding.
+/// The run's approval deadline is five seconds after `clock`'s current instant.
 pub fn approved_request(
     registry: &ToolRegistry,
     chat: EngineChatParameters,
     run_id: &str,
     policy: Arc<dyn ToolApprovalPolicy>,
+    clock: Arc<dyn Clock>,
 ) -> Result<EngineTextStreamRequest> {
     let operator = registry.for_profile("operator");
     let binding_revision = operator.revision().into();
@@ -230,10 +251,11 @@ pub fn approved_request(
         ToolApprovalScope {
             run_id: run_id.into(),
             binding_revision,
-            deadline: Instant::now() + Duration::from_secs(5),
+            deadline: clock.instant() + Duration::from_secs(5),
         },
         policy,
         8,
+        clock,
     )?;
     let mut request = request(registry, "operator", chat);
     request.local_tools = executor.definitions();

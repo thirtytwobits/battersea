@@ -104,7 +104,7 @@ impl TelemetryConfig {
                     "Exporter queue must be bounded and positive".into(),
                 ));
             }
-            crate::otlp::Exporter::new(
+            crate::otlp::Exporter::validate(
                 &otlp.endpoint,
                 std::time::Duration::from_millis(otlp.timeout_ms),
                 otlp.max_batch_bytes,

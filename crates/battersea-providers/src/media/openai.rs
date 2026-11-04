@@ -1,7 +1,8 @@
 use super::{
     read_u64_option_opt, resolve_openai_base_url, with_estimated_generation_progress,
-    MediaBackendConfig, MediaGenerationActivityReporter, MediaGenerationActivityUpdate,
-    MediaGenerationAdapter, MediaRenderRequest, MediaRenderResult, MediaTimingRecorder,
+    within_request_deadline, MediaBackendConfig, MediaGenerationActivityReporter,
+    MediaGenerationActivityUpdate, MediaGenerationAdapter, MediaRenderRequest, MediaRenderResult,
+    MediaTimingRecorder,
 };
 use crate::adapter::error::EngineAdapterRequestError;
 use crate::http_payload::BoundedResponse as _;
@@ -25,15 +26,15 @@ use tokio_util::sync::CancellationToken;
 /// configured request timeout.
 pub(crate) fn create_openai_media_generator(
     backend: MediaBackendConfig,
+    clock: Arc<dyn battersea_model::Clock>,
 ) -> Result<Arc<dyn MediaGenerationAdapter>, EngineAdapterRequestError> {
-    let timeout_ms = backend
+    backend
         .options
         .timeout_ms
         .ok_or_else(|| missing_openai_media_option("timeoutMs"))?;
     let http_client = reqwest::Client::builder()
         .retry(reqwest::retry::never())
         .redirect(reqwest::redirect::Policy::none())
-        .timeout(std::time::Duration::from_millis(timeout_ms))
         .build()
         .map_err(|error| EngineAdapterRequestError::transport("openai", error.to_string()))?;
     if let Some(binding) = &backend.binding {
@@ -41,6 +42,7 @@ pub(crate) fn create_openai_media_generator(
     }
     Ok(Arc::new(OpenAiMediaGenerator {
         http_client,
+        clock,
         backend,
     }))
 }
@@ -57,6 +59,7 @@ fn missing_openai_media_option(key: &str) -> EngineAdapterRequestError {
 
 struct OpenAiMediaGenerator {
     http_client: reqwest::Client,
+    clock: Arc<dyn battersea_model::Clock>,
     backend: MediaBackendConfig,
 }
 
@@ -92,6 +95,9 @@ struct OpenAiImage {
 impl MediaGenerationAdapter for OpenAiMediaGenerator {
     fn backend(&self) -> &MediaBackendConfig {
         &self.backend
+    }
+    fn clock(&self) -> Arc<dyn battersea_model::Clock> {
+        self.clock.clone()
     }
 
     fn prepare(
@@ -153,18 +159,21 @@ impl OpenAiMediaGenerator {
         let target_asset_count = usize::from(requested_asset_count);
         let stream_partial_images = provider_request["stream"].as_bool().unwrap_or(false);
         let partial_images = provider_request["partial_images"].as_u64().unwrap_or(0) as u8;
-        let mut timing = MediaTimingRecorder::start();
-        let phase_started_at = chrono::Utc::now();
-        let phase_started_instant = std::time::Instant::now();
+        let mut timing = MediaTimingRecorder::start(self.clock.clone());
+        let (phase_started_at, phase_started_instant) = timing.now();
         let response = if stream_partial_images {
-            let request_future = send_image_generation_stream_request(
-                &self.http_client,
+            let request_future = within_request_deadline(
                 &self.backend,
-                provider_request.clone(),
-                target_asset_count,
-                partial_images,
-                activity_reporter.clone(),
-                cancellation.clone(),
+                self.clock.as_ref(),
+                send_image_generation_stream_request(
+                    &self.http_client,
+                    &self.backend,
+                    provider_request.clone(),
+                    target_asset_count,
+                    partial_images,
+                    activity_reporter.clone(),
+                    cancellation.clone(),
+                ),
             );
             tokio::select! {
                 _ = cancellation.cancelled() => {
@@ -178,10 +187,15 @@ impl OpenAiMediaGenerator {
                 target_asset_count,
                 activity_reporter.clone(),
                 cancellation.clone(),
-                send_image_generation_json_request(
-                    &self.http_client,
+                self.clock.as_ref(),
+                within_request_deadline(
                     &self.backend,
-                    provider_request.clone(),
+                    self.clock.as_ref(),
+                    send_image_generation_json_request(
+                        &self.http_client,
+                        &self.backend,
+                        provider_request.clone(),
+                    ),
                 ),
             )
             .await?
@@ -913,7 +927,10 @@ mod tests {
         (format!("http://{address}/v1"), handle)
     }
 
-    fn spawn_openai_image_json_server() -> (String, thread::JoinHandle<()>) {
+    /// Answers one image request once `release` signals.
+    fn spawn_openai_image_json_server(
+        release: std::sync::mpsc::Receiver<()>,
+    ) -> (String, thread::JoinHandle<()>) {
         let listener =
             TcpListener::bind(crate::test_endpoints::TEST_BIND_ADDRESS).expect("bind loopback");
         let address = listener.local_addr().expect("local addr");
@@ -925,7 +942,7 @@ mod tests {
             assert!(!request_text.contains("\"stream\""));
             assert!(!request_text.contains("\"partial_images\""));
 
-            thread::sleep(Duration::from_millis(50));
+            release.recv().expect("release");
             let body = serde_json::to_string(&json!({
                 "created": 1780292100_u64,
                 "data": [
@@ -952,12 +969,13 @@ mod tests {
 
     #[test]
     fn create_openai_media_generator_succeeds_for_valid_backend_config() {
-        assert!(create_openai_media_generator(sample_backend()).is_ok());
+        assert!(create_openai_media_generator(sample_backend(), crate::test_clock()).is_ok());
     }
 
     #[tokio::test(flavor = "current_thread")]
     async fn generate_rejects_non_image_media_kinds() {
-        let generator = create_openai_media_generator(sample_backend()).expect("generator");
+        let generator = create_openai_media_generator(sample_backend(), crate::test_clock())
+            .expect("generator");
         let request = MediaRenderRequest {
             kind: MediaKind::Video,
             prompt_text: "A moving shot".to_string(),
@@ -979,7 +997,8 @@ mod tests {
         let (endpoint, handle) = spawn_openai_image_stream_server();
         let mut backend = sample_backend();
         backend.endpoint = endpoint;
-        let generator = create_openai_media_generator(backend).expect("generator");
+        let generator =
+            create_openai_media_generator(backend, crate::test_clock()).expect("generator");
         let reporter = Arc::new(CapturingReporter::new());
 
         let result = generator
@@ -1020,27 +1039,42 @@ mod tests {
 
     #[tokio::test(flavor = "current_thread")]
     async fn generate_multiple_openai_images_uses_json_response_with_estimated_progress() {
-        let (endpoint, handle) = spawn_openai_image_json_server();
+        let (release, held) = std::sync::mpsc::channel();
+        let (endpoint, handle) = spawn_openai_image_json_server(held);
         let mut backend = sample_backend();
         backend.endpoint = endpoint;
         backend
             .options
             .extra
             .insert("estimatedProgressIntervalMs".to_string(), json!(10));
-        let generator = create_openai_media_generator(backend).expect("generator");
+        let clock = battersea_model::ManualClock::new(0);
+        let generator =
+            create_openai_media_generator(backend, Arc::new(clock.clone())).expect("generator");
         let reporter = Arc::new(CapturingReporter::new());
         let mut request = sample_request("Two images without streaming");
         request.options.count = Some(2);
 
-        let result = generator
-            .generate(
+        // While the provider holds its response, one progress tick reaches both slots.
+        let tick = async {
+            assert_eq!(
+                clock
+                    .advance_to_timer_within(Duration::from_millis(10))
+                    .await,
+                Duration::from_millis(10)
+            );
+            clock.timer_within(Duration::from_millis(10)).await;
+            release.send(()).expect("release the response");
+        };
+        let (result, ()) = tokio::join!(
+            generator.generate(
                 request,
                 CancellationToken::new(),
                 Some(reporter.clone()),
                 None,
-            )
-            .await
-            .expect("non-streamed image generation succeeds");
+            ),
+            tick
+        );
+        let result = result.expect("non-streamed image generation succeeds");
         handle.join().expect("server joins");
 
         assert_eq!(result.assets.len(), 2);

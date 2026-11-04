@@ -246,6 +246,7 @@ impl OpenAiEngineAdapter {
             base_url: self.base_url.clone(),
             backend: self.backend.clone(),
             logger: self.logger.clone(),
+            clock: self.clock.clone(),
             context: self.context.clone(),
             input: vec![],
             transport: OpenAiTurnTransport::Stream {

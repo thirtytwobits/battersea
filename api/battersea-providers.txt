@@ -9,17 +9,16 @@ pub use battersea_providers::media::<<battersea_model::media::*>>
 pub struct battersea_providers::media::MediaTimingRecorder
 impl battersea_providers::media::MediaTimingRecorder
 pub fn battersea_providers::media::MediaTimingRecorder::finish_client_estimate(self) -> battersea_providers::media::MediaRenderTiming
-pub fn battersea_providers::media::MediaTimingRecorder::record_phase(&mut self, impl core::convert::Into<alloc::string::String>, impl core::convert::Into<alloc::string::String>, bool, chrono::datetime::DateTime<chrono::offset::utc::Utc>, std::time::Instant)
-pub fn battersea_providers::media::MediaTimingRecorder::start() -> Self
-impl core::fmt::Debug for battersea_providers::media::MediaTimingRecorder
-pub fn battersea_providers::media::MediaTimingRecorder::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn battersea_providers::media::MediaTimingRecorder::now(&self) -> (chrono::datetime::DateTime<chrono::offset::utc::Utc>, tokio::time::instant::Instant)
+pub fn battersea_providers::media::MediaTimingRecorder::record_phase(&mut self, impl core::convert::Into<alloc::string::String>, impl core::convert::Into<alloc::string::String>, bool, chrono::datetime::DateTime<chrono::offset::utc::Utc>, tokio::time::instant::Instant)
+pub fn battersea_providers::media::MediaTimingRecorder::start(alloc::rcs::arc::Arc<dyn battersea_model::clock::Clock>) -> Self
 impl core::marker::Freeze for battersea_providers::media::MediaTimingRecorder
 impl core::marker::Send for battersea_providers::media::MediaTimingRecorder
 impl core::marker::Sync for battersea_providers::media::MediaTimingRecorder
 impl core::marker::Unpin for battersea_providers::media::MediaTimingRecorder
 impl core::marker::UnsafeUnpin for battersea_providers::media::MediaTimingRecorder
-impl core::panic::unwind_safe::RefUnwindSafe for battersea_providers::media::MediaTimingRecorder
-impl core::panic::unwind_safe::UnwindSafe for battersea_providers::media::MediaTimingRecorder
+impl !core::panic::unwind_safe::RefUnwindSafe for battersea_providers::media::MediaTimingRecorder
+impl !core::panic::unwind_safe::UnwindSafe for battersea_providers::media::MediaTimingRecorder
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_providers::media::MediaTimingRecorder where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_providers::media::MediaTimingRecorder where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<T, U> core::convert::Into<U> for battersea_providers::media::MediaTimingRecorder where U: core::convert::From<T>
@@ -53,7 +52,7 @@ pub fn battersea_providers::media::accepts_size(&str, &str, &str) -> bool
 pub fn battersea_providers::media::duration_ms(core::time::Duration) -> u64
 pub fn battersea_providers::media::prepare_media_request(&battersea_model::media::MediaBackendConfig, battersea_model::media::MediaRenderRequest) -> core::result::Result<battersea_model::media::PreparedMediaRequest, battersea_model::adapter::error::EngineAdapterRequestError>
 pub fn battersea_providers::media::resolve_estimated_generation_ms(&battersea_model::media::MediaBackendConfig) -> u64
-pub async fn battersea_providers::media::with_estimated_generation_progress<T>(&battersea_model::media::MediaBackendConfig, usize, core::option::Option<alloc::rcs::arc::Arc<dyn battersea_model::media::MediaGenerationActivityReporter>>, tokio_util::sync::cancellation_token::CancellationToken, impl core::future::future::Future<Output = core::result::Result<T, battersea_model::adapter::error::EngineAdapterRequestError>>) -> core::result::Result<T, battersea_model::adapter::error::EngineAdapterRequestError>
+pub async fn battersea_providers::media::with_estimated_generation_progress<T>(&battersea_model::media::MediaBackendConfig, usize, core::option::Option<alloc::rcs::arc::Arc<dyn battersea_model::media::MediaGenerationActivityReporter>>, tokio_util::sync::cancellation_token::CancellationToken, &dyn battersea_model::clock::Clock, impl core::future::future::Future<Output = core::result::Result<T, battersea_model::adapter::error::EngineAdapterRequestError>>) -> core::result::Result<T, battersea_model::adapter::error::EngineAdapterRequestError>
 pub type battersea_providers::media::MediaRenderTiming = battersea_model::media::MediaProvenanceTiming
 pub mod battersea_providers::registry
 pub fn battersea_providers::registry::builtin_registry() -> &'static battersea_model::registry::ProviderRegistry

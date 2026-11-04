@@ -1670,13 +1670,10 @@ async fn cancellation_preempts_a_blocked_consumer_and_stops_a_full_provider_mail
         tokio::task::yield_now().await;
         cancel.cancel();
     });
-    let result = tokio::time::timeout(
-        std::time::Duration::from_secs(5),
-        host.run_activation(&mut state, "source", HashMap::new(), token),
-    )
-    .await
-    .unwrap()
-    .unwrap_err();
+    let result = host
+        .run_activation(&mut state, "source", HashMap::new(), token)
+        .await
+        .unwrap_err();
     watcher.await.unwrap();
     assert_eq!(result.code(), "cancelled");
     assert_eq!(
@@ -1924,10 +1921,7 @@ async fn an_idle_provider_does_not_block_an_independent_ready_provider() {
         vec![edge("peer", "peer", "sink", 0, "stream")],
         "stream",
     );
-    let error = tokio::time::timeout(std::time::Duration::from_secs(5), run(&host, &mut state))
-        .await
-        .unwrap()
-        .unwrap_err();
+    let error = run(&host, &mut state).await.unwrap_err();
     assert_eq!(error.code(), "cancelled");
     assert_eq!(state.seen.len(), 1);
     assert!(host
@@ -1987,10 +1981,7 @@ async fn a_busy_provider_cannot_starve_a_ready_peer() {
         ],
         "stream",
     );
-    let error = tokio::time::timeout(std::time::Duration::from_secs(5), run(&host, &mut state))
-        .await
-        .unwrap()
-        .unwrap_err();
+    let error = run(&host, &mut state).await.unwrap_err();
     assert_eq!(error.code(), "cancelled");
     assert!(state.seen.iter().any(|(id, _)| id == "cancel"));
     assert!(state.max_usage.items <= state.flow.execution.limits.pending_events as usize);

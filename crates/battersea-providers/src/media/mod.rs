@@ -25,10 +25,12 @@ use crate::adapter::error::EngineAdapterRequestError;
 #[cfg(test)]
 use crate::adapter::{EngineAuthConfig, EngineBackendOptions};
 
+use battersea_model::{clock::utc_now, Clock};
 use serde_json::Value;
 use std::collections::BTreeMap;
 use std::sync::Arc;
-use std::time::{Duration, Instant};
+use std::time::Duration;
+use tokio::time::Instant;
 use tokio_util::sync::CancellationToken;
 
 #[cfg(feature = "google")]
@@ -45,20 +47,32 @@ pub use battersea_model::media::*;
 
 pub type MediaRenderTiming = MediaProvenanceTiming;
 
-#[derive(Debug)]
+/// Records generation timing by the adapter's clock.
 pub struct MediaTimingRecorder {
+    clock: Arc<dyn Clock>,
     started_at: chrono::DateTime<chrono::Utc>,
     started_instant: Instant,
     phases: Vec<MediaProvenanceTimingPhase>,
 }
 
 impl MediaTimingRecorder {
-    pub fn start() -> Self {
+    pub fn start(clock: Arc<dyn Clock>) -> Self {
+        let (started_at, started_instant) = (utc_now(clock.as_ref()), clock.instant());
         Self {
-            started_at: chrono::Utc::now(),
-            started_instant: Instant::now(),
+            clock,
+            started_at,
+            started_instant,
             phases: Vec::new(),
         }
+    }
+
+    /// The current wall time and instant, to mark the start of a phase.
+    pub fn now(&self) -> (chrono::DateTime<chrono::Utc>, Instant) {
+        (utc_now(self.clock.as_ref()), self.clock.instant())
+    }
+
+    fn elapsed_since(&self, instant: Instant) -> Duration {
+        self.clock.instant().saturating_duration_since(instant)
     }
 
     pub fn record_phase(
@@ -69,20 +83,21 @@ impl MediaTimingRecorder {
         started_at: chrono::DateTime<chrono::Utc>,
         started_instant: Instant,
     ) {
-        let completed_at = chrono::Utc::now();
+        let completed_at = utc_now(self.clock.as_ref());
+        let duration_ms = duration_ms(self.elapsed_since(started_instant));
         self.phases.push(MediaProvenanceTimingPhase {
             name: name.into(),
             started_at: started_at.to_rfc3339(),
             completed_at: completed_at.to_rfc3339(),
-            duration_ms: duration_ms(started_instant.elapsed()),
+            duration_ms,
             category: category.into(),
             included_in_model_processing,
         });
     }
 
     pub fn finish_client_estimate(self) -> MediaRenderTiming {
-        let completed_at = chrono::Utc::now();
-        let elapsed_ms = duration_ms(self.started_instant.elapsed());
+        let completed_at = utc_now(self.clock.as_ref());
+        let elapsed_ms = duration_ms(self.elapsed_since(self.started_instant));
         let included_phases = self
             .phases
             .iter()
@@ -145,11 +160,13 @@ pub fn accepts_size(provider: &str, model: &str, value: &str) -> bool {
 
 /// Runs estimate-backed progress for the lifetime of a media request. Reporter
 /// failure interrupts the request; completion drops any pending progress send.
+/// Runs `work` while reporting estimated progress at intervals of `clock`.
 pub async fn with_estimated_generation_progress<T>(
     backend: &MediaBackendConfig,
     slot_count: usize,
     activity_reporter: Option<Arc<dyn MediaGenerationActivityReporter>>,
     cancellation: CancellationToken,
+    clock: &dyn Clock,
     work: impl std::future::Future<Output = Result<T, EngineAdapterRequestError>>,
 ) -> Result<T, EngineAdapterRequestError> {
     let progress = async {
@@ -166,6 +183,7 @@ pub async fn with_estimated_generation_progress<T>(
             resolve_estimated_generation_ms(backend),
             read_estimated_progress_interval_ms(&backend.options.extra),
             cancellation.clone(),
+            clock,
         )
         .await
     };
@@ -178,6 +196,33 @@ pub async fn with_estimated_generation_progress<T>(
         },
         result = work => result,
     }
+}
+
+/// Bounds one provider request, including its response body, by the backend's
+/// `options.timeoutMs` on `clock`.
+#[cfg(any(
+    feature = "openai",
+    feature = "google",
+    feature = "runway",
+    feature = "replicate"
+))]
+pub(crate) async fn within_request_deadline<T>(
+    backend: &MediaBackendConfig,
+    clock: &dyn Clock,
+    request: impl std::future::Future<Output = Result<T, EngineAdapterRequestError>>,
+) -> Result<T, EngineAdapterRequestError> {
+    let Some(timeout_ms) = backend.options.timeout_ms else {
+        return request.await;
+    };
+    battersea_model::clock::timeout(clock, Duration::from_millis(timeout_ms), request)
+        .await
+        .unwrap_or_else(|_| {
+            Err(EngineAdapterRequestError::new(
+                &backend.provider,
+                "Media request deadline exceeded.",
+                battersea_model::ErrorKind::Timeout,
+            ))
+        })
 }
 
 /// Normalises a configured base URL before provider-specific suffix trimming.
@@ -294,21 +339,22 @@ async fn emit_estimated_generation_progress_ticks(
     estimated_ms: u64,
     interval_ms: u64,
     cancellation: CancellationToken,
+    clock: &dyn Clock,
 ) -> Result<(), crate::EngineAdapterRequestError> {
     const PROGRESS_CAP: f32 = 0.95;
-    let started = Instant::now();
+    let started = clock.instant();
     let interval = Duration::from_millis(interval_ms);
     loop {
         tokio::select! {
             _ = cancellation.cancelled() => {
                 break;
             }
-            _ = tokio::time::sleep(interval) => {}
+            _ = battersea_model::clock::sleep(clock, interval) => {}
         }
         if cancellation.is_cancelled() {
             break;
         }
-        let elapsed_ms = duration_ms(started.elapsed());
+        let elapsed_ms = duration_ms(clock.instant().saturating_duration_since(started));
         let progress =
             ((elapsed_ms as f32) / (estimated_ms as f32) * PROGRESS_CAP).clamp(0.0, PROGRESS_CAP);
         let eta_ms = estimated_ms.saturating_sub(elapsed_ms);
@@ -368,10 +414,11 @@ mod tests {
         MediaGenerationActivityUpdate, MediaTimingRecorder,
     };
     use battersea_model::media::{MediaProvenanceTimingConfidence, MediaProvenanceTimingSource};
+    use battersea_model::{Clock, ManualClock};
     use serde_json::json;
     use std::collections::BTreeMap;
     use std::sync::Arc;
-    use std::time::{Duration, Instant};
+    use std::time::Duration;
     use tokio_util::sync::CancellationToken;
 
     #[test]
@@ -596,11 +643,13 @@ mod tests {
                     .await
             };
             let backend = progress_test_backend();
+            let clock = ManualClock::new(0);
             let run = with_estimated_generation_progress(
                 &backend,
                 1,
                 Some(reporter),
                 cancellation.clone(),
+                &clock,
                 work,
             );
             let cancel = async {
@@ -609,10 +658,9 @@ mod tests {
                     cancellation.cancel();
                 }
             };
-            let (result, ()) =
-                tokio::time::timeout(Duration::from_secs(2), async { tokio::join!(run, cancel) })
-                    .await
-                    .expect("blocked reporter must be interruptible");
+            // The first progress tick is due one configured interval after the request starts.
+            let tick = clock.advance_to_timer_within(Duration::from_millis(5));
+            let (result, (), _) = tokio::join!(run, cancel, tick);
             assert!(result.is_err());
             assert!(
                 dropped.load(Ordering::SeqCst),
@@ -645,18 +693,24 @@ mod tests {
         });
         let backend = progress_test_backend();
         let cancellation = CancellationToken::new();
+        let clock = ManualClock::new(0);
         with_estimated_generation_progress(
             &backend,
             2,
             Some(reporter.clone()),
             cancellation,
+            &clock,
             async {
-                for _ in 0..20 {
-                    if reporter.updates.lock().expect("updates lock").len() >= 4 {
-                        break;
-                    }
-                    tokio::time::sleep(Duration::from_millis(5)).await;
+                for _ in 0..2 {
+                    assert_eq!(
+                        clock
+                            .advance_to_timer_within(Duration::from_millis(5))
+                            .await,
+                        Duration::from_millis(5)
+                    );
                 }
+                // The next pending tick shows that the second tick has been reported.
+                clock.timer_within(Duration::from_millis(5)).await;
                 Ok(())
             },
         )
@@ -664,33 +718,46 @@ mod tests {
         .expect("progress delivery");
         let updates = reporter.updates.lock().expect("updates lock").clone();
 
-        assert!(
-            updates.len() >= 4,
-            "expected ticks for both slots, got {updates:?}"
+        // One update per slot and tick; elapsed time follows the clock.
+        assert_eq!(
+            updates
+                .iter()
+                .map(|update| (update.slot_index, update.eta_ms))
+                .collect::<Vec<_>>(),
+            [
+                (Some(0), Some(15)),
+                (Some(1), Some(15)),
+                (Some(0), Some(10)),
+                (Some(1), Some(10))
+            ]
         );
         assert!(updates.iter().all(|update| update.progress.is_some()));
         assert!(updates.iter().all(|update| update.progress.unwrap() < 1.0));
-        assert!(updates.iter().any(|update| update.slot_index == Some(0)));
-        assert!(updates.iter().any(|update| update.slot_index == Some(1)));
     }
 
     #[test]
     fn timing_recorder_excludes_poll_and_retry_wait_from_model_processing() {
-        let mut recorder = MediaTimingRecorder::start();
-        recorder.record_phase(
-            "poll wait",
-            "poll-wait",
-            false,
-            chrono::Utc::now(),
-            Instant::now(),
+        let clock = Arc::new(ManualClock::new(784_111_777_000));
+        let mut recorder = MediaTimingRecorder::start(clock.clone());
+        let (started_at, started) = recorder.now();
+        clock.advance(Duration::from_millis(30));
+        recorder.record_phase("poll wait", "poll-wait", false, started_at, started);
+        let (started_at, started) = recorder.now();
+        clock.advance(Duration::from_millis(12));
+        recorder.record_phase("poll retry wait", "retry-wait", false, started_at, started);
+        assert_eq!(
+            recorder
+                .phases
+                .iter()
+                .map(|phase| phase.duration_ms)
+                .collect::<Vec<_>>(),
+            [30, 12]
         );
-        recorder.record_phase(
-            "poll retry wait",
-            "retry-wait",
-            false,
-            chrono::Utc::now(),
-            Instant::now(),
+        assert_eq!(
+            recorder.phases[1].completed_at,
+            "1994-11-06T08:49:37.042+00:00"
         );
+        assert_eq!(clock.instant(), recorder.now().1);
 
         let timing = recorder.finish_client_estimate();
 

@@ -456,10 +456,13 @@ impl ValidatedProviderConfiguration {
     pub fn configuration(&self) -> &ProviderConfiguration {
         &self.configuration
     }
+    /// Creates the configured adapters. `clock` drives their deadlines, backoff, polling and
+    /// idle watchdogs.
     pub fn bind(
         &self,
         credentials: &dyn CredentialResolver,
         logger: Option<Arc<dyn EngineAdapterLogger>>,
+        clock: Arc<dyn battersea_model::Clock>,
     ) -> Result<ConfiguredProviders, ProviderConfigurationError> {
         let mut bindings = BTreeMap::<(String, String), (ProviderBinding, EngineAuthConfig)>::new();
         let mut resolve = |provider: &str,
@@ -568,14 +571,16 @@ impl ValidatedProviderConfiguration {
                 .register_chat(&file.provider, registered)
                 .expect("unique provider");
             let logger = logger.clone().map(|logger| bound::logger(&backend, logger));
-            let inner = registry.create_chat(backend.clone(), logger).map_err(|_| {
-                error(
-                    ProviderCode::InvalidOptions,
-                    &format!("backends.{id}"),
-                    &file.provider,
-                    &adapter.id,
-                )
-            })?;
+            let inner = registry
+                .create_chat(backend.clone(), logger, clock.clone())
+                .map_err(|_| {
+                    error(
+                        ProviderCode::InvalidOptions,
+                        &format!("backends.{id}"),
+                        &file.provider,
+                        &adapter.id,
+                    )
+                })?;
             chat.insert(
                 id.clone(),
                 bound::chat(
@@ -610,14 +615,16 @@ impl ValidatedProviderConfiguration {
             registry
                 .register_media(&file.provider, registered.clone())
                 .expect("unique provider");
-            let inner = registry.create_media(backend.clone()).map_err(|_| {
-                error(
-                    ProviderCode::InvalidOptions,
-                    &format!("mediaBackends.{id}"),
-                    &file.provider,
-                    &adapter.id,
-                )
-            })?;
+            let inner = registry
+                .create_media(backend.clone(), clock.clone())
+                .map_err(|_| {
+                    error(
+                        ProviderCode::InvalidOptions,
+                        &format!("mediaBackends.{id}"),
+                        &file.provider,
+                        &adapter.id,
+                    )
+                })?;
             media.insert(id.clone(), bound::media(backend, inner, registered));
         }
         let snapshot = serde_json::json!({"version":1,"configuration":self.configuration,"bindings":bindings.values().map(|(b,_)| b).collect::<Vec<_>>()});

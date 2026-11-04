@@ -3,7 +3,7 @@
 use crate::{registry::refusal, Tool, ToolRegistry};
 use async_trait::async_trait;
 use battersea_model::{
-    configuration_digest, EngineAdapterRequestError, EngineLocalToolCall,
+    configuration_digest, Clock, EngineAdapterRequestError, EngineLocalToolCall,
     EngineLocalToolDefinition, EngineLocalToolExecutor, EngineLocalToolResult, ErrorKind,
     ToolCallOutcome, ToolCode,
 };
@@ -11,8 +11,8 @@ use serde_json::json;
 use std::{
     collections::BTreeSet,
     sync::{Arc, Mutex},
-    time::Instant,
 };
+use tokio::time::Instant;
 
 /// Host identity and absolute deadline for one tool conversation.
 #[derive(Clone, Debug)]
@@ -21,6 +21,7 @@ pub struct ToolApprovalScope {
     /// Host revision covering the registry's selection, [`ToolRegistry::revision`], its grant
     /// and its credential scopes.
     pub binding_revision: String,
+    /// An instant of the executor's [`Clock`].
     pub deadline: Instant,
 }
 
@@ -66,6 +67,7 @@ pub struct ApprovedToolExecutor {
     policy: Arc<dyn ToolApprovalPolicy>,
     calls: Arc<Mutex<BTreeSet<String>>>,
     max_calls: usize,
+    clock: Arc<dyn Clock>,
 }
 
 impl ApprovedToolExecutor {
@@ -79,6 +81,7 @@ impl ApprovedToolExecutor {
         scope: ToolApprovalScope,
         policy: Arc<dyn ToolApprovalPolicy>,
         max_calls: usize,
+        clock: Arc<dyn Clock>,
     ) -> Result<Self, EngineAdapterRequestError> {
         if scope.run_id.trim().is_empty()
             || scope.binding_revision.trim().is_empty()
@@ -95,6 +98,7 @@ impl ApprovedToolExecutor {
             policy,
             calls: Arc::new(Mutex::new(BTreeSet::new())),
             max_calls,
+            clock,
         })
     }
 
@@ -124,7 +128,7 @@ impl EngineLocalToolExecutor for ApprovedToolExecutor {
                 ErrorKind::InvalidRequest,
             ));
         }
-        if Instant::now() >= self.scope.deadline {
+        if self.clock.instant() >= self.scope.deadline {
             return Err(refused(
                 ToolCode::ToolApprovalExpired,
                 "Tool approval deadline expired.",
@@ -174,7 +178,7 @@ impl EngineLocalToolExecutor for ApprovedToolExecutor {
             call: &prepared.call,
             revision: &revision,
         });
-        if Instant::now() >= self.scope.deadline {
+        if self.clock.instant() >= self.scope.deadline {
             return Err(refused(
                 ToolCode::ToolApprovalExpired,
                 "Tool approval deadline expired.",
@@ -200,15 +204,19 @@ impl EngineLocalToolExecutor for ApprovedToolExecutor {
         }
         let mut evidence = prepared.evidence.clone();
         evidence.outcome = ToolCallOutcome::Uncertain;
-        tokio::time::timeout_at(self.scope.deadline.into(), prepared.execute())
-            .await
-            .map_err(|_| {
-                EngineAdapterRequestError::new(
-                    "tools",
-                    "Tool execution deadline expired.",
-                    ErrorKind::Timeout,
-                )
-                .with_tool_call(evidence)
-            })?
+        battersea_model::clock::timeout_at(
+            self.clock.as_ref(),
+            self.scope.deadline,
+            prepared.execute(),
+        )
+        .await
+        .map_err(|_| {
+            EngineAdapterRequestError::new(
+                "tools",
+                "Tool execution deadline expired.",
+                ErrorKind::Timeout,
+            )
+            .with_tool_call(evidence)
+        })?
     }
 }

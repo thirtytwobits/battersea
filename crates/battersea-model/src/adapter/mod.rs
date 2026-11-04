@@ -597,39 +597,43 @@ pub(crate) fn retain_tool_evidence(
     }
 }
 
-/// Ends a stream with one timeout error when no event arrives within `idle`.
-/// Every event resets the clock. The timeout retains the latest observed tool evidence
-/// and drops the underlying stream.
+/// Ends a stream with one timeout error when no event arrives within `idle` on `clock`.
+/// Every event restarts the idle deadline. The timeout retains the latest observed tool
+/// evidence and drops the underlying stream.
 pub fn with_stream_idle_watchdog(
     stream: EngineTextStream,
     idle: std::time::Duration,
     provider: impl Into<String>,
+    clock: Arc<dyn crate::Clock>,
 ) -> EngineTextStream {
     use futures_util::StreamExt as _;
     Box::pin(futures_util::stream::unfold(
         Some((stream, provider.into(), None)),
-        move |state| async move {
-            let (mut stream, provider, mut tool_call) = state?;
-            match tokio::time::timeout(idle, stream.next()).await {
-                Ok(Some(event)) => {
-                    if let Ok(event) = &event {
-                        retain_tool_evidence(&mut tool_call, event);
+        move |state| {
+            let clock = clock.clone();
+            async move {
+                let (mut stream, provider, mut tool_call) = state?;
+                match crate::clock::timeout(clock.as_ref(), idle, stream.next()).await {
+                    Ok(Some(event)) => {
+                        if let Ok(event) = &event {
+                            retain_tool_evidence(&mut tool_call, event);
+                        }
+                        Some((event, Some((stream, provider, tool_call))))
                     }
-                    Some((event, Some((stream, provider, tool_call))))
-                }
-                Ok(None) => None,
-                Err(_) => {
-                    let mut error = EngineAdapterRequestError::new(
-                        provider,
-                        format!(
-                            "Provider stream idle deadline exceeded ({}ms).",
-                            idle.as_millis()
-                        ),
-                        error::ErrorKind::Timeout,
-                    )
-                    .with_idle_watchdog(idle.as_millis().min(u64::MAX as u128) as u64);
-                    error.tool_call = tool_call.map(Box::new);
-                    Some((Err(error), None))
+                    Ok(None) => None,
+                    Err(_) => {
+                        let mut error = EngineAdapterRequestError::new(
+                            provider,
+                            format!(
+                                "Provider stream idle deadline exceeded ({}ms).",
+                                idle.as_millis()
+                            ),
+                            error::ErrorKind::Timeout,
+                        )
+                        .with_idle_watchdog(idle.as_millis().min(u64::MAX as u128) as u64);
+                        error.tool_call = tool_call.map(Box::new);
+                        Some((Err(error), None))
+                    }
                 }
             }
         },

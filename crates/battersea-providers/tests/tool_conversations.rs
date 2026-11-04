@@ -11,6 +11,7 @@ use axum::{
 use battersea_model::engine::{
     EngineBackendCapabilities, EngineChatParameters, EngineChatToolChoiceMode,
 };
+use battersea_model::ManualClock;
 use battersea_providers::{
     adapter::EngineAuthConfig, EngineAdapter, EngineAdapterLogger, EngineAdapterRequest,
     EngineAdapterRequestError, EngineAdapterStreamLog, EngineBackendConfig, EngineBackendOptions,
@@ -150,12 +151,20 @@ fn backend(provider: &str, url: &str, mode: &str) -> EngineBackendConfig {
         long_description: String::new(),
     }
 }
+/// An adapter on a clock no one advances: its deadlines, watchdogs, backoff and polling wait.
 fn adapter(backend: EngineBackendConfig) -> Arc<dyn EngineAdapter> {
     observed_adapter(backend, None)
 }
 fn observed_adapter(
+    backend: EngineBackendConfig,
+    observer: Option<Arc<StreamObserver>>,
+) -> Arc<dyn EngineAdapter> {
+    clocked_adapter(backend, observer, ManualClock::new(0))
+}
+fn clocked_adapter(
     mut backend: EngineBackendConfig,
     observer: Option<Arc<StreamObserver>>,
+    clock: ManualClock,
 ) -> Arc<dyn EngineAdapter> {
     let registry = battersea_providers::builtin_registry();
     backend
@@ -172,6 +181,7 @@ fn observed_adapter(
         .create_chat(
             backend,
             observer.map(|observer| observer as Arc<dyn EngineAdapterLogger>),
+            Arc::new(clock),
         )
         .unwrap()
 }
@@ -375,10 +385,7 @@ async fn round_trip_result(provider: &str, mode: &str, result: Option<EngineLoca
         .await
         .unwrap();
     let mut events = Vec::new();
-    while let Some(event) = tokio::time::timeout(std::time::Duration::from_secs(5), stream.next())
-        .await
-        .unwrap()
-    {
+    while let Some(event) = stream.next().await {
         events.push(event.unwrap());
     }
     if streamed {
@@ -653,12 +660,22 @@ async fn dropping_a_background_tool_stream_cancels_the_remote_response() {
     let mut backend = backend("openai", &url, "poll");
     backend.options.background_poll_interval_ms = Some(1);
     let request = request(&backend, Arc::new(RecordingExecutor::default()));
-    let stream = adapter(backend).stream_text(request).await.unwrap();
+    let clock = ManualClock::new(0);
+    let stream = clocked_adapter(backend, None, clock.clone())
+        .stream_text(request)
+        .await
+        .unwrap();
+    // The queued response is polled after one poll interval.
+    assert_eq!(
+        clock
+            .advance_to_timer_within(std::time::Duration::from_millis(1))
+            .await,
+        std::time::Duration::from_millis(1)
+    );
     polling.notified().await;
     drop(stream);
-    tokio::time::timeout(std::time::Duration::from_secs(2), cancelled.notified())
-        .await
-        .expect("remote cancellation during blocked poll");
+    // Remote cancellation follows the dropped stream during the blocked poll.
+    cancelled.notified().await;
     server.abort();
 }
 
@@ -909,12 +926,21 @@ async fn rejected_tool_continuation_retries_its_body_without_reexecuting_the_too
         .await;
         let backend = content_backend(provider, &url);
         let executor = Arc::new(RecordingExecutor::default());
-        let events = adapter(backend.clone())
-            .stream_text(request(&backend, executor.clone()))
-            .await
-            .unwrap()
-            .collect::<Vec<_>>()
-            .await;
+        let clock = ManualClock::new(0);
+        let adapter = clocked_adapter(backend.clone(), None, clock.clone());
+        // Retry-After 0 leaves the 1ms initial backoff before the retried continuation.
+        let (events, delay) = tokio::join!(
+            async {
+                adapter
+                    .stream_text(request(&backend, executor.clone()))
+                    .await
+                    .unwrap()
+                    .collect::<Vec<_>>()
+                    .await
+            },
+            clock.advance_to_timer_within(std::time::Duration::from_millis(20))
+        );
+        assert_eq!(delay, std::time::Duration::from_millis(1), "{provider}");
         assert!(events.iter().all(Result::is_ok), "{provider}: {events:?}");
         assert_eq!(
             executor.0.lock().unwrap().len(),
@@ -1142,7 +1168,23 @@ async fn the_operation_deadline_covers_backoff_and_retry_does_not_reset_it() {
     backend.options.retry_max_delay_ms = Some(1000);
     let mut request = request(&backend, Arc::new(RecordingExecutor::default()));
     request.local_tools.clear();
-    let result = adapter(backend).stream_text(request).await;
+    let clock = ManualClock::new(0);
+    let adapter = clocked_adapter(backend, None, clock.clone());
+    // Once the one-second backoff is scheduled, the 50ms operation deadline elapses first.
+    let expire = async {
+        while !clock
+            .pending_timers()
+            .contains(&std::time::Duration::from_secs(1))
+        {
+            tokio::task::yield_now().await;
+        }
+        assert_eq!(
+            clock.pending_timers(),
+            [50, 1000].map(std::time::Duration::from_millis)
+        );
+        clock.advance(std::time::Duration::from_millis(50));
+    };
+    let (result, ()) = tokio::join!(adapter.stream_text(request), expire);
     assert!(
         matches!(result,Err(error) if error.classification==battersea_model::ErrorKind::Timeout)
     );
@@ -1158,19 +1200,21 @@ async fn dropping_a_tool_consumer_interrupts_retry_backoff() {
     backend.options.retry_initial_delay_ms = Some(1000);
     backend.options.retry_max_delay_ms = Some(1000);
     let executor = Arc::new(RecordingExecutor::default());
-    let stream = adapter(backend.clone())
+    let clock = ManualClock::new(0);
+    let stream = clocked_adapter(backend.clone(), None, clock.clone())
         .stream_text(request(&backend, executor.clone()))
         .await
         .unwrap();
-    tokio::time::timeout(std::time::Duration::from_secs(2), async {
-        while state.requests.lock().unwrap().is_empty() {
-            tokio::task::yield_now().await;
-        }
-    })
-    .await
-    .unwrap();
+    let backoff = std::time::Duration::from_secs(1);
+    while !clock.pending_timers().contains(&backoff) {
+        tokio::task::yield_now().await;
+    }
     drop(stream);
-    tokio::time::sleep(std::time::Duration::from_millis(1100)).await;
+    // Dropping the consumer cancels the backoff, so its timer is no longer pending.
+    while clock.pending_timers().contains(&backoff) {
+        tokio::task::yield_now().await;
+    }
+    clock.advance(std::time::Duration::from_millis(1100));
     assert_eq!(state.requests.lock().unwrap().len(), 1);
     assert!(executor.0.lock().unwrap().is_empty());
     server.abort();
@@ -1295,11 +1339,27 @@ async fn connection_refusal_retries_only_within_the_explicit_attempt_bound() {
         let attempts = backend.options.max_retries.unwrap() + 1;
         let mut request = request(&backend, Arc::new(RecordingExecutor::default()));
         request.local_tools.clear();
-        let error = adapter(backend)
-            .stream_text(request)
-            .await
-            .err()
-            .expect("connection refused");
+        let clock = ManualClock::new(0);
+        let adapter = clocked_adapter(backend, None, clock.clone());
+        // Each refused attempt is followed by an exponential backoff from the 1ms initial delay.
+        let backoff = async {
+            let mut delays = Vec::new();
+            for _ in 1..attempts {
+                delays.push(
+                    clock
+                        .advance_to_timer_within(std::time::Duration::from_millis(20))
+                        .await,
+                );
+            }
+            delays
+        };
+        let (result, delays) = tokio::join!(adapter.stream_text(request), backoff);
+        assert_eq!(
+            delays,
+            [1, 2].map(std::time::Duration::from_millis),
+            "{provider}"
+        );
+        let error = result.err().expect("connection refused");
         assert_eq!(error.dispatch, battersea_model::DispatchState::NotSent);
         assert_eq!(error.attempts, attempts);
     }
@@ -1318,11 +1378,7 @@ async fn accepted_connection_loss_does_not_recreate_generation() {
             let mut buffer = [0; 8192];
             assert!(stream.read(&mut buffer).await.unwrap() > 0);
             drop(stream);
-            assert!(
-                tokio::time::timeout(std::time::Duration::from_millis(100), listener.accept())
-                    .await
-                    .is_err()
-            );
+            listener
         });
         let backend = content_backend(provider, &url);
         let mut request = request(&backend, Arc::new(RecordingExecutor::default()));
@@ -1334,7 +1390,9 @@ async fn accepted_connection_loss_does_not_recreate_generation() {
             .expect("connection lost");
         assert_eq!(error.dispatch, battersea_model::DispatchState::Unknown);
         assert_eq!(error.attempts, 1);
-        server.await.unwrap();
+        // The finished request made no second connection.
+        let listener = server.await.unwrap();
+        assert!(futures_util::poll!(Box::pin(listener.accept())).is_pending());
     }
 }
 

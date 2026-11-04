@@ -514,7 +514,10 @@ fn router(app: App) -> Router {
 async fn serve(root: PathBuf, port: u16) -> Result<(), Box<dyn std::error::Error>> {
     let tokens = Arc::new(tokens(&root)?);
     let app = App {
-        runtime: Arc::new(Application::new(root.clone())?),
+        runtime: Arc::new(Application::new(
+            root.clone(),
+            Arc::new(battersea_model::SystemClock),
+        )?),
         runs: Arc::default(),
         writes: Arc::default(),
     };
@@ -559,6 +562,9 @@ async fn serve(root: PathBuf, port: u16) -> Result<(), Box<dyn std::error::Error
         &root.join(ENDPOINT_RECORD),
         &json!({"endpoint": format!("{audience}/mcp"), "token": operator}),
     )?;
+    // Readiness: the endpoint line follows the endpoint record and precedes serving.
+    println!("{audience}/mcp");
+    std::io::Write::flush(&mut std::io::stdout())?;
     axum::serve(listener, router(app).merge(mcp)).await?;
     Ok(())
 }
@@ -627,12 +633,16 @@ async fn main() -> Result<std::process::ExitCode, Box<dyn std::error::Error>> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    /// A clock no test advances unless it exercises a delay.
+    fn clock() -> Arc<dyn battersea_model::Clock> {
+        Arc::new(battersea_model::ManualClock::new(1_800_000_000_000))
+    }
     #[tokio::test]
     async fn custom_node_runs_and_capture_survives_completion_without_product_configuration() {
         let temp = tempfile::tempdir().unwrap();
         let root = temp.path().join("app");
         initialise(&root).unwrap();
-        let app = Application::new(root.clone()).unwrap();
+        let app = Application::new(root.clone(), clock()).unwrap();
         let flow = load_document(include_str!("../fixtures/example.json")).unwrap();
         let id = uuid::Uuid::new_v4().to_string();
         let mut run = app.run(id.clone(), &flow).unwrap();
@@ -663,7 +673,7 @@ mod tests {
         let root = temp.path().join("app");
         initialise(&root).unwrap();
         let app = App {
-            runtime: Arc::new(Application::new(root.clone()).unwrap()),
+            runtime: Arc::new(Application::new(root.clone(), clock()).unwrap()),
             runs: Arc::default(),
             writes: Arc::default(),
         };
@@ -684,7 +694,7 @@ mod tests {
         let root = temp.path().join("app");
         initialise(&root).unwrap();
         let app = App {
-            runtime: Arc::new(Application::new(root.clone()).unwrap()),
+            runtime: Arc::new(Application::new(root.clone(), clock()).unwrap()),
             runs: Arc::default(),
             writes: Arc::default(),
         };
@@ -715,7 +725,7 @@ mod tests {
         let root = temp.path().join("app");
         initialise(&root).unwrap();
         let app = App {
-            runtime: Arc::new(Application::new(root.clone()).unwrap()),
+            runtime: Arc::new(Application::new(root.clone(), clock()).unwrap()),
             runs: Arc::default(),
             writes: Arc::default(),
         };
@@ -740,21 +750,17 @@ mod tests {
         let record: Value = serde_json::from_slice(&std::fs::read(&path).unwrap()).unwrap();
         assert_eq!(record["id"], id);
         let _ = cancel(State(app.clone()), Path(id.clone())).await.unwrap();
-        tokio::time::timeout(std::time::Duration::from_secs(5), async {
-            loop {
-                let snapshot = inspect(State(app.clone()), Path(id.clone()))
-                    .await
-                    .unwrap()
-                    .0;
-                assert_eq!(snapshot["id"], id);
-                if snapshot["status"] == "cancelled" {
-                    break;
-                }
-                tokio::task::yield_now().await;
+        loop {
+            let snapshot = inspect(State(app.clone()), Path(id.clone()))
+                .await
+                .unwrap()
+                .0;
+            assert_eq!(snapshot["id"], id);
+            if snapshot["status"] == "cancelled" {
+                break;
             }
-        })
-        .await
-        .unwrap();
+            tokio::task::yield_now().await;
+        }
         let record: Value = serde_json::from_slice(&std::fs::read(path).unwrap()).unwrap();
         assert_eq!(record["id"], id);
     }

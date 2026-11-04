@@ -9,6 +9,14 @@ Clapham, and only where `contracts/dependencies.json` names it. A future optiona
 belongs in an explicit adapter package.
 
 Use `cargo xtask --help` and `npm run` for the available gates. Add behaviour tests from contracts.
+
+## Time in tests
+
+Library code takes its clock and timers from the host. A test's outcome never depends on elapsed
+real time or machine load: tests do not sleep, poll on a timer or bound a wait with a real
+deadline. Tests drive time by advancing a `ManualClock` and order concurrent work with explicit
+signals such as channels and fixture counters. Deadlines, backoff, expiry, polling and idle
+watchdogs are behaviour and are tested by advancing the clock.
 Record source commits, paths and copyright notices when extracting code. Read the relevant
 contract before changing behaviour. Reads cannot upgrade stored formats.
 
