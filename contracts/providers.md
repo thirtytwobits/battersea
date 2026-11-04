@@ -163,8 +163,8 @@ Gemini checkpoint codec version 1 retains the exact contents sent and the native
 Continuation appends the model content unchanged, including thought signatures and opaque part
 fields, then one user content with the ordered `functionResponse` projections. Each projection
 carries the native function name, and the call ID only where Gemini assigned one. The correlation
-ID of a call without a native ID derives from its part position in the retained response, so it
-survives restart. An HTTP 429 retry sends the same prepared request. Durable turns admit one
+ID of a call without a native ID derives from its turn and part position in the retained
+transcript, so it is unique across the conversation and survives restart. An HTTP 429 retry sends the same prepared request. Durable turns admit one
 candidate with `finishReason` `STOP` and text, thought text and `functionCall` parts. Durable text,
 reasoning, native content and usage events are derived from the completed response. A blocked
 prompt, other finish reasons and part types, and a final response without text are rejected

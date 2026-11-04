@@ -2320,7 +2320,7 @@ async fn native_turns_admit_complete_evidence_and_whole_call_batches(api: Api) {
                 {"functionCall":{"name":"remote_write","args":{"value":1}}},
                 {"functionCall":{"id":"effect-2","name":"remote_write","args":{"value":2}}}
             ]}}),
-            ["call-1", "effect-2"],
+            ["call-0-1", "effect-2"],
         )
     } else {
         (
@@ -2421,6 +2421,49 @@ async fn native_turns_admit_complete_evidence_and_whole_call_batches(api: Api) {
             );
         }
         assert_eq!(fixture::effect_count(&ledger).unwrap(), 2);
+    }
+
+    if api == Api::Google {
+        // Generated correlation IDs stay unique when successive turns call at the same part.
+        let unidentified = |value: u64| {
+            json!({"finishReason":"STOP","content":{"role":"model","parts":[
+                {"functionCall":{"name":"remote_write","args":{"value":value}}}
+            ]}})
+        };
+        let (directory, fixture, provider, adapter, mut request, scope) =
+            conversation(Some(unidentified(1))).await;
+        *fixture.second_message.lock().unwrap() = Some(unidentified(2));
+        request.max_turns = 3;
+        let durable = open(directory.path(), adapter, &scope, &request, true)
+            .await
+            .unwrap();
+        let mut state = durable.resume(1).await.unwrap();
+        let mut ids = Vec::new();
+        while state.phase == ConversationPhase::AwaitingTools {
+            let call = state.turns.last().unwrap().response.calls[0].clone();
+            ids.push(call.id.clone());
+            let result = executor.call(call.clone()).await.unwrap();
+            let ready = durable
+                .record_tool_result(state.revision, ConversationToolResult { call, result })
+                .await
+                .unwrap();
+            state = durable.resume(ready.revision).await.unwrap();
+        }
+        assert_eq!(state.phase, ConversationPhase::Completed);
+        assert_eq!(ids, ["call-0-0", "call-1-0"]);
+        drop(durable);
+        // Recovery derives the same identities from the retained transcript.
+        let (adapter, _) = api.connect(&provider.endpoint, None).unwrap();
+        let reopened = open(directory.path(), adapter, &scope, &request, false)
+            .await
+            .unwrap();
+        assert_eq!(
+            reopened.inspect().await.unwrap().phase,
+            ConversationPhase::Completed
+        );
+        let requests = fixture.requests.lock().unwrap();
+        assert_eq!(requests.len(), 3);
+        assert!(!requests[2].to_string().contains("call-"));
     }
 
     // Expiry after restart refuses generation before provider I/O.

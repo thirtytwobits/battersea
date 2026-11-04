@@ -45,6 +45,14 @@ fn request_revision(request: &ConversationRequest) -> String {
     configuration_digest(&serde_json::to_value(request).expect("request"))
 }
 
+/// The number of contents the request's own messages project to; model turns follow them.
+fn original_len(
+    backend: &EngineBackendConfig,
+    request: &ConversationRequest,
+) -> Result<usize, EngineAdapterRequestError> {
+    Ok(crate::content::messages("google", &backend.provider, &request.shared.messages)?.len())
+}
+
 fn same_calls<'a>(
     retained: &[EngineLocalToolCall],
     other: impl ExactSizeIterator<Item = &'a EngineLocalToolCall>,
@@ -86,10 +94,12 @@ fn validate_part(part: &Value) -> Result<(), EngineAdapterRequestError> {
     }
 }
 
-/// Validate one retained model content and return its tool calls.
+/// Validate one retained model content and return its tool calls. `turn` counts the model
+/// contents that precede it, so a generated correlation ID is unique across the conversation.
 fn model_calls(
     request: &ConversationRequest,
     content: &Value,
+    turn: usize,
 ) -> Result<Vec<EngineLocalToolCall>, EngineAdapterRequestError> {
     let parts = content["parts"]
         .as_array()
@@ -108,7 +118,7 @@ fn model_calls(
         }],
         ..Default::default()
     };
-    let calls = collect_google_function_calls(&payload)?;
+    let calls = collect_google_function_calls(&payload, turn)?;
     super::super::tool_loop::validate_tool_calls("google", &request.to_request(), &calls)?;
     Ok(calls)
 }
@@ -207,9 +217,9 @@ impl GoogleEngineAdapter {
             ));
         }
         // Each preceding turn is a function-calling model content answered by its ordered results.
-        for pair in checkpoint.contents[original.len()..].chunks(2) {
+        for (turn, pair) in checkpoint.contents[original.len()..].chunks(2).enumerate() {
             let (model, answer) = (&pair[0], &pair[1]);
-            if model_calls(request, model)?.is_empty() || answer["role"] != "user" {
+            if model_calls(request, model, turn)?.is_empty() || answer["role"] != "user" {
                 return Err(invalid("Invalid Gemini transcript order."));
             }
             let calls = call_parts(model);
@@ -241,7 +251,8 @@ impl GoogleEngineAdapter {
             self.validate_durable_request(request, Some(state))?;
             let checkpoint = decode(state)?;
             let model = checkpoint.response["candidates"][0]["content"].clone();
-            let calls = model_calls(request, &model)?;
+            let turn = (checkpoint.contents.len() - original_len(&self.backend, request)?) / 2;
+            let calls = model_calls(request, &model, turn)?;
             if calls.is_empty() {
                 return Err(invalid("Completed Gemini turn cannot continue."));
             }
@@ -284,7 +295,12 @@ impl GoogleEngineAdapter {
                 "Gemini transcript differs from its predecessor and recorded results.",
             ));
         }
-        let calls = model_calls(request, &checkpoint.response["candidates"][0]["content"])?;
+        let index = (checkpoint.contents.len() - original_len(&self.backend, request)?) / 2;
+        let calls = model_calls(
+            request,
+            &checkpoint.response["candidates"][0]["content"],
+            index,
+        )?;
         if !same_calls(&calls, turn.calls.iter()) {
             return Err(invalid("Gemini calls differ from the retained response."));
         }
@@ -353,7 +369,8 @@ impl GoogleEngineAdapter {
             .map_err(|error| invalid(&error.to_string()))?;
         // The completed native response determines durable events and calls.
         let events = response_events(&request, &native, false)?;
-        let calls = model_calls(&request, &native["candidates"][0]["content"])?;
+        let index = (contents.len() - original_len(&self.backend, &request)?) / 2;
+        let calls = model_calls(&request, &native["candidates"][0]["content"], index)?;
         emit_response(
             self.logger.as_ref(),
             &self.context,
@@ -418,7 +435,8 @@ fn response_events(
     if candidate["finishReason"] != "STOP" {
         return Err(invalid("Gemini turn is not successfully completed."));
     }
-    let calls = model_calls(request, &candidate["content"])?;
+    // Only whether the turn calls tools matters here, not the calls' correlation IDs.
+    let calls = model_calls(request, &candidate["content"], 0)?;
     let parts = candidate["content"]["parts"]
         .as_array()
         .expect("validated content");

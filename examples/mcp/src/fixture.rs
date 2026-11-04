@@ -170,6 +170,8 @@ pub struct ProviderFixture {
     /// Replaces the first Anthropic message's `content` and `stop_reason`, or the first Gemini
     /// candidate.
     pub first_message: Option<Value>,
+    /// Replaces the second Gemini candidate when set.
+    pub second_message: Mutex<Option<Value>>,
 }
 impl ProviderFixture {
     pub fn new(arguments: Value, reject_continuation_once: bool) -> Arc<Self> {
@@ -181,6 +183,7 @@ impl ProviderFixture {
             fail_continuation: false.into(),
             hang_continuation: false.into(),
             first_message: None,
+            second_message: Mutex::new(None),
         })
     }
 }
@@ -398,12 +401,16 @@ pub async fn google_http(fixture: Arc<ProviderFixture>) -> Result<HttpServer> {
         {
             std::future::pending::<()>().await;
         }
-        let candidate = match &fixture.first_message {
-            Some(candidate) if turn == 1 => candidate.clone(),
-            None if turn == 1 => json!({"finishReason":"STOP","content":{"role":"model","parts":[
-                {"text":"Record the effect","thought":true,"thoughtSignature":"thought-signature"},
-                {"functionCall":{"id":"effect-1","name":"remote_write","args":fixture.arguments},"thoughtSignature":"call-signature","vendor":{"keep":true}}
-            ]}}),
+        let second = fixture.second_message.lock().unwrap().clone();
+        let candidate = match (&fixture.first_message, second) {
+            (_, Some(candidate)) if turn == 2 => candidate,
+            (Some(candidate), _) if turn == 1 => candidate.clone(),
+            (None, _) if turn == 1 => {
+                json!({"finishReason":"STOP","content":{"role":"model","parts":[
+                    {"text":"Record the effect","thought":true,"thoughtSignature":"thought-signature"},
+                    {"functionCall":{"id":"effect-1","name":"remote_write","args":fixture.arguments},"thoughtSignature":"call-signature","vendor":{"keep":true}}
+                ]}})
+            }
             _ => json!({"finishReason":"STOP","content":{"role":"model","parts":[
                 {"text":fixture.final_text}
             ]}}),

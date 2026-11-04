@@ -477,7 +477,12 @@ impl ToolConversation for GoogleToolConversation {
                 ),
             ));
         }
-        let calls = collect_google_function_calls(&payload)?;
+        let turn = self
+            .contents
+            .iter()
+            .filter(|content| content["role"] == "model")
+            .count();
+        let calls = collect_google_function_calls(&payload, turn)?;
         emit_response(
             self.logger.as_ref(),
             &self.context,
@@ -694,10 +699,12 @@ fn sanitize_schema_for_gemini(schema: &Value) -> Value {
     }
 }
 
-/// Preserve native call IDs. Older endpoints omit IDs; the adapter supplies
-/// an internal correlation ID and omits it from the provider response.
+/// Preserve native call IDs. Older endpoints omit IDs; the adapter supplies the internal
+/// correlation ID `call-{turn}-{part}`, unique across the conversation's model turns, and omits
+/// it from the provider request. `turn` counts the model contents that precede this response.
 fn collect_google_function_calls(
     payload: &GeminiGenerateContentResponse,
+    turn: usize,
 ) -> Result<Vec<EngineLocalToolCall>, EngineAdapterRequestError> {
     payload
         .candidates
@@ -711,7 +718,7 @@ fn collect_google_function_calls(
             let id = call
                 .get("id")
                 .cloned()
-                .unwrap_or_else(|| json!(format!("call-{index}")));
+                .unwrap_or_else(|| json!(format!("call-{turn}-{index}")));
             super::tool_loop::decode_tool_call(
                 "google",
                 Some(&id),
@@ -1697,7 +1704,7 @@ mod tests {
             response_id: None,
         };
 
-        let calls = collect_google_function_calls(&payload).expect("calls");
+        let calls = collect_google_function_calls(&payload, 0).expect("calls");
         assert_eq!(calls.len(), 2);
         assert_eq!(calls[0].name, "open_safe");
         assert_eq!(calls[0].arguments, json!({ "code": "1234" }));
@@ -1713,7 +1720,7 @@ mod tests {
         let payload: GeminiGenerateContentResponse = serde_json::from_value(json!({
             "candidates": [{"content": {"parts": [{"functionCall": {"id":"native-id", "name":"no_parameters"}}]}}]
         })).unwrap();
-        let calls = collect_google_function_calls(&payload).unwrap();
+        let calls = collect_google_function_calls(&payload, 0).unwrap();
         assert_eq!(
             calls[0].id,
             payload.candidates[0].content.as_ref().unwrap().parts[0]
@@ -1734,7 +1741,7 @@ mod tests {
                 "candidates": [{"content": {"parts": [{"functionCall": call}]}}]
             }))
             .unwrap();
-            assert!(collect_google_function_calls(&payload).is_err());
+            assert!(collect_google_function_calls(&payload, 0).is_err());
         }
     }
 
