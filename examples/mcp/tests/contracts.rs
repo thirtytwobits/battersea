@@ -32,6 +32,7 @@ enum Api {
     Completions,
     Responses,
     Anthropic,
+    Google,
 }
 impl Api {
     async fn serve(self, fixture: Arc<ProviderFixture>) -> Result<HttpServer> {
@@ -39,6 +40,7 @@ impl Api {
             Api::Completions => fixture::provider_http(fixture).await,
             Api::Responses => fixture::responses_http(fixture).await,
             Api::Anthropic => fixture::anthropic_http(fixture).await,
+            Api::Google => fixture::google_http(fixture).await,
         }
     }
     fn connect(
@@ -58,6 +60,7 @@ impl Api {
             (Api::Anthropic, logger) => {
                 host::anthropic_provider(endpoint, logger, provider_clock())
             }
+            (Api::Google, logger) => host::google_provider(endpoint, logger, provider_clock()),
         }
     }
 }
@@ -229,7 +232,6 @@ async fn collect(
 }
 /// The time each durable test starts at.
 const START_MS: u64 = 1_800_000_000_000;
-/// A clock standing at the start, so expiry depends on no real time.
 /// A provider clock whose retry backoff and background poll intervals, at most 20ms, complete
 /// once scheduled. Operation, idle, store and approval deadlines are at least one second, so
 /// they elapse only if a test advances to them.
@@ -245,6 +247,7 @@ fn provider_clock() -> Arc<dyn battersea_model::Clock> {
     });
     Arc::new(clock)
 }
+/// A clock standing at the start, so expiry depends on no real time.
 fn clock() -> Arc<battersea_model::ManualClock> {
     Arc::new(battersea_model::ManualClock::new(START_MS))
 }
@@ -746,6 +749,7 @@ async fn durable_provider_continuation_reopens_both_journals_and_retries_the_sav
             (true, Api::Responses, true),
             (false, Api::Responses, true),
             (true, Api::Anthropic, false),
+            (true, Api::Google, false),
         ]
         .map(|(s, a, b)| (t, s, a, b))
     }) {
@@ -989,6 +993,23 @@ async fn durable_provider_continuation_reopens_both_journals_and_retries_the_sav
                     .unwrap()
                     .contains(&json!("reasoning.encrypted_content")));
                 assert!(requests[1].get("previous_response_id").is_none());
+            } else if api == Api::Google {
+                // Thought signatures, opaque part fields and native call IDs return unchanged.
+                let contents = &requests[1]["contents"];
+                assert_eq!(contents[1]["role"], "model");
+                assert_eq!(
+                    contents[1]["parts"][0]["thoughtSignature"],
+                    "thought-signature"
+                );
+                assert_eq!(
+                    contents[1]["parts"][1]["thoughtSignature"],
+                    "call-signature"
+                );
+                assert_eq!(contents[1]["parts"][1]["vendor"]["keep"], true);
+                let response = &contents[2]["parts"][0]["functionResponse"];
+                assert_eq!(response["id"], "effect-1");
+                assert_eq!(response["name"], "remote_write");
+                assert!(!requests[1]["tools"].to_string().contains("forged"));
             } else if api == Api::Anthropic {
                 // Signed, redacted and opaque native content returns unchanged.
                 let messages = &requests[1]["messages"];
@@ -1065,11 +1086,13 @@ async fn durable_provider_continuation_reopens_both_journals_and_retries_the_sav
                     response.detail.streaming,
                     Some(api == Api::Responses && !background)
                 );
-                assert_eq!(
-                    response.detail.response_id.as_deref(),
-                    native["id"].as_str()
-                );
-                assert_eq!(response.detail.usage.as_ref(), native.get("usage"));
+                let (id, usage) = if api == Api::Google {
+                    ("responseId", "usageMetadata")
+                } else {
+                    ("id", "usage")
+                };
+                assert_eq!(response.detail.response_id.as_deref(), native[id].as_str());
+                assert_eq!(response.detail.usage.as_ref(), native.get(usage));
                 assert_eq!(
                     response.detail.output_chars,
                     Some(if index == 0 {
@@ -1098,9 +1121,14 @@ async fn interrupted_or_invalid_provider_continuations_keep_the_tool_result_and_
     };
     use mcp_example::conversation_journal::FileConversationStore;
     use std::sync::atomic::Ordering;
-    for (api, failure) in [Api::Completions, Api::Responses, Api::Anthropic]
-        .into_iter()
-        .flat_map(|r| (0..3).map(move |f| (r, f)))
+    for (api, failure) in [
+        Api::Completions,
+        Api::Responses,
+        Api::Anthropic,
+        Api::Google,
+    ]
+    .into_iter()
+    .flat_map(|r| (0..3).map(move |f| (r, f)))
     {
         let (directory, ledger) = temporary_ledger();
         let remote = Remote::start(
@@ -1276,6 +1304,7 @@ async fn reconciled_and_reopened_calls_must_match_the_provider_transcript() {
         (Api::Completions, true),
         (Api::Responses, true),
         (Api::Anthropic, true),
+        (Api::Google, true),
     ]
     .into_iter()
     .flat_map(|(r, s)| [false, true].map(move |f| (r, s, f)))
@@ -1284,6 +1313,7 @@ async fn reconciled_and_reopened_calls_must_match_the_provider_transcript() {
     {
         let responses = api == Api::Responses;
         let anthropic = api == Api::Anthropic;
+        let google = api == Api::Google;
         let (directory, ledger) = temporary_ledger();
         let remote = Remote::start(
             Transport::Json,
@@ -1371,6 +1401,9 @@ async fn reconciled_and_reopened_calls_must_match_the_provider_transcript() {
                     }
                 }
                 _ if anthropic => changed.state["response"]["stop_reason"] = json!("max_tokens"),
+                _ if google => {
+                    changed.state["response"]["candidates"][0]["finishReason"] = json!("MAX_TOKENS")
+                }
                 _ if responses => {
                     changed.state["response"]["output"][0]["status"] = json!("incomplete");
                 }
@@ -1462,11 +1495,13 @@ async fn reconciled_and_reopened_calls_must_match_the_provider_transcript() {
             Api::Completions => 13,
             Api::Responses => 24,
             Api::Anthropic => 22,
+            Api::Google => 25,
         };
         for mutation in 0..mutations {
             let mut changed = final_turn.clone();
             match mutation {
                 4..=6 | 11.. if anthropic => anthropic_final_turn_mutation(mutation, &mut changed),
+                4..=6 | 11.. if google => google_final_turn_mutation(mutation, &mut changed),
                 0 => {
                     // Both display projections agree with each other but differ from native evidence.
                     for event in &mut changed.events {
@@ -1979,6 +2014,55 @@ async fn cancellation_recovers_a_matching_terminal_response_after_rejection() {
     }
 }
 
+/// Alter Gemini evidence that the shared mutations do not reach.
+fn google_final_turn_mutation(mutation: usize, turn: &mut battersea_model::ConversationTurn) {
+    let state = &mut turn.state;
+    let candidate = &mut state["response"]["candidates"][0];
+    match mutation {
+        4 => {
+            state["contents"][2]["parts"][0]["functionResponse"]["response"] =
+                json!({"different":true})
+        }
+        5 => state["contents"][1]["parts"][1]["thoughtSignature"] = json!("different"),
+        6 => {
+            state["contents"].as_array_mut().unwrap().remove(1);
+        }
+        11 => candidate["finishReason"] = json!("SAFETY"),
+        12 => candidate["finishReason"] = json!("MAX_TOKENS"),
+        13 => {
+            candidate["content"]["parts"][0]["inlineData"] =
+                json!({"mimeType":"image/png","data":"AA=="})
+        }
+        14 => state["response"]["promptFeedback"] = json!({"blockReason":"SAFETY"}),
+        15 => state["response"]["usageMetadata"]["promptTokenCount"] = json!(-1),
+        16 => state["request_revision"] = json!("different"),
+        17 => state["binding"]["configuration_revision"] = json!("different"),
+        18 => turn.events.insert(
+            1,
+            EngineTextStreamEvent::ReasoningDelta {
+                text: "invented".into(),
+            },
+        ),
+        19 => state["contents"][0] = json!({"role":"user","parts":[{"text":"different request"}]}),
+        20 => state["contents"][1]["parts"][1]["vendor"] = json!({"keep":false}),
+        21 => {
+            state["contents"][2]["parts"][0]["functionResponse"]
+                .as_object_mut()
+                .unwrap()
+                .remove("id");
+        }
+        22 => state["contents"][2]["parts"][0]["functionResponse"]["name"] = json!("other"),
+        23 => {
+            let candidate = candidate.clone();
+            state["response"]["candidates"]
+                .as_array_mut()
+                .unwrap()
+                .push(candidate);
+        }
+        _ => candidate["content"]["role"] = json!("user"),
+    }
+}
+
 /// Alter Anthropic evidence that the shared mutations do not reach.
 fn anthropic_final_turn_mutation(mutation: usize, turn: &mut battersea_model::ConversationTurn) {
     let state = &mut turn.state;
@@ -2014,9 +2098,101 @@ fn anthropic_final_turn_mutation(mutation: usize, turn: &mut battersea_model::Co
 
 #[tokio::test]
 async fn anthropic_turns_admit_complete_native_evidence_and_whole_call_batches() {
+    native_turns_admit_complete_evidence_and_whole_call_batches(Api::Anthropic).await;
+}
+
+#[tokio::test]
+async fn gemini_turns_admit_complete_native_evidence_and_generated_call_identities() {
+    native_turns_admit_complete_evidence_and_whole_call_batches(Api::Google).await;
+}
+
+/// Turns that fail admission for one native protocol.
+fn refused_first_messages(api: Api) -> Vec<Value> {
+    if api == Api::Google {
+        let call = |id: &str, value: u64| json!({"functionCall":{"id":id,"name":"remote_write","args":{"value":value}}});
+        let candidate = |finish: &str, parts: Vec<Value>| json!({"finishReason":finish,"content":{"role":"model","parts":parts}});
+        return vec![
+            candidate("MAX_TOKENS", vec![call("effect-1", 1)]),
+            candidate("SAFETY", vec![json!({"text":"Declined"})]),
+            candidate("MALFORMED_FUNCTION_CALL", vec![call("effect-1", 1)]),
+            candidate(
+                "STOP",
+                vec![
+                    json!({"executableCode":{"language":"PYTHON","code":"1"}}),
+                    call("effect-1", 1),
+                ],
+            ),
+            candidate(
+                "STOP",
+                vec![json!({"inlineData":{"mimeType":"image/png","data":"AA=="}})],
+            ),
+            candidate(
+                "STOP",
+                vec![json!({"functionResponse":{"name":"remote_write","response":{}}})],
+            ),
+            candidate(
+                "STOP",
+                vec![
+                    json!({"functionCall":{"id":"effect-1","name":"remote_write","args":"{\"value\":1}"}}),
+                ],
+            ),
+            candidate(
+                "STOP",
+                vec![json!({"functionCall":{"id":"effect-1","args":{}}})],
+            ),
+            candidate(
+                "STOP",
+                vec![
+                    json!({"text":"Unsigned","thought":"yes"}),
+                    call("effect-1", 1),
+                ],
+            ),
+            candidate(
+                "STOP",
+                vec![
+                    json!({"text":"Both","functionCall":{"id":"effect-1","name":"remote_write","args":{"value":1}}}),
+                ],
+            ),
+            candidate("STOP", vec![call("effect-1", 1), call("effect-1", 2)]),
+            candidate(
+                "STOP",
+                vec![json!({"functionCall":{"id":"effect-1","name":"unoffered","args":{}}})],
+            ),
+            json!({"finishReason":"STOP","content":{"role":"user","parts":[call("effect-1", 1)]}}),
+            candidate("STOP", vec![]),
+            candidate("STOP", vec![json!({"text":"  "})]),
+            candidate("STOP", vec![json!({"text":"Thinking","thought":true})]),
+            candidate(
+                "STOP",
+                vec![
+                    json!({"text":"x".repeat(70 * 1024),"thought":true}),
+                    call("effect-1", 1),
+                ],
+            ),
+        ];
+    }
+    let call = |id: &str, value: u64| json!({"type":"tool_use","id":id,"name":"remote_write","input":{"value":value}});
+    vec![
+        json!({"stop_reason":"max_tokens","content":[call("effect-1",1)]}),
+        json!({"stop_reason":"refusal","content":[{"type":"text","text":"Declined"}]}),
+        json!({"stop_reason":"pause_turn","content":[call("effect-1",1)]}),
+        json!({"stop_reason":"end_turn","content":[call("effect-1",1)]}),
+        json!({"stop_reason":"tool_use","content":[{"type":"text","text":"No call"}]}),
+        json!({"stop_reason":"tool_use","content":[{"type":"server_tool_use","id":"server-1","name":"web_search","input":{}},call("effect-1",1)]}),
+        json!({"stop_reason":"tool_use","content":[{"type":"thinking","thinking":"Unsigned"},call("effect-1",1)]}),
+        json!({"stop_reason":"tool_use","content":[{"type":"tool_use","id":"effect-1","name":"remote_write","input":"{\"value\":1}"}]}),
+        json!({"stop_reason":"tool_use","content":[call("effect-1",1),call("effect-1",2)]}),
+        json!({"stop_reason":"tool_use","content":[{"type":"tool_use","id":"effect-1","name":"unoffered","input":{}}]}),
+        json!({"stop_reason":"end_turn","content":[]}),
+        json!({"stop_reason":"end_turn","content":[{"type":"text","text":"  "}]}),
+        json!({"stop_reason":"tool_use","content":[{"type":"thinking","thinking":"x".repeat(70 * 1024),"signature":"large"},call("effect-1",1)]}),
+    ]
+}
+
+async fn native_turns_admit_complete_evidence_and_whole_call_batches(api: Api) {
     use battersea_model::{
         engine::EngineContextOverflow, ConversationPhase, ConversationRequest, ConversationScope,
-        ConversationToolResult, DurableConversation, EngineLocalToolExecutor,
+        ConversationToolResult, DurableConversation, EngineLocalToolExecutor, Modality,
     };
     use mcp_example::conversation_journal::FileConversationStore;
 
@@ -2030,7 +2206,6 @@ async fn anthropic_turns_admit_complete_native_evidence_and_whole_call_batches()
     .await
     .unwrap();
     let (binding, tools) = host::bind(&remote.connection).await.unwrap();
-    let call = |id: &str, value: u64| json!({"type":"tool_use","id":id,"name":"remote_write","input":{"value":value}});
     let conversation = |first_message: Option<Value>| {
         let tools = &tools;
         let binding = &binding;
@@ -2038,8 +2213,8 @@ async fn anthropic_turns_admit_complete_native_evidence_and_whole_call_batches()
             let directory = tempfile::tempdir().unwrap();
             let mut fixture = ProviderFixture::new(json!({"value":1}), false);
             Arc::get_mut(&mut fixture).unwrap().first_message = first_message;
-            let provider = Api::Anthropic.serve(fixture.clone()).await.unwrap();
-            let (adapter, chat) = Api::Anthropic.connect(&provider.endpoint, None).unwrap();
+            let provider = api.serve(fixture.clone()).await.unwrap();
+            let (adapter, chat) = api.connect(&provider.endpoint, None).unwrap();
             let original = host::request(tools, "operator", chat);
             let request = ConversationRequest {
                 shared: original.shared,
@@ -2047,7 +2222,7 @@ async fn anthropic_turns_admit_complete_native_evidence_and_whole_call_batches()
                 max_turns: 2,
             };
             let scope = ConversationScope {
-                run_id: "anthropic-evidence".into(),
+                run_id: "native-evidence".into(),
                 tool_binding_revision: binding.revision().into(),
                 expires_at_unix_ms: START_MS + 4000,
             };
@@ -2090,11 +2265,15 @@ async fn anthropic_turns_admit_complete_native_evidence_and_whole_call_batches()
 
     // Unsupported requests and malformed retained state fail before provider I/O.
     let (_directory, fixture, _provider, adapter, request, _) = conversation(None).await;
-    let mut unbounded = request.clone();
-    unbounded.shared.chat.max_output_tokens = None;
     let mut truncating = request.clone();
     truncating.shared.chat.context_overflow = EngineContextOverflow::ProviderTruncate;
-    for request in [unbounded, truncating] {
+    let mut unsupported = request.clone();
+    if api == Api::Google {
+        unsupported.shared.chat.output_modalities = Some(vec![Modality::Image]);
+    } else {
+        unsupported.shared.chat.max_output_tokens = None;
+    }
+    for request in [truncating, unsupported] {
         assert!(adapter.validate_conversation(&request, None).is_err());
         assert!(adapter
             .conversation_turn(request, None, vec![])
@@ -2113,22 +2292,8 @@ async fn anthropic_turns_admit_complete_native_evidence_and_whole_call_batches()
     assert!(fixture.requests.lock().unwrap().is_empty());
 
     // Partial, refused, malformed or oversized turns never become executable tool batches.
-    let refused = [
-        json!({"stop_reason":"max_tokens","content":[call("effect-1",1)]}),
-        json!({"stop_reason":"refusal","content":[{"type":"text","text":"Declined"}]}),
-        json!({"stop_reason":"pause_turn","content":[call("effect-1",1)]}),
-        json!({"stop_reason":"end_turn","content":[call("effect-1",1)]}),
-        json!({"stop_reason":"tool_use","content":[{"type":"text","text":"No call"}]}),
-        json!({"stop_reason":"tool_use","content":[{"type":"server_tool_use","id":"server-1","name":"web_search","input":{}},call("effect-1",1)]}),
-        json!({"stop_reason":"tool_use","content":[{"type":"thinking","thinking":"Unsigned"},call("effect-1",1)]}),
-        json!({"stop_reason":"tool_use","content":[{"type":"tool_use","id":"effect-1","name":"remote_write","input":"{\"value\":1}"}]}),
-        json!({"stop_reason":"tool_use","content":[call("effect-1",1),call("effect-1",2)]}),
-        json!({"stop_reason":"tool_use","content":[{"type":"tool_use","id":"effect-1","name":"unoffered","input":{}}]}),
-        json!({"stop_reason":"end_turn","content":[]}),
-        json!({"stop_reason":"end_turn","content":[{"type":"text","text":"  "}]}),
-        json!({"stop_reason":"tool_use","content":[{"type":"thinking","thinking":"x".repeat(70 * 1024),"signature":"large"},call("effect-1",1)]}),
-    ];
-    for (index, message) in refused.into_iter().enumerate() {
+    // The last message is admissible but exceeds the checkpoint bound; durable storage refuses it.
+    for (index, message) in refused_first_messages(api).into_iter().enumerate() {
         let (directory, fixture, _provider, adapter, request, scope) =
             conversation(Some(message)).await;
         let durable = open(directory.path(), adapter, &scope, &request, true)
@@ -2147,21 +2312,34 @@ async fn anthropic_turns_admit_complete_native_evidence_and_whole_call_batches()
     assert_eq!(fixture::effect_count(&ledger).unwrap(), 0);
 
     // A parallel batch continues only once every ordered result is retained.
-    let (directory, fixture, provider, adapter, request, scope) = conversation(Some(json!({
-        "stop_reason":"tool_use",
-        "content":[{"type":"thinking","thinking":"Two effects","signature":"batch-signature"},call("effect-1",1),call("effect-2",2)]
-    })))
-    .await;
+    // Gemini supplies a correlation ID where a call omits its native ID.
+    let (batch, ids) = if api == Api::Google {
+        (
+            json!({"finishReason":"STOP","content":{"role":"model","parts":[
+                {"text":"Two effects","thought":true,"thoughtSignature":"batch-signature"},
+                {"functionCall":{"name":"remote_write","args":{"value":1}}},
+                {"functionCall":{"id":"effect-2","name":"remote_write","args":{"value":2}}}
+            ]}}),
+            ["call-0-1", "effect-2"],
+        )
+    } else {
+        (
+            json!({"stop_reason":"tool_use","content":[
+                {"type":"thinking","thinking":"Two effects","signature":"batch-signature"},
+                {"type":"tool_use","id":"effect-1","name":"remote_write","input":{"value":1}},
+                {"type":"tool_use","id":"effect-2","name":"remote_write","input":{"value":2}}
+            ]}),
+            ["effect-1", "effect-2"],
+        )
+    };
+    let (directory, fixture, provider, adapter, request, scope) = conversation(Some(batch)).await;
     let durable = open(directory.path(), adapter, &scope, &request, true)
         .await
         .unwrap();
     let pending = durable.resume(1).await.unwrap();
     assert_eq!(pending.phase, ConversationPhase::AwaitingTools);
     let calls = pending.turns[0].response.calls.clone();
-    assert_eq!(
-        calls.iter().map(|c| c.id.as_str()).collect::<Vec<_>>(),
-        ["effect-1", "effect-2"]
-    );
+    assert_eq!(calls.iter().map(|c| c.id.as_str()).collect::<Vec<_>>(), ids);
     let executor = tools.for_profile("operator");
     let first = executor.call(calls[0].clone()).await.unwrap();
     let partial = durable
@@ -2186,7 +2364,7 @@ async fn anthropic_turns_admit_complete_native_evidence_and_whole_call_batches()
     drop(durable);
 
     std::fs::write(directory.path().join("conversation.json"), b"{corrupt").unwrap();
-    let (adapter, _) = Api::Anthropic.connect(&provider.endpoint, None).unwrap();
+    let (adapter, _) = api.connect(&provider.endpoint, None).unwrap();
     assert!(open(directory.path(), adapter, &scope, &request, false)
         .await
         .is_err());
@@ -2196,7 +2374,7 @@ async fn anthropic_turns_admit_complete_native_evidence_and_whole_call_batches()
     )
     .unwrap();
 
-    let (adapter, _) = Api::Anthropic.connect(&provider.endpoint, None).unwrap();
+    let (adapter, _) = api.connect(&provider.endpoint, None).unwrap();
     let durable = open(directory.path(), adapter, &scope, &request, false)
         .await
         .unwrap();
@@ -2216,18 +2394,76 @@ async fn anthropic_turns_admit_complete_native_evidence_and_whole_call_batches()
     {
         let requests = fixture.requests.lock().unwrap();
         assert_eq!(requests.len(), 2);
-        let messages = &requests[1]["messages"];
-        assert_eq!(messages[1]["content"][0]["signature"], "batch-signature");
-        assert_eq!(
-            messages[2]["content"]
-                .as_array()
-                .unwrap()
+        if api == Api::Google {
+            // The generated correlation ID stays out of the provider request.
+            let contents = &requests[1]["contents"];
+            assert_eq!(
+                contents[1]["parts"][0]["thoughtSignature"],
+                "batch-signature"
+            );
+            let responses = contents[2]["parts"].as_array().unwrap();
+            assert!(responses[0]["functionResponse"].get("id").is_none());
+            assert_eq!(responses[1]["functionResponse"]["id"], "effect-2");
+            assert!(responses
                 .iter()
-                .map(|result| result["tool_use_id"].as_str().unwrap())
-                .collect::<Vec<_>>(),
-            ["effect-1", "effect-2"]
-        );
+                .all(|part| part["functionResponse"]["name"] == "remote_write"));
+        } else {
+            let messages = &requests[1]["messages"];
+            assert_eq!(messages[1]["content"][0]["signature"], "batch-signature");
+            assert_eq!(
+                messages[2]["content"]
+                    .as_array()
+                    .unwrap()
+                    .iter()
+                    .map(|result| result["tool_use_id"].as_str().unwrap())
+                    .collect::<Vec<_>>(),
+                ids
+            );
+        }
         assert_eq!(fixture::effect_count(&ledger).unwrap(), 2);
+    }
+
+    if api == Api::Google {
+        // Generated correlation IDs stay unique when successive turns call at the same part.
+        let unidentified = |value: u64| {
+            json!({"finishReason":"STOP","content":{"role":"model","parts":[
+                {"functionCall":{"name":"remote_write","args":{"value":value}}}
+            ]}})
+        };
+        let (directory, fixture, provider, adapter, mut request, scope) =
+            conversation(Some(unidentified(1))).await;
+        *fixture.second_message.lock().unwrap() = Some(unidentified(2));
+        request.max_turns = 3;
+        let durable = open(directory.path(), adapter, &scope, &request, true)
+            .await
+            .unwrap();
+        let mut state = durable.resume(1).await.unwrap();
+        let mut ids = Vec::new();
+        while state.phase == ConversationPhase::AwaitingTools {
+            let call = state.turns.last().unwrap().response.calls[0].clone();
+            ids.push(call.id.clone());
+            let result = executor.call(call.clone()).await.unwrap();
+            let ready = durable
+                .record_tool_result(state.revision, ConversationToolResult { call, result })
+                .await
+                .unwrap();
+            state = durable.resume(ready.revision).await.unwrap();
+        }
+        assert_eq!(state.phase, ConversationPhase::Completed);
+        assert_eq!(ids, ["call-0-0", "call-1-0"]);
+        drop(durable);
+        // Recovery derives the same identities from the retained transcript.
+        let (adapter, _) = api.connect(&provider.endpoint, None).unwrap();
+        let reopened = open(directory.path(), adapter, &scope, &request, false)
+            .await
+            .unwrap();
+        assert_eq!(
+            reopened.inspect().await.unwrap().phase,
+            ConversationPhase::Completed
+        );
+        let requests = fixture.requests.lock().unwrap();
+        assert_eq!(requests.len(), 3);
+        assert!(!requests[2].to_string().contains("call-"));
     }
 
     // Expiry after restart refuses generation before provider I/O.
@@ -2235,7 +2471,7 @@ async fn anthropic_turns_admit_complete_native_evidence_and_whole_call_batches()
     open(directory.path(), adapter, &scope, &request, true)
         .await
         .unwrap();
-    let (adapter, _) = Api::Anthropic.connect(&provider.endpoint, None).unwrap();
+    let (adapter, _) = api.connect(&provider.endpoint, None).unwrap();
     let late = clock();
     late.advance(Duration::from_secs(5));
     let expired = DurableConversation::open(

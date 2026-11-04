@@ -167,8 +167,11 @@ pub struct ProviderFixture {
     pub final_text: String,
     pub fail_continuation: std::sync::atomic::AtomicBool,
     pub hang_continuation: std::sync::atomic::AtomicBool,
-    /// Replaces the first Anthropic message's `content` and `stop_reason`.
+    /// Replaces the first Anthropic message's `content` and `stop_reason`, or the first Gemini
+    /// candidate.
     pub first_message: Option<Value>,
+    /// Replaces the second Gemini candidate when set.
+    pub second_message: Mutex<Option<Value>>,
 }
 impl ProviderFixture {
     pub fn new(arguments: Value, reject_continuation_once: bool) -> Arc<Self> {
@@ -180,6 +183,7 @@ impl ProviderFixture {
             fail_continuation: false.into(),
             hang_continuation: false.into(),
             first_message: None,
+            second_message: Mutex::new(None),
         })
     }
 }
@@ -363,4 +367,58 @@ pub async fn anthropic_http(fixture: Arc<ProviderFixture>) -> Result<HttpServer>
             .with_state(fixture),
     )
     .await
+}
+
+/// Controlled `generateContent` API with thought signatures, opaque fields and native call IDs.
+pub async fn google_http(fixture: Arc<ProviderFixture>) -> Result<HttpServer> {
+    async fn reply(
+        State(fixture): State<Arc<ProviderFixture>>,
+        Json(request): Json<Value>,
+    ) -> Response {
+        let turn = {
+            let mut requests = fixture.requests.lock().unwrap();
+            requests.push(request);
+            requests.len()
+        };
+        if turn == 2 && fixture.reject_continuation_once {
+            return (StatusCode::TOO_MANY_REQUESTS, Json(json!({}))).into_response();
+        }
+        if turn > 1
+            && fixture
+                .fail_continuation
+                .load(std::sync::atomic::Ordering::SeqCst)
+        {
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error":"uncertain continuation"})),
+            )
+                .into_response();
+        }
+        if turn > 1
+            && fixture
+                .hang_continuation
+                .load(std::sync::atomic::Ordering::SeqCst)
+        {
+            std::future::pending::<()>().await;
+        }
+        let second = fixture.second_message.lock().unwrap().clone();
+        let candidate = match (&fixture.first_message, second) {
+            (_, Some(candidate)) if turn == 2 => candidate,
+            (Some(candidate), _) if turn == 1 => candidate.clone(),
+            (None, _) if turn == 1 => {
+                json!({"finishReason":"STOP","content":{"role":"model","parts":[
+                    {"text":"Record the effect","thought":true,"thoughtSignature":"thought-signature"},
+                    {"functionCall":{"id":"effect-1","name":"remote_write","args":fixture.arguments},"thoughtSignature":"call-signature","vendor":{"keep":true}}
+                ]}})
+            }
+            _ => json!({"finishReason":"STOP","content":{"role":"model","parts":[
+                {"text":fixture.final_text}
+            ]}}),
+        };
+        Json(json!({"candidates":[candidate],"responseId":format!("response-{turn}"),"modelVersion":"fixture",
+            "usageMetadata":{"promptTokenCount":2,"candidatesTokenCount":2,"thoughtsTokenCount":1,"totalTokenCount":5}}))
+        .into_response()
+    }
+    // Gemini routes carry the model and method in one path segment.
+    listen(Router::new().fallback(post(reply)).with_state(fixture)).await
 }
