@@ -281,6 +281,7 @@ impl AnthropicEngineAdapter {
             self.client.post(&self.backend.endpoint).json(&body),
             &self.backend,
             self.logger.as_ref(),
+            self.clock.as_ref(),
         )
         .await?;
         let status = response.status().as_u16();

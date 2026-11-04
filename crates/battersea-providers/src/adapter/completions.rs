@@ -23,6 +23,7 @@ pub(crate) fn registration() -> ChatProvider {
 fn create(
     backend: EngineBackendConfig,
     logger: Option<Arc<dyn EngineAdapterLogger>>,
+    clock: Arc<dyn Clock>,
 ) -> Result<Arc<dyn EngineAdapter>, EngineAdapterRequestError> {
     crate::retry::validate(&backend)?;
     let binding = backend
@@ -37,15 +38,13 @@ fn create(
             ErrorKind::InvalidRequest,
         ));
     }
+    backend
+        .options
+        .timeout_ms
+        .ok_or_else(|| missing_backend_option(&backend.provider, "timeoutMs"))?;
     let client = reqwest::Client::builder()
         .retry(reqwest::retry::never())
         .redirect(reqwest::redirect::Policy::none())
-        .timeout(std::time::Duration::from_millis(
-            backend
-                .options
-                .timeout_ms
-                .ok_or_else(|| missing_backend_option(&backend.provider, "timeoutMs"))?,
-        ))
         .build()
         .map_err(|_| {
             EngineAdapterRequestError::new(
@@ -58,12 +57,14 @@ fn create(
         backend,
         logger,
         client,
+        clock,
     }))
 }
 struct Completions {
     backend: EngineBackendConfig,
     logger: Option<Arc<dyn EngineAdapterLogger>>,
     client: reqwest::Client,
+    clock: Arc<dyn Clock>,
 }
 #[async_trait]
 impl EngineAdapter for Completions {
@@ -272,6 +273,7 @@ impl EngineAdapter for Completions {
             backend: self.backend.clone(),
             logger: self.logger.clone(),
             client: self.client.clone(),
+            clock: self.clock.clone(),
             messages,
             context,
             usage: Value::Null,
@@ -289,8 +291,9 @@ impl EngineAdapter for Completions {
         let calls = {
             let work = conversation.next_turn(&runtime, results, &tx);
             tokio::pin!(work);
-            let timer = tokio::time::sleep(idle);
-            tokio::pin!(timer);
+            let mut timer = battersea_model::clock::deadline_after(self.clock.as_ref(), idle)
+                .map(|deadline| self.clock.sleep_until(deadline))
+                .unwrap_or_else(|| Box::pin(std::future::pending()));
             loop {
                 tokio::select! {
                     result=&mut work=> {
@@ -300,7 +303,9 @@ impl EngineAdapter for Completions {
                     },
                     Some(event)=rx.recv()=> {
                         retain_event(&self.backend.provider,&mut events,&mut retained,event?)?;
-                        timer.as_mut().reset(tokio::time::Instant::now()+idle);
+                        timer = battersea_model::clock::deadline_after(self.clock.as_ref(), idle)
+                            .map(|deadline| self.clock.sleep_until(deadline))
+                            .unwrap_or_else(|| Box::pin(std::future::pending()));
                     },
                     _=&mut timer=>return Err(EngineAdapterRequestError::new(&self.backend.provider,"Durable provider turn exceeded its idle timeout.",ErrorKind::Timeout)),
                 }
@@ -371,6 +376,7 @@ impl EngineAdapter for Completions {
             backend: self.backend.clone(),
             logger: self.logger.clone(),
             client: self.client.clone(),
+            clock: self.clock.clone(),
             messages,
             context: context.clone(),
             usage: Value::Null,
@@ -386,6 +392,7 @@ impl EngineAdapter for Completions {
             executor,
             self.logger.clone(),
             context,
+            self.clock.clone(),
             tx,
         ));
         Ok(Box::pin(ReceiverStream::new(rx)))
@@ -440,6 +447,7 @@ struct Conversation {
     backend: EngineBackendConfig,
     logger: Option<Arc<dyn EngineAdapterLogger>>,
     client: reqwest::Client,
+    clock: Arc<dyn Clock>,
     messages: Vec<Value>,
     context: EngineAdapterDebugContext,
     usage: Value,
@@ -522,6 +530,7 @@ impl ToolConversation for Conversation {
             self.client.post(url).json(&body),
             &self.backend,
             self.logger.as_ref(),
+            self.clock.as_ref(),
         )
         .await?;
         let request_id = response

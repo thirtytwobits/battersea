@@ -2,9 +2,9 @@
 //! its token carries.
 use serde_json::Value;
 use std::{
+    io::BufRead,
     path::{Path, PathBuf},
     process::{Command, Output, Stdio},
-    time::{Duration, Instant},
 };
 
 const BINARY: &str = env!("CARGO_BIN_EXE_editor-server-example");
@@ -28,17 +28,17 @@ impl Daemon {
             .arg("serve")
             .arg(&root)
             .args(["--port", "0"])
-            .stdout(Stdio::null())
+            .stdout(Stdio::piped())
             .spawn()
             .unwrap();
-        let deadline = Instant::now() + Duration::from_secs(20);
-        while !root.join("daemon.json").is_file() {
-            assert!(
-                Instant::now() < deadline,
-                "the daemon wrote no endpoint record"
-            );
-            std::thread::sleep(Duration::from_millis(20));
-        }
+        // The daemon prints its endpoint after writing the endpoint record.
+        let mut process = process;
+        let mut endpoint = String::new();
+        std::io::BufReader::new(process.stdout.take().unwrap())
+            .read_line(&mut endpoint)
+            .unwrap();
+        assert!(endpoint.trim_end().ends_with("/mcp"), "{endpoint:?}");
+        assert!(root.join("daemon.json").is_file());
         Self {
             root,
             process,

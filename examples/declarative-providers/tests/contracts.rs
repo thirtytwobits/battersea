@@ -169,6 +169,25 @@ async fn events(
     }
     Ok(events)
 }
+/// Collects a stream while completing each scheduled timer of at most `window`, for retry
+/// backoff. `window` must stay below the remaining time of every watchdog and deadline the test
+/// does not exercise.
+async fn events_advancing(
+    adapter: &Arc<dyn EngineAdapter>,
+    request: EngineTextStreamRequest,
+    clock: &battersea_model::ManualClock,
+    window: std::time::Duration,
+) -> Result<Vec<EngineTextStreamEvent>, EngineAdapterRequestError> {
+    let collect = events(adapter, request);
+    tokio::pin!(collect);
+    loop {
+        tokio::select! {
+            biased;
+            result = &mut collect => return result,
+            _ = clock.advance_to_timer_within(window) => {}
+        }
+    }
+}
 fn completion(text: &str) -> Value {
     json!({"choices":[{"message":{"role":"assistant","content":text},"finish_reason":"stop"}],"usage":{"prompt_tokens":3,"completion_tokens":4,"total_tokens":7}})
 }
@@ -247,7 +266,7 @@ async fn builtins_count_and_stream_through_prefixed_service_bindings() {
         let configured = config
             .validate(&protocols())
             .unwrap()
-            .bind(&secrets, None)
+            .bind(&secrets, None, clock())
             .unwrap();
         let adapter = configured.chat("office-chat").unwrap();
         assert_eq!(adapter.describe_debug_context().provider, "office");
@@ -311,7 +330,7 @@ async fn services_sharing_an_adapter_keep_authentication_continuation_and_revisi
     let configured = config
         .validate(&protocols())
         .unwrap()
-        .bind(&secrets, None)
+        .bind(&secrets, None, clock())
         .unwrap();
     let output = events(configured.chat("office-chat").unwrap(), request(&config))
         .await
@@ -372,7 +391,7 @@ async fn services_sharing_an_adapter_keep_authentication_continuation_and_revisi
     let changed = config
         .validate(&protocols())
         .unwrap()
-        .bind(&secrets, None)
+        .bind(&secrets, None, clock())
         .unwrap();
     assert_ne!(configured.revision(), changed.revision());
     assert!(events(changed.chat("office-chat").unwrap(), continuation)
@@ -400,7 +419,7 @@ async fn completions_streams_validated_structured_output_and_refuses_counting_wi
     let configured = config
         .validate(&protocols())
         .unwrap()
-        .bind(&Secrets::new(), None)
+        .bind(&Secrets::new(), None, clock())
         .unwrap();
     let adapter = configured.chat("office-chat").unwrap();
     assert!(adapter
@@ -424,7 +443,7 @@ async fn completions_reject_unsupported_image_formats_before_dispatch() {
     let configured = config
         .validate(&protocols())
         .unwrap()
-        .bind(&Secrets::new(), None)
+        .bind(&Secrets::new(), None, clock())
         .unwrap();
     let adapter = configured.chat("office-chat").unwrap();
     for mime in ["image/svg+xml", "image/heic", "image/bmp"] {
@@ -499,10 +518,11 @@ async fn completions_retries_immutable_turns_and_executes_tools_once() {
     options.max_retries = Some(1);
     options.retry_initial_delay_ms = Some(1);
     options.retry_max_delay_ms = Some(20);
+    let backoff = battersea_model::ManualClock::new(0);
     let configured = config
         .validate(&protocols())
         .unwrap()
-        .bind(&Secrets::new(), None)
+        .bind(&Secrets::new(), None, Arc::new(backoff.clone()))
         .unwrap();
     let count = Arc::new(AtomicUsize::new(0));
     let mut req = request(&config);
@@ -512,9 +532,15 @@ async fn completions_retries_immutable_turns_and_executes_tools_once() {
         input_schema: json!({"type":"object","properties":{"value":{"type":"integer"}},"required":["value"]}),
     }];
     req.local_tool_executor = Some(Arc::new(Echo(count.clone())));
-    events(configured.chat("office-chat").unwrap(), req)
-        .await
-        .unwrap();
+    let window = std::time::Duration::from_millis(20);
+    events_advancing(
+        configured.chat("office-chat").unwrap(),
+        req,
+        &backoff,
+        window,
+    )
+    .await
+    .unwrap();
     assert_eq!(count.load(Ordering::SeqCst), 1);
     let calls = wire.requests.lock().unwrap();
     assert_eq!(calls[0].2, calls[1].2);
@@ -686,16 +712,17 @@ fn media_output_byte_limit_is_validated_before_credentials_and_factories() {
             if id == "mock" {
                 let original = descriptor.chat.as_ref().unwrap().factory.clone();
                 let count = constructions.clone();
-                descriptor.chat.as_mut().unwrap().factory = Arc::new(move |backend, logger| {
-                    count.fetch_add(1, Ordering::SeqCst);
-                    original(backend, logger)
-                });
+                descriptor.chat.as_mut().unwrap().factory =
+                    Arc::new(move |backend, logger, clock| {
+                        count.fetch_add(1, Ordering::SeqCst);
+                        original(backend, logger, clock)
+                    });
             } else {
                 let original = descriptor.media.as_ref().unwrap().factory.clone();
                 let count = constructions.clone();
-                descriptor.media.as_mut().unwrap().factory = Arc::new(move |backend| {
+                descriptor.media.as_mut().unwrap().factory = Arc::new(move |backend, clock| {
                     count.fetch_add(1, Ordering::SeqCst);
-                    original(backend)
+                    original(backend, clock)
                 });
             }
             registry.register(descriptor).unwrap();
@@ -714,7 +741,7 @@ fn media_output_byte_limit_is_validated_before_credentials_and_factories() {
                 .insert("maxOutputBytes".into(), json!(bytes));
             let result = config
                 .validate(&registry)
-                .and_then(|valid| valid.bind(&secrets, None));
+                .and_then(|valid| valid.bind(&secrets, None, clock()));
             let error = result.err().unwrap();
             assert_eq!(error.code, ProviderCode::InvalidOptions);
             assert!(error.path.starts_with("mediaBackends.office-image"));
@@ -733,7 +760,7 @@ fn media_output_byte_limit_is_validated_before_credentials_and_factories() {
         config
             .validate(&registry)
             .unwrap()
-            .bind(&secrets, None)
+            .bind(&secrets, None, clock())
             .unwrap();
         assert_eq!(secrets.calls.load(Ordering::SeqCst), 2);
         assert_eq!(constructions.load(Ordering::SeqCst), 2);
@@ -786,7 +813,7 @@ async fn media_uses_its_own_binding_for_submission_polling_retrieval_and_cancell
         let configured = config
             .validate(&protocols())
             .unwrap()
-            .bind(&credentials, None)
+            .bind(&credentials, None, clock())
             .unwrap();
         let adapter = configured.media("office-image").unwrap();
         assert_eq!(adapter.backend().provider, "office");
@@ -820,6 +847,7 @@ async fn media_uses_its_own_binding_for_submission_polling_retrieval_and_cancell
                         scope: "account-2",
                     },
                     None,
+                    clock(),
                 )
                 .unwrap();
             assert_ne!(rotated.revision(), configured.revision());
@@ -853,7 +881,7 @@ fn authored_configuration_and_safe_export_match_the_schema() {
     let configured = config
         .validate(&protocols())
         .unwrap()
-        .bind(&Secrets::new(), None)
+        .bind(&Secrets::new(), None, clock())
         .unwrap();
     assert!(validator.is_valid(&configured.snapshot()["configuration"]));
     let reloaded: ProviderConfiguration =
@@ -861,7 +889,7 @@ fn authored_configuration_and_safe_export_match_the_schema() {
     let rebound = reloaded
         .validate(&protocols())
         .unwrap()
-        .bind(&Secrets::new(), None)
+        .bind(&Secrets::new(), None, clock())
         .unwrap();
     assert_eq!(rebound.revision(), configured.revision());
 }
@@ -874,9 +902,9 @@ async fn application_adapter_registration_is_pinned_and_validated_before_constru
     let constructions = Arc::new(AtomicUsize::new(0));
     let count = constructions.clone();
     let original = custom.chat.as_ref().unwrap().factory.clone();
-    custom.chat.as_mut().unwrap().factory = Arc::new(move |backend, logger| {
+    custom.chat.as_mut().unwrap().factory = Arc::new(move |backend, logger, clock| {
         count.fetch_add(1, Ordering::SeqCst);
-        original(backend, logger)
+        original(backend, logger, clock)
     });
     let mut protocols = ProtocolRegistry::default();
     protocols.register(custom.clone()).unwrap();
@@ -894,11 +922,20 @@ async fn application_adapter_registration_is_pinned_and_validated_before_constru
         .unwrap();
     binding.adapter = "application-text".into();
     binding.auth = Authentication::None;
+    // The reply is not paced: this test checks registration, not mock streaming delays.
+    config
+        .backends
+        .get_mut("office-chat")
+        .unwrap()
+        .options
+        .as_mut()
+        .unwrap()
+        .mock_stream_delay_multiplier = Some(0.0);
     let valid = config.validate(&protocols).unwrap();
     assert_eq!(constructions.load(Ordering::SeqCst), 0);
     drop(protocols);
     let secrets = Secrets::new();
-    let configured = valid.bind(&secrets, None).unwrap();
+    let configured = valid.bind(&secrets, None, clock()).unwrap();
     assert_eq!(constructions.load(Ordering::SeqCst), 1);
     assert_eq!(secrets.calls.load(Ordering::SeqCst), 0);
     let mut req = request(&config);
@@ -919,9 +956,9 @@ fn application_adapter_required_headers_match_case_insensitively() {
     let constructions = Arc::new(AtomicUsize::new(0));
     let count = constructions.clone();
     let original = custom.chat.as_ref().unwrap().factory.clone();
-    custom.chat.as_mut().unwrap().factory = Arc::new(move |backend, logger| {
+    custom.chat.as_mut().unwrap().factory = Arc::new(move |backend, logger, clock| {
         count.fetch_add(1, Ordering::SeqCst);
-        original(backend, logger)
+        original(backend, logger, clock)
     });
     let mut registry = ProtocolRegistry::default();
     registry.register(custom).unwrap();
@@ -951,7 +988,7 @@ fn application_adapter_required_headers_match_case_insensitively() {
         config
             .validate(&registry)
             .unwrap()
-            .bind(&secrets, None)
+            .bind(&secrets, None, clock())
             .unwrap();
     }
     assert_eq!(secrets.calls.load(Ordering::SeqCst), 3);
@@ -967,7 +1004,7 @@ fn application_adapter_required_headers_match_case_insensitively() {
         .clear();
     let result = config
         .validate(&registry)
-        .and_then(|valid| valid.bind(&secrets, None));
+        .and_then(|valid| valid.bind(&secrets, None, clock()));
     assert_eq!(
         result.err().unwrap().code,
         ProviderCode::InvalidAuthentication
@@ -1059,6 +1096,7 @@ async fn encoded_credentials_are_masked_in_returned_errors_and_request_and_error
                     scope: "account-1",
                 },
                 Some(logs.clone()),
+                clock(),
             )
             .unwrap();
         for alias in &aliases {
@@ -1126,6 +1164,7 @@ async fn runway_error_bodies_mask_uri_and_json_escaped_credentials() {
                 scope: "account-1",
             },
             None,
+            clock(),
         )
         .unwrap();
     for _ in aliases {
@@ -1174,6 +1213,7 @@ async fn credentials_are_redacted_and_rotation_requires_a_new_binding() {
                 scope: "account-1",
             },
             Some(logs.clone()),
+            clock(),
         )
         .unwrap();
     let error = events(configured.chat("office-chat").unwrap(), request(&config))
@@ -1204,6 +1244,7 @@ async fn credentials_are_redacted_and_rotation_requires_a_new_binding() {
                 scope: "account-2",
             },
             None,
+            clock(),
         )
         .unwrap();
     assert_ne!(rotated.revision(), configured.revision());
@@ -1223,7 +1264,8 @@ async fn credentials_are_redacted_and_rotation_requires_a_new_binding() {
                     value: "invalid\nheader",
                     scope: "account-1"
                 },
-                None
+                None,
+                clock()
             )
             .err()
             .unwrap()
@@ -1259,7 +1301,7 @@ async fn incomplete_streams_and_server_failures_do_not_replay_generation() {
         let configured = config
             .validate(&protocols())
             .unwrap()
-            .bind(&Secrets::new(), None)
+            .bind(&Secrets::new(), None, clock())
             .unwrap();
         let error = events(configured.chat("office-chat").unwrap(), request(&config))
             .await
@@ -1301,10 +1343,11 @@ async fn background_cleanup_keeps_query_authentication_and_prefix() {
     options.background_mode = Some("poll".into());
     options.background_poll_interval_ms = Some(200);
     options.background_max_wait_ms = Some(3000);
+    let polling = battersea_model::ManualClock::new(0);
     let configured = config
         .validate(&protocols())
         .unwrap()
-        .bind(&Secrets::new(), None)
+        .bind(&Secrets::new(), None, Arc::new(polling.clone()))
         .unwrap();
     let stream = configured
         .chat("office-chat")
@@ -1312,21 +1355,20 @@ async fn background_cleanup_keeps_query_authentication_and_prefix() {
         .stream_text(request(&config))
         .await
         .unwrap();
-    tokio::time::timeout(std::time::Duration::from_secs(2), async {
-        while wire.requests.lock().unwrap().len() < 2 {
-            tokio::time::sleep(std::time::Duration::from_millis(5)).await;
-        }
-    })
-    .await
-    .unwrap();
+    // The queued response is retrieved after one 200ms poll interval.
+    assert_eq!(
+        polling
+            .advance_to_timer_within(std::time::Duration::from_millis(200))
+            .await,
+        std::time::Duration::from_millis(200)
+    );
+    while wire.requests.lock().unwrap().len() < 2 {
+        tokio::task::yield_now().await;
+    }
     drop(stream);
-    tokio::time::timeout(std::time::Duration::from_secs(3), async {
-        while wire.requests.lock().unwrap().len() < 3 {
-            tokio::time::sleep(std::time::Duration::from_millis(10)).await;
-        }
-    })
-    .await
-    .unwrap();
+    while wire.requests.lock().unwrap().len() < 3 {
+        tokio::task::yield_now().await;
+    }
     assert_eq!(
         wire.requests.lock().unwrap()[2].0,
         "/proxy/v1/responses/response-1/cancel?token=secret-office-key"
@@ -1363,10 +1405,11 @@ async fn fragmented_completion_tools_are_validated_before_execution_and_retained
         options.max_retries = Some(1);
         options.retry_initial_delay_ms = Some(1);
         options.retry_max_delay_ms = Some(20);
+        let backoff = battersea_model::ManualClock::new(0);
         let configured = config
             .validate(&protocols())
             .unwrap()
-            .bind(&Secrets::new(), None)
+            .bind(&Secrets::new(), None, Arc::new(backoff.clone()))
             .unwrap();
         let count = Arc::new(AtomicUsize::new(0));
         let mut req = request(&config);
@@ -1376,7 +1419,14 @@ async fn fragmented_completion_tools_are_validated_before_execution_and_retained
             input_schema: json!({"type":"object","properties":{"value":{"type":"integer"}},"required":["value"]}),
         }];
         req.local_tool_executor = Some(Arc::new(Echo(count.clone())));
-        let result = events(configured.chat("office-chat").unwrap(), req).await;
+        let window = std::time::Duration::from_millis(20);
+        let result = events_advancing(
+            configured.chat("office-chat").unwrap(),
+            req,
+            &backoff,
+            window,
+        )
+        .await;
         let calls = wire.requests.lock().unwrap();
         if argument == "3" {
             result.unwrap();
@@ -1399,7 +1449,7 @@ async fn configured_google_service_accepts_protocol_owned_storage_references() {
     let configured = config
         .validate(&protocols())
         .unwrap()
-        .bind(&Secrets::new(), None)
+        .bind(&Secrets::new(), None, clock())
         .unwrap();
     let mut req = request(&config);
     req.shared.messages[0].content.push(ContentBlock::Image {
@@ -1443,6 +1493,7 @@ fn missing_credentials_and_unsupported_modes_fail_during_binding_or_validation()
                 scope_revision: "account-1".into(),
             },
             None,
+            clock(),
         )
         .err()
         .unwrap();
@@ -1500,4 +1551,9 @@ fn yaml_credentials_use_the_documented_mapping_form() {
             Some(&expected)
         );
     }
+}
+
+/// A clock no test advances unless it exercises a deadline, backoff or poll interval.
+fn clock() -> Arc<dyn battersea_model::Clock> {
+    Arc::new(battersea_model::ManualClock::new(0))
 }

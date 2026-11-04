@@ -102,7 +102,10 @@ async fn runway_pending_job_keeps_remote_identity_through_completion_and_cancell
     let server = tokio::spawn(async move {
         axum::serve(listener, router).await.unwrap();
     });
-    let adapter = crate::builtin_registry().create_media(config).unwrap();
+    let clock = battersea_model::ManualClock::new(0);
+    let adapter = crate::builtin_registry()
+        .create_media(config, Arc::new(clock.clone()))
+        .unwrap();
     for mode in ["complete", "cancel", "deadline"] {
         let prepared = adapter
             .prepare(MediaRenderRequest {
@@ -129,9 +132,9 @@ async fn runway_pending_job_keeps_remote_identity_through_completion_and_cancell
             .wait(
                 token,
                 Some(if mode == "deadline" {
-                    tokio::time::Instant::now() - Duration::from_secs(1)
+                    clock.instant() - Duration::from_secs(1)
                 } else {
-                    tokio::time::Instant::now() + Duration::from_secs(5)
+                    clock.instant() + Duration::from_secs(5)
                 }),
             )
             .await;
@@ -173,7 +176,11 @@ fn unsupported_media_parameters_fail_before_adapter_creation_or_submission() {
         .supported_media_parameters
         .push("seed".into());
     assert_eq!(
-        registry.create_media(config).err().unwrap().classification,
+        registry
+            .create_media(config, crate::test_clock())
+            .err()
+            .unwrap()
+            .classification,
         battersea_model::ErrorKind::InvalidRequest
     );
     let request = MediaRenderRequest {
@@ -195,34 +202,13 @@ fn unsupported_media_parameters_fail_before_adapter_creation_or_submission() {
     );
 }
 
-/// How long the capture server waits for the submit under test.
-///
-/// A hang guard, not an assertion about how quickly a request is made. This
-/// runs alongside the rest of the suite, and an accept that returns in
-/// milliseconds on an idle machine has taken seconds under that load.
-const SUBMIT_DEADLINE: Duration = Duration::from_secs(60);
-
 /// Receive one real HTTP submit, then reject it to prevent polling or asset retrieval.
 fn capture_server() -> (String, std::thread::JoinHandle<(String, Value)>) {
     let listener = std::net::TcpListener::bind(crate::test_endpoints::TEST_BIND_ADDRESS).unwrap();
     let address = listener.local_addr().unwrap();
-    listener.set_nonblocking(true).unwrap();
     let handle = std::thread::spawn(move || {
-        let deadline = Instant::now() + SUBMIT_DEADLINE;
-        let mut stream = loop {
-            match listener.accept() {
-                Ok((stream, _)) => break stream,
-                Err(error)
-                    if error.kind() == std::io::ErrorKind::WouldBlock
-                        && Instant::now() < deadline =>
-                {
-                    std::thread::sleep(Duration::from_millis(5))
-                }
-                Err(error) => panic!("No submit received: {error}"),
-            }
-        };
-        stream.set_nonblocking(false).unwrap();
-        stream.set_read_timeout(Some(SUBMIT_DEADLINE)).unwrap();
+        // Accepting blocks until the submit under test connects.
+        let (mut stream, _) = listener.accept().expect("a submit");
         let mut bytes = Vec::new();
         let (headers, body) = loop {
             let mut chunk = [0; 4096];
@@ -293,9 +279,9 @@ async fn credential_free_capture_matches_every_image_transport_submit() {
             backend.auth.api_key = Some("local-test-key".into());
             backend.auth.has_api_key = true;
             let adapter = match provider {
-                "openai" => create_openai_media_generator(backend),
-                "google" => create_google_media_generator(backend),
-                "runway" => create_runway_media_generator(backend),
+                "openai" => create_openai_media_generator(backend, crate::test_clock()),
+                "google" => create_google_media_generator(backend, crate::test_clock()),
+                "runway" => create_runway_media_generator(backend, crate::test_clock()),
                 _ => unreachable!(),
             }
             .unwrap();

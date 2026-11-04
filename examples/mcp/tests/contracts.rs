@@ -50,12 +50,14 @@ impl Api {
         battersea_model::engine::EngineChatParameters,
     )> {
         match (self, logger) {
-            (Api::Completions, _) => host::provider(endpoint),
+            (Api::Completions, _) => host::provider(endpoint, provider_clock()),
             (Api::Responses, Some(logger)) => {
-                host::responses_provider_with_logger(endpoint, logger)
+                host::responses_provider_with_logger(endpoint, logger, provider_clock())
             }
-            (Api::Responses, None) => host::responses_provider(endpoint),
-            (Api::Anthropic, logger) => host::anthropic_provider(endpoint, logger),
+            (Api::Responses, None) => host::responses_provider(endpoint, provider_clock()),
+            (Api::Anthropic, logger) => {
+                host::anthropic_provider(endpoint, logger, provider_clock())
+            }
         }
     }
 }
@@ -100,9 +102,15 @@ async fn remote_approval_precedes_effects_and_provider_retries_reuse_the_decisio
             });
             let fixture = ProviderFixture::new(json!({"value":1}), true);
             let provider = fixture::provider_http(fixture.clone()).await.unwrap();
-            let (adapter, chat) = host::provider(&provider.endpoint).unwrap();
-            let request =
-                host::approved_request(&tools, chat, "approval-run", policy.clone()).unwrap();
+            let (adapter, chat) = host::provider(&provider.endpoint, provider_clock()).unwrap();
+            let request = host::approved_request(
+                &tools,
+                chat,
+                "approval-run",
+                policy.clone(),
+                provider_clock(),
+            )
+            .unwrap();
             let executor = request.local_tool_executor.clone().unwrap();
             let result = collect(&adapter, request).await;
             let count = match decision {
@@ -222,6 +230,21 @@ async fn collect(
 /// The time each durable test starts at.
 const START_MS: u64 = 1_800_000_000_000;
 /// A clock standing at the start, so expiry depends on no real time.
+/// A provider clock whose retry backoff and background poll intervals, at most 20ms, complete
+/// once scheduled. Operation, idle, store and approval deadlines are at least one second, so
+/// they elapse only if a test advances to them.
+fn provider_clock() -> Arc<dyn battersea_model::Clock> {
+    let clock = battersea_model::ManualClock::new(START_MS);
+    let advancing = clock.clone();
+    tokio::spawn(async move {
+        loop {
+            advancing
+                .advance_to_timer_within(Duration::from_millis(20))
+                .await;
+        }
+    });
+    Arc::new(clock)
+}
 fn clock() -> Arc<battersea_model::ManualClock> {
     Arc::new(battersea_model::ManualClock::new(START_MS))
 }
@@ -259,7 +282,7 @@ async fn provider_continuation_retries_reuse_mcp_results_and_exclude_metadata() 
             assert!(tools.for_profile("forged").definitions().is_empty());
             let fixture = ProviderFixture::new(json!({"value":1}), true);
             let provider = fixture::provider_http(fixture.clone()).await.unwrap();
-            let (adapter, chat) = host::provider(&provider.endpoint).unwrap();
+            let (adapter, chat) = host::provider(&provider.endpoint, provider_clock()).unwrap();
             let events = collect(&adapter, host::request(&tools, "operator", chat))
                 .await
                 .unwrap();
@@ -330,7 +353,7 @@ async fn remote_failures_preserve_tool_outcomes_without_provider_replay() {
             let (_binding, tools) = host::bind(&remote.connection).await.unwrap();
             let fixture = ProviderFixture::new(json!({"value":1}), true);
             let provider = fixture::provider_http(fixture.clone()).await.unwrap();
-            let (adapter, chat) = host::provider(&provider.endpoint).unwrap();
+            let (adapter, chat) = host::provider(&provider.endpoint, provider_clock()).unwrap();
             let error = collect(&adapter, host::request(&tools, "operator", chat))
                 .await
                 .unwrap_err();
@@ -371,26 +394,24 @@ async fn cancellation_after_remote_dispatch_does_not_resume_or_repeat_the_effect
         let (_binding, tools) = host::bind(&remote.connection).await.unwrap();
         let fixture = ProviderFixture::new(json!({"value":1}), true);
         let provider = fixture::provider_http(fixture.clone()).await.unwrap();
-        let (adapter, chat) = host::provider(&provider.endpoint).unwrap();
+        let (adapter, chat) = host::provider(&provider.endpoint, provider_clock()).unwrap();
         let mut stream = adapter
             .stream_text(host::request(&tools, "operator", chat))
             .await
             .unwrap();
-        tokio::time::timeout(Duration::from_secs(3), async {
-            loop {
-                tokio::select! {
-                    event = stream.next() => {
-                        let event = event.unwrap().unwrap();
-                        assert!(!matches!(event, EngineTextStreamEvent::ToolCallCompleted { .. }));
-                    }
-                    _ = tokio::time::sleep(Duration::from_millis(5)) => {
-                        if fixture::effect_count(&ledger).ok() == Some(1) { break; }
-                    }
+        // The remote effect is recorded while its reply is lost, so no call completes.
+        loop {
+            tokio::select! {
+                biased;
+                event = stream.next() => {
+                    let event = event.unwrap().unwrap();
+                    assert!(!matches!(event, EngineTextStreamEvent::ToolCallCompleted { .. }));
+                }
+                () = tokio::task::yield_now() => {
+                    if fixture::effect_count(&ledger).ok() == Some(1) { break; }
                 }
             }
-        })
-        .await
-        .unwrap();
+        }
         drop(stream);
         remote.close().await;
         let restarted = Remote::start(transport, &ledger, Fault::None, Duration::from_secs(10))
@@ -417,7 +438,7 @@ async fn schema_and_host_profile_refusals_precede_remote_dispatch() {
             let (_binding, tools) = host::bind(&remote.connection).await.unwrap();
             let fixture = ProviderFixture::new(arguments, false);
             let provider = fixture::provider_http(fixture.clone()).await.unwrap();
-            let (adapter, chat) = host::provider(&provider.endpoint).unwrap();
+            let (adapter, chat) = host::provider(&provider.endpoint, provider_clock()).unwrap();
             let error = collect(&adapter, host::request(&tools, profile, chat))
                 .await
                 .unwrap_err();
@@ -449,7 +470,7 @@ async fn changed_definitions_stop_a_pinned_provider_conversation() {
         connection.discover().await.unwrap();
         let fixture = ProviderFixture::new(json!({"value":1}), false);
         let provider = fixture::provider_http(fixture).await.unwrap();
-        let (adapter, chat) = host::provider(&provider.endpoint).unwrap();
+        let (adapter, chat) = host::provider(&provider.endpoint, provider_clock()).unwrap();
         let error = collect(&adapter, host::request(&tools, "operator", chat))
             .await
             .unwrap_err();
@@ -535,7 +556,7 @@ async fn durable_pending_calls_resume_from_disk_once_without_regenerating() {
         .unwrap();
         let fixture = ProviderFixture::new(json!({"value":1}), false);
         let provider = fixture::provider_http(fixture.clone()).await.unwrap();
-        let (adapter, chat) = host::provider(&provider.endpoint).unwrap();
+        let (adapter, chat) = host::provider(&provider.endpoint, provider_clock()).unwrap();
         let mut request = host::request(&tools, "operator", chat);
         request.local_tools = executor.definitions();
         request.local_tool_executor = Some(Arc::new(executor));
@@ -752,6 +773,7 @@ async fn durable_provider_continuation_reopens_both_journals_and_retries_the_sav
                     &provider.endpoint,
                     streaming,
                     Some(logs.clone()),
+                    provider_clock(),
                 )
             } else {
                 api.connect(
@@ -1146,13 +1168,9 @@ async fn interrupted_or_invalid_provider_continuations_keep_the_tool_result_and_
             .unwrap();
         if failure == 1 {
             let task = tokio::spawn(async move { conversation.resume(4).await });
-            tokio::time::timeout(Duration::from_secs(2), async {
-                while fixture.requests.lock().unwrap().len() < 2 {
-                    tokio::task::yield_now().await;
-                }
-            })
-            .await
-            .unwrap();
+            while fixture.requests.lock().unwrap().len() < 2 {
+                tokio::task::yield_now().await;
+            }
             task.abort();
             assert!(task.await.unwrap_err().is_cancelled());
         } else {
@@ -1692,7 +1710,8 @@ async fn background_retrieval_failures_preserve_identity_and_cancellation_is_exp
     let fixture = BackgroundFixture::new(ProviderFixture::new(json!({"value":1}), false));
     let server = background_fixture::serve(fixture.clone()).await.unwrap();
     let (adapter, chat) =
-        host::background_responses_provider(&server.endpoint, false, None).unwrap();
+        host::background_responses_provider(&server.endpoint, false, None, provider_clock())
+            .unwrap();
     let original = host::request(&host::registry(Vec::new(), &[]).unwrap(), "operator", chat);
     let request = ConversationRequest {
         shared: original.shared,
@@ -1722,7 +1741,9 @@ async fn background_retrieval_failures_preserve_identity_and_cancellation_is_exp
     let path = directory.path().join("conversation.json");
     let pending_bytes = std::fs::read(&path).unwrap();
     assert_eq!(*fixture.operations.lock().unwrap(), ["create"]);
-    let (adapter, _) = host::background_responses_provider(&server.endpoint, false, None).unwrap();
+    let (adapter, _) =
+        host::background_responses_provider(&server.endpoint, false, None, provider_clock())
+            .unwrap();
     let conversation = DurableConversation::open(
         store(),
         adapter,
@@ -1752,7 +1773,9 @@ async fn background_retrieval_failures_preserve_identity_and_cancellation_is_exp
     assert!(conversation.resume(8).await.is_err());
     drop(conversation);
     fixture.fail_cancel.store(false, Ordering::SeqCst);
-    let (adapter, _) = host::background_responses_provider(&server.endpoint, false, None).unwrap();
+    let (adapter, _) =
+        host::background_responses_provider(&server.endpoint, false, None, provider_clock())
+            .unwrap();
     let conversation = DurableConversation::open(
         store(),
         adapter,
@@ -1795,7 +1818,8 @@ async fn background_retrieval_failures_preserve_identity_and_cancellation_is_exp
         value["checksum"] = json!(battersea_model::configuration_digest(&value));
         std::fs::write(&path, serde_json::to_vec(&value).unwrap()).unwrap();
         let (adapter, _) =
-            host::background_responses_provider(&server.endpoint, false, None).unwrap();
+            host::background_responses_provider(&server.endpoint, false, None, provider_clock())
+                .unwrap();
         assert!(DurableConversation::open(
             store(),
             adapter,
@@ -1827,7 +1851,8 @@ async fn background_retrieval_failures_preserve_identity_and_cancellation_is_exp
         let changed = serde_json::to_vec(&value).unwrap();
         std::fs::write(&path, &changed).unwrap();
         let (adapter, _) =
-            host::background_responses_provider(&server.endpoint, false, None).unwrap();
+            host::background_responses_provider(&server.endpoint, false, None, provider_clock())
+                .unwrap();
         assert!(
             DurableConversation::open(
                 store(),
@@ -1845,7 +1870,8 @@ async fn background_retrieval_failures_preserve_identity_and_cancellation_is_exp
         assert_eq!(std::fs::read(&path).unwrap(), changed);
     }
     std::fs::write(&path, bytes).unwrap();
-    let (foreground, mut chat) = host::responses_provider(&server.endpoint).unwrap();
+    let (foreground, mut chat) =
+        host::responses_provider(&server.endpoint, provider_clock()).unwrap();
     chat.stream = false;
     let unsupported = host::request(&host::registry(Vec::new(), &[]).unwrap(), "operator", chat);
     assert!(foreground.stream_text(unsupported.clone()).await.is_err());
@@ -1871,7 +1897,8 @@ async fn cancellation_recovers_a_matching_terminal_response_after_rejection() {
         let fixture = BackgroundFixture::new(ProviderFixture::new(json!({"value":1}), false));
         let server = background_fixture::serve(fixture.clone()).await.unwrap();
         let (adapter, chat) =
-            host::background_responses_provider(&server.endpoint, false, None).unwrap();
+            host::background_responses_provider(&server.endpoint, false, None, provider_clock())
+                .unwrap();
         let original = host::request(&host::registry(Vec::new(), &[]).unwrap(), "operator", chat);
         let request = ConversationRequest {
             shared: original.shared,
@@ -1915,7 +1942,8 @@ async fn cancellation_recovers_a_matching_terminal_response_after_rejection() {
         fixture.wrong_identity.store(false, Ordering::SeqCst);
         fixture.fail_poll.store(false, Ordering::SeqCst);
         let (adapter, _) =
-            host::background_responses_provider(&server.endpoint, false, None).unwrap();
+            host::background_responses_provider(&server.endpoint, false, None, provider_clock())
+                .unwrap();
         let conversation = DurableConversation::open(
             store(),
             adapter,

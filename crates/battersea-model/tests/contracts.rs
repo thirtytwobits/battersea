@@ -62,6 +62,10 @@ impl EngineAdapter for Transport {
         Ok(Box::pin(stream::pending()))
     }
 }
+/// A clock no test advances unless it exercises a deadline.
+fn clock() -> Arc<dyn Clock> {
+    Arc::new(ManualClock::new(0))
+}
 fn registry(calls: Arc<AtomicUsize>) -> ProviderRegistry {
     let mut registry = ProviderRegistry::default();
     registry
@@ -71,7 +75,7 @@ fn registry(calls: Arc<AtomicUsize>) -> ProviderRegistry {
                 content: crate::ContentCapabilities::text(),
                 background_modes: vec![],
                 parameters: backend().capabilities.supported_chat_parameters,
-                factory: Arc::new(move |_, _| Ok(Arc::new(Transport(calls.clone())))),
+                factory: Arc::new(move |_, _, _| Ok(Arc::new(Transport(calls.clone())))),
             },
         )
         .unwrap();
@@ -82,7 +86,9 @@ async fn open_provider_admission_rejects_modalities_and_modes_before_transport()
     let calls = Arc::new(AtomicUsize::new(0));
     let registry = registry(calls.clone());
     let backend = backend();
-    let adapter = registry.create_chat(backend.clone(), None).unwrap();
+    let adapter = registry
+        .create_chat(backend.clone(), None, clock())
+        .unwrap();
     let mut invalid = request(&backend);
     invalid.shared.messages[0].content = vec![ContentBlock::Image {
         url: "fixture".into(),
@@ -157,7 +163,7 @@ fn registry_rejects_unknown_or_inconsistent_backend_before_factory() {
         mutate(&mut invalid);
         assert!(matches!(
             registry
-                .create_chat(invalid, None)
+                .create_chat(invalid, None, clock())
                 .err()
                 .unwrap()
                 .classification,
@@ -167,48 +173,82 @@ fn registry_rejects_unknown_or_inconsistent_backend_before_factory() {
 }
 #[tokio::test]
 async fn request_deadline_covers_token_count_and_consumption_of_a_stalled_stream() {
+    let clock = ManualClock::new(0);
     let adapter = registry(Default::default())
-        .create_chat(backend(), None)
+        .create_chat(backend(), None, Arc::new(clock.clone()))
         .unwrap();
-    let count = tokio::time::timeout(
-        Duration::from_secs(3),
+    // The configured 20ms deadline is the only timer, and it elapses only when advanced.
+    let window = Duration::from_millis(20);
+    let (count, remaining) = tokio::join!(
         adapter.count_text_stream_input_tokens(request(&backend())),
-    )
-    .await
-    .expect("bounded token counting");
+        clock.advance_to_timer_within(window)
+    );
+    assert_eq!(remaining, window);
     assert!(matches!(
         count.unwrap_err().classification,
         ErrorKind::Timeout
     ));
     let mut stream = adapter.stream_text(request(&backend())).await.unwrap();
-    let error = tokio::time::timeout(Duration::from_secs(3), stream.next())
-        .await
-        .expect("bounded stream")
-        .unwrap()
-        .unwrap_err();
-    assert!(matches!(error.classification, ErrorKind::Timeout));
-    assert!(tokio::time::timeout(Duration::from_secs(3), stream.next())
-        .await
-        .expect("terminal stream")
-        .is_none());
+    let (error, remaining) = tokio::join!(stream.next(), clock.advance_to_timer_within(window));
+    assert_eq!(remaining, window);
+    assert!(matches!(
+        error.unwrap().unwrap_err().classification,
+        ErrorKind::Timeout
+    ));
+    assert!(stream.next().await.is_none());
 }
 #[tokio::test]
 async fn idle_watchdog_reports_one_typed_timeout_then_ends() {
+    let clock = ManualClock::new(0);
     let mut stream = with_stream_idle_watchdog(
         Box::pin(stream::pending()),
         Duration::from_millis(10),
         "external",
+        Arc::new(clock.clone()),
     );
-    let error = tokio::time::timeout(Duration::from_secs(3), stream.next())
-        .await
-        .unwrap()
-        .unwrap()
-        .unwrap_err();
-    assert!(matches!(error.classification, ErrorKind::Timeout));
-    assert!(tokio::time::timeout(Duration::from_secs(3), stream.next())
-        .await
-        .expect("terminal stream")
-        .is_none());
+    let (error, remaining) = tokio::join!(
+        stream.next(),
+        clock.advance_to_timer_within(Duration::from_millis(10))
+    );
+    assert_eq!(remaining, Duration::from_millis(10));
+    assert!(matches!(
+        error.unwrap().unwrap_err().classification,
+        ErrorKind::Timeout
+    ));
+    assert!(stream.next().await.is_none());
+}
+
+#[tokio::test]
+async fn each_idle_watchdog_event_restarts_the_idle_deadline() {
+    let clock = ManualClock::new(0);
+    let (sender, receiver) = tokio::sync::mpsc::unbounded_channel();
+    let events = tokio_stream::wrappers::UnboundedReceiverStream::new(receiver).map(Ok);
+    let mut stream =
+        with_stream_idle_watchdog(Box::pin(events), Duration::from_millis(10), "external", {
+            Arc::new(clock.clone())
+        });
+    let delta = || EngineTextStreamEvent::TextDelta { text: "x".into() };
+    // Nine milliseconds into each idle period an event arrives and restarts the period.
+    for _ in 0..3 {
+        let next = stream.next();
+        tokio::pin!(next);
+        let send = async {
+            assert_eq!(
+                clock.timer_within(Duration::from_millis(10)).await,
+                Duration::from_millis(10)
+            );
+            clock.advance(Duration::from_millis(9));
+            sender.send(delta()).unwrap();
+        };
+        let (event, ()) = tokio::join!(next, send);
+        assert_eq!(event.unwrap().unwrap(), delta());
+    }
+    let (error, remaining) = tokio::join!(
+        stream.next(),
+        clock.advance_to_timer_within(Duration::from_millis(10))
+    );
+    assert_eq!(remaining, Duration::from_millis(10));
+    assert!(error.unwrap().is_err());
 }
 
 struct ToolEvents(Vec<EngineTextStreamEvent>);
@@ -265,6 +305,7 @@ async fn stream_watchdogs_retain_started_and_completed_tool_evidence() {
             });
         }
         for idle in [true, false] {
+            let clock = ManualClock::new(0);
             let mut stream = if idle {
                 with_stream_idle_watchdog(
                     ToolEvents(events.clone())
@@ -273,6 +314,7 @@ async fn stream_watchdogs_retain_started_and_completed_tool_evidence() {
                         .unwrap(),
                     Duration::from_millis(10),
                     "external",
+                    Arc::new(clock.clone()),
                 )
             } else {
                 let mut registry = ProviderRegistry::default();
@@ -284,14 +326,16 @@ async fn stream_watchdogs_retain_started_and_completed_tool_evidence() {
                             content: ContentCapabilities::text(),
                             background_modes: vec![],
                             parameters: backend().capabilities.supported_chat_parameters,
-                            factory: Arc::new(move |_, _| Ok(Arc::new(ToolEvents(events.clone())))),
+                            factory: Arc::new(move |_, _, _| {
+                                Ok(Arc::new(ToolEvents(events.clone())))
+                            }),
                         },
                     )
                     .unwrap();
                 let mut backend = backend();
                 backend.options.timeout_ms = Some(100);
                 registry
-                    .create_chat(backend.clone(), None)
+                    .create_chat(backend.clone(), None, Arc::new(clock.clone()))
                     .unwrap()
                     .stream_text(request(&backend))
                     .await
@@ -300,11 +344,16 @@ async fn stream_watchdogs_retain_started_and_completed_tool_evidence() {
             for expected in &events {
                 assert_eq!(&stream.next().await.unwrap().unwrap(), expected);
             }
-            let error = tokio::time::timeout(Duration::from_secs(3), stream.next())
-                .await
-                .unwrap()
-                .unwrap()
-                .unwrap_err();
+            // The idle watchdog allows 10ms; the request deadline allows 100ms.
+            let (error, remaining) = tokio::join!(
+                stream.next(),
+                clock.advance_to_timer_within(Duration::from_millis(100))
+            );
+            assert_eq!(
+                remaining,
+                Duration::from_millis(if idle { 10 } else { 100 })
+            );
+            let error = error.unwrap().unwrap_err();
             assert_eq!(error.classification, ErrorKind::Timeout);
             let evidence = error.tool_call.unwrap();
             assert_eq!(evidence.call_id, "effect-1");
@@ -320,11 +369,14 @@ async fn stream_watchdogs_retain_started_and_completed_tool_evidence() {
         }
     }
 }
-struct PendingJob(Arc<AtomicUsize>);
+struct PendingJob(Arc<AtomicUsize>, ManualClock);
 #[async_trait]
 impl MediaJob for PendingJob {
     fn id(&self) -> &str {
         "accepted-provider-id"
+    }
+    fn clock(&self) -> Arc<dyn Clock> {
+        Arc::new(self.1.clone())
     }
     async fn wait(
         &mut self,
@@ -370,18 +422,25 @@ impl MediaJob for PendingJob {
 async fn pending_media_jobs_cancel_once_on_cancellation_or_deadline() {
     for cancelled in [false, true] {
         let calls = Arc::new(AtomicUsize::new(0));
-        let submission = MediaSubmission::Pending(Box::new(PendingJob(calls.clone())));
+        let clock = ManualClock::new(0);
+        let submission =
+            MediaSubmission::Pending(Box::new(PendingJob(calls.clone(), clock.clone())));
         let cancellation = CancellationToken::new();
         if cancelled {
             cancellation.cancel();
         }
-        let deadline = tokio::time::Instant::now() + Duration::from_millis(10);
-        let result = tokio::time::timeout(
-            Duration::from_secs(3),
-            submission.wait(cancellation, Some(deadline)),
-        )
-        .await
-        .expect("bounded job")
+        let deadline = clock.instant() + Duration::from_millis(10);
+        let wait = submission.wait(cancellation, Some(deadline));
+        let result = if cancelled {
+            wait.await
+        } else {
+            let (result, remaining) = tokio::join!(
+                wait,
+                clock.advance_to_timer_within(Duration::from_millis(10))
+            );
+            assert_eq!(remaining, Duration::from_millis(10));
+            result
+        }
         .unwrap_err();
         assert_eq!(
             result.classification,

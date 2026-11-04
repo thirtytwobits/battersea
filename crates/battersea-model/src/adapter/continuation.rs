@@ -1,7 +1,7 @@
 //! Copyright (c) Scott A Dixon
 //! Durable provider turns and host-controlled continuation of tool conversations.
 use super::*;
-use crate::{configuration_digest, ErrorKind, ExpiryClock, ProviderContentOrigin, ToolCode};
+use crate::{configuration_digest, Clock, ErrorKind, ProviderContentOrigin, ToolCode};
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -10,7 +10,7 @@ use std::{
     sync::Arc,
     time::Duration,
 };
-use tokio::time::{timeout, Instant};
+use tokio::time::Instant;
 
 pub const CONVERSATION_CHECKPOINT_VERSION: u32 = 2;
 
@@ -441,7 +441,7 @@ pub struct DurableConversation {
     request: ConversationRequest,
     max_bytes: usize,
     store_timeout: Duration,
-    clock: Arc<dyn ExpiryClock>,
+    clock: Arc<dyn Clock>,
     deadline: Instant,
 }
 impl DurableConversation {
@@ -452,7 +452,7 @@ impl DurableConversation {
         request: ConversationRequest,
         max_bytes: usize,
         store_timeout: Duration,
-        clock: Arc<dyn ExpiryClock>,
+        clock: Arc<dyn Clock>,
     ) -> Result<Self, EngineAdapterRequestError> {
         if scope.run_id.trim().is_empty()
             || scope.tool_binding_revision.trim().is_empty()
@@ -493,7 +493,7 @@ impl DurableConversation {
         request: ConversationRequest,
         max_bytes: usize,
         store_timeout: Duration,
-        clock: Arc<dyn ExpiryClock>,
+        clock: Arc<dyn Clock>,
     ) -> Result<Self, EngineAdapterRequestError> {
         let this = Self::build(
             store,
@@ -537,7 +537,7 @@ impl DurableConversation {
         request: ConversationRequest,
         max_bytes: usize,
         store_timeout: Duration,
-        clock: Arc<dyn ExpiryClock>,
+        clock: Arc<dyn Clock>,
     ) -> Result<Self, EngineAdapterRequestError> {
         let this = Self::build(
             store,
@@ -566,7 +566,8 @@ impl DurableConversation {
         }
     }
     pub async fn inspect(&self) -> Result<ConversationCheckpoint, EngineAdapterRequestError> {
-        let record = timeout(
+        let record = crate::clock::timeout(
+            self.clock.as_ref(),
             self.store_timeout,
             self.store.load(&self.scope.run_id, self.max_bytes),
         )
@@ -693,7 +694,8 @@ impl DurableConversation {
         r.checksum = r.digest()?;
         r.validate()?;
         bounded(r, self.max_bytes)?;
-        timeout(
+        crate::clock::timeout(
+            self.clock.as_ref(),
             self.store_timeout,
             self.store.compare_exchange(&self.scope.run_id, expected, r),
         )
@@ -835,7 +837,8 @@ impl DurableConversation {
         self.advance(&mut record)?;
         self.write(Some(expected_revision), &mut record).await?;
         let previous = record.turns.last();
-        let step = timeout(
+        let step = crate::clock::timeout(
+            self.clock.as_ref(),
             Duration::from_millis(self.binding.timeout_ms),
             self.adapter.conversation_step(
                 record.request.clone(),
@@ -951,7 +954,8 @@ impl DurableConversation {
         self.advance(&mut r)?;
         self.write(Some(expected_revision), &mut r).await?;
         self.live(&r)?;
-        let response = timeout(
+        let response = crate::clock::timeout(
+            self.clock.as_ref(),
             self.remaining(),
             self.adapter
                 .conversation_step(r.request.clone(), state, results, command.clone()),

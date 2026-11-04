@@ -34,6 +34,7 @@ use async_trait::async_trait;
 use battersea_model::engine::{
     EngineChatParameters, EngineChatToolChoiceMode, EngineThinkingVisibility,
 };
+use battersea_model::Clock;
 use eventsource_stream::Eventsource;
 use futures_util::{stream, StreamExt};
 use serde::{Deserialize, Serialize};
@@ -55,6 +56,7 @@ const DEFAULT_GEMINI_HOST: &str = "https://generativelanguage.googleapis.com";
 pub(crate) fn create_google_adapter(
     backend: EngineBackendConfig,
     logger: Option<Arc<dyn EngineAdapterLogger>>,
+    clock: Arc<dyn Clock>,
 ) -> Result<Arc<dyn EngineAdapter>, EngineAdapterRequestError> {
     let provider = "google";
     crate::retry::validate(&backend)?;
@@ -85,12 +87,12 @@ pub(crate) fn create_google_adapter(
     let client = reqwest::Client::builder()
         .retry(reqwest::retry::never())
         .redirect(reqwest::redirect::Policy::none())
-        .timeout(std::time::Duration::from_millis(timeout_ms))
         .build()
         .map_err(|error| EngineAdapterRequestError::transport("google", error.to_string()))?;
     Ok(Arc::new(GoogleEngineAdapter {
         client,
         logger,
+        clock,
         backend,
         api_key,
         base_url: base_url.clone(),
@@ -110,6 +112,7 @@ pub(crate) fn create_google_adapter(
 struct GoogleEngineAdapter {
     client: reqwest::Client,
     logger: Option<Arc<dyn EngineAdapterLogger>>,
+    clock: Arc<dyn Clock>,
     backend: EngineBackendConfig,
     api_key: String,
     base_url: String,
@@ -147,6 +150,7 @@ impl EngineAdapter for GoogleEngineAdapter {
             self.client.post(url).json(&body),
             &self.backend,
             self.logger.as_ref(),
+            self.clock.as_ref(),
         )
         .await?;
         let payload: Value = response.bounded_json().await.map_err(|error| {
@@ -201,6 +205,7 @@ impl EngineAdapter for GoogleEngineAdapter {
             self.client.post(url).json(&body),
             &self.backend,
             self.logger.as_ref(),
+            self.clock.as_ref(),
         )
         .await?;
         let status = response.status().as_u16();
@@ -277,6 +282,7 @@ impl EngineAdapter for GoogleEngineAdapter {
             Box::pin(stream),
             std::time::Duration::from_millis(self.stream_idle_timeout_ms),
             "google",
+            self.clock.clone(),
         ))
     }
 }
@@ -326,6 +332,7 @@ impl GoogleEngineAdapter {
         let backend = self.backend.clone();
         let logger = self.logger.clone();
         let context = self.context.clone();
+        let clock = self.clock.clone();
         let url = self.build_request_url("generateContent", false);
 
         let contents =
@@ -337,9 +344,10 @@ impl GoogleEngineAdapter {
                 url,
                 logger: logger.clone(),
                 context: context.clone(),
+                clock: clock.clone(),
                 contents,
             };
-            run_tool_loop(conversation, request, executor, logger, context, tx).await;
+            run_tool_loop(conversation, request, executor, logger, context, clock, tx).await;
         });
 
         // NOTE: no `with_stream_idle_watchdog` here, unlike the SSE
@@ -365,6 +373,7 @@ struct GoogleToolConversation {
     url: String,
     logger: Option<Arc<dyn EngineAdapterLogger>>,
     context: EngineAdapterDebugContext,
+    clock: Arc<dyn Clock>,
     contents: Vec<Value>,
 }
 
@@ -419,6 +428,7 @@ impl ToolConversation for GoogleToolConversation {
             self.client.post(&self.url).json(&body),
             &self.backend,
             self.logger.as_ref(),
+            self.clock.as_ref(),
         )
         .await?;
         let status = response.status().as_u16();

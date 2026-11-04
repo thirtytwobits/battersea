@@ -1,5 +1,5 @@
 //! Explicit provider registration. Construction and admission perform no provider I/O.
-use crate::{adapter::*, media::*, EngineAdapterRequestError, ErrorKind};
+use crate::{adapter::*, media::*, Clock, EngineAdapterRequestError, ErrorKind};
 use async_trait::async_trait;
 use serde_json::Value;
 use std::{collections::BTreeMap, sync::Arc};
@@ -7,10 +7,14 @@ use std::{collections::BTreeMap, sync::Arc};
 type ChatFactory = dyn Fn(
         EngineBackendConfig,
         Option<Arc<dyn EngineAdapterLogger>>,
+        Arc<dyn Clock>,
     ) -> Result<Arc<dyn EngineAdapter>, EngineAdapterRequestError>
     + Send
     + Sync;
-type MediaFactory = dyn Fn(MediaBackendConfig) -> Result<Arc<dyn MediaGenerationAdapter>, EngineAdapterRequestError>
+type MediaFactory = dyn Fn(
+        MediaBackendConfig,
+        Arc<dyn Clock>,
+    ) -> Result<Arc<dyn MediaGenerationAdapter>, EngineAdapterRequestError>
     + Send
     + Sync;
 type MediaPrepare = dyn Fn(
@@ -167,14 +171,24 @@ impl ProviderRegistry {
         }
         Ok(())
     }
+    /// `clock` drives the adapter's deadlines, backoff, polling and idle watchdogs.
     pub fn create_chat(
         &self,
         backend: EngineBackendConfig,
         logger: Option<Arc<dyn EngineAdapterLogger>>,
+        clock: Arc<dyn Clock>,
     ) -> Result<Arc<dyn EngineAdapter>, EngineAdapterRequestError> {
         self.validate_chat_backend(&backend)?;
-        let inner = (self.chat_provider(&backend.provider)?.factory)(backend.clone(), logger)?;
-        Ok(Arc::new(AdmittedAdapter { backend, inner }))
+        let inner = (self.chat_provider(&backend.provider)?.factory)(
+            backend.clone(),
+            logger,
+            clock.clone(),
+        )?;
+        Ok(Arc::new(AdmittedAdapter {
+            backend,
+            inner,
+            clock,
+        }))
     }
     pub fn validate_media_backend(
         &self,
@@ -224,12 +238,14 @@ impl ProviderRegistry {
         }
         Ok(())
     }
+    /// `clock` drives the adapter's deadlines, backoff and polling.
     pub fn create_media(
         &self,
         backend: MediaBackendConfig,
+        clock: Arc<dyn Clock>,
     ) -> Result<Arc<dyn MediaGenerationAdapter>, EngineAdapterRequestError> {
         self.validate_media_backend(&backend)?;
-        (self.media_provider(&backend.provider)?.factory)(backend)
+        (self.media_provider(&backend.provider)?.factory)(backend, clock)
     }
     pub fn prepare_media(
         &self,
@@ -289,6 +305,7 @@ impl ProviderRegistry {
 struct AdmittedAdapter {
     backend: EngineBackendConfig,
     inner: Arc<dyn EngineAdapter>,
+    clock: Arc<dyn Clock>,
 }
 impl AdmittedAdapter {
     async fn validate_conversation_output(
@@ -370,15 +387,19 @@ impl EngineAdapter for AdmittedAdapter {
             .inner
             .conversation_step(request.clone(), previous, results, command);
         let mut step = match self.backend.options.timeout_ms {
-            Some(ms) => tokio::time::timeout(std::time::Duration::from_millis(ms), call)
-                .await
-                .map_err(|_| {
-                    EngineAdapterRequestError::new(
-                        &self.backend.provider,
-                        "Provider operation deadline exceeded.",
-                        ErrorKind::Timeout,
-                    )
-                })??,
+            Some(ms) => crate::clock::timeout(
+                self.clock.as_ref(),
+                std::time::Duration::from_millis(ms),
+                call,
+            )
+            .await
+            .map_err(|_| {
+                EngineAdapterRequestError::new(
+                    &self.backend.provider,
+                    "Provider operation deadline exceeded.",
+                    ErrorKind::Timeout,
+                )
+            })??,
             None => call.await?,
         };
         if let crate::ConversationStep::Completed { turn } = &mut step {
@@ -397,15 +418,19 @@ impl EngineAdapter for AdmittedAdapter {
         let request_for_output = request.clone();
         let call = self.inner.conversation_turn(request, state, results);
         let mut turn = match self.backend.options.timeout_ms {
-            Some(ms) => tokio::time::timeout(std::time::Duration::from_millis(ms), call)
-                .await
-                .map_err(|_| {
-                    EngineAdapterRequestError::new(
-                        &self.backend.provider,
-                        "Provider turn deadline exceeded.",
-                        ErrorKind::Timeout,
-                    )
-                })??,
+            Some(ms) => crate::clock::timeout(
+                self.clock.as_ref(),
+                std::time::Duration::from_millis(ms),
+                call,
+            )
+            .await
+            .map_err(|_| {
+                EngineAdapterRequestError::new(
+                    &self.backend.provider,
+                    "Provider turn deadline exceeded.",
+                    ErrorKind::Timeout,
+                )
+            })??,
             None => call.await?,
         };
         self.validate_conversation_output(&request_for_output, &mut turn)
@@ -423,15 +448,19 @@ impl EngineAdapter for AdmittedAdapter {
         validate_chat_request(&self.backend, &request)?;
         let call = self.inner.count_text_stream_input_tokens(request);
         match self.backend.options.timeout_ms {
-            Some(ms) => tokio::time::timeout(std::time::Duration::from_millis(ms), call)
-                .await
-                .map_err(|_| {
-                    EngineAdapterRequestError::new(
-                        &self.backend.provider,
-                        "Token counting deadline exceeded.",
-                        ErrorKind::Timeout,
-                    )
-                })?,
+            Some(ms) => crate::clock::timeout(
+                self.clock.as_ref(),
+                std::time::Duration::from_millis(ms),
+                call,
+            )
+            .await
+            .map_err(|_| {
+                EngineAdapterRequestError::new(
+                    &self.backend.provider,
+                    "Token counting deadline exceeded.",
+                    ErrorKind::Timeout,
+                )
+            })?,
             None => call.await,
         }
     }
@@ -440,11 +469,9 @@ impl EngineAdapter for AdmittedAdapter {
         request: EngineTextStreamRequest,
     ) -> Result<EngineTextStream, EngineAdapterRequestError> {
         validate_chat_request(&self.backend, &request)?;
-        let deadline = self
-            .backend
-            .options
-            .timeout_ms
-            .map(|ms| tokio::time::Instant::now() + std::time::Duration::from_millis(ms));
+        let deadline = self.backend.options.timeout_ms.and_then(|ms| {
+            crate::clock::deadline_after(self.clock.as_ref(), std::time::Duration::from_millis(ms))
+        });
         let response_format = request.shared.chat.response_format.clone();
         let output_modalities = request
             .shared
@@ -454,7 +481,7 @@ impl EngineAdapter for AdmittedAdapter {
             .unwrap_or_else(|| vec![crate::Modality::Text]);
         let call = self.inner.stream_text(request);
         let stream = match deadline {
-            Some(deadline) => tokio::time::timeout_at(deadline, call)
+            Some(deadline) => crate::clock::timeout_at(self.clock.as_ref(), deadline, call)
                 .await
                 .map_err(|_| {
                     EngineAdapterRequestError::new(
@@ -471,6 +498,7 @@ impl EngineAdapter for AdmittedAdapter {
                 stream,
                 std::time::Duration::from_millis(ms),
                 provider.clone(),
+                self.clock.clone(),
             ),
             None => stream,
         };
@@ -482,13 +510,15 @@ impl EngineAdapter for AdmittedAdapter {
         );
         let stream = validated;
         Ok(Box::pin(futures_util::stream::unfold(
-            Some((stream, deadline, provider, None)),
+            Some((stream, deadline, provider, None, self.clock.clone())),
             |state| async move {
                 use futures_util::StreamExt;
-                let (mut stream, deadline, provider, mut tool_call) = state?;
+                let (mut stream, deadline, provider, mut tool_call, clock) = state?;
                 let next = match deadline {
                     Some(deadline) => {
-                        match tokio::time::timeout_at(deadline, stream.next()).await {
+                        match crate::clock::timeout_at(clock.as_ref(), deadline, stream.next())
+                            .await
+                        {
                             Ok(next) => next,
                             Err(_) => {
                                 let mut error = EngineAdapterRequestError::new(
@@ -507,7 +537,7 @@ impl EngineAdapter for AdmittedAdapter {
                     if let Ok(event) = &event {
                         super::adapter::retain_tool_evidence(&mut tool_call, event);
                     }
-                    (event, Some((stream, deadline, provider, tool_call)))
+                    (event, Some((stream, deadline, provider, tool_call, clock)))
                 })
             },
         )))

@@ -13,7 +13,7 @@ use base64::Engine as _;
 use battersea_model::{
     adapter::{EngineAuthConfig, EngineBackendOptions},
     media::*,
-    ErrorKind,
+    ErrorKind, ManualClock,
 };
 use chrono::Utc;
 use hmac::{Hmac, Mac};
@@ -127,15 +127,37 @@ fn request(kind: MediaKind) -> MediaRenderRequest {
 }
 fn update(provider: &str, status: &str, output: Value) -> Value {
     if provider == "replicate" {
-        json!({"id":"accepted-job","status":status,"output":output,"completed_at":Utc::now().to_rfc3339()})
+        json!({"id":"accepted-job","status":status,"output":output,"completed_at":start().to_rfc3339()})
     } else {
         json!({"id":"accepted-job","status":status,"output":output})
     }
 }
+/// The time each test starts at.
+const START_MS: u64 = 1_800_000_000_000;
+fn start() -> chrono::DateTime<Utc> {
+    chrono::DateTime::from_timestamp_millis(START_MS as i64).unwrap()
+}
+/// A clock standing at the start. Each 1ms poll interval or retry delay completes once it is
+/// scheduled; operation and job deadlines elapse only when a test advances to them.
+fn polling_clock() -> ManualClock {
+    let clock = ManualClock::new(START_MS);
+    let advancing = clock.clone();
+    tokio::spawn(async move {
+        loop {
+            advancing
+                .advance_to_timer_within(Duration::from_millis(1))
+                .await;
+        }
+    });
+    clock
+}
+fn media(config: MediaBackendConfig) -> Arc<dyn MediaGenerationAdapter> {
+    battersea_providers::builtin_registry()
+        .create_media(config, Arc::new(polling_clock()))
+        .unwrap()
+}
 async fn submit(config: MediaBackendConfig, kind: MediaKind) -> Box<dyn MediaJob> {
-    let adapter = battersea_providers::builtin_registry()
-        .create_media(config)
-        .unwrap();
+    let adapter = media(config);
     match adapter
         .submit(
             adapter.prepare(request(kind)).unwrap(),
@@ -269,7 +291,7 @@ async fn transient_poll_errors_retry_only_gets_and_respect_retry_after_bound() {
         });
         if rate_limited {
             transient.retry = Some(if mode == "date" {
-                (Utc::now() + chrono::Duration::seconds(60)).to_rfc2822()
+                (start() + chrono::Duration::seconds(60)).to_rfc2822()
             } else {
                 "60".into()
             });
@@ -304,11 +326,9 @@ async fn transient_poll_errors_retry_only_gets_and_respect_retry_after_bound() {
             MediaKind::Image,
         )
         .await;
+        let deadline = job.clock().instant() + Duration::from_secs(2);
         let result = MediaSubmission::Pending(job)
-            .wait(
-                CancellationToken::new(),
-                Some(tokio::time::Instant::now() + Duration::from_secs(2)),
-            )
+            .wait(CancellationToken::new(), Some(deadline))
             .await;
         if rate_limited {
             assert_eq!(result.unwrap_err().classification, ErrorKind::RateLimit);
@@ -357,8 +377,9 @@ async fn cancellation_deadline_and_drop_cleanup_target_the_accepted_job_once() {
             if mode == "cancel" {
                 token.cancel();
             }
+            let deadline = job.clock().instant();
             let error = MediaSubmission::Pending(job)
-                .wait(token, Some(tokio::time::Instant::now()))
+                .wait(token, Some(deadline))
                 .await
                 .unwrap_err();
             assert!(matches!(
@@ -367,16 +388,9 @@ async fn cancellation_deadline_and_drop_cleanup_target_the_accepted_job_once() {
             ));
             assert_eq!(error.request_id.as_deref(), Some("accepted-job"));
         }
-        tokio::time::timeout(Duration::from_secs(2), async {
-            loop {
-                if state.calls.lock().unwrap().len() >= 2 {
-                    break;
-                }
-                tokio::task::yield_now().await;
-            }
-        })
-        .await
-        .unwrap();
+        while state.calls.lock().unwrap().len() < 2 {
+            tokio::task::yield_now().await;
+        }
         assert_eq!(
             state
                 .calls
@@ -411,7 +425,7 @@ async fn retrieval_failure_is_repeatable_without_regenerating_or_publishing_part
         MediaKind::Image,
     )
     .await;
-    let retrieval_started = Utc::now();
+    let retrieval_started = battersea_model::clock::utc_now(job.clock().as_ref());
     assert_eq!(
         job.retrieve(CancellationToken::new())
             .await
@@ -455,8 +469,7 @@ async fn expired_removed_and_malformed_results_never_produce_success_or_new_gene
         let (url, state, task) = server().await;
         let mut terminal = update("replicate", "succeeded", json!([format!("{url}/asset")]));
         if mode == "expired" {
-            terminal["completed_at"] =
-                json!((Utc::now() - chrono::Duration::hours(2)).to_rfc3339());
+            terminal["completed_at"] = json!((start() - chrono::Duration::hours(2)).to_rfc3339());
         }
         if mode == "removed" {
             terminal["data_removed"] = json!(true);
@@ -525,7 +538,7 @@ async fn signed_callbacks_are_idempotent_reject_replays_and_preserve_terminal_re
         "whsec_{}",
         base64::engine::general_purpose::STANDARD.encode(key)
     );
-    let now = Utc::now();
+    let now = start();
     let timestamp = now.timestamp().to_string();
     let id = "delivery-id";
     let body = serde_json::to_vec(&update(
@@ -723,9 +736,7 @@ async fn ambiguous_submission_is_not_replayed_even_with_retries_configured() {
     enqueue(&state, [Reply::error(StatusCode::INTERNAL_SERVER_ERROR)]);
     let mut config = backend("replicate", &url, MediaKind::Image);
     config.options.max_retries = Some(10);
-    let adapter = battersea_providers::builtin_registry()
-        .create_media(config)
-        .unwrap();
+    let adapter = media(config);
     let error = adapter
         .generate(
             request(MediaKind::Image),
@@ -759,9 +770,7 @@ async fn configured_model_mapping_and_callbacks_are_captured_in_the_exact_submit
         .options
         .extra
         .insert("input".into(), json!({"format":"png"}));
-    let adapter = battersea_providers::builtin_registry()
-        .create_media(config)
-        .unwrap();
+    let adapter = media(config);
     let mut input = request(MediaKind::Image);
     input.options.count = Some(2);
     let prepared = adapter.prepare(input.clone()).unwrap();
@@ -805,9 +814,7 @@ async fn runway_progress_is_attributed_to_each_requested_slot_and_bounded() {
             Reply::error(StatusCode::NO_CONTENT),
         ],
     );
-    let adapter = battersea_providers::builtin_registry()
-        .create_media(backend("runway", &url, MediaKind::Image))
-        .unwrap();
+    let adapter = media(backend("runway", &url, MediaKind::Image));
     let mut request = request(MediaKind::Image);
     request.options.count = Some(3);
     let reporter = Arc::new(Reporter::default());
@@ -846,9 +853,7 @@ async fn malformed_accepted_submission_keeps_identity_and_disposes_remote_work()
             Reply::json(update("replicate", "canceled", Value::Null)),
         ],
     );
-    let adapter = battersea_providers::builtin_registry()
-        .create_media(backend("replicate", &url, MediaKind::Image))
-        .unwrap();
+    let adapter = media(backend("replicate", &url, MediaKind::Image));
     let error = adapter
         .generate(
             request(MediaKind::Image),
@@ -860,16 +865,9 @@ async fn malformed_accepted_submission_keeps_identity_and_disposes_remote_work()
         .unwrap_err();
     assert_eq!(error.classification, ErrorKind::InvalidResponse);
     assert_eq!(error.request_id.as_deref(), Some("accepted-job"));
-    tokio::time::timeout(Duration::from_secs(2), async {
-        loop {
-            if state.calls.lock().unwrap().len() == 2 {
-                break;
-            }
-            tokio::task::yield_now().await;
-        }
-    })
-    .await
-    .unwrap();
+    while state.calls.lock().unwrap().len() != 2 {
+        tokio::task::yield_now().await;
+    }
     assert!(state
         .calls
         .lock()

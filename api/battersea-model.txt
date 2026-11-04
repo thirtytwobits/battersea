@@ -553,7 +553,7 @@ impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusi
 pub trait battersea_model::adapter::tool_loop::ToolConversation: core::marker::Send
 pub fn battersea_model::adapter::tool_loop::ToolConversation::next_turn<'life0, 'life1, 'life2, 'async_trait>(&'life0 mut self, &'life1 battersea_model::EngineTextStreamRequest, alloc::vec::Vec<battersea_model::tool_loop::ExecutedToolCall>, &'life2 battersea_model::tool_loop::ToolEventSender) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<alloc::vec::Vec<battersea_model::EngineLocalToolCall>, battersea_model::EngineAdapterRequestError>> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait, 'life1: 'async_trait, 'life2: 'async_trait
 pub fn battersea_model::adapter::tool_loop::decode_tool_call(&str, core::option::Option<&serde_json::value::Value>, core::option::Option<&serde_json::value::Value>, core::option::Option<serde_json::value::Value>) -> core::result::Result<battersea_model::EngineLocalToolCall, battersea_model::EngineAdapterRequestError>
-pub async fn battersea_model::adapter::tool_loop::run_tool_loop(impl battersea_model::tool_loop::ToolConversation, battersea_model::EngineTextStreamRequest, alloc::rcs::arc::Arc<dyn battersea_model::EngineLocalToolExecutor>, core::option::Option<alloc::rcs::arc::Arc<dyn battersea_model::EngineAdapterLogger>>, battersea_model::EngineAdapterDebugContext, battersea_model::tool_loop::ToolEventSender)
+pub async fn battersea_model::adapter::tool_loop::run_tool_loop(impl battersea_model::tool_loop::ToolConversation, battersea_model::EngineTextStreamRequest, alloc::rcs::arc::Arc<dyn battersea_model::EngineLocalToolExecutor>, core::option::Option<alloc::rcs::arc::Arc<dyn battersea_model::EngineAdapterLogger>>, battersea_model::EngineAdapterDebugContext, alloc::rcs::arc::Arc<dyn battersea_model::Clock>, battersea_model::tool_loop::ToolEventSender)
 pub async fn battersea_model::adapter::tool_loop::send_event(&battersea_model::tool_loop::ToolEventSender, battersea_model::EngineTextStreamEvent) -> core::result::Result<(), battersea_model::EngineAdapterRequestError>
 pub fn battersea_model::adapter::tool_loop::validate_tool_calls(&str, &battersea_model::EngineTextStreamRequest, &[battersea_model::EngineLocalToolCall]) -> core::result::Result<(), battersea_model::EngineAdapterRequestError>
 pub type battersea_model::adapter::tool_loop::ToolEventSender = tokio::sync::mpsc::bounded::Sender<core::result::Result<battersea_model::EngineTextStreamEvent, battersea_model::EngineAdapterRequestError>>
@@ -1582,9 +1582,9 @@ impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusi
 pub struct battersea_model::adapter::DurableConversation
 impl battersea_model::DurableConversation
 pub async fn battersea_model::DurableConversation::cancel(&self, u64) -> core::result::Result<battersea_model::ConversationCheckpoint, battersea_model::EngineAdapterRequestError>
-pub async fn battersea_model::DurableConversation::create(alloc::rcs::arc::Arc<dyn battersea_model::ConversationStore>, alloc::rcs::arc::Arc<dyn battersea_model::EngineAdapter>, battersea_model::ConversationScope, battersea_model::ConversationRequest, usize, core::time::Duration, alloc::rcs::arc::Arc<dyn battersea_model::ExpiryClock>) -> core::result::Result<Self, battersea_model::EngineAdapterRequestError>
+pub async fn battersea_model::DurableConversation::create(alloc::rcs::arc::Arc<dyn battersea_model::ConversationStore>, alloc::rcs::arc::Arc<dyn battersea_model::EngineAdapter>, battersea_model::ConversationScope, battersea_model::ConversationRequest, usize, core::time::Duration, alloc::rcs::arc::Arc<dyn battersea_model::Clock>) -> core::result::Result<Self, battersea_model::EngineAdapterRequestError>
 pub async fn battersea_model::DurableConversation::inspect(&self) -> core::result::Result<battersea_model::ConversationCheckpoint, battersea_model::EngineAdapterRequestError>
-pub async fn battersea_model::DurableConversation::open(alloc::rcs::arc::Arc<dyn battersea_model::ConversationStore>, alloc::rcs::arc::Arc<dyn battersea_model::EngineAdapter>, battersea_model::ConversationScope, battersea_model::ConversationRequest, usize, core::time::Duration, alloc::rcs::arc::Arc<dyn battersea_model::ExpiryClock>) -> core::result::Result<Self, battersea_model::EngineAdapterRequestError>
+pub async fn battersea_model::DurableConversation::open(alloc::rcs::arc::Arc<dyn battersea_model::ConversationStore>, alloc::rcs::arc::Arc<dyn battersea_model::EngineAdapter>, battersea_model::ConversationScope, battersea_model::ConversationRequest, usize, core::time::Duration, alloc::rcs::arc::Arc<dyn battersea_model::Clock>) -> core::result::Result<Self, battersea_model::EngineAdapterRequestError>
 pub async fn battersea_model::DurableConversation::reconcile(&self, u64, battersea_model::ConversationResolution, &str, &str) -> core::result::Result<battersea_model::ConversationCheckpoint, battersea_model::EngineAdapterRequestError>
 pub async fn battersea_model::DurableConversation::record_tool_result(&self, u64, battersea_model::ConversationToolResult) -> core::result::Result<battersea_model::ConversationCheckpoint, battersea_model::EngineAdapterRequestError>
 pub async fn battersea_model::DurableConversation::resume(&self, u64) -> core::result::Result<battersea_model::ConversationCheckpoint, battersea_model::EngineAdapterRequestError>
@@ -2900,20 +2900,74 @@ pub async fn battersea_model::adapter::emit_stream_event(core::option::Option<&a
 pub fn battersea_model::adapter::local_tool_name(&str) -> alloc::string::String
 pub fn battersea_model::adapter::missing_backend_option(&str, &str) -> battersea_model::EngineAdapterRequestError
 pub fn battersea_model::adapter::validate_chat_request(&battersea_model::EngineBackendConfig, &battersea_model::EngineTextStreamRequest) -> core::result::Result<(), battersea_model::EngineAdapterRequestError>
-pub fn battersea_model::adapter::with_stream_idle_watchdog(battersea_model::EngineTextStream, core::time::Duration, impl core::convert::Into<alloc::string::String>) -> battersea_model::EngineTextStream
+pub fn battersea_model::adapter::with_stream_idle_watchdog(battersea_model::EngineTextStream, core::time::Duration, impl core::convert::Into<alloc::string::String>, alloc::rcs::arc::Arc<dyn battersea_model::Clock>) -> battersea_model::EngineTextStream
 pub type battersea_model::adapter::EngineTextStream = futures_core::stream::BoxStream<'static, core::result::Result<battersea_model::EngineTextStreamEvent, battersea_model::EngineAdapterRequestError>>
 pub type battersea_model::adapter::MockResponseRenderer = (dyn core::ops::function::Fn(&str) -> alloc::string::String + core::marker::Send + core::marker::Sync)
 pub mod battersea_model::clock
+pub struct battersea_model::clock::Elapsed
+impl core::clone::Clone for battersea_model::Elapsed
+pub fn battersea_model::Elapsed::clone(&self) -> Self
+impl core::cmp::Eq for battersea_model::Elapsed
+impl core::cmp::PartialEq for battersea_model::Elapsed
+pub fn battersea_model::Elapsed::eq(&self, &Self) -> bool
+impl core::fmt::Debug for battersea_model::Elapsed
+pub fn battersea_model::Elapsed::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for battersea_model::Elapsed
+impl core::marker::StructuralPartialEq for battersea_model::Elapsed
+impl core::marker::Freeze for battersea_model::Elapsed
+impl core::marker::Send for battersea_model::Elapsed
+impl core::marker::Sync for battersea_model::Elapsed
+impl core::marker::Unpin for battersea_model::Elapsed
+impl core::marker::UnsafeUnpin for battersea_model::Elapsed
+impl core::panic::unwind_safe::RefUnwindSafe for battersea_model::Elapsed
+impl core::panic::unwind_safe::UnwindSafe for battersea_model::Elapsed
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_model::Elapsed where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_model::Elapsed where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<T, U> core::convert::Into<U> for battersea_model::Elapsed where U: core::convert::From<T>
+pub fn battersea_model::Elapsed::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_model::Elapsed where U: core::convert::Into<T>
+pub type battersea_model::Elapsed::Error = never
+pub fn battersea_model::Elapsed::try_from(U) -> core::result::Result<T, never>
+impl<T, U> core::convert::TryInto<U> for battersea_model::Elapsed where U: core::convert::TryFrom<T>
+pub type battersea_model::Elapsed::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_model::Elapsed::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for battersea_model::Elapsed where T: core::clone::Clone
+pub type battersea_model::Elapsed::Owned = T
+pub fn battersea_model::Elapsed::clone_into(&self, &mut T)
+pub fn battersea_model::Elapsed::to_owned(&self) -> T
+impl<T> core::any::Any for battersea_model::Elapsed where T: 'static + ?core::marker::Sized
+pub fn battersea_model::Elapsed::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_model::Elapsed where T: ?core::marker::Sized
+pub fn battersea_model::Elapsed::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_model::Elapsed where T: ?core::marker::Sized
+pub fn battersea_model::Elapsed::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for battersea_model::Elapsed where T: core::clone::Clone
+pub unsafe fn battersea_model::Elapsed::clone_to_uninit(&self, *mut u8)
+impl<T> core::convert::From<T> for battersea_model::Elapsed
+pub fn battersea_model::Elapsed::from(T) -> T
+impl<T> dyn_clone::DynClone for battersea_model::Elapsed where T: core::clone::Clone
+pub fn battersea_model::Elapsed::__clone_box(&self, dyn_clone::sealed::Private) -> *mut ()
+impl<T> outref::AsOut<T> for battersea_model::Elapsed where T: core::marker::Copy
+pub fn battersea_model::Elapsed::as_out(&mut self) -> outref::Out<'_, T>
+impl<T> typenum::type_operators::Same for battersea_model::Elapsed
+pub type battersea_model::Elapsed::Output = T
+impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_model::Elapsed where T: ?core::marker::Sized
 pub struct battersea_model::clock::ManualClock
 impl battersea_model::ManualClock
 pub fn battersea_model::ManualClock::advance(&self, core::time::Duration)
+pub async fn battersea_model::ManualClock::advance_to_timer_within(&self, core::time::Duration) -> core::time::Duration
 pub fn battersea_model::ManualClock::new(u64) -> Self
-impl battersea_model::ExpiryClock for battersea_model::ManualClock
+pub fn battersea_model::ManualClock::pending_timers(&self) -> alloc::vec::Vec<core::time::Duration>
+pub async fn battersea_model::ManualClock::timer_within(&self, core::time::Duration) -> core::time::Duration
+impl battersea_model::Clock for battersea_model::ManualClock
 pub fn battersea_model::ManualClock::instant(&self) -> tokio::time::instant::Instant
+pub fn battersea_model::ManualClock::sleep_until(&self, tokio::time::instant::Instant) -> battersea_model::Sleep
 pub fn battersea_model::ManualClock::unix_ms(&self) -> core::option::Option<u64>
+impl core::clone::Clone for battersea_model::ManualClock
+pub fn battersea_model::ManualClock::clone(&self) -> Self
 impl core::fmt::Debug for battersea_model::ManualClock
 pub fn battersea_model::ManualClock::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
-impl !core::marker::Freeze for battersea_model::ManualClock
+impl core::marker::Freeze for battersea_model::ManualClock
 impl core::marker::Send for battersea_model::ManualClock
 impl core::marker::Sync for battersea_model::ManualClock
 impl core::marker::Unpin for battersea_model::ManualClock
@@ -2930,20 +2984,29 @@ pub fn battersea_model::ManualClock::try_from(U) -> core::result::Result<T, neve
 impl<T, U> core::convert::TryInto<U> for battersea_model::ManualClock where U: core::convert::TryFrom<T>
 pub type battersea_model::ManualClock::Error = <U as core::convert::TryFrom<T>>::Error
 pub fn battersea_model::ManualClock::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for battersea_model::ManualClock where T: core::clone::Clone
+pub type battersea_model::ManualClock::Owned = T
+pub fn battersea_model::ManualClock::clone_into(&self, &mut T)
+pub fn battersea_model::ManualClock::to_owned(&self) -> T
 impl<T> core::any::Any for battersea_model::ManualClock where T: 'static + ?core::marker::Sized
 pub fn battersea_model::ManualClock::type_id(&self) -> core::any::TypeId
 impl<T> core::borrow::Borrow<T> for battersea_model::ManualClock where T: ?core::marker::Sized
 pub fn battersea_model::ManualClock::borrow(&self) -> &T
 impl<T> core::borrow::BorrowMut<T> for battersea_model::ManualClock where T: ?core::marker::Sized
 pub fn battersea_model::ManualClock::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for battersea_model::ManualClock where T: core::clone::Clone
+pub unsafe fn battersea_model::ManualClock::clone_to_uninit(&self, *mut u8)
 impl<T> core::convert::From<T> for battersea_model::ManualClock
 pub fn battersea_model::ManualClock::from(T) -> T
+impl<T> dyn_clone::DynClone for battersea_model::ManualClock where T: core::clone::Clone
+pub fn battersea_model::ManualClock::__clone_box(&self, dyn_clone::sealed::Private) -> *mut ()
 impl<T> typenum::type_operators::Same for battersea_model::ManualClock
 pub type battersea_model::ManualClock::Output = T
 impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_model::ManualClock where T: ?core::marker::Sized
 pub struct battersea_model::clock::SystemClock
-impl battersea_model::ExpiryClock for battersea_model::SystemClock
+impl battersea_model::Clock for battersea_model::SystemClock
 pub fn battersea_model::SystemClock::instant(&self) -> tokio::time::instant::Instant
+pub fn battersea_model::SystemClock::sleep_until(&self, tokio::time::instant::Instant) -> battersea_model::Sleep
 pub fn battersea_model::SystemClock::unix_ms(&self) -> core::option::Option<u64>
 impl core::clone::Clone for battersea_model::SystemClock
 pub fn battersea_model::SystemClock::clone(&self) -> Self
@@ -2990,15 +3053,24 @@ pub fn battersea_model::SystemClock::as_out(&mut self) -> outref::Out<'_, T>
 impl<T> typenum::type_operators::Same for battersea_model::SystemClock
 pub type battersea_model::SystemClock::Output = T
 impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_model::SystemClock where T: ?core::marker::Sized
-pub trait battersea_model::clock::ExpiryClock: core::marker::Send + core::marker::Sync
-pub fn battersea_model::clock::ExpiryClock::instant(&self) -> tokio::time::instant::Instant
-pub fn battersea_model::clock::ExpiryClock::unix_ms(&self) -> core::option::Option<u64>
-impl battersea_model::ExpiryClock for battersea_model::ManualClock
+pub trait battersea_model::clock::Clock: core::marker::Send + core::marker::Sync
+pub fn battersea_model::clock::Clock::instant(&self) -> tokio::time::instant::Instant
+pub fn battersea_model::clock::Clock::sleep_until(&self, tokio::time::instant::Instant) -> battersea_model::Sleep
+pub fn battersea_model::clock::Clock::unix_ms(&self) -> core::option::Option<u64>
+impl battersea_model::Clock for battersea_model::ManualClock
 pub fn battersea_model::ManualClock::instant(&self) -> tokio::time::instant::Instant
+pub fn battersea_model::ManualClock::sleep_until(&self, tokio::time::instant::Instant) -> battersea_model::Sleep
 pub fn battersea_model::ManualClock::unix_ms(&self) -> core::option::Option<u64>
-impl battersea_model::ExpiryClock for battersea_model::SystemClock
+impl battersea_model::Clock for battersea_model::SystemClock
 pub fn battersea_model::SystemClock::instant(&self) -> tokio::time::instant::Instant
+pub fn battersea_model::SystemClock::sleep_until(&self, tokio::time::instant::Instant) -> battersea_model::Sleep
 pub fn battersea_model::SystemClock::unix_ms(&self) -> core::option::Option<u64>
+pub fn battersea_model::clock::deadline_after(&dyn battersea_model::Clock, core::time::Duration) -> core::option::Option<tokio::time::instant::Instant>
+pub async fn battersea_model::clock::sleep(&dyn battersea_model::Clock, core::time::Duration)
+pub async fn battersea_model::clock::timeout<F: core::future::future::Future>(&dyn battersea_model::Clock, core::time::Duration, F) -> core::result::Result<<F as core::future::future::Future>::Output, battersea_model::Elapsed>
+pub async fn battersea_model::clock::timeout_at<F: core::future::future::Future>(&dyn battersea_model::Clock, tokio::time::instant::Instant, F) -> core::result::Result<<F as core::future::future::Future>::Output, battersea_model::Elapsed>
+pub fn battersea_model::clock::utc_now(&dyn battersea_model::Clock) -> chrono::datetime::DateTime<chrono::offset::utc::Utc>
+pub type battersea_model::clock::Sleep = core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = ()> + core::marker::Send + 'static)>>
 pub mod battersea_model::content
 pub enum battersea_model::content::Modality
 pub battersea_model::content::Modality::Audio
@@ -6062,6 +6134,7 @@ pub fn battersea_model::media::MediaGenerationActivityReporter::report_activity<
 pub trait battersea_model::media::MediaGenerationAdapter: core::marker::Send + core::marker::Sync
 pub fn battersea_model::media::MediaGenerationAdapter::backend(&self) -> &battersea_model::media::MediaBackendConfig
 pub fn battersea_model::media::MediaGenerationAdapter::cancel<'life0, 'life1, 'async_trait>(&'life0 self, &'life1 str) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<(), battersea_model::EngineAdapterRequestError>> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait, 'life1: 'async_trait
+pub fn battersea_model::media::MediaGenerationAdapter::clock(&self) -> alloc::rcs::arc::Arc<dyn battersea_model::Clock>
 pub fn battersea_model::media::MediaGenerationAdapter::generate<'life0, 'async_trait>(&'life0 self, battersea_model::media::MediaRenderRequest, tokio_util::sync::cancellation_token::CancellationToken, core::option::Option<alloc::rcs::arc::Arc<dyn battersea_model::media::MediaGenerationActivityReporter>>, core::option::Option<alloc::rcs::arc::Arc<dyn battersea_model::media::MediaGenerationBatchReporter>>) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<battersea_model::media::MediaRenderResult, battersea_model::EngineAdapterRequestError>> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait
 pub fn battersea_model::media::MediaGenerationAdapter::prepare(&self, battersea_model::media::MediaRenderRequest) -> core::result::Result<battersea_model::media::PreparedMediaRequest, battersea_model::EngineAdapterRequestError>
 pub fn battersea_model::media::MediaGenerationAdapter::submit<'life0, 'async_trait>(&'life0 self, battersea_model::media::PreparedMediaRequest, tokio_util::sync::cancellation_token::CancellationToken, core::option::Option<alloc::rcs::arc::Arc<dyn battersea_model::media::MediaGenerationActivityReporter>>, core::option::Option<alloc::rcs::arc::Arc<dyn battersea_model::media::MediaGenerationBatchReporter>>) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<battersea_model::media::MediaSubmission, battersea_model::EngineAdapterRequestError>> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait
@@ -6069,6 +6142,7 @@ pub trait battersea_model::media::MediaGenerationBatchReporter: core::marker::Se
 pub fn battersea_model::media::MediaGenerationBatchReporter::report_batch<'life0, 'async_trait>(&'life0 self, battersea_model::media::MediaRenderResult) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<(), battersea_model::EngineAdapterRequestError>> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait
 pub trait battersea_model::media::MediaJob: core::marker::Send + core::marker::Sync
 pub fn battersea_model::media::MediaJob::cancel<'life0, 'async_trait>(&'life0 mut self) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<(), battersea_model::EngineAdapterRequestError>> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait
+pub fn battersea_model::media::MediaJob::clock(&self) -> alloc::rcs::arc::Arc<dyn battersea_model::Clock>
 pub fn battersea_model::media::MediaJob::id(&self) -> &str
 pub fn battersea_model::media::MediaJob::poll<'life0, 'async_trait>(&'life0 mut self, tokio_util::sync::cancellation_token::CancellationToken) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<battersea_model::media::MediaJobStatus, battersea_model::EngineAdapterRequestError>> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait
 pub fn battersea_model::media::MediaJob::poll_policy(&self) -> battersea_model::media::MediaPollPolicy
@@ -7058,7 +7132,7 @@ pub mod battersea_model::registry
 pub struct battersea_model::registry::ChatProvider
 pub battersea_model::registry::ChatProvider::background_modes: alloc::vec::Vec<alloc::string::String>
 pub battersea_model::registry::ChatProvider::content: battersea_model::ContentCapabilities
-pub battersea_model::registry::ChatProvider::factory: alloc::rcs::arc::Arc<(dyn core::ops::function::Fn(battersea_model::EngineBackendConfig, core::option::Option<alloc::rcs::arc::Arc<dyn battersea_model::EngineAdapterLogger>>) -> core::result::Result<alloc::rcs::arc::Arc<dyn battersea_model::EngineAdapter>, battersea_model::EngineAdapterRequestError> + core::marker::Send + core::marker::Sync)>
+pub battersea_model::registry::ChatProvider::factory: alloc::rcs::arc::Arc<(dyn core::ops::function::Fn(battersea_model::EngineBackendConfig, core::option::Option<alloc::rcs::arc::Arc<dyn battersea_model::EngineAdapterLogger>>, alloc::rcs::arc::Arc<dyn battersea_model::Clock>) -> core::result::Result<alloc::rcs::arc::Arc<dyn battersea_model::EngineAdapter>, battersea_model::EngineAdapterRequestError> + core::marker::Send + core::marker::Sync)>
 pub battersea_model::registry::ChatProvider::parameters: alloc::vec::Vec<alloc::string::String>
 impl core::clone::Clone for battersea_model::ChatProvider
 pub fn battersea_model::ChatProvider::clone(&self) -> Self
@@ -7102,7 +7176,7 @@ pub struct battersea_model::registry::MediaProvider
 pub battersea_model::registry::MediaProvider::accepts_aspect_ratio: fn(&str, &str) -> bool
 pub battersea_model::registry::MediaProvider::accepts_size: fn(&str, &str) -> bool
 pub battersea_model::registry::MediaProvider::capabilities: battersea_model::MediaProviderCapabilities
-pub battersea_model::registry::MediaProvider::factory: alloc::rcs::arc::Arc<(dyn core::ops::function::Fn(battersea_model::media::MediaBackendConfig) -> core::result::Result<alloc::rcs::arc::Arc<dyn battersea_model::media::MediaGenerationAdapter>, battersea_model::EngineAdapterRequestError> + core::marker::Send + core::marker::Sync)>
+pub battersea_model::registry::MediaProvider::factory: alloc::rcs::arc::Arc<(dyn core::ops::function::Fn(battersea_model::media::MediaBackendConfig, alloc::rcs::arc::Arc<dyn battersea_model::Clock>) -> core::result::Result<alloc::rcs::arc::Arc<dyn battersea_model::media::MediaGenerationAdapter>, battersea_model::EngineAdapterRequestError> + core::marker::Send + core::marker::Sync)>
 pub battersea_model::registry::MediaProvider::parameters: alloc::vec::Vec<alloc::string::String>
 pub battersea_model::registry::MediaProvider::prepare: alloc::rcs::arc::Arc<(dyn core::ops::function::Fn(&battersea_model::media::MediaBackendConfig, battersea_model::media::MediaRenderRequest) -> core::result::Result<battersea_model::media::PreparedMediaRequest, battersea_model::EngineAdapterRequestError> + core::marker::Send + core::marker::Sync)>
 impl core::clone::Clone for battersea_model::MediaProvider
@@ -7198,8 +7272,8 @@ impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusi
 pub struct battersea_model::registry::ProviderRegistry
 impl battersea_model::ProviderRegistry
 pub fn battersea_model::ProviderRegistry::chat_provider(&self, &str) -> core::result::Result<&battersea_model::ChatProvider, battersea_model::EngineAdapterRequestError>
-pub fn battersea_model::ProviderRegistry::create_chat(&self, battersea_model::EngineBackendConfig, core::option::Option<alloc::rcs::arc::Arc<dyn battersea_model::EngineAdapterLogger>>) -> core::result::Result<alloc::rcs::arc::Arc<dyn battersea_model::EngineAdapter>, battersea_model::EngineAdapterRequestError>
-pub fn battersea_model::ProviderRegistry::create_media(&self, battersea_model::media::MediaBackendConfig) -> core::result::Result<alloc::rcs::arc::Arc<dyn battersea_model::media::MediaGenerationAdapter>, battersea_model::EngineAdapterRequestError>
+pub fn battersea_model::ProviderRegistry::create_chat(&self, battersea_model::EngineBackendConfig, core::option::Option<alloc::rcs::arc::Arc<dyn battersea_model::EngineAdapterLogger>>, alloc::rcs::arc::Arc<dyn battersea_model::Clock>) -> core::result::Result<alloc::rcs::arc::Arc<dyn battersea_model::EngineAdapter>, battersea_model::EngineAdapterRequestError>
+pub fn battersea_model::ProviderRegistry::create_media(&self, battersea_model::media::MediaBackendConfig, alloc::rcs::arc::Arc<dyn battersea_model::Clock>) -> core::result::Result<alloc::rcs::arc::Arc<dyn battersea_model::media::MediaGenerationAdapter>, battersea_model::EngineAdapterRequestError>
 pub fn battersea_model::ProviderRegistry::media_provider(&self, &str) -> core::result::Result<&battersea_model::MediaProvider, battersea_model::EngineAdapterRequestError>
 pub fn battersea_model::ProviderRegistry::prepare_media(&self, &battersea_model::media::MediaBackendConfig, battersea_model::media::MediaRenderRequest) -> core::result::Result<battersea_model::media::PreparedMediaRequest, battersea_model::EngineAdapterRequestError>
 pub fn battersea_model::ProviderRegistry::register_chat(&mut self, impl core::convert::Into<alloc::string::String>, battersea_model::ChatProvider) -> core::result::Result<(), battersea_model::EngineAdapterRequestError>
@@ -7272,7 +7346,7 @@ impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusi
 pub trait battersea_model::tool_loop::ToolConversation: core::marker::Send
 pub fn battersea_model::tool_loop::ToolConversation::next_turn<'life0, 'life1, 'life2, 'async_trait>(&'life0 mut self, &'life1 battersea_model::EngineTextStreamRequest, alloc::vec::Vec<battersea_model::tool_loop::ExecutedToolCall>, &'life2 battersea_model::tool_loop::ToolEventSender) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<alloc::vec::Vec<battersea_model::EngineLocalToolCall>, battersea_model::EngineAdapterRequestError>> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait, 'life1: 'async_trait, 'life2: 'async_trait
 pub fn battersea_model::tool_loop::decode_tool_call(&str, core::option::Option<&serde_json::value::Value>, core::option::Option<&serde_json::value::Value>, core::option::Option<serde_json::value::Value>) -> core::result::Result<battersea_model::EngineLocalToolCall, battersea_model::EngineAdapterRequestError>
-pub async fn battersea_model::tool_loop::run_tool_loop(impl battersea_model::tool_loop::ToolConversation, battersea_model::EngineTextStreamRequest, alloc::rcs::arc::Arc<dyn battersea_model::EngineLocalToolExecutor>, core::option::Option<alloc::rcs::arc::Arc<dyn battersea_model::EngineAdapterLogger>>, battersea_model::EngineAdapterDebugContext, battersea_model::tool_loop::ToolEventSender)
+pub async fn battersea_model::tool_loop::run_tool_loop(impl battersea_model::tool_loop::ToolConversation, battersea_model::EngineTextStreamRequest, alloc::rcs::arc::Arc<dyn battersea_model::EngineLocalToolExecutor>, core::option::Option<alloc::rcs::arc::Arc<dyn battersea_model::EngineAdapterLogger>>, battersea_model::EngineAdapterDebugContext, alloc::rcs::arc::Arc<dyn battersea_model::Clock>, battersea_model::tool_loop::ToolEventSender)
 pub async fn battersea_model::tool_loop::send_event(&battersea_model::tool_loop::ToolEventSender, battersea_model::EngineTextStreamEvent) -> core::result::Result<(), battersea_model::EngineAdapterRequestError>
 pub fn battersea_model::tool_loop::validate_tool_calls(&str, &battersea_model::EngineTextStreamRequest, &[battersea_model::EngineLocalToolCall]) -> core::result::Result<(), battersea_model::EngineAdapterRequestError>
 pub type battersea_model::tool_loop::ToolEventSender = tokio::sync::mpsc::bounded::Sender<core::result::Result<battersea_model::EngineTextStreamEvent, battersea_model::EngineAdapterRequestError>>
@@ -8830,7 +8904,7 @@ impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusi
 pub struct battersea_model::ChatProvider
 pub battersea_model::ChatProvider::background_modes: alloc::vec::Vec<alloc::string::String>
 pub battersea_model::ChatProvider::content: battersea_model::ContentCapabilities
-pub battersea_model::ChatProvider::factory: alloc::rcs::arc::Arc<(dyn core::ops::function::Fn(battersea_model::EngineBackendConfig, core::option::Option<alloc::rcs::arc::Arc<dyn battersea_model::EngineAdapterLogger>>) -> core::result::Result<alloc::rcs::arc::Arc<dyn battersea_model::EngineAdapter>, battersea_model::EngineAdapterRequestError> + core::marker::Send + core::marker::Sync)>
+pub battersea_model::ChatProvider::factory: alloc::rcs::arc::Arc<(dyn core::ops::function::Fn(battersea_model::EngineBackendConfig, core::option::Option<alloc::rcs::arc::Arc<dyn battersea_model::EngineAdapterLogger>>, alloc::rcs::arc::Arc<dyn battersea_model::Clock>) -> core::result::Result<alloc::rcs::arc::Arc<dyn battersea_model::EngineAdapter>, battersea_model::EngineAdapterRequestError> + core::marker::Send + core::marker::Sync)>
 pub battersea_model::ChatProvider::parameters: alloc::vec::Vec<alloc::string::String>
 impl core::clone::Clone for battersea_model::ChatProvider
 pub fn battersea_model::ChatProvider::clone(&self) -> Self
@@ -9263,9 +9337,9 @@ impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusi
 pub struct battersea_model::DurableConversation
 impl battersea_model::DurableConversation
 pub async fn battersea_model::DurableConversation::cancel(&self, u64) -> core::result::Result<battersea_model::ConversationCheckpoint, battersea_model::EngineAdapterRequestError>
-pub async fn battersea_model::DurableConversation::create(alloc::rcs::arc::Arc<dyn battersea_model::ConversationStore>, alloc::rcs::arc::Arc<dyn battersea_model::EngineAdapter>, battersea_model::ConversationScope, battersea_model::ConversationRequest, usize, core::time::Duration, alloc::rcs::arc::Arc<dyn battersea_model::ExpiryClock>) -> core::result::Result<Self, battersea_model::EngineAdapterRequestError>
+pub async fn battersea_model::DurableConversation::create(alloc::rcs::arc::Arc<dyn battersea_model::ConversationStore>, alloc::rcs::arc::Arc<dyn battersea_model::EngineAdapter>, battersea_model::ConversationScope, battersea_model::ConversationRequest, usize, core::time::Duration, alloc::rcs::arc::Arc<dyn battersea_model::Clock>) -> core::result::Result<Self, battersea_model::EngineAdapterRequestError>
 pub async fn battersea_model::DurableConversation::inspect(&self) -> core::result::Result<battersea_model::ConversationCheckpoint, battersea_model::EngineAdapterRequestError>
-pub async fn battersea_model::DurableConversation::open(alloc::rcs::arc::Arc<dyn battersea_model::ConversationStore>, alloc::rcs::arc::Arc<dyn battersea_model::EngineAdapter>, battersea_model::ConversationScope, battersea_model::ConversationRequest, usize, core::time::Duration, alloc::rcs::arc::Arc<dyn battersea_model::ExpiryClock>) -> core::result::Result<Self, battersea_model::EngineAdapterRequestError>
+pub async fn battersea_model::DurableConversation::open(alloc::rcs::arc::Arc<dyn battersea_model::ConversationStore>, alloc::rcs::arc::Arc<dyn battersea_model::EngineAdapter>, battersea_model::ConversationScope, battersea_model::ConversationRequest, usize, core::time::Duration, alloc::rcs::arc::Arc<dyn battersea_model::Clock>) -> core::result::Result<Self, battersea_model::EngineAdapterRequestError>
 pub async fn battersea_model::DurableConversation::reconcile(&self, u64, battersea_model::ConversationResolution, &str, &str) -> core::result::Result<battersea_model::ConversationCheckpoint, battersea_model::EngineAdapterRequestError>
 pub async fn battersea_model::DurableConversation::record_tool_result(&self, u64, battersea_model::ConversationToolResult) -> core::result::Result<battersea_model::ConversationCheckpoint, battersea_model::EngineAdapterRequestError>
 pub async fn battersea_model::DurableConversation::resume(&self, u64) -> core::result::Result<battersea_model::ConversationCheckpoint, battersea_model::EngineAdapterRequestError>
@@ -9307,6 +9381,54 @@ pub fn battersea_model::DurableConversation::__clone_box(&self, dyn_clone::seale
 impl<T> typenum::type_operators::Same for battersea_model::DurableConversation
 pub type battersea_model::DurableConversation::Output = T
 impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_model::DurableConversation where T: ?core::marker::Sized
+pub struct battersea_model::Elapsed
+impl core::clone::Clone for battersea_model::Elapsed
+pub fn battersea_model::Elapsed::clone(&self) -> Self
+impl core::cmp::Eq for battersea_model::Elapsed
+impl core::cmp::PartialEq for battersea_model::Elapsed
+pub fn battersea_model::Elapsed::eq(&self, &Self) -> bool
+impl core::fmt::Debug for battersea_model::Elapsed
+pub fn battersea_model::Elapsed::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for battersea_model::Elapsed
+impl core::marker::StructuralPartialEq for battersea_model::Elapsed
+impl core::marker::Freeze for battersea_model::Elapsed
+impl core::marker::Send for battersea_model::Elapsed
+impl core::marker::Sync for battersea_model::Elapsed
+impl core::marker::Unpin for battersea_model::Elapsed
+impl core::marker::UnsafeUnpin for battersea_model::Elapsed
+impl core::panic::unwind_safe::RefUnwindSafe for battersea_model::Elapsed
+impl core::panic::unwind_safe::UnwindSafe for battersea_model::Elapsed
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_model::Elapsed where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_model::Elapsed where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<T, U> core::convert::Into<U> for battersea_model::Elapsed where U: core::convert::From<T>
+pub fn battersea_model::Elapsed::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_model::Elapsed where U: core::convert::Into<T>
+pub type battersea_model::Elapsed::Error = never
+pub fn battersea_model::Elapsed::try_from(U) -> core::result::Result<T, never>
+impl<T, U> core::convert::TryInto<U> for battersea_model::Elapsed where U: core::convert::TryFrom<T>
+pub type battersea_model::Elapsed::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_model::Elapsed::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for battersea_model::Elapsed where T: core::clone::Clone
+pub type battersea_model::Elapsed::Owned = T
+pub fn battersea_model::Elapsed::clone_into(&self, &mut T)
+pub fn battersea_model::Elapsed::to_owned(&self) -> T
+impl<T> core::any::Any for battersea_model::Elapsed where T: 'static + ?core::marker::Sized
+pub fn battersea_model::Elapsed::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_model::Elapsed where T: ?core::marker::Sized
+pub fn battersea_model::Elapsed::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_model::Elapsed where T: ?core::marker::Sized
+pub fn battersea_model::Elapsed::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for battersea_model::Elapsed where T: core::clone::Clone
+pub unsafe fn battersea_model::Elapsed::clone_to_uninit(&self, *mut u8)
+impl<T> core::convert::From<T> for battersea_model::Elapsed
+pub fn battersea_model::Elapsed::from(T) -> T
+impl<T> dyn_clone::DynClone for battersea_model::Elapsed where T: core::clone::Clone
+pub fn battersea_model::Elapsed::__clone_box(&self, dyn_clone::sealed::Private) -> *mut ()
+impl<T> outref::AsOut<T> for battersea_model::Elapsed where T: core::marker::Copy
+pub fn battersea_model::Elapsed::as_out(&mut self) -> outref::Out<'_, T>
+impl<T> typenum::type_operators::Same for battersea_model::Elapsed
+pub type battersea_model::Elapsed::Output = T
+impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_model::Elapsed where T: ?core::marker::Sized
 pub struct battersea_model::EngineAdapterDebugContext
 pub battersea_model::EngineAdapterDebugContext::backend: alloc::string::String
 pub battersea_model::EngineAdapterDebugContext::base_url: core::option::Option<alloc::string::String>
@@ -10367,13 +10489,19 @@ impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusi
 pub struct battersea_model::ManualClock
 impl battersea_model::ManualClock
 pub fn battersea_model::ManualClock::advance(&self, core::time::Duration)
+pub async fn battersea_model::ManualClock::advance_to_timer_within(&self, core::time::Duration) -> core::time::Duration
 pub fn battersea_model::ManualClock::new(u64) -> Self
-impl battersea_model::ExpiryClock for battersea_model::ManualClock
+pub fn battersea_model::ManualClock::pending_timers(&self) -> alloc::vec::Vec<core::time::Duration>
+pub async fn battersea_model::ManualClock::timer_within(&self, core::time::Duration) -> core::time::Duration
+impl battersea_model::Clock for battersea_model::ManualClock
 pub fn battersea_model::ManualClock::instant(&self) -> tokio::time::instant::Instant
+pub fn battersea_model::ManualClock::sleep_until(&self, tokio::time::instant::Instant) -> battersea_model::Sleep
 pub fn battersea_model::ManualClock::unix_ms(&self) -> core::option::Option<u64>
+impl core::clone::Clone for battersea_model::ManualClock
+pub fn battersea_model::ManualClock::clone(&self) -> Self
 impl core::fmt::Debug for battersea_model::ManualClock
 pub fn battersea_model::ManualClock::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
-impl !core::marker::Freeze for battersea_model::ManualClock
+impl core::marker::Freeze for battersea_model::ManualClock
 impl core::marker::Send for battersea_model::ManualClock
 impl core::marker::Sync for battersea_model::ManualClock
 impl core::marker::Unpin for battersea_model::ManualClock
@@ -10390,14 +10518,22 @@ pub fn battersea_model::ManualClock::try_from(U) -> core::result::Result<T, neve
 impl<T, U> core::convert::TryInto<U> for battersea_model::ManualClock where U: core::convert::TryFrom<T>
 pub type battersea_model::ManualClock::Error = <U as core::convert::TryFrom<T>>::Error
 pub fn battersea_model::ManualClock::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for battersea_model::ManualClock where T: core::clone::Clone
+pub type battersea_model::ManualClock::Owned = T
+pub fn battersea_model::ManualClock::clone_into(&self, &mut T)
+pub fn battersea_model::ManualClock::to_owned(&self) -> T
 impl<T> core::any::Any for battersea_model::ManualClock where T: 'static + ?core::marker::Sized
 pub fn battersea_model::ManualClock::type_id(&self) -> core::any::TypeId
 impl<T> core::borrow::Borrow<T> for battersea_model::ManualClock where T: ?core::marker::Sized
 pub fn battersea_model::ManualClock::borrow(&self) -> &T
 impl<T> core::borrow::BorrowMut<T> for battersea_model::ManualClock where T: ?core::marker::Sized
 pub fn battersea_model::ManualClock::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for battersea_model::ManualClock where T: core::clone::Clone
+pub unsafe fn battersea_model::ManualClock::clone_to_uninit(&self, *mut u8)
 impl<T> core::convert::From<T> for battersea_model::ManualClock
 pub fn battersea_model::ManualClock::from(T) -> T
+impl<T> dyn_clone::DynClone for battersea_model::ManualClock where T: core::clone::Clone
+pub fn battersea_model::ManualClock::__clone_box(&self, dyn_clone::sealed::Private) -> *mut ()
 impl<T> typenum::type_operators::Same for battersea_model::ManualClock
 pub type battersea_model::ManualClock::Output = T
 impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_model::ManualClock where T: ?core::marker::Sized
@@ -10405,7 +10541,7 @@ pub struct battersea_model::MediaProvider
 pub battersea_model::MediaProvider::accepts_aspect_ratio: fn(&str, &str) -> bool
 pub battersea_model::MediaProvider::accepts_size: fn(&str, &str) -> bool
 pub battersea_model::MediaProvider::capabilities: battersea_model::MediaProviderCapabilities
-pub battersea_model::MediaProvider::factory: alloc::rcs::arc::Arc<(dyn core::ops::function::Fn(battersea_model::media::MediaBackendConfig) -> core::result::Result<alloc::rcs::arc::Arc<dyn battersea_model::media::MediaGenerationAdapter>, battersea_model::EngineAdapterRequestError> + core::marker::Send + core::marker::Sync)>
+pub battersea_model::MediaProvider::factory: alloc::rcs::arc::Arc<(dyn core::ops::function::Fn(battersea_model::media::MediaBackendConfig, alloc::rcs::arc::Arc<dyn battersea_model::Clock>) -> core::result::Result<alloc::rcs::arc::Arc<dyn battersea_model::media::MediaGenerationAdapter>, battersea_model::EngineAdapterRequestError> + core::marker::Send + core::marker::Sync)>
 pub battersea_model::MediaProvider::parameters: alloc::vec::Vec<alloc::string::String>
 pub battersea_model::MediaProvider::prepare: alloc::rcs::arc::Arc<(dyn core::ops::function::Fn(&battersea_model::media::MediaBackendConfig, battersea_model::media::MediaRenderRequest) -> core::result::Result<battersea_model::media::PreparedMediaRequest, battersea_model::EngineAdapterRequestError> + core::marker::Send + core::marker::Sync)>
 impl core::clone::Clone for battersea_model::MediaProvider
@@ -11021,8 +11157,8 @@ impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusi
 pub struct battersea_model::ProviderRegistry
 impl battersea_model::ProviderRegistry
 pub fn battersea_model::ProviderRegistry::chat_provider(&self, &str) -> core::result::Result<&battersea_model::ChatProvider, battersea_model::EngineAdapterRequestError>
-pub fn battersea_model::ProviderRegistry::create_chat(&self, battersea_model::EngineBackendConfig, core::option::Option<alloc::rcs::arc::Arc<dyn battersea_model::EngineAdapterLogger>>) -> core::result::Result<alloc::rcs::arc::Arc<dyn battersea_model::EngineAdapter>, battersea_model::EngineAdapterRequestError>
-pub fn battersea_model::ProviderRegistry::create_media(&self, battersea_model::media::MediaBackendConfig) -> core::result::Result<alloc::rcs::arc::Arc<dyn battersea_model::media::MediaGenerationAdapter>, battersea_model::EngineAdapterRequestError>
+pub fn battersea_model::ProviderRegistry::create_chat(&self, battersea_model::EngineBackendConfig, core::option::Option<alloc::rcs::arc::Arc<dyn battersea_model::EngineAdapterLogger>>, alloc::rcs::arc::Arc<dyn battersea_model::Clock>) -> core::result::Result<alloc::rcs::arc::Arc<dyn battersea_model::EngineAdapter>, battersea_model::EngineAdapterRequestError>
+pub fn battersea_model::ProviderRegistry::create_media(&self, battersea_model::media::MediaBackendConfig, alloc::rcs::arc::Arc<dyn battersea_model::Clock>) -> core::result::Result<alloc::rcs::arc::Arc<dyn battersea_model::media::MediaGenerationAdapter>, battersea_model::EngineAdapterRequestError>
 pub fn battersea_model::ProviderRegistry::media_provider(&self, &str) -> core::result::Result<&battersea_model::MediaProvider, battersea_model::EngineAdapterRequestError>
 pub fn battersea_model::ProviderRegistry::prepare_media(&self, &battersea_model::media::MediaBackendConfig, battersea_model::media::MediaRenderRequest) -> core::result::Result<battersea_model::media::PreparedMediaRequest, battersea_model::EngineAdapterRequestError>
 pub fn battersea_model::ProviderRegistry::register_chat(&mut self, impl core::convert::Into<alloc::string::String>, battersea_model::ChatProvider) -> core::result::Result<(), battersea_model::EngineAdapterRequestError>
@@ -11267,8 +11403,9 @@ impl<T> typenum::type_operators::Same for battersea_model::StoredConversationTur
 pub type battersea_model::StoredConversationTurn::Output = T
 impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_model::StoredConversationTurn where T: ?core::marker::Sized
 pub struct battersea_model::SystemClock
-impl battersea_model::ExpiryClock for battersea_model::SystemClock
+impl battersea_model::Clock for battersea_model::SystemClock
 pub fn battersea_model::SystemClock::instant(&self) -> tokio::time::instant::Instant
+pub fn battersea_model::SystemClock::sleep_until(&self, tokio::time::instant::Instant) -> battersea_model::Sleep
 pub fn battersea_model::SystemClock::unix_ms(&self) -> core::option::Option<u64>
 impl core::clone::Clone for battersea_model::SystemClock
 pub fn battersea_model::SystemClock::clone(&self) -> Self
@@ -11471,6 +11608,18 @@ impl<T> typenum::type_operators::Same for battersea_model::WatchdogFailure
 pub type battersea_model::WatchdogFailure::Output = T
 impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_model::WatchdogFailure where T: ?core::marker::Sized
 pub const battersea_model::CONVERSATION_CHECKPOINT_VERSION: u32
+pub trait battersea_model::Clock: core::marker::Send + core::marker::Sync
+pub fn battersea_model::Clock::instant(&self) -> tokio::time::instant::Instant
+pub fn battersea_model::Clock::sleep_until(&self, tokio::time::instant::Instant) -> battersea_model::Sleep
+pub fn battersea_model::Clock::unix_ms(&self) -> core::option::Option<u64>
+impl battersea_model::Clock for battersea_model::ManualClock
+pub fn battersea_model::ManualClock::instant(&self) -> tokio::time::instant::Instant
+pub fn battersea_model::ManualClock::sleep_until(&self, tokio::time::instant::Instant) -> battersea_model::Sleep
+pub fn battersea_model::ManualClock::unix_ms(&self) -> core::option::Option<u64>
+impl battersea_model::Clock for battersea_model::SystemClock
+pub fn battersea_model::SystemClock::instant(&self) -> tokio::time::instant::Instant
+pub fn battersea_model::SystemClock::sleep_until(&self, tokio::time::instant::Instant) -> battersea_model::Sleep
+pub fn battersea_model::SystemClock::unix_ms(&self) -> core::option::Option<u64>
 pub trait battersea_model::ConversationStore: core::marker::Send + core::marker::Sync
 pub fn battersea_model::ConversationStore::compare_exchange<'life0, 'life1, 'life2, 'async_trait>(&'life0 self, &'life1 str, core::option::Option<u64>, &'life2 battersea_model::ConversationCheckpoint) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<(), battersea_model::ConversationStoreError>> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait, 'life1: 'async_trait, 'life2: 'async_trait
 pub fn battersea_model::ConversationStore::load<'life0, 'life1, 'async_trait>(&'life0 self, &'life1 str, usize) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<core::option::Option<battersea_model::ConversationCheckpoint>, battersea_model::ConversationStoreError>> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait, 'life1: 'async_trait
@@ -11497,25 +11646,22 @@ pub trait battersea_model::EngineLocalToolExecutor: core::marker::Send + core::m
 pub fn battersea_model::EngineLocalToolExecutor::call<'life0, 'async_trait>(&'life0 self, battersea_model::EngineLocalToolCall) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<battersea_model::EngineLocalToolResult, battersea_model::EngineAdapterRequestError>> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait
 impl battersea_model::EngineLocalToolExecutor for battersea_model::NoLocalTools
 pub fn battersea_model::NoLocalTools::call<'life0, 'async_trait>(&'life0 self, battersea_model::EngineLocalToolCall) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<battersea_model::EngineLocalToolResult, battersea_model::EngineAdapterRequestError>> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait
-pub trait battersea_model::ExpiryClock: core::marker::Send + core::marker::Sync
-pub fn battersea_model::ExpiryClock::instant(&self) -> tokio::time::instant::Instant
-pub fn battersea_model::ExpiryClock::unix_ms(&self) -> core::option::Option<u64>
-impl battersea_model::ExpiryClock for battersea_model::ManualClock
-pub fn battersea_model::ManualClock::instant(&self) -> tokio::time::instant::Instant
-pub fn battersea_model::ManualClock::unix_ms(&self) -> core::option::Option<u64>
-impl battersea_model::ExpiryClock for battersea_model::SystemClock
-pub fn battersea_model::SystemClock::instant(&self) -> tokio::time::instant::Instant
-pub fn battersea_model::SystemClock::unix_ms(&self) -> core::option::Option<u64>
 pub fn battersea_model::configuration_digest(&serde_json::value::Value) -> alloc::string::String
+pub fn battersea_model::deadline_after(&dyn battersea_model::Clock, core::time::Duration) -> core::option::Option<tokio::time::instant::Instant>
 pub async fn battersea_model::emit_error(core::option::Option<&alloc::rcs::arc::Arc<dyn battersea_model::EngineAdapterLogger>>, &battersea_model::EngineAdapterDebugContext, battersea_model::EngineOperation, &battersea_model::EngineAdapterRequestError)
 pub async fn battersea_model::emit_request(core::option::Option<&alloc::rcs::arc::Arc<dyn battersea_model::EngineAdapterLogger>>, &battersea_model::EngineAdapterDebugContext, &battersea_model::EngineAdapterRequest, core::option::Option<&str>, core::option::Option<serde_json::value::Value>)
 pub async fn battersea_model::emit_response(core::option::Option<&alloc::rcs::arc::Arc<dyn battersea_model::EngineAdapterLogger>>, &battersea_model::EngineAdapterDebugContext, battersea_model::EngineOperation, u16, battersea_model::EngineAdapterResponseDetail)
 pub async fn battersea_model::emit_stream_event(core::option::Option<&alloc::rcs::arc::Arc<dyn battersea_model::EngineAdapterLogger>>, &battersea_model::EngineAdapterDebugContext, battersea_model::EngineOperation, impl core::convert::Into<alloc::string::String>, serde_json::value::Value)
 pub fn battersea_model::local_tool_name(&str) -> alloc::string::String
 pub fn battersea_model::missing_backend_option(&str, &str) -> battersea_model::EngineAdapterRequestError
+pub async fn battersea_model::sleep(&dyn battersea_model::Clock, core::time::Duration)
+pub async fn battersea_model::timeout<F: core::future::future::Future>(&dyn battersea_model::Clock, core::time::Duration, F) -> core::result::Result<<F as core::future::future::Future>::Output, battersea_model::Elapsed>
+pub async fn battersea_model::timeout_at<F: core::future::future::Future>(&dyn battersea_model::Clock, tokio::time::instant::Instant, F) -> core::result::Result<<F as core::future::future::Future>::Output, battersea_model::Elapsed>
 pub fn battersea_model::upgrade_provider_content(&battersea_model::Message, &str, &battersea_model::ProviderContentOrigin) -> core::result::Result<battersea_model::Message, battersea_model::ProviderConfigurationError>
+pub fn battersea_model::utc_now(&dyn battersea_model::Clock) -> chrono::datetime::DateTime<chrono::offset::utc::Utc>
 pub fn battersea_model::validate_chat_request(&battersea_model::EngineBackendConfig, &battersea_model::EngineTextStreamRequest) -> core::result::Result<(), battersea_model::EngineAdapterRequestError>
 pub fn battersea_model::validate_messages(&str, &battersea_model::ContentCapabilities, &[battersea_model::Message]) -> core::result::Result<(), battersea_model::EngineAdapterRequestError>
-pub fn battersea_model::with_stream_idle_watchdog(battersea_model::EngineTextStream, core::time::Duration, impl core::convert::Into<alloc::string::String>) -> battersea_model::EngineTextStream
+pub fn battersea_model::with_stream_idle_watchdog(battersea_model::EngineTextStream, core::time::Duration, impl core::convert::Into<alloc::string::String>, alloc::rcs::arc::Arc<dyn battersea_model::Clock>) -> battersea_model::EngineTextStream
 pub type battersea_model::EngineTextStream = futures_core::stream::BoxStream<'static, core::result::Result<battersea_model::EngineTextStreamEvent, battersea_model::EngineAdapterRequestError>>
 pub type battersea_model::MockResponseRenderer = (dyn core::ops::function::Fn(&str) -> alloc::string::String + core::marker::Send + core::marker::Sync)
+pub type battersea_model::Sleep = core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = ()> + core::marker::Send + 'static)>>

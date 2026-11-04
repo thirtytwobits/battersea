@@ -3,14 +3,14 @@
 use crate::{registry::PreparedCall, Tool, ToolRegistry};
 use async_trait::async_trait;
 use battersea_model::{
-    configuration_digest, EngineAdapterRequestError, EngineLocalToolCall,
+    configuration_digest, Clock, EngineAdapterRequestError, EngineLocalToolCall,
     EngineLocalToolDefinition, EngineLocalToolExecutor, EngineLocalToolResult, ErrorKind,
-    ExpiryClock, ToolCallEvidence, ToolCallOutcome, ToolCode,
+    ToolCallEvidence, ToolCallOutcome, ToolCode,
 };
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::{collections::BTreeMap, io::Write, sync::Arc, time::Duration};
-use tokio::time::{timeout, Instant};
+use tokio::time::Instant;
 
 pub const TOOL_APPROVAL_JOURNAL_VERSION: u32 = 1;
 const MAX_CALLS: usize = 4096;
@@ -330,7 +330,7 @@ pub struct DurableToolExecutor {
     scope: DurableToolApprovalScope,
     max_bytes: usize,
     store_timeout: Duration,
-    clock: Arc<dyn ExpiryClock>,
+    clock: Arc<dyn Clock>,
     deadline: Instant,
 }
 impl DurableToolExecutor {
@@ -340,7 +340,7 @@ impl DurableToolExecutor {
         scope: DurableToolApprovalScope,
         max_bytes: usize,
         store_timeout: Duration,
-        clock: Arc<dyn ExpiryClock>,
+        clock: Arc<dyn Clock>,
     ) -> Result<Self, EngineAdapterRequestError> {
         if scope.run_id.trim().is_empty()
             || scope.binding_revision.trim().is_empty()
@@ -377,7 +377,7 @@ impl DurableToolExecutor {
         scope: DurableToolApprovalScope,
         limits: ToolApprovalJournalLimits,
         store_timeout: Duration,
-        clock: Arc<dyn ExpiryClock>,
+        clock: Arc<dyn Clock>,
     ) -> Result<Self, EngineAdapterRequestError> {
         checked_limits(limits)?;
         measure(&scope, limits.max_bytes)?;
@@ -410,7 +410,7 @@ impl DurableToolExecutor {
         scope: DurableToolApprovalScope,
         max_bytes: usize,
         store_timeout: Duration,
-        clock: Arc<dyn ExpiryClock>,
+        clock: Arc<dyn Clock>,
     ) -> Result<Self, EngineAdapterRequestError> {
         let executor = Self::build(store, registry, scope, max_bytes, store_timeout, clock)?;
         executor.inspect().await?;
@@ -423,7 +423,8 @@ impl DurableToolExecutor {
 
     /// Inspect durable state, including expired calls and unresolved intents, without mutation.
     pub async fn inspect(&self) -> Result<ToolApprovalJournal, EngineAdapterRequestError> {
-        let record = timeout(
+        let record = battersea_model::clock::timeout(
+            self.clock.as_ref(),
             self.store_timeout,
             self.store.load(&self.scope.run_id, self.max_bytes),
         )
@@ -456,7 +457,8 @@ impl DurableToolExecutor {
     ) -> Result<(), EngineAdapterRequestError> {
         next.validate()?;
         measure(next, self.max_bytes)?;
-        timeout(
+        battersea_model::clock::timeout(
+            self.clock.as_ref(),
             self.store_timeout,
             self.store
                 .compare_exchange(&self.scope.run_id, expected, next),
@@ -688,16 +690,17 @@ impl DurableToolExecutor {
         let remaining = self
             .deadline
             .saturating_duration_since(self.clock.instant());
-        let result = timeout(remaining, prepared.execute())
-            .await
-            .unwrap_or_else(|_| {
-                Err(EngineAdapterRequestError::new(
-                    "tools",
-                    "Tool execution deadline expired.",
-                    ErrorKind::Timeout,
-                )
-                .with_tool_call(evidence(&call, ToolCallOutcome::Uncertain)))
-            });
+        let result =
+            battersea_model::clock::timeout(self.clock.as_ref(), remaining, prepared.execute())
+                .await
+                .unwrap_or_else(|_| {
+                    Err(EngineAdapterRequestError::new(
+                        "tools",
+                        "Tool execution deadline expired.",
+                        ErrorKind::Timeout,
+                    )
+                    .with_tool_call(evidence(&call, ToolCallOutcome::Uncertain)))
+                });
         let observed = match &result {
             Ok(_) => evidence(&call, ToolCallOutcome::Completed),
             Err(e) => e

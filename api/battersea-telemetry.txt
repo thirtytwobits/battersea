@@ -1115,7 +1115,8 @@ impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusi
 pub struct battersea_telemetry::otlp::Exporter
 impl battersea_telemetry::otlp::Exporter
 pub async fn battersea_telemetry::otlp::Exporter::export(&self, &battersea_telemetry::otlp::Batch) -> battersea_telemetry::Result<()>
-pub fn battersea_telemetry::otlp::Exporter::new(&str, core::time::Duration, usize) -> battersea_telemetry::Result<Self>
+pub fn battersea_telemetry::otlp::Exporter::new(&str, core::time::Duration, usize, alloc::rcs::arc::Arc<dyn battersea_model::clock::Clock>) -> battersea_telemetry::Result<Self>
+pub fn battersea_telemetry::otlp::Exporter::validate(&str, core::time::Duration, usize) -> battersea_telemetry::Result<()>
 impl core::clone::Clone for battersea_telemetry::otlp::Exporter
 pub fn battersea_telemetry::otlp::Exporter::clone(&self) -> Self
 impl core::fmt::Debug for battersea_telemetry::otlp::Exporter

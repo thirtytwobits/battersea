@@ -179,7 +179,9 @@ mod tests {
         let bytes = serde_json::to_vec_pretty(&old).unwrap();
         fs::write(root.join("flows/example.json"), &bytes).unwrap();
         let app = App {
-            runtime: Arc::new(Application::new(root).unwrap()),
+            runtime: Arc::new(
+                Application::new(root, Arc::new(battersea_model::ManualClock::new(0))).unwrap(),
+            ),
             runs: Arc::default(),
             writes: Arc::default(),
         };

@@ -3,7 +3,10 @@ use crate::http_payload::BoundedResponse as _;
 use crate::{
     EngineAdapterLogger, EngineAdapterRequestError, EngineAdapterRetryLog, EngineBackendConfig,
 };
-use battersea_model::adapter::error::{DispatchState, ErrorKind};
+use battersea_model::{
+    adapter::error::{DispatchState, ErrorKind},
+    Clock,
+};
 use reqwest::{RequestBuilder, Response};
 use std::{sync::Arc, time::Duration};
 
@@ -32,18 +35,15 @@ fn delay_ms(backend: &EngineBackendConfig, retry: u32, after: Option<u64>) -> Op
     )
 }
 
-fn retry_after(headers: &reqwest::header::HeaderMap) -> Option<u64> {
+/// The provider's requested delay. An HTTP date is measured from `clock`'s wall time.
+fn retry_after(headers: &reqwest::header::HeaderMap, clock: &dyn Clock) -> Option<u64> {
     let value = headers.get(reqwest::header::RETRY_AFTER)?.to_str().ok()?;
     if let Ok(seconds) = value.parse::<u64>() {
         return Some(seconds.saturating_mul(1000));
     }
-    chrono::DateTime::parse_from_rfc2822(value)
-        .ok()
-        .map(|date| {
-            date.signed_duration_since(chrono::Utc::now())
-                .num_milliseconds()
-                .max(0) as u64
-        })
+    let date = chrono::DateTime::parse_from_rfc2822(value).ok()?;
+    let now = i64::try_from(clock.unix_ms()?).ok()?;
+    Some(date.timestamp_millis().saturating_sub(now).max(0) as u64)
 }
 
 /// The provider's own message for a refused request: the `error.message` field of its JSON
@@ -55,10 +55,13 @@ fn provider_reason(body: &str) -> Option<String> {
     (!message.is_empty()).then(|| message.to_owned())
 }
 
+/// Sends `request`, retrying safe failures with backoff timed by `clock`. The caller's operation
+/// deadline bounds every attempt and delay.
 pub(crate) async fn send(
     request: RequestBuilder,
     backend: &EngineBackendConfig,
     logger: Option<&Arc<dyn EngineAdapterLogger>>,
+    clock: &dyn Clock,
 ) -> Result<Response, EngineAdapterRequestError> {
     validate(backend)?;
     // Building before sending separates malformed requests from ambiguous transport failures.
@@ -103,7 +106,7 @@ pub(crate) async fn send(
                 let delay_named = response
                     .headers()
                     .contains_key(reqwest::header::RETRY_AFTER);
-                let retry_after_ms = retry_after(response.headers());
+                let retry_after_ms = retry_after(response.headers(), clock);
                 let reason = response
                     .bounded_text()
                     .await
@@ -184,7 +187,7 @@ pub(crate) async fn send(
                 })
                 .await;
         }
-        tokio::time::sleep(Duration::from_millis(delay_ms)).await;
+        battersea_model::clock::sleep(clock, Duration::from_millis(delay_ms)).await;
     }
     unreachable!("finite attempt loop returns a response or failure")
 }
@@ -224,11 +227,19 @@ mod tests {
     }
     #[test]
     fn retry_after_is_a_lower_bound_including_http_dates() {
+        // Sun, 06 Nov 1994 08:49:37 GMT, the RFC 9110 example date.
+        let clock = battersea_model::ManualClock::new(784_111_777_000);
         let mut headers = reqwest::header::HeaderMap::new();
         headers.insert("retry-after", "3".parse().unwrap());
-        assert_eq!(retry_after(&headers), Some(3000));
-        let future = chrono::Utc::now() + chrono::Duration::seconds(10);
-        headers.insert("retry-after", future.to_rfc2822().parse().unwrap());
-        assert!(retry_after(&headers).is_some_and(|ms| (8000..=10000).contains(&ms)));
+        assert_eq!(retry_after(&headers, &clock), Some(3000));
+        headers.insert(
+            "retry-after",
+            "Sun, 06 Nov 1994 08:49:47 GMT".parse().unwrap(),
+        );
+        assert_eq!(retry_after(&headers, &clock), Some(10_000));
+        clock.advance(Duration::from_secs(4));
+        assert_eq!(retry_after(&headers, &clock), Some(6_000));
+        clock.advance(Duration::from_secs(20));
+        assert_eq!(retry_after(&headers, &clock), Some(0));
     }
 }

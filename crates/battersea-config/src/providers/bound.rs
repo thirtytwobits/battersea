@@ -371,6 +371,9 @@ impl MediaGenerationAdapter for Media {
     fn backend(&self) -> &MediaBackendConfig {
         &self.backend
     }
+    fn clock(&self) -> Arc<dyn battersea_model::Clock> {
+        self.inner.clock()
+    }
     fn prepare(
         &self,
         request: MediaRenderRequest,
@@ -424,6 +427,9 @@ struct Job {
 impl MediaJob for Job {
     fn provider(&self) -> &str {
         &self.context.binding.provider
+    }
+    fn clock(&self) -> Arc<dyn battersea_model::Clock> {
+        self.inner.clock()
     }
     fn id(&self) -> &str {
         self.inner.id()

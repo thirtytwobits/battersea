@@ -9,9 +9,12 @@ let mut protocols = battersea_model::ProtocolRegistry::default();
 battersea_providers::register_builtin_adapters(&mut protocols)?;
 let configuration = battersea_config::parse_provider_configuration(source)?;
 let validated = configuration.validate(&protocols)?;
-let providers = validated.bind(&credentials, logger)?;
+let providers = validated.bind(&credentials, logger, Arc::new(SystemClock))?;
 let chat = providers.chat("office-chat").ok_or("unknown backend")?;
 ```
+
+Adapters run deadlines, retry backoff, polling and idle watchdogs on the clock passed to `bind`.
+Tests pass a `ManualClock` and advance it.
 
 `examples/declarative-providers` is a complete consumer with a YAML configuration.
 `compose_backend_schema` exposes the `providerConfiguration` definition for application schemas.

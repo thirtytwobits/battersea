@@ -19,6 +19,7 @@ fn pianola_tap_captures_only_matching_ports_in_full_and_in_order() {
             },
         ],
         16 * 1024 * 1024,
+        clock(),
     );
 
     // Matches (port-only), full value preserved.
@@ -251,6 +252,7 @@ fn independent_roll_captures_asserts_and_resolves_a_grade() {
             port: port.into(),
         }],
         16 * 1024 * 1024,
+        clock(),
     );
     tap.capture(&roll.name, "external-node", port, "text", value);
     let captured = tap.emissions_from(0);
@@ -339,7 +341,7 @@ fn capture_capacity_failure_is_sticky_and_preserves_complete_prior_emissions() {
         port: "text".into(),
     };
     let first = json!({"text":"complete emission"});
-    let mut tap = PianolaTap::new(vec![target], 512);
+    let mut tap = PianolaTap::new(vec![target], 512, clock());
     tap.capture("bounded", "source", "text", "text", &first);
     assert!(tap.error().is_none());
     let accepted = tap.emissions_from(0);
@@ -356,4 +358,45 @@ fn capture_capacity_failure_is_sticky_and_preserves_complete_prior_emissions() {
     tap.capture("bounded", "source", "text", "text", &json!("later"));
     assert_eq!(tap.captured_len(), accepted.len());
     assert_eq!(tap.emissions_from(0)[0].value, accepted[0].value);
+}
+
+/// A clock no test advances unless it checks capture times.
+fn clock() -> std::sync::Arc<dyn battersea_model::Clock> {
+    std::sync::Arc::new(battersea_model::ManualClock::new(784_111_777_000))
+}
+
+#[test]
+fn captures_are_timestamped_by_the_tap_clock() {
+    let clock = battersea_model::ManualClock::new(784_111_777_000);
+    let mut tap = PianolaTap::new(
+        vec![PianolaTapTarget {
+            flow_key: "timed".into(),
+            node_id: None,
+            port: "text".into(),
+        }],
+        512,
+        std::sync::Arc::new(clock.clone()),
+    );
+    tap.capture(
+        "timed",
+        "source",
+        "text",
+        "text",
+        &serde_json::json!("first"),
+    );
+    clock.advance(std::time::Duration::from_millis(1_250));
+    tap.capture(
+        "timed",
+        "source",
+        "text",
+        "text",
+        &serde_json::json!("second"),
+    );
+    assert_eq!(
+        tap.emissions_from(0)
+            .iter()
+            .map(|emission| emission.at.timestamp_millis())
+            .collect::<Vec<_>>(),
+        [784_111_777_000, 784_111_778_250]
+    );
 }

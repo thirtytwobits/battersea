@@ -414,13 +414,9 @@ async fn cancelled_provider_task_leaves_an_unresolved_intent() {
     provider.pause.store(true, Ordering::SeqCst);
     let d = create(store.clone(), provider.clone(), scope.clone()).await;
     let task = tokio::spawn(async move { d.resume(1).await });
-    tokio::time::timeout(Duration::from_secs(2), async {
-        while provider.calls.load(Ordering::SeqCst) == 0 {
-            tokio::task::yield_now().await;
-        }
-    })
-    .await
-    .unwrap();
+    while provider.calls.load(Ordering::SeqCst) == 0 {
+        tokio::task::yield_now().await;
+    }
     task.abort();
     assert!(task.await.unwrap_err().is_cancelled());
     let d = open(store, provider.clone(), scope).await;
@@ -630,11 +626,25 @@ async fn a_deadline_during_generation_never_turns_an_intent_into_a_retry() {
     let mut scope = scope();
     scope.expires_at_unix_ms -= 3800;
     provider.pause.store(true, Ordering::SeqCst);
-    let d = create(store.clone(), provider.clone(), scope.clone()).await;
-    assert_eq!(
-        d.resume(1).await.unwrap_err().classification,
-        ErrorKind::Timeout
+    let clock = clock();
+    let d = DurableConversation::create(
+        store.clone(),
+        provider.clone(),
+        scope.clone(),
+        request(),
+        65536,
+        Duration::from_secs(1),
+        clock.clone(),
+    )
+    .await
+    .unwrap();
+    // The paused provider holds generation until the 200ms remaining before expiry elapse.
+    let (resumed, remaining) = tokio::join!(
+        d.resume(1),
+        clock.advance_to_timer_within(Duration::from_millis(200))
     );
+    assert_eq!(remaining, Duration::from_millis(200));
+    assert_eq!(resumed.unwrap_err().classification, ErrorKind::Timeout);
     drop(d);
     let d = open(store, provider.clone(), scope).await;
     code(
@@ -727,3 +737,59 @@ async fn recovered_turns_obey_final_output_admission() {
 
 #[path = "continuation/background.rs"]
 mod background;
+
+/// Never acknowledges the write of one revision.
+struct Hanging {
+    inner: Store,
+    revision: u64,
+}
+#[async_trait]
+impl ConversationStore for Hanging {
+    async fn load(
+        &self,
+        run: &str,
+        max: usize,
+    ) -> Result<Option<ConversationCheckpoint>, ConversationStoreError> {
+        self.inner.load(run, max).await
+    }
+    async fn compare_exchange(
+        &self,
+        run: &str,
+        expected: Option<u64>,
+        next: &ConversationCheckpoint,
+    ) -> Result<(), ConversationStoreError> {
+        if next.revision == self.revision {
+            return std::future::pending().await;
+        }
+        self.inner.compare_exchange(run, expected, next).await
+    }
+}
+
+#[tokio::test]
+async fn a_store_write_that_never_completes_fails_at_the_store_deadline() {
+    let store = Arc::new(Hanging {
+        inner: Store::default(),
+        revision: 2,
+    });
+    let provider = Arc::new(Provider::default());
+    let clock = clock();
+    let d = DurableConversation::create(
+        store,
+        provider.clone(),
+        scope(),
+        request(),
+        65536,
+        Duration::from_secs(1),
+        clock.clone(),
+    )
+    .await
+    .unwrap();
+    // Publishing the dispatch intent hangs; the store deadline elapses only when advanced.
+    let (resumed, remaining) = tokio::join!(
+        d.resume(1),
+        clock.advance_to_timer_within(Duration::from_secs(1))
+    );
+    assert_eq!(remaining, Duration::from_secs(1));
+    code(resumed.unwrap_err(), ToolCode::ToolContinuationStorage);
+    assert_eq!(provider.calls.load(Ordering::SeqCst), 0);
+}

@@ -78,7 +78,9 @@ async fn demonstrate() -> Result<(), Box<dyn std::error::Error>> {
     );
     let tools = ToolRegistry::new(set, selection, grant)?;
     let backend = chat_backend();
-    let adapter = providers.create_chat(backend.clone(), None)?;
+    // The host owns time; tests of this host pass a clock they advance.
+    let clock: Arc<dyn battersea_model::Clock> = Arc::new(battersea_model::SystemClock);
+    let adapter = providers.create_chat(backend.clone(), None, clock.clone())?;
     let input = "A quiet landscape.";
     let mut stream = adapter
         .stream_text(EngineTextStreamRequest {
@@ -130,7 +132,7 @@ async fn demonstrate() -> Result<(), Box<dyn std::error::Error>> {
         short_description: String::new(),
         long_description: String::new(),
     };
-    let generator = providers.create_media(media_backend)?;
+    let generator = providers.create_media(media_backend, clock)?;
     let prepared = generator.prepare(MediaRenderRequest {
         kind: MediaKind::Image,
         prompt_text: input.into(),

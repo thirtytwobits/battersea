@@ -251,13 +251,24 @@ pub struct TappedEmission {
 /// The lossless capture buffer a roll's runner installs on its sandbox
 /// engine for the duration of a run. Capture is ordered and byte-bounded;
 /// exceeding capacity records a sticky failure instead of truncating a value.
-#[derive(Debug)]
 pub struct PianolaTap {
     targets: Vec<PianolaTapTarget>,
     emissions: Vec<TappedEmission>,
     next_ordinal: u64,
     remaining_bytes: usize,
     error: Option<String>,
+    clock: std::sync::Arc<dyn battersea_model::Clock>,
+}
+impl std::fmt::Debug for PianolaTap {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("PianolaTap")
+            .field("targets", &self.targets)
+            .field("emissions", &self.emissions)
+            .field("next_ordinal", &self.next_ordinal)
+            .field("remaining_bytes", &self.remaining_bytes)
+            .field("error", &self.error)
+            .finish_non_exhaustive()
+    }
 }
 
 /// One captured port emission attributed to a roll step. Serialised one
@@ -527,13 +538,19 @@ pub fn severity_str(severity: Severity) -> &'static str {
 }
 
 impl PianolaTap {
-    pub fn new(targets: Vec<PianolaTapTarget>, max_bytes: usize) -> Self {
+    /// `clock` timestamps each captured emission.
+    pub fn new(
+        targets: Vec<PianolaTapTarget>,
+        max_bytes: usize,
+        clock: std::sync::Arc<dyn battersea_model::Clock>,
+    ) -> Self {
         Self {
             targets,
             emissions: Vec::new(),
             next_ordinal: 0,
             remaining_bytes: max_bytes,
             error: None,
+            clock,
         }
     }
 
@@ -591,7 +608,7 @@ impl PianolaTap {
             port: port.to_string(),
             token_type: token_type.to_string(),
             value: value.clone(),
-            at: Utc::now(),
+            at: battersea_model::clock::utc_now(self.clock.as_ref()),
             ordinal,
         });
     }

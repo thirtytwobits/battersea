@@ -14,6 +14,7 @@ use battersea_model::engine::{
     EngineChatToolChoiceMode, EngineReasoningEffort, EngineTemperatureDispatch,
     EngineThinkingVisibility,
 };
+use battersea_model::Clock;
 use eventsource_stream::Eventsource;
 use futures_util::{stream, StreamExt};
 use reqwest::header::{HeaderMap, HeaderName, HeaderValue};
@@ -31,6 +32,7 @@ mod continuation;
 pub(crate) fn create_anthropic_adapter(
     mut backend: EngineBackendConfig,
     logger: Option<Arc<dyn EngineAdapterLogger>>,
+    clock: Arc<dyn Clock>,
 ) -> Result<Arc<dyn EngineAdapter>, EngineAdapterRequestError> {
     let provider = "anthropic";
     crate::retry::validate(&backend)?;
@@ -58,13 +60,13 @@ pub(crate) fn create_anthropic_adapter(
     let client = reqwest::Client::builder()
         .retry(reqwest::retry::never())
         .redirect(reqwest::redirect::Policy::none())
-        .timeout(std::time::Duration::from_millis(timeout_ms))
         .default_headers(build_headers(&backend)?)
         .build()
         .map_err(|error| EngineAdapterRequestError::transport("anthropic", error.to_string()))?;
     Ok(Arc::new(AnthropicEngineAdapter {
         client,
         logger,
+        clock,
         backend,
         stream_idle_timeout_ms,
         context: EngineAdapterDebugContext {
@@ -82,6 +84,7 @@ pub(crate) fn create_anthropic_adapter(
 struct AnthropicEngineAdapter {
     client: reqwest::Client,
     logger: Option<Arc<dyn EngineAdapterLogger>>,
+    clock: Arc<dyn Clock>,
     backend: EngineBackendConfig,
     stream_idle_timeout_ms: u64,
     context: EngineAdapterDebugContext,
@@ -144,6 +147,7 @@ impl EngineAdapter for AnthropicEngineAdapter {
             self.client.post(self.backend.endpoint.clone()).json(&body),
             &self.backend,
             self.logger.as_ref(),
+            self.clock.as_ref(),
         )
         .await?;
         let status = response.status().as_u16();
@@ -244,6 +248,7 @@ impl EngineAdapter for AnthropicEngineAdapter {
             Box::pin(stream),
             std::time::Duration::from_millis(self.stream_idle_timeout_ms),
             "anthropic",
+            self.clock.clone(),
         ))
     }
 
@@ -269,6 +274,7 @@ impl EngineAdapter for AnthropicEngineAdapter {
                 .json(&body),
             &self.backend,
             self.logger.as_ref(),
+            self.clock.as_ref(),
         )
         .await?;
         let request_id = response
@@ -310,6 +316,7 @@ impl AnthropicEngineAdapter {
         let backend = self.backend.clone();
         let logger = self.logger.clone();
         let context = self.context.clone();
+        let clock = self.clock.clone();
 
         let messages =
             crate::content::messages("anthropic", &backend.provider, &request.shared.messages)?;
@@ -319,9 +326,10 @@ impl AnthropicEngineAdapter {
                 backend,
                 logger: logger.clone(),
                 context: context.clone(),
+                clock: clock.clone(),
                 messages,
             };
-            run_tool_loop(conversation, request, executor, logger, context, tx).await;
+            run_tool_loop(conversation, request, executor, logger, context, clock, tx).await;
         });
 
         Ok(Box::pin(ReceiverStream::new(rx)))
@@ -333,6 +341,7 @@ struct AnthropicToolConversation {
     backend: EngineBackendConfig,
     logger: Option<Arc<dyn EngineAdapterLogger>>,
     context: EngineAdapterDebugContext,
+    clock: Arc<dyn Clock>,
     messages: Vec<Value>,
 }
 
@@ -366,6 +375,7 @@ impl ToolConversation for AnthropicToolConversation {
             self.client.post(&self.backend.endpoint).json(&body),
             &self.backend,
             self.logger.as_ref(),
+            self.clock.as_ref(),
         )
         .await?;
         let status = response.status().as_u16();
@@ -1604,7 +1614,8 @@ mod tests {
 
     #[test]
     fn create_anthropic_adapter_derives_debug_context_defaults() {
-        let adapter = create_anthropic_adapter(sample_backend(), None).expect("create adapter");
+        let adapter = create_anthropic_adapter(sample_backend(), None, crate::test_clock())
+            .expect("create adapter");
         let context = adapter.describe_debug_context();
 
         assert_eq!(
@@ -1626,7 +1637,7 @@ mod tests {
         let mut backend = sample_backend();
         backend.auth.header = Some("bad header".to_string());
 
-        let error = match create_anthropic_adapter(backend, None) {
+        let error = match create_anthropic_adapter(backend, None, crate::test_clock()) {
             Ok(_) => panic!("invalid header should fail"),
             Err(error) => error,
         };
@@ -1901,7 +1912,8 @@ mod tests {
         let (url, handle) = spawn_input_token_count_server();
         let mut backend = sample_backend();
         backend.endpoint = url;
-        let adapter = create_anthropic_adapter(backend, None).expect("adapter");
+        let adapter =
+            create_anthropic_adapter(backend, None, crate::test_clock()).expect("adapter");
 
         let count = adapter
             .count_text_stream_input_tokens(sample_stream_request())
@@ -1944,7 +1956,8 @@ mod tests {
         );
         let mut backend = sample_backend();
         backend.endpoint = url;
-        let adapter = create_anthropic_adapter(backend, None).expect("adapter");
+        let adapter =
+            create_anthropic_adapter(backend, None, crate::test_clock()).expect("adapter");
 
         let error = adapter
             .count_text_stream_input_tokens(sample_stream_request())

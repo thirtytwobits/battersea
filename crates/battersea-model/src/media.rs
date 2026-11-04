@@ -356,6 +356,8 @@ impl PreparedMediaRequest {
 #[async_trait]
 pub trait MediaGenerationAdapter: Send + Sync {
     fn backend(&self) -> &MediaBackendConfig;
+    /// The clock the adapter was created with; it drives the generation deadline.
+    fn clock(&self) -> Arc<dyn crate::Clock>;
 
     fn prepare(
         &self,
@@ -370,11 +372,10 @@ pub trait MediaGenerationAdapter: Send + Sync {
         batch_reporter: Option<Arc<dyn MediaGenerationBatchReporter>>,
     ) -> Result<MediaRenderResult, EngineAdapterRequestError> {
         let prepared = self.prepare(request)?;
-        let deadline = self
-            .backend()
-            .options
-            .timeout_ms
-            .map(|ms| tokio::time::Instant::now() + std::time::Duration::from_millis(ms));
+        let clock = self.clock();
+        let deadline = self.backend().options.timeout_ms.and_then(|ms| {
+            crate::clock::deadline_after(clock.as_ref(), std::time::Duration::from_millis(ms))
+        });
         let submit = self.submit(
             prepared,
             cancellation.clone(),
@@ -383,17 +384,15 @@ pub trait MediaGenerationAdapter: Send + Sync {
         );
         let submission_work = async {
             Ok::<_, EngineAdapterRequestError>(match deadline {
-                Some(deadline) => {
-                    tokio::time::timeout_at(deadline, submit)
-                        .await
-                        .map_err(|_| {
-                            EngineAdapterRequestError::new(
-                                &self.backend().provider,
-                                "Media submission deadline exceeded.",
-                                crate::ErrorKind::Timeout,
-                            )
-                        })??
-                }
+                Some(deadline) => crate::clock::timeout_at(clock.as_ref(), deadline, submit)
+                    .await
+                    .map_err(|_| {
+                        EngineAdapterRequestError::new(
+                            &self.backend().provider,
+                            "Media submission deadline exceeded.",
+                            crate::ErrorKind::Timeout,
+                        )
+                    })??,
                 None => submit.await?,
             })
         };
@@ -435,12 +434,15 @@ pub trait MediaJob: Send + Sync {
         "media"
     }
     fn id(&self) -> &str;
+    /// The clock that drives polling intervals, retry backoff and cleanup deadlines.
+    fn clock(&self) -> Arc<dyn crate::Clock>;
     async fn wait(
         &mut self,
         cancellation: CancellationToken,
     ) -> Result<MediaRenderResult, EngineAdapterRequestError> {
         let policy = self.poll_policy();
         policy.validate()?;
+        let clock = self.clock();
         let mut retries = 0_u32;
         loop {
             let result = tokio::select! {
@@ -491,7 +493,7 @@ pub trait MediaJob: Send + Sync {
             tokio::select! {
                 biased;
                 _ = cancellation.cancelled() => return Err(EngineAdapterRequestError::new("media", "Media job cancelled.", crate::ErrorKind::Cancelled)),
-                _ = tokio::time::sleep(std::time::Duration::from_millis(delay)) => {}
+                _ = crate::clock::sleep(clock.as_ref(), std::time::Duration::from_millis(delay)) => {}
             }
         }
     }
@@ -532,13 +534,14 @@ impl MediaSubmission {
         match self {
             Self::Complete(result) => Ok(result),
             Self::Pending(mut job) => {
+                let clock = job.clock();
                 let result = tokio::select! {
                     biased;
                     _ = cancellation.cancelled() => Err(EngineAdapterRequestError::new(job.provider(), "Media job cancelled.", crate::ErrorKind::Cancelled)),
                     result = async {
                         match deadline {
-                            Some(deadline) if deadline <= tokio::time::Instant::now() => Err(EngineAdapterRequestError::new(job.provider(), "Media job deadline exceeded.", crate::ErrorKind::Timeout)),
-                            Some(deadline) => tokio::time::timeout_at(deadline, job.wait(cancellation.clone())).await
+                            Some(deadline) if deadline <= clock.instant() => Err(EngineAdapterRequestError::new(job.provider(), "Media job deadline exceeded.", crate::ErrorKind::Timeout)),
+                            Some(deadline) => crate::clock::timeout_at(clock.as_ref(), deadline, job.wait(cancellation.clone())).await
                                 .map_err(|_| EngineAdapterRequestError::new(job.provider(), "Media job deadline exceeded.", crate::ErrorKind::Timeout))?,
                             None => job.wait(cancellation.clone()).await,
                         }
@@ -550,8 +553,12 @@ impl MediaSubmission {
                         .with_dispatch(crate::adapter::error::DispatchState::Accepted)
                 });
                 if result.is_err() && !job.snapshot().status.is_terminal() {
-                    let cleanup =
-                        tokio::time::timeout(std::time::Duration::from_secs(5), job.cancel()).await;
+                    let cleanup = crate::clock::timeout(
+                        clock.as_ref(),
+                        std::time::Duration::from_secs(5),
+                        job.cancel(),
+                    )
+                    .await;
                     if let Err(error) = &mut result {
                         match cleanup {
                             Ok(Ok(())) => {}

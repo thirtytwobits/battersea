@@ -2,6 +2,23 @@
 
 ## Unreleased
 
+### Breaking
+
+- `ExpiryClock` is `Clock` and adds `sleep_until`. Library code takes its time and timers from the
+  host's clock: `battersea_model::clock` provides `sleep`, `timeout`, `timeout_at`,
+  `deadline_after` and `utc_now`. `ManualClock` completes timers when advanced and reports pending
+  timers to tests.
+- `ProviderRegistry::create_chat` and `create_media`, chat and media factories, and
+  `ValidatedProviderConfiguration::bind` take an `Arc<dyn Clock>`. Adapters run deadlines, retry
+  backoff, Retry-After dates, polling and idle watchdogs on it; their HTTP clients apply no timeout
+  of their own. Pass `Arc::new(SystemClock)` in production.
+- `MediaGenerationAdapter` and `MediaJob` provide `clock`. `with_stream_idle_watchdog`,
+  `run_tool_loop`, `with_estimated_generation_progress` and `MediaTimingRecorder::start` take a
+  clock.
+- `ApprovedToolExecutor::new` takes a clock, and `ToolApprovalScope::deadline` is an instant of it.
+- The OTLP `Exporter::new` takes a clock; `Exporter::validate` checks a configuration.
+  `PianolaTap::new` takes the clock that timestamps captures.
+
 ### Added
 
 - `DurableConversation` continues Anthropic Messages tool conversations after approval and

@@ -9,7 +9,7 @@ use std::sync::{
     atomic::{AtomicUsize, Ordering},
     Arc, Mutex,
 };
-use std::time::{Duration, Instant};
+use std::time::Duration;
 
 struct Policy {
     decision: ToolApprovalDecision,
@@ -57,11 +57,12 @@ fn registry(effect: Arc<Effect>, tool: clapham::Operation) -> ToolRegistry {
         .unwrap()
         .for_profile("operator")
 }
-fn scope() -> ToolApprovalScope {
+/// A scope whose deadline is five seconds after `clock`'s current instant.
+fn scope(clock: &ManualClock) -> ToolApprovalScope {
     ToolApprovalScope {
         run_id: "run-1".into(),
         binding_revision: "binding-1".into(),
-        deadline: Instant::now() + Duration::from_secs(5),
+        deadline: clock.instant() + Duration::from_secs(5),
     }
 }
 fn policy(decision: ToolApprovalDecision) -> Arc<Policy> {
@@ -87,10 +88,18 @@ fn refused(error: EngineAdapterRequestError, code: ToolCode) {
 
 #[tokio::test]
 async fn schema_and_profile_checks_precede_host_policy() {
+    let clock = ManualClock::new(0);
     let effect = Arc::new(Effect::default());
     let policy = policy(ToolApprovalDecision::Allow);
     let registry = registry(effect.clone(), tool());
-    let executor = ApprovedToolExecutor::new(registry.clone(), scope(), policy.clone(), 8).unwrap();
+    let executor = ApprovedToolExecutor::new(
+        registry.clone(),
+        scope(&clock),
+        policy.clone(),
+        8,
+        Arc::new(clock.clone()),
+    )
+    .unwrap();
     refused(
         executor
             .call(call("bad", json!("wrong")))
@@ -98,9 +107,14 @@ async fn schema_and_profile_checks_precede_host_policy() {
             .unwrap_err(),
         ToolCode::InvalidToolArguments,
     );
-    let forbidden =
-        ApprovedToolExecutor::new(registry.for_profile("forged"), scope(), policy.clone(), 8)
-            .unwrap();
+    let forbidden = ApprovedToolExecutor::new(
+        registry.for_profile("forged"),
+        scope(&clock),
+        policy.clone(),
+        8,
+        Arc::new(clock.clone()),
+    )
+    .unwrap();
     refused(
         forbidden.call(call("bad", json!(1))).await.unwrap_err(),
         ToolCode::UnregisteredTool,
@@ -111,15 +125,21 @@ async fn schema_and_profile_checks_precede_host_policy() {
 
 #[tokio::test]
 async fn denied_pending_and_expired_calls_never_dispatch() {
+    let clock = ManualClock::new(0);
     for (decision, code) in [
         (ToolApprovalDecision::Deny, ToolCode::ToolApprovalDenied),
         (ToolApprovalDecision::Pending, ToolCode::ToolApprovalPending),
     ] {
         let effect = Arc::new(Effect::default());
         let policy = policy(decision);
-        let executor =
-            ApprovedToolExecutor::new(registry(effect.clone(), tool()), scope(), policy.clone(), 8)
-                .unwrap();
+        let executor = ApprovedToolExecutor::new(
+            registry(effect.clone(), tool()),
+            scope(&clock),
+            policy.clone(),
+            8,
+            Arc::new(clock.clone()),
+        )
+        .unwrap();
         refused(
             executor.call(call("one", json!(1))).await.unwrap_err(),
             code,
@@ -133,11 +153,16 @@ async fn denied_pending_and_expired_calls_never_dispatch() {
     }
     let effect = Arc::new(Effect::default());
     let policy = policy(ToolApprovalDecision::Allow);
-    let mut expired = scope();
-    expired.deadline = Instant::now();
-    let executor =
-        ApprovedToolExecutor::new(registry(effect.clone(), tool()), expired, policy.clone(), 8)
-            .unwrap();
+    let mut expired = scope(&clock);
+    expired.deadline = clock.instant();
+    let executor = ApprovedToolExecutor::new(
+        registry(effect.clone(), tool()),
+        expired,
+        policy.clone(),
+        8,
+        Arc::new(clock.clone()),
+    )
+    .unwrap();
     refused(
         executor.call(call("one", json!(1))).await.unwrap_err(),
         ToolCode::ToolApprovalExpired,
@@ -148,11 +173,17 @@ async fn denied_pending_and_expired_calls_never_dispatch() {
 
 #[tokio::test]
 async fn concurrent_and_altered_duplicates_share_one_dispatch_reservation() {
+    let clock = ManualClock::new(0);
     let effect = Arc::new(Effect::default());
     let policy = policy(ToolApprovalDecision::Allow);
-    let executor =
-        ApprovedToolExecutor::new(registry(effect.clone(), tool()), scope(), policy.clone(), 8)
-            .unwrap();
+    let executor = ApprovedToolExecutor::new(
+        registry(effect.clone(), tool()),
+        scope(&clock),
+        policy.clone(),
+        8,
+        Arc::new(clock.clone()),
+    )
+    .unwrap();
     let clone = executor.clone();
     let (first, duplicate) = tokio::join!(
         executor.call(call("one", json!(1))),
@@ -166,11 +197,17 @@ async fn concurrent_and_altered_duplicates_share_one_dispatch_reservation() {
 
 #[tokio::test]
 async fn capacity_preserves_existing_reservations_and_distinct_calls_execute() {
+    let clock = ManualClock::new(0);
     let effect = Arc::new(Effect::default());
     let policy = policy(ToolApprovalDecision::Allow);
-    let executor =
-        ApprovedToolExecutor::new(registry(effect.clone(), tool()), scope(), policy.clone(), 2)
-            .unwrap();
+    let executor = ApprovedToolExecutor::new(
+        registry(effect.clone(), tool()),
+        scope(&clock),
+        policy.clone(),
+        2,
+        Arc::new(clock.clone()),
+    )
+    .unwrap();
     let (a, b) = tokio::join!(
         executor.call(call("one", json!(1))),
         executor.call(call("two", json!(2)))
@@ -190,10 +227,11 @@ async fn capacity_preserves_existing_reservations_and_distinct_calls_execute() {
 
 #[tokio::test]
 async fn approval_revision_binds_run_binding_record_identity_and_arguments() {
+    let clock = ManualClock::new(0);
     let effect = Arc::new(Effect::default());
     let policy = policy(ToolApprovalDecision::Deny);
     for change in 0..6 {
-        let mut scope = scope();
+        let mut scope = scope(&clock);
         let mut tool = tool();
         let mut call = call("one", json!(1));
         match change {
@@ -204,9 +242,14 @@ async fn approval_revision_binds_run_binding_record_identity_and_arguments() {
             5 => call.arguments = json!({"value":2}),
             _ => (),
         }
-        let executor =
-            ApprovedToolExecutor::new(registry(effect.clone(), tool), scope, policy.clone(), 8)
-                .unwrap();
+        let executor = ApprovedToolExecutor::new(
+            registry(effect.clone(), tool),
+            scope,
+            policy.clone(),
+            8,
+            Arc::new(clock.clone()),
+        )
+        .unwrap();
         refused(
             executor.call(call).await.unwrap_err(),
             ToolCode::ToolApprovalDenied,
@@ -224,33 +267,44 @@ async fn approval_revision_binds_run_binding_record_identity_and_arguments() {
 
 #[tokio::test]
 async fn cancelled_and_timed_out_executions_cannot_be_repeated() {
+    let clock = ManualClock::new(0);
     for timeout in [false, true] {
         let effect = Arc::new(Effect {
             wait: true,
             ..Effect::default()
         });
         let policy = policy(ToolApprovalDecision::Allow);
-        let mut scope = scope();
+        let mut scope = scope(&clock);
         if timeout {
-            scope.deadline = Instant::now() + Duration::from_millis(50);
+            scope.deadline = clock.instant() + Duration::from_millis(50);
         }
-        let executor =
-            ApprovedToolExecutor::new(registry(effect.clone(), tool()), scope, policy.clone(), 8)
-                .unwrap();
+        let executor = ApprovedToolExecutor::new(
+            registry(effect.clone(), tool()),
+            scope,
+            policy.clone(),
+            8,
+            Arc::new(clock.clone()),
+        )
+        .unwrap();
         let cloned = executor.clone();
         let task = tokio::spawn(async move { cloned.call(call("one", json!(1))).await });
+        while effect.calls.load(Ordering::SeqCst) == 0 {
+            tokio::task::yield_now().await;
+        }
         if timeout {
+            // The executing tool never returns; the deadline elapses only when advanced.
+            assert_eq!(
+                clock.timer_within(Duration::from_millis(50)).await,
+                Duration::from_millis(50)
+            );
+            clock.advance(Duration::from_millis(49));
+            tokio::task::yield_now().await;
+            assert!(!task.is_finished());
+            clock.advance(Duration::from_millis(1));
             let error = task.await.unwrap().unwrap_err();
             assert_eq!(error.classification, ErrorKind::Timeout);
             assert_eq!(error.tool_call.unwrap().outcome, ToolCallOutcome::Uncertain);
         } else {
-            tokio::time::timeout(Duration::from_secs(2), async {
-                while effect.calls.load(Ordering::SeqCst) == 0 {
-                    tokio::task::yield_now().await;
-                }
-            })
-            .await
-            .unwrap();
             task.abort();
             assert!(task.await.unwrap_err().is_cancelled());
         }
@@ -262,13 +316,20 @@ async fn cancelled_and_timed_out_executions_cannot_be_repeated() {
 
 #[tokio::test]
 async fn read_only_author_claims_cannot_override_the_host_decision() {
+    let clock = ManualClock::new(0);
     let effect = Arc::new(Effect::default());
     let policy = policy(ToolApprovalDecision::Deny);
     let mut claimed = tool();
     claimed.effect = clapham::Effect::Query;
     assert!(Tool::for_operation(&claimed).effect().read_only);
-    let executor =
-        ApprovedToolExecutor::new(registry(effect.clone(), claimed), scope(), policy, 8).unwrap();
+    let executor = ApprovedToolExecutor::new(
+        registry(effect.clone(), claimed),
+        scope(&clock),
+        policy,
+        8,
+        Arc::new(clock.clone()),
+    )
+    .unwrap();
     refused(
         executor.call(call("one", json!(1))).await.unwrap_err(),
         ToolCode::ToolApprovalDenied,
@@ -278,11 +339,14 @@ async fn read_only_author_claims_cannot_override_the_host_decision() {
 
 #[tokio::test]
 async fn approval_keeps_registry_output_validation_and_snapshot() {
+    let clock = ManualClock::new(0);
     let effect = Arc::new(Effect::default());
     let policy = policy(ToolApprovalDecision::Allow);
     let definition = support::with_output(tool(), json!({"type":"object","required":["receipt"]}));
     let registry = registry(effect.clone(), definition);
-    let executor = ApprovedToolExecutor::new(registry, scope(), policy, 8).unwrap();
+    let executor =
+        ApprovedToolExecutor::new(registry, scope(&clock), policy, 8, Arc::new(clock.clone()))
+            .unwrap();
     assert_eq!(executor.definitions().len(), 1);
     let error = executor.call(call("one", json!(1))).await.unwrap_err();
     assert_eq!(error.tool_code, Some(ToolCode::InvalidToolResult));
@@ -296,8 +360,9 @@ async fn approval_keeps_registry_output_validation_and_snapshot() {
 
 #[test]
 fn approval_scope_and_capacity_must_be_explicit_and_bounded() {
+    let clock = ManualClock::new(0);
     for case in 0..4 {
-        let mut scope = scope();
+        let mut scope = scope(&clock);
         let capacity = match case {
             0 => 0,
             1 => 65537,
@@ -315,6 +380,7 @@ fn approval_scope_and_capacity_must_be_explicit_and_bounded() {
             scope,
             policy(ToolApprovalDecision::Allow),
             capacity,
+            Arc::new(clock.clone()),
         );
         assert_eq!(
             result.err().unwrap().tool_code,

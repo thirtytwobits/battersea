@@ -22,6 +22,8 @@ pub(crate) struct RemoteUpdate {
 pub(crate) trait JobTransport: Send + Sync {
     fn provider(&self) -> &str;
     fn backend(&self) -> &MediaBackendConfig;
+    /// The adapter's clock; it judges output expiry, provider delays and cleanup deadlines.
+    fn clock(&self) -> Arc<dyn battersea_model::Clock>;
     fn decode(
         &self,
         raw: Value,
@@ -268,9 +270,6 @@ impl RemoteJob {
         }
         let client = reqwest::Client::builder()
             .redirect(reqwest::redirect::Policy::none())
-            .timeout(Duration::from_millis(
-                self.transport.backend().options.timeout_ms.unwrap(),
-            ))
             .build()
             .map_err(|error| self.error(ErrorKind::Retrieval, error.to_string()))?;
         let mut remaining = self
@@ -287,7 +286,7 @@ impl RemoteJob {
             if self
                 .snapshot
                 .output_expires_at
-                .is_some_and(|at| at <= Utc::now())
+                .is_some_and(|at| at <= utc_now(self.transport.clock().as_ref()))
             {
                 return Err(self.error(
                     ErrorKind::Expired,
@@ -420,7 +419,7 @@ impl RemoteJob {
         if self
             .snapshot
             .output_expires_at
-            .is_some_and(|at| at <= Utc::now())
+            .is_some_and(|at| at <= utc_now(self.transport.clock().as_ref()))
         {
             return Err(self.error(
                 ErrorKind::Expired,
@@ -444,6 +443,9 @@ impl RemoteJob {
 impl MediaJob for RemoteJob {
     fn provider(&self) -> &str {
         self.transport.provider()
+    }
+    fn clock(&self) -> Arc<dyn battersea_model::Clock> {
+        self.transport.clock()
     }
     fn id(&self) -> &str {
         &self.snapshot.id
@@ -525,7 +527,8 @@ impl Drop for RemoteJob {
             let transport = self.transport.clone();
             let id = self.snapshot.id.clone();
             runtime.spawn(async move {
-                if !matches!(tokio::time::timeout(Duration::from_secs(5), transport.cancel(&id)).await, Ok(Ok(MediaJobStatus::Cancelled))) {
+                let clock = transport.clock();
+                if !matches!(battersea_model::clock::timeout(clock.as_ref(), Duration::from_secs(5), transport.cancel(&id)).await, Ok(Ok(MediaJobStatus::Cancelled))) {
                     tracing::warn!(provider = transport.provider(), job_id = %id, "Dropped media job cancellation was not confirmed");
                 }
             });
@@ -546,9 +549,11 @@ pub(crate) fn validate_id(provider: &str, id: &str) -> Result<(), EngineAdapterR
     }
     Ok(())
 }
+/// Decodes a job operation response. `clock` measures a Retry-After date.
 pub(crate) async fn json_response(
     provider: &str,
     response: reqwest::Response,
+    clock: &dyn battersea_model::Clock,
 ) -> Result<Value, EngineAdapterRequestError> {
     use crate::http_payload::BoundedResponse as _;
     let status = response.status();
@@ -578,7 +583,7 @@ pub(crate) async fn json_response(
                         .or_else(|| {
                             DateTime::parse_from_rfc2822(value).ok().map(|at| {
                                 at.timestamp_millis()
-                                    .saturating_sub(Utc::now().timestamp_millis())
+                                    .saturating_sub(utc_now(clock).timestamp_millis())
                                     .max(0) as u64
                             })
                         })

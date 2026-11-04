@@ -11,6 +11,7 @@ use sha2::Sha256;
 #[derive(Clone)]
 pub(crate) struct Replicate {
     backend: MediaBackendConfig,
+    clock: Arc<dyn battersea_model::Clock>,
     client: reqwest::Client,
     base: reqwest::Url,
     kind: MediaKind,
@@ -20,6 +21,7 @@ fn invalid(message: impl Into<String>) -> EngineAdapterRequestError {
 }
 pub(crate) fn create(
     backend: MediaBackendConfig,
+    clock: Arc<dyn battersea_model::Clock>,
 ) -> Result<Arc<dyn MediaGenerationAdapter>, EngineAdapterRequestError> {
     poll_policy(&backend)?;
     let base = reqwest::Url::parse(&backend.endpoint)
@@ -53,11 +55,11 @@ pub(crate) fn create(
     let client = reqwest::Client::builder()
         .retry(reqwest::retry::never())
         .redirect(reqwest::redirect::Policy::none())
-        .timeout(Duration::from_millis(backend.options.timeout_ms.unwrap()))
         .build()
         .map_err(|error| invalid(error.to_string()))?;
     Ok(Arc::new(Replicate {
         backend,
+        clock,
         client,
         base,
         kind,
@@ -303,6 +305,9 @@ impl MediaGenerationAdapter for Replicate {
     fn backend(&self) -> &MediaBackendConfig {
         &self.backend
     }
+    fn clock(&self) -> Arc<dyn battersea_model::Clock> {
+        self.clock.clone()
+    }
     fn prepare(
         &self,
         request: MediaRenderRequest,
@@ -316,7 +321,7 @@ impl MediaGenerationAdapter for Replicate {
         reporter: Option<Arc<dyn MediaGenerationActivityReporter>>,
         _batches: Option<Arc<dyn MediaGenerationBatchReporter>>,
     ) -> Result<MediaSubmission, EngineAdapterRequestError> {
-        let timing = MediaTimingRecorder::start();
+        let timing = MediaTimingRecorder::start(self.clock.clone());
         let work = async {
             let response = self
                 .request(reqwest::Method::POST, &prepared.path)
@@ -331,7 +336,7 @@ impl MediaGenerationAdapter for Replicate {
                             DispatchState::Unknown
                         })
                 })?;
-            let raw = json_response("replicate", response).await?;
+            let raw = json_response("replicate", response, self.clock.as_ref()).await?;
             let job = RemoteJob::new(
                 Arc::new(self.clone()),
                 raw,
@@ -367,6 +372,9 @@ impl JobTransport for Replicate {
     fn backend(&self) -> &MediaBackendConfig {
         &self.backend
     }
+    fn clock(&self) -> Arc<dyn battersea_model::Clock> {
+        self.clock.clone()
+    }
     fn decode(
         &self,
         raw: Value,
@@ -380,7 +388,7 @@ impl JobTransport for Replicate {
             .send()
             .await
             .map_err(|e| EngineAdapterRequestError::transport("replicate", e.to_string()))?;
-        self.decode(json_response("replicate", response).await?)
+        self.decode(json_response("replicate", response, self.clock.as_ref()).await?)
     }
     async fn cancel(&self, id: &str) -> Result<MediaJobStatus, EngineAdapterRequestError> {
         let response = self
@@ -388,7 +396,8 @@ impl JobTransport for Replicate {
             .send()
             .await
             .map_err(|e| EngineAdapterRequestError::transport("replicate", e.to_string()))?;
-        let update = self.decode(json_response("replicate", response).await?)?;
+        let update =
+            self.decode(json_response("replicate", response, self.clock.as_ref()).await?)?;
         if update.id != id {
             return Err(EngineAdapterRequestError::invalid_response(
                 "replicate",

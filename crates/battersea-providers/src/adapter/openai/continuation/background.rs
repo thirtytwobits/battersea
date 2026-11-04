@@ -173,9 +173,10 @@ impl OpenAiEngineAdapter {
                 let http = if matches!(command, ConversationCommand::Cancel { .. }) {
                     self.http_client.post(format!("{url}/cancel"))
                 } else {
-                    tokio::time::sleep(std::time::Duration::from_millis(
-                        self.background_poll_interval_ms,
-                    ))
+                    battersea_model::clock::sleep(
+                        self.clock.as_ref(),
+                        std::time::Duration::from_millis(self.background_poll_interval_ms),
+                    )
                     .await;
                     self.retrieve_durable_response(&request, &id)
                 };
@@ -190,7 +191,13 @@ impl OpenAiEngineAdapter {
                 (http.headers(headers), Some(pending))
             }
         };
-        let sent = crate::retry::send(http, &self.backend, self.logger.as_ref()).await;
+        let sent = crate::retry::send(
+            http,
+            &self.backend,
+            self.logger.as_ref(),
+            self.clock.as_ref(),
+        )
+        .await;
         let response: Value = match sent {
             Ok(response) => response
                 .bounded_json()
@@ -211,6 +218,7 @@ impl OpenAiEngineAdapter {
                         .headers(build_openai_headers(&self.backend)?),
                     &self.backend,
                     self.logger.as_ref(),
+                    self.clock.as_ref(),
                 )
                 .await?
                 .bounded_json()

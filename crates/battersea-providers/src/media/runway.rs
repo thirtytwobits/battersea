@@ -17,6 +17,7 @@ use tokio_util::sync::CancellationToken;
 /// validating auth and version headers during construction.
 pub(crate) fn create_runway_media_generator(
     backend: MediaBackendConfig,
+    clock: Arc<dyn battersea_model::Clock>,
 ) -> Result<Arc<dyn MediaGenerationAdapter>, EngineAdapterRequestError> {
     super::jobs::poll_policy(&backend)?;
     let timeout_ms = require_timeout_ms(&backend)?;
@@ -35,12 +36,12 @@ pub(crate) fn create_runway_media_generator(
     let client = reqwest::Client::builder()
         .retry(reqwest::retry::never())
         .redirect(reqwest::redirect::Policy::none())
-        .timeout(std::time::Duration::from_millis(timeout_ms))
         .default_headers(build_headers(&backend)?)
         .build()
         .map_err(|error| EngineAdapterRequestError::transport("runway", error.to_string()))?;
     Ok(Arc::new(RunwayMediaGenerator {
         client,
+        clock,
         base_url: crate::connection::base(backend.binding.as_ref(), || {
             derive_base_url(&backend.endpoint)
         }),
@@ -51,6 +52,7 @@ pub(crate) fn create_runway_media_generator(
 #[derive(Clone)]
 struct RunwayMediaGenerator {
     client: reqwest::Client,
+    clock: Arc<dyn battersea_model::Clock>,
     base_url: String,
     backend: MediaBackendConfig,
 }
@@ -92,6 +94,9 @@ impl MediaGenerationAdapter for RunwayMediaGenerator {
     fn backend(&self) -> &MediaBackendConfig {
         &self.backend
     }
+    fn clock(&self) -> Arc<dyn battersea_model::Clock> {
+        self.clock.clone()
+    }
 
     fn prepare(
         &self,
@@ -128,9 +133,8 @@ impl MediaGenerationAdapter for RunwayMediaGenerator {
 
         let submit_body = prepared.body;
         let submit_path = prepared.path;
-        let mut timing = MediaTimingRecorder::start();
-        let submit_started_at = chrono::Utc::now();
-        let submit_started_instant = std::time::Instant::now();
+        let mut timing = MediaTimingRecorder::start(self.clock.clone());
+        let (submit_started_at, submit_started_instant) = timing.now();
         let submit = crate::connection::authenticate(
             self.client
                 .post(format!("{}/{}", self.base_url, submit_path)),
@@ -587,12 +591,16 @@ impl super::jobs::JobTransport for RunwayTransport {
     fn backend(&self) -> &MediaBackendConfig {
         &self.adapter.backend
     }
+    fn clock(&self) -> Arc<dyn battersea_model::Clock> {
+        self.adapter.clock.clone()
+    }
     fn decode(
         &self,
         raw: Value,
         submission: bool,
     ) -> Result<super::jobs::RemoteUpdate, EngineAdapterRequestError> {
-        decode_task(raw, self.kind.clone(), submission)
+        let now = battersea_model::clock::utc_now(self.adapter.clock.as_ref());
+        decode_task(raw, self.kind.clone(), submission, now)
     }
     async fn poll(&self, id: &str) -> Result<super::jobs::RemoteUpdate, EngineAdapterRequestError> {
         let response = crate::connection::authenticate(
@@ -606,9 +614,10 @@ impl super::jobs::JobTransport for RunwayTransport {
         .await
         .map_err(|e| EngineAdapterRequestError::transport("runway", e.to_string()))?;
         decode_task(
-            super::jobs::json_response("runway", response).await?,
+            super::jobs::json_response("runway", response, self.adapter.clock.as_ref()).await?,
             self.kind.clone(),
             false,
+            battersea_model::clock::utc_now(self.adapter.clock.as_ref()),
         )
     }
     async fn cancel(&self, id: &str) -> Result<super::MediaJobStatus, EngineAdapterRequestError> {
@@ -616,10 +625,12 @@ impl super::jobs::JobTransport for RunwayTransport {
         Ok(super::MediaJobStatus::Cancelled)
     }
 }
+/// Decodes a Runway task. A succeeded task's outputs are estimated to expire a day after `now`.
 fn decode_task(
     raw: Value,
     kind: MediaKind,
     submission: bool,
+    now: chrono::DateTime<chrono::Utc>,
 ) -> Result<super::jobs::RemoteUpdate, EngineAdapterRequestError> {
     use super::MediaJobStatus as Status;
     let bad = |message| EngineAdapterRequestError::invalid_response("runway", message);
@@ -667,8 +678,7 @@ fn decode_task(
         id,
         status,
         assets,
-        expires_at: (status == Status::Succeeded)
-            .then(|| chrono::Utc::now() + chrono::Duration::hours(24)),
+        expires_at: (status == Status::Succeeded).then(|| now + chrono::Duration::hours(24)),
         expiry_is_estimate: true,
         failure: raw["failure"]
             .as_str()
@@ -816,11 +826,11 @@ mod tests {
     fn constructor_derives_trimmed_base_url_and_rejects_invalid_headers() {
         let mut backend = sample_backend();
         backend.endpoint = "https://api.runwayml.com/v1/tasks".to_string();
-        assert!(create_runway_media_generator(backend).is_ok());
+        assert!(create_runway_media_generator(backend, crate::test_clock()).is_ok());
 
         let mut invalid = sample_backend();
         invalid.auth.version_header = Some("bad header".to_string());
-        let error = match create_runway_media_generator(invalid) {
+        let error = match create_runway_media_generator(invalid, crate::test_clock()) {
             Ok(_) => panic!("invalid header should fail"),
             Err(error) => error,
         };
