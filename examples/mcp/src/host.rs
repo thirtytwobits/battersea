@@ -143,6 +143,13 @@ pub fn background_responses_provider(
     configured_provider(endpoint, "openai-responses", stream, true, logger)
 }
 
+pub fn anthropic_provider(
+    endpoint: &str,
+    logger: Option<Arc<dyn EngineAdapterLogger>>,
+) -> Result<(Arc<dyn EngineAdapter>, EngineChatParameters)> {
+    configured_provider(endpoint, "anthropic-messages", true, false, logger)
+}
+
 fn configured_provider(
     endpoint: &str,
     adapter: &str,
@@ -161,10 +168,14 @@ fn configured_provider(
     if background {
         options.as_object_mut().unwrap().extend(serde_json::json!({"background":true,"backgroundMode":"poll","backgroundPollIntervalMs":1,"backgroundMaxWaitMs":5000}).as_object().unwrap().clone());
     }
+    let mut binding = serde_json::json!({"adapter":adapter,"baseUrl":format!("{endpoint}/v1/"),"auth":{"type":"none"}});
+    if adapter == "anthropic-messages" {
+        binding["headers"] = serde_json::json!({"anthropic-version":"2023-06-01"});
+    }
     let config: battersea_config::ProviderConfiguration = serde_json::from_value(
         serde_json::json!({
             "version":1,
-            "providers":{"controlled":{"chat":{"adapter":adapter,"baseUrl":format!("{endpoint}/v1/"),"auth":{"type":"none"}}}},
+            "providers":{"controlled":{"chat":binding}},
             "backends":{"chat":{"provider":"controlled","model":"fixture","contextWindowTokens":8192,"capabilities":capabilities,
                 "properties":{"stream":stream,"maxOutputTokens":1024,"temperature":0.7,"stopSequences":[],"toolExecution":"engine-orchestrated","maxToolRounds":2,"toolChoice":{"mode":"auto"},"contextOverflow":"error"},
                 "options":options}}

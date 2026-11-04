@@ -26,6 +26,40 @@ enum Transport {
 }
 const TRANSPORTS: [Transport; 3] = [Transport::Stdio, Transport::Json, Transport::Sse];
 
+/// Provider protocol served by the controlled provider fixture.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum Api {
+    Completions,
+    Responses,
+    Anthropic,
+}
+impl Api {
+    async fn serve(self, fixture: Arc<ProviderFixture>) -> Result<HttpServer> {
+        match self {
+            Api::Completions => fixture::provider_http(fixture).await,
+            Api::Responses => fixture::responses_http(fixture).await,
+            Api::Anthropic => fixture::anthropic_http(fixture).await,
+        }
+    }
+    fn connect(
+        self,
+        endpoint: &str,
+        logger: Option<Arc<dyn battersea_model::EngineAdapterLogger>>,
+    ) -> Result<(
+        Arc<dyn EngineAdapter>,
+        battersea_model::engine::EngineChatParameters,
+    )> {
+        match (self, logger) {
+            (Api::Completions, _) => host::provider(endpoint),
+            (Api::Responses, Some(logger)) => {
+                host::responses_provider_with_logger(endpoint, logger)
+            }
+            (Api::Responses, None) => host::responses_provider(endpoint),
+            (Api::Anthropic, logger) => host::anthropic_provider(endpoint, logger),
+        }
+    }
+}
+
 struct HostPolicy {
     decision: ToolApprovalDecision,
     binding_revision: String,
@@ -683,32 +717,32 @@ async fn durable_provider_continuation_reopens_both_journals_and_retries_the_sav
             self.responses.lock().unwrap().push(entry);
         }
     }
-    for (transport, streaming, responses, background) in TRANSPORTS.into_iter().flat_map(|t| {
+    for (transport, streaming, api, background) in TRANSPORTS.into_iter().flat_map(|t| {
         [
-            (false, false, false),
-            (true, false, false),
-            (true, true, false),
-            (true, true, true),
-            (false, true, true),
+            (false, Api::Completions, false),
+            (true, Api::Completions, false),
+            (true, Api::Responses, false),
+            (true, Api::Responses, true),
+            (false, Api::Responses, true),
+            (true, Api::Anthropic, false),
         ]
-        .map(|(s, r, b)| (t, s, r, b))
+        .map(|(s, a, b)| (t, s, a, b))
     }) {
+        let responses = api == Api::Responses;
         let (directory, ledger) = temporary_ledger();
         let remote = Remote::start(transport, &ledger, Fault::None, Duration::from_secs(10))
             .await
             .unwrap();
         let (binding, tools) = host::bind(&remote.connection).await.unwrap();
         let mut fixture = ProviderFixture::new(json!({"value":1}), true);
-        if responses {
+        if api != Api::Completions {
             Arc::get_mut(&mut fixture).unwrap().final_text = "  Résultat reçu ✓  ".into();
         }
         let jobs = mcp_example::background_fixture::BackgroundFixture::new(fixture.clone());
         let provider = if background {
             mcp_example::background_fixture::serve(jobs.clone()).await
-        } else if responses {
-            fixture::responses_http(fixture.clone()).await
         } else {
-            fixture::provider_http(fixture.clone()).await
+            api.serve(fixture.clone()).await
         }
         .unwrap();
         let logs = Arc::new(Logs::default());
@@ -719,10 +753,11 @@ async fn durable_provider_continuation_reopens_both_journals_and_retries_the_sav
                     streaming,
                     Some(logs.clone()),
                 )
-            } else if responses {
-                host::responses_provider_with_logger(&provider.endpoint, logs.clone())
             } else {
-                host::provider(&provider.endpoint)
+                api.connect(
+                    &provider.endpoint,
+                    (api != Api::Completions).then(|| logs.clone() as Arc<dyn EngineAdapterLogger>),
+                )
             }
         };
         let (adapter, chat) = connect().unwrap();
@@ -932,6 +967,17 @@ async fn durable_provider_continuation_reopens_both_journals_and_retries_the_sav
                     .unwrap()
                     .contains(&json!("reasoning.encrypted_content")));
                 assert!(requests[1].get("previous_response_id").is_none());
+            } else if api == Api::Anthropic {
+                // Signed, redacted and opaque native content returns unchanged.
+                let messages = &requests[1]["messages"];
+                assert_eq!(messages[1]["content"][0]["signature"], "retained-signature");
+                assert_eq!(messages[1]["content"][1]["data"], "opaque-redacted");
+                assert_eq!(messages[1]["content"][2]["vendor"]["keep"], true);
+                assert_eq!(messages[2]["content"][0]["type"], "tool_result");
+                assert_eq!(messages[2]["content"][0]["tool_use_id"], "effect-1");
+                assert_eq!(messages[2]["content"][0]["is_error"], false);
+                assert!(requests[1].get("stream").is_none());
+                assert!(!requests[1]["tools"].to_string().contains("forged"));
             } else {
                 assert_eq!(
                     requests[1]["messages"][1]["tool_calls"][0]["id"],
@@ -976,7 +1022,7 @@ async fn durable_provider_continuation_reopens_both_journals_and_retries_the_sav
         assert_eq!(gate.inspect().await.unwrap().revision, 5);
         assert_eq!(fixture.requests.lock().unwrap().len(), 3);
         assert_eq!(fixture::effect_count(&ledger).unwrap(), 1);
-        if responses {
+        if api != Api::Completions {
             // Reopening and retrying a rejected HTTP request do not duplicate completed logs.
             let requests = logs.requests.lock().unwrap();
             let responses = logs.responses.lock().unwrap();
@@ -993,7 +1039,10 @@ async fn durable_provider_continuation_reopens_both_journals_and_retries_the_sav
                 assert_eq!(response.operation, requests[index].operation);
                 assert_eq!(response.status, 200);
                 assert!(response.detail.ok);
-                assert_eq!(response.detail.streaming, Some(!background));
+                assert_eq!(
+                    response.detail.streaming,
+                    Some(api == Api::Responses && !background)
+                );
                 assert_eq!(
                     response.detail.response_id.as_deref(),
                     native["id"].as_str()
@@ -1027,7 +1076,7 @@ async fn interrupted_or_invalid_provider_continuations_keep_the_tool_result_and_
     };
     use mcp_example::conversation_journal::FileConversationStore;
     use std::sync::atomic::Ordering;
-    for (responses, failure) in [false, true]
+    for (api, failure) in [Api::Completions, Api::Responses, Api::Anthropic]
         .into_iter()
         .flat_map(|r| (0..3).map(move |f| (r, f)))
     {
@@ -1048,19 +1097,8 @@ async fn interrupted_or_invalid_provider_continuations_keep_the_tool_result_and_
         fixture
             .hang_continuation
             .store(failure == 1, Ordering::SeqCst);
-        let provider = if responses {
-            fixture::responses_http(fixture.clone()).await
-        } else {
-            fixture::provider_http(fixture.clone()).await
-        }
-        .unwrap();
-        let connect = |endpoint: &str| {
-            if responses {
-                host::responses_provider(endpoint)
-            } else {
-                host::provider(endpoint)
-            }
-        };
+        let provider = api.serve(fixture.clone()).await.unwrap();
+        let connect = |endpoint: &str| api.connect(endpoint, None);
         let (adapter, chat) = connect(&provider.endpoint).unwrap();
         let original = host::request(&tools, "operator", chat);
         let mut request = ConversationRequest {
@@ -1069,7 +1107,14 @@ async fn interrupted_or_invalid_provider_continuations_keep_the_tool_result_and_
             max_turns: 2,
         };
         if failure == 2 {
-            request.shared.chat.response_format = Some(battersea_model::ResponseFormat::JsonObject);
+            request.shared.chat.response_format = Some(if api == Api::Anthropic {
+                battersea_model::ResponseFormat::JsonSchema {
+                    name: "receipt".into(),
+                    schema: json!({"type":"object"}),
+                }
+            } else {
+                battersea_model::ResponseFormat::JsonObject
+            });
         }
         let scope = ConversationScope {
             run_id: "failed-continuation".into(),
@@ -1208,10 +1253,19 @@ async fn reconciled_and_reopened_calls_must_match_the_provider_transcript() {
             self.inner.compare_exchange(run, expected, next).await
         }
     }
-    for (responses, streaming, schema) in [(false, false), (false, true), (true, true)]
-        .into_iter()
-        .flat_map(|(r, s)| [false, true].map(move |f| (r, s, f)))
+    for (api, streaming, schema) in [
+        (Api::Completions, false),
+        (Api::Completions, true),
+        (Api::Responses, true),
+        (Api::Anthropic, true),
+    ]
+    .into_iter()
+    .flat_map(|(r, s)| [false, true].map(move |f| (r, s, f)))
+    // Anthropic structured output admits JSON Schema only.
+    .filter(|&(api, _, schema)| schema || api != Api::Anthropic)
     {
+        let responses = api == Api::Responses;
+        let anthropic = api == Api::Anthropic;
         let (directory, ledger) = temporary_ledger();
         let remote = Remote::start(
             Transport::Json,
@@ -1224,18 +1278,8 @@ async fn reconciled_and_reopened_calls_must_match_the_provider_transcript() {
         let (binding, tools) = host::bind(&remote.connection).await.unwrap();
         let mut fixture = ProviderFixture::new(json!({"value":1}), false);
         Arc::get_mut(&mut fixture).unwrap().final_text = r#"{"received":true}"#.into();
-        let provider = if responses {
-            fixture::responses_http(fixture.clone()).await
-        } else {
-            fixture::provider_http(fixture.clone()).await
-        }
-        .unwrap();
-        let (adapter, chat) = if responses {
-            host::responses_provider(&provider.endpoint)
-        } else {
-            host::provider(&provider.endpoint)
-        }
-        .unwrap();
+        let provider = api.serve(fixture.clone()).await.unwrap();
+        let (adapter, chat) = api.connect(&provider.endpoint, None).unwrap();
         let mut original = host::request(&tools, "operator", chat);
         original.shared.chat.stream = streaming;
         original.shared.chat.response_format = Some(if schema {
@@ -1308,6 +1352,7 @@ async fn reconciled_and_reopened_calls_must_match_the_provider_transcript() {
                         }
                     }
                 }
+                _ if anthropic => changed.state["response"]["stop_reason"] = json!("max_tokens"),
                 _ if responses => {
                     changed.state["response"]["output"][0]["status"] = json!("incomplete");
                 }
@@ -1395,9 +1440,15 @@ async fn reconciled_and_reopened_calls_must_match_the_provider_transcript() {
         assert!(conversation.resume(4).await.is_err());
         let retained = store.retained.lock().unwrap().clone().unwrap();
         let final_turn = retained.turns[1].response.clone();
-        for mutation in 0..if responses { 24 } else { 13 } {
+        let mutations = match api {
+            Api::Completions => 13,
+            Api::Responses => 24,
+            Api::Anthropic => 22,
+        };
+        for mutation in 0..mutations {
             let mut changed = final_turn.clone();
             match mutation {
+                4..=6 | 11.. if anthropic => anthropic_final_turn_mutation(mutation, &mut changed),
                 0 => {
                     // Both display projections agree with each other but differ from native evidence.
                     for event in &mut changed.events {
@@ -1898,4 +1949,283 @@ async fn cancellation_recovers_a_matching_terminal_response_after_rejection() {
         );
         assert_eq!(fixture.provider.requests.lock().unwrap().len(), 1);
     }
+}
+
+/// Alter Anthropic evidence that the shared mutations do not reach.
+fn anthropic_final_turn_mutation(mutation: usize, turn: &mut battersea_model::ConversationTurn) {
+    let state = &mut turn.state;
+    match mutation {
+        4 => state["messages"][2]["content"][0]["content"] = json!("different result"),
+        5 => state["messages"][1]["content"][0]["signature"] = json!("different signature"),
+        6 => {
+            state["messages"].as_array_mut().unwrap().remove(1);
+        }
+        11 => state["response"]["stop_reason"] = json!("refusal"),
+        12 => state["response"]["stop_reason"] = json!("max_tokens"),
+        13 => state["response"]["content"][0]["type"] = json!("server_tool_use"),
+        14 => {
+            state["response"].as_object_mut().unwrap().remove("id");
+        }
+        15 => state["response"]["usage"]["input_tokens"] = json!(-1),
+        16 => state["request_revision"] = json!("different"),
+        17 => state["binding"]["configuration_revision"] = json!("different"),
+        18 => turn.events.insert(
+            1,
+            EngineTextStreamEvent::ReasoningDelta {
+                text: "invented".into(),
+            },
+        ),
+        19 => {
+            state["messages"][0] =
+                json!({"role":"user","content":[{"type":"text","text":"different request"}]})
+        }
+        20 => state["messages"][1]["content"][2]["vendor"] = json!({"keep":false}),
+        _ => state["messages"][2]["content"][0]["is_error"] = json!(true),
+    }
+}
+
+#[tokio::test]
+async fn anthropic_turns_admit_complete_native_evidence_and_whole_call_batches() {
+    use battersea_model::{
+        engine::EngineContextOverflow, ConversationPhase, ConversationRequest, ConversationScope,
+        ConversationToolResult, DurableConversation, EngineLocalToolExecutor,
+    };
+    use mcp_example::conversation_journal::FileConversationStore;
+
+    let (_ledger_directory, ledger) = temporary_ledger();
+    let remote = Remote::start(
+        Transport::Json,
+        &ledger,
+        Fault::None,
+        Duration::from_secs(10),
+    )
+    .await
+    .unwrap();
+    let (binding, tools) = host::bind(&remote.connection).await.unwrap();
+    let call = |id: &str, value: u64| json!({"type":"tool_use","id":id,"name":"remote_write","input":{"value":value}});
+    let conversation = |first_message: Option<Value>| {
+        let tools = &tools;
+        let binding = &binding;
+        async move {
+            let directory = tempfile::tempdir().unwrap();
+            let mut fixture = ProviderFixture::new(json!({"value":1}), false);
+            Arc::get_mut(&mut fixture).unwrap().first_message = first_message;
+            let provider = Api::Anthropic.serve(fixture.clone()).await.unwrap();
+            let (adapter, chat) = Api::Anthropic.connect(&provider.endpoint, None).unwrap();
+            let original = host::request(tools, "operator", chat);
+            let request = ConversationRequest {
+                shared: original.shared,
+                tools: original.local_tools,
+                max_turns: 2,
+            };
+            let scope = ConversationScope {
+                run_id: "anthropic-evidence".into(),
+                tool_binding_revision: binding.revision().into(),
+                expires_at_unix_ms: START_MS + 4000,
+            };
+            (directory, fixture, provider, adapter, request, scope)
+        }
+    };
+    let open = |directory: &Path,
+                adapter: Arc<dyn EngineAdapter>,
+                scope: &ConversationScope,
+                request: &ConversationRequest,
+                create: bool| {
+        let store = Arc::new(FileConversationStore::new(directory.into()));
+        let (scope, request) = (scope.clone(), request.clone());
+        async move {
+            if create {
+                DurableConversation::create(
+                    store,
+                    adapter,
+                    scope,
+                    request,
+                    65536,
+                    Duration::from_secs(1),
+                    clock(),
+                )
+                .await
+            } else {
+                DurableConversation::open(
+                    store,
+                    adapter,
+                    scope,
+                    request,
+                    65536,
+                    Duration::from_secs(1),
+                    clock(),
+                )
+                .await
+            }
+        }
+    };
+
+    // Unsupported requests and malformed retained state fail before provider I/O.
+    let (_directory, fixture, _provider, adapter, request, _) = conversation(None).await;
+    let mut unbounded = request.clone();
+    unbounded.shared.chat.max_output_tokens = None;
+    let mut truncating = request.clone();
+    truncating.shared.chat.context_overflow = EngineContextOverflow::ProviderTruncate;
+    for request in [unbounded, truncating] {
+        assert!(adapter.validate_conversation(&request, None).is_err());
+        assert!(adapter
+            .conversation_turn(request, None, vec![])
+            .await
+            .is_err());
+    }
+    for state in [
+        json!({"version":1}),
+        json!([]),
+        json!({"version":2,"binding":{},"request_revision":"","messages":[],"response":{}}),
+    ] {
+        assert!(adapter
+            .validate_conversation(&request, Some(&state))
+            .is_err());
+    }
+    assert!(fixture.requests.lock().unwrap().is_empty());
+
+    // Partial, refused, malformed or oversized turns never become executable tool batches.
+    let refused = [
+        json!({"stop_reason":"max_tokens","content":[call("effect-1",1)]}),
+        json!({"stop_reason":"refusal","content":[{"type":"text","text":"Declined"}]}),
+        json!({"stop_reason":"pause_turn","content":[call("effect-1",1)]}),
+        json!({"stop_reason":"end_turn","content":[call("effect-1",1)]}),
+        json!({"stop_reason":"tool_use","content":[{"type":"text","text":"No call"}]}),
+        json!({"stop_reason":"tool_use","content":[{"type":"server_tool_use","id":"server-1","name":"web_search","input":{}},call("effect-1",1)]}),
+        json!({"stop_reason":"tool_use","content":[{"type":"thinking","thinking":"Unsigned"},call("effect-1",1)]}),
+        json!({"stop_reason":"tool_use","content":[{"type":"tool_use","id":"effect-1","name":"remote_write","input":"{\"value\":1}"}]}),
+        json!({"stop_reason":"tool_use","content":[call("effect-1",1),call("effect-1",2)]}),
+        json!({"stop_reason":"tool_use","content":[{"type":"tool_use","id":"effect-1","name":"unoffered","input":{}}]}),
+        json!({"stop_reason":"end_turn","content":[]}),
+        json!({"stop_reason":"end_turn","content":[{"type":"text","text":"  "}]}),
+        json!({"stop_reason":"tool_use","content":[{"type":"thinking","thinking":"x".repeat(70 * 1024),"signature":"large"},call("effect-1",1)]}),
+    ];
+    for (index, message) in refused.into_iter().enumerate() {
+        let (directory, fixture, _provider, adapter, request, scope) =
+            conversation(Some(message)).await;
+        let durable = open(directory.path(), adapter, &scope, &request, true)
+            .await
+            .unwrap();
+        assert!(durable.resume(1).await.is_err(), "message {index}");
+        let unchanged = durable.inspect().await.unwrap();
+        assert_eq!(
+            unchanged.phase,
+            ConversationPhase::ProviderIntent,
+            "message {index}"
+        );
+        assert!(unchanged.turns.is_empty(), "message {index}");
+        assert_eq!(fixture.requests.lock().unwrap().len(), 1, "message {index}");
+    }
+    assert_eq!(fixture::effect_count(&ledger).unwrap(), 0);
+
+    // A parallel batch continues only once every ordered result is retained.
+    let (directory, fixture, provider, adapter, request, scope) = conversation(Some(json!({
+        "stop_reason":"tool_use",
+        "content":[{"type":"thinking","thinking":"Two effects","signature":"batch-signature"},call("effect-1",1),call("effect-2",2)]
+    })))
+    .await;
+    let durable = open(directory.path(), adapter, &scope, &request, true)
+        .await
+        .unwrap();
+    let pending = durable.resume(1).await.unwrap();
+    assert_eq!(pending.phase, ConversationPhase::AwaitingTools);
+    let calls = pending.turns[0].response.calls.clone();
+    assert_eq!(
+        calls.iter().map(|c| c.id.as_str()).collect::<Vec<_>>(),
+        ["effect-1", "effect-2"]
+    );
+    let executor = tools.for_profile("operator");
+    let first = executor.call(calls[0].clone()).await.unwrap();
+    let partial = durable
+        .record_tool_result(
+            pending.revision,
+            ConversationToolResult {
+                call: calls[0].clone(),
+                result: first,
+            },
+        )
+        .await
+        .unwrap();
+    assert_eq!(
+        durable
+            .resume(partial.revision)
+            .await
+            .unwrap_err()
+            .tool_code,
+        Some(ToolCode::ToolApprovalPending)
+    );
+    assert_eq!(fixture.requests.lock().unwrap().len(), 1);
+    drop(durable);
+
+    std::fs::write(directory.path().join("conversation.json"), b"{corrupt").unwrap();
+    let (adapter, _) = Api::Anthropic.connect(&provider.endpoint, None).unwrap();
+    assert!(open(directory.path(), adapter, &scope, &request, false)
+        .await
+        .is_err());
+    std::fs::write(
+        directory.path().join("conversation.json"),
+        serde_json::to_vec(&partial).unwrap(),
+    )
+    .unwrap();
+
+    let (adapter, _) = Api::Anthropic.connect(&provider.endpoint, None).unwrap();
+    let durable = open(directory.path(), adapter, &scope, &request, false)
+        .await
+        .unwrap();
+    let second = executor.call(calls[1].clone()).await.unwrap();
+    let ready = durable
+        .record_tool_result(
+            partial.revision,
+            ConversationToolResult {
+                call: calls[1].clone(),
+                result: second,
+            },
+        )
+        .await
+        .unwrap();
+    let completed = durable.resume(ready.revision).await.unwrap();
+    assert_eq!(completed.phase, ConversationPhase::Completed);
+    {
+        let requests = fixture.requests.lock().unwrap();
+        assert_eq!(requests.len(), 2);
+        let messages = &requests[1]["messages"];
+        assert_eq!(messages[1]["content"][0]["signature"], "batch-signature");
+        assert_eq!(
+            messages[2]["content"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .map(|result| result["tool_use_id"].as_str().unwrap())
+                .collect::<Vec<_>>(),
+            ["effect-1", "effect-2"]
+        );
+        assert_eq!(fixture::effect_count(&ledger).unwrap(), 2);
+    }
+
+    // Expiry after restart refuses generation before provider I/O.
+    let (directory, fixture, provider, adapter, request, scope) = conversation(None).await;
+    open(directory.path(), adapter, &scope, &request, true)
+        .await
+        .unwrap();
+    let (adapter, _) = Api::Anthropic.connect(&provider.endpoint, None).unwrap();
+    let late = clock();
+    late.advance(Duration::from_secs(5));
+    let expired = DurableConversation::open(
+        Arc::new(FileConversationStore::new(directory.path().into())),
+        adapter,
+        scope,
+        request,
+        65536,
+        Duration::from_secs(1),
+        late,
+    )
+    .await
+    .unwrap()
+    .resume(1)
+    .await
+    .unwrap_err();
+    assert_eq!(expired.classification, battersea_model::ErrorKind::Expired);
+    assert_eq!(expired.dispatch, battersea_model::DispatchState::NotSent);
+    assert!(fixture.requests.lock().unwrap().is_empty());
+    remote.close().await;
 }

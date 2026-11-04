@@ -24,6 +24,8 @@ use std::sync::Arc;
 use tokio::sync::mpsc;
 use tokio_stream::wrappers::ReceiverStream;
 
+mod continuation;
+
 /// Builds an Anthropic text adapter from backend config, deriving stable debug context fields and
 /// validating any configured auth headers up front.
 pub(crate) fn create_anthropic_adapter(
@@ -87,6 +89,33 @@ struct AnthropicEngineAdapter {
 
 #[async_trait]
 impl EngineAdapter for AnthropicEngineAdapter {
+    fn validate_conversation(
+        &self,
+        request: &battersea_model::ConversationRequest,
+        state: Option<&Value>,
+    ) -> Result<battersea_model::ConversationBinding, EngineAdapterRequestError> {
+        self.validate_durable_request(request, state)
+    }
+
+    fn validate_conversation_turn(
+        &self,
+        request: &battersea_model::ConversationRequest,
+        previous: Option<&Value>,
+        results: &[battersea_model::ConversationToolResult],
+        turn: &battersea_model::ConversationTurn,
+    ) -> Result<battersea_model::ConversationBinding, EngineAdapterRequestError> {
+        self.validate_durable_turn(request, previous, results, turn)
+    }
+
+    async fn conversation_turn(
+        &self,
+        request: battersea_model::ConversationRequest,
+        state: Option<Value>,
+        results: Vec<battersea_model::ConversationToolResult>,
+    ) -> Result<battersea_model::ConversationTurn, EngineAdapterRequestError> {
+        self.durable_turn(request, state, results).await
+    }
+
     fn describe_debug_context(&self) -> EngineAdapterDebugContext {
         self.context.clone()
     }

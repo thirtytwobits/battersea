@@ -94,7 +94,8 @@ requires an application-authored prompt and is not a fallback for unsupported na
 `DurableConversation` checkpoints provider turns through a host-owned `ConversationStore`.
 Chat Completions supports ordinary and streaming responses. OpenAI Responses supports foreground
 streaming and background polling with `contextOverflow=error`. Background streaming returns
-`unsupported_tool_continuation`: recovery requires a retained event cursor.
+`unsupported_tool_continuation`: recovery requires a retained event cursor. Anthropic Messages
+supports `contextOverflow=error` and sends each durable turn as a non-streaming request.
 Other adapters return `unsupported_tool_continuation` from the default interface.
 
 Acceptance pins the original request, tool definitions, provider binding, safe backend
@@ -145,6 +146,16 @@ then the ordered `function_call_output` projections. Requests include encrypted 
 host-owned history. Durable text, reasoning, native content and usage events are derived from the
 completed response; partial stream observations remain diagnostics. Refusals, incomplete responses
 and unsupported output items are rejected before publication and on recovery.
+
+Anthropic checkpoint codec version 1 retains the exact messages sent and the native message.
+Continuation appends the assistant `content` unchanged, including signed and redacted thinking and
+opaque block fields, then one user message with the ordered `tool_result` projections. An HTTP 429
+retry sends the same prepared request. Durable turns admit `text`, `thinking`, `redacted_thinking`
+and `tool_use` blocks and the `end_turn`, `stop_sequence` and `tool_use` stop reasons; `tool_use`
+is the stop reason exactly when the message requests tools. Durable text, reasoning, native content
+and usage events are derived from the completed message. Other stop reasons and block types, and a
+final message without text, are rejected before publication and on recovery. A request without
+`maxOutputTokens` fails before I/O.
 
 An interrupted provider task, ambiguous response or failed turn publication can leave an intent.
 `resume` refuses that intent as `tool_continuation_unresolved`. After fencing the original task,

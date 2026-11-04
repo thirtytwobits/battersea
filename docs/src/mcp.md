@@ -76,9 +76,11 @@ records approval, resumes the tool, copies the published result into the convers
 and explicitly requests the next provider turn. Each boundary can be reopened using fresh store
 handles and the original configured binding.
 
-The consumer exercises ordinary and streaming Chat Completions, foreground streaming Responses
-and background polling Responses over all three MCP transports. Responses retains native reasoning and function-call items across
-reopen, including their opaque fields. A rejected
+The consumer exercises ordinary and streaming Chat Completions, foreground streaming Responses,
+background polling Responses and Anthropic Messages over all three MCP transports. Responses
+retains native reasoning and function-call items across reopen, and Anthropic retains signed and
+redacted thinking and tool-use blocks, including their opaque fields. An Anthropic parallel call
+batch continues once every result is recorded. A rejected
 continuation reuses the saved transcript, the tool effect occurs once, and the remote result's
 `_meta` stays out of provider requests. Failed, cancelled and invalid provider continuations retain an
 unresolved intent and the preceding tool result. The host fences the original task before resolving

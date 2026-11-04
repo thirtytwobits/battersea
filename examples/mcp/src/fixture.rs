@@ -167,6 +167,8 @@ pub struct ProviderFixture {
     pub final_text: String,
     pub fail_continuation: std::sync::atomic::AtomicBool,
     pub hang_continuation: std::sync::atomic::AtomicBool,
+    /// Replaces the first Anthropic message's `content` and `stop_reason`.
+    pub first_message: Option<Value>,
 }
 impl ProviderFixture {
     pub fn new(arguments: Value, reject_continuation_once: bool) -> Arc<Self> {
@@ -177,6 +179,7 @@ impl ProviderFixture {
             final_text: "Remote result received".into(),
             fail_continuation: false.into(),
             hang_continuation: false.into(),
+            first_message: None,
         })
     }
 }
@@ -298,6 +301,65 @@ pub async fn provider_http(fixture: Arc<ProviderFixture>) -> Result<HttpServer> 
     listen(
         Router::new()
             .route("/v1/chat/completions", post(reply))
+            .with_state(fixture),
+    )
+    .await
+}
+
+/// Controlled Messages API with signed and redacted thinking, opaque fields and native tool use.
+pub async fn anthropic_http(fixture: Arc<ProviderFixture>) -> Result<HttpServer> {
+    async fn reply(
+        State(fixture): State<Arc<ProviderFixture>>,
+        Json(request): Json<Value>,
+    ) -> Response {
+        let turn = {
+            let mut requests = fixture.requests.lock().unwrap();
+            requests.push(request);
+            requests.len()
+        };
+        if turn == 2 && fixture.reject_continuation_once {
+            return (StatusCode::TOO_MANY_REQUESTS, Json(json!({}))).into_response();
+        }
+        if turn > 1
+            && fixture
+                .fail_continuation
+                .load(std::sync::atomic::Ordering::SeqCst)
+        {
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error":"uncertain continuation"})),
+            )
+                .into_response();
+        }
+        if turn > 1
+            && fixture
+                .hang_continuation
+                .load(std::sync::atomic::Ordering::SeqCst)
+        {
+            std::future::pending::<()>().await;
+        }
+        let message = match &fixture.first_message {
+            Some(message) if turn == 1 => message.clone(),
+            None if turn == 1 => json!({"stop_reason":"tool_use","content":[
+                {"type":"thinking","thinking":"Record the effect","signature":"retained-signature"},
+                {"type":"redacted_thinking","data":"opaque-redacted"},
+                {"type":"tool_use","id":"effect-1","name":"remote_write","input":fixture.arguments,"vendor":{"keep":true}}
+            ]}),
+            _ => json!({"stop_reason":"end_turn","content":[
+                {"type":"text","text":fixture.final_text,"citations":null}
+            ]}),
+        };
+        let mut response = json!({"id":format!("msg-{turn}"),"type":"message","role":"assistant","model":"fixture","stop_sequence":null,
+            "usage":{"input_tokens":2,"output_tokens":2,"cache_creation_input_tokens":0,"cache_read_input_tokens":1}});
+        response
+            .as_object_mut()
+            .unwrap()
+            .extend(message.as_object().unwrap().clone());
+        Json(response).into_response()
+    }
+    listen(
+        Router::new()
+            .route("/v1/messages", post(reply))
             .with_state(fixture),
     )
     .await
