@@ -4,6 +4,7 @@
  * Exercises live edge activation helpers for the editor's dataflow workspace.
  */
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import test from "node:test";
 
 import {
@@ -19,8 +20,8 @@ test("resolveFlowStudioEdgeActivityEvent activates every emitted target edge", (
       signalPort: "post_activate",
       targetCount: 2,
       targets: [
-        { edgeId: "edge-1", targetFlowKey: "flow-a", targetNodeId: "b", targetPort: "action" },
-        { edgeId: "edge-2", targetFlowKey: "flow-a", targetNodeId: "c", targetPort: "action" }
+        { edgeId: "edge-1", targetNodeId: "b", targetPort: "action" },
+        { edgeId: "edge-2", targetNodeId: "c", targetPort: "action" }
       ]
     },
     id: "record-1",
@@ -70,7 +71,7 @@ test("resolveFlowStudioEdgeActivityEvent ignores unrelated records and malformed
   }), null);
   assert.equal(resolveFlowStudioEdgeActivityEvent({
     detail: {
-      targets: [{ targetFlowKey: "flow-a", targetNodeId: "b" }]
+      targets: [{ targetNodeId: "b", targetPort: "input" }]
     },
     id: "record-4",
     path: "/dev/sessions/session-1/flows/current/raw",
@@ -79,6 +80,25 @@ test("resolveFlowStudioEdgeActivityEvent ignores unrelated records and malformed
     summary: "Emitted prompt.fragment on output.",
     timestamp: "2026-03-21T10:00:03Z"
   }), null);
+});
+
+test("resolveFlowStudioEdgeActivityEvent lights each edge of a runtime run on emit and fades it on receive", () => {
+  const fixture = JSON.parse(readFileSync(
+    new URL("../../../crates/battersea-runtime/fixtures/edge-activity.json", import.meta.url),
+    "utf8"
+  )) as { edges: string[]; records: Array<{ phase: string; detail: unknown }> };
+  const transitions = new Map<string, string[]>();
+  for (const record of fixture.records) {
+    const activity = resolveFlowStudioEdgeActivityEvent(record);
+    assert.ok(activity, `${record.phase} must resolve to edge activity`);
+    for (const edgeId of activity.edgeIds) {
+      transitions.set(edgeId, [...(transitions.get(edgeId) ?? []), activity.transition]);
+    }
+  }
+  assert.deepEqual(
+    Object.fromEntries(transitions),
+    Object.fromEntries(fixture.edges.map((edgeId) => [edgeId, ["activate", "fade"]]))
+  );
 });
 
 test("pruneFlowStudioEdgeActivationState removes edges that are no longer visible", () => {

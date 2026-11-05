@@ -1718,6 +1718,62 @@ async fn an_instrument_relays_its_signal_and_is_never_run_as_a_node() {
     );
 }
 
+/// The editor's edge activity reads `fixtures/edge-activity.json`, so the fixture is the
+/// records this run publishes.
+#[tokio::test]
+async fn emit_records_name_the_edges_their_receive_records_name() {
+    let (host, mut state) = fixture(
+        vec![
+            node(
+                "source",
+                "Source",
+                json!({"values":["first"],"signal":true}),
+            ),
+            node("first", "Sink", json!({})),
+            node("second", "Sink", json!({})),
+            node("action", "Action", json!({})),
+        ],
+        vec![
+            edge("a", "source", "first", 0, "final_value"),
+            edge("b", "source", "second", 1, "final_value"),
+            signal("go", "source", "action", "go"),
+        ],
+        "final_value",
+    );
+    run(&host, &mut state).await.unwrap();
+    let records = host
+        .events
+        .lock()
+        .unwrap()
+        .iter()
+        .filter(|event| {
+            matches!(
+                event.kind,
+                EventKind::TokenEmit
+                    | EventKind::TokenReceive
+                    | EventKind::SignalEmit
+                    | EventKind::SignalReceive
+            )
+        })
+        .map(|event| json!({"phase":event.kind.category(),"detail":event.detail}))
+        .collect::<Vec<_>>();
+    let fixture: Value =
+        serde_json::from_str(include_str!("../fixtures/edge-activity.json")).unwrap();
+    let edges = state
+        .flow
+        .edges
+        .iter()
+        .map(|e| e.id.as_str())
+        .collect::<Vec<_>>();
+    assert_eq!(fixture["edges"], json!(edges));
+    assert_eq!(
+        Value::from(records.clone()),
+        fixture["records"],
+        "fixtures/edge-activity.json must hold the published records:\n{}",
+        serde_json::to_string_pretty(&records).unwrap()
+    );
+}
+
 #[tokio::test]
 async fn queued_signals_follow_data_and_signal_cycles_are_refused() {
     let (host, mut state) = fixture(
