@@ -97,14 +97,14 @@ fn patterns() -> &'static Patterns {
             (
                 "schema-name",
                 "Schema names sent to providers must come from approved prompt config.",
-                vec![compile(r#"\bschema_name[ \t]*:[ \t]*"[^"]+""#)],
+                vec![compile(r#"\bschema_name[ \t]*:[ \t]*(r#*)?"[^"]+""#)],
             ),
             (
                 "tool-description",
                 "Tool and schema-field descriptions sent over the wire must come from approved prompt config.",
                 vec![
                     // A JSON-shaped key, as in a hand-built serde_json schema.
-                    compile(r#""description"[ \t]*:[ \t]*"[^"]+""#),
+                    compile(r#""description"[ \t]*:[ \t]*(r#*)?"[^"]+""#),
                     // A Rust struct field. The rule matched only the quoted form
                     // for a long time, which is how 22 model-facing tool
                     // descriptions sat in chat_tool_catalog.rs unreported: they
@@ -114,19 +114,19 @@ fn patterns() -> &'static Patterns {
                     // so the literal opens on one line and closes on another;
                     // requiring both on one line is what let the catalogue's 22
                     // descriptions through even after this shape was covered.
-                    compile(r#"\bdescription[ \t]*:[ \t]*"[^"]*"#),
+                    compile(r#"\bdescription[ \t]*:[ \t]*(r#*)?"[^"]*"#),
                 ],
             ),
             (
                 "system-prompt",
                 "System prompt text must come from approved prompt config.",
-                vec![compile(r#""system"[ \t]*:[ \t]*"[^"]+""#)],
+                vec![compile(r#""system"[ \t]*:[ \t]*(r#*)?"[^"]+""#)],
             ),
             (
                 "planner-fields",
                 "Planner prompt text, summary, and negative_prompt literals must come from approved prompt config.",
                 vec![compile(
-                    r#"\b(summary|prompt_text|negative_prompt)[ \t]*:[ \t]*(Some\()?"[^"]+""#,
+                    r#"\b(summary|prompt_text|negative_prompt)[ \t]*:[ \t]*(Some\()?(r#*)?"[^"]+""#,
                 )],
             ),
         ],

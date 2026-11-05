@@ -2847,3 +2847,136 @@ fn every_journal_and_pump_failure_is_named_by_a_declared_code() {
         "each journal failure has its own code"
     );
 }
+
+/// Sources `a`, `b` and `c` with a snapshot input `in`, an execution input `late`
+/// and a snapshot output, beside an inline node `join`.
+fn source_ordering(source_order: &[&str], edges: Vec<Value>) -> Run {
+    let nodes = ["a", "b", "c"]
+        .map(|id| node(id, "Source", json!({})))
+        .into_iter()
+        .chain([node("join", "Join", json!({}))])
+        .collect();
+    let (_, mut state) = fixture(nodes, vec![], "final_value");
+    let mut definitions = state.definitions.clone();
+    let source = definitions.get_mut("Source").unwrap();
+    source.interfaces.clear();
+    source.output_ports[0].phase = FlowPortPhase::Snapshot;
+    for (name, phase) in [("in", "snapshot"), ("late", "execution")] {
+        source.input_ports.push(serde_json::from_value(json!({"name":name,"kind":"input","token_type":"text","mode":"final_value","phase":phase})).unwrap());
+    }
+    let mut flow = state.flow.clone();
+    flow.execution.source_order = source_order.iter().map(|id| id.to_string()).collect();
+    flow.edges = edges
+        .into_iter()
+        .map(|edge| serde_json::from_value(edge).unwrap())
+        .collect();
+    state.scheduler = SchedulerState::new("ordering".into(), &flow, definitions).unwrap();
+    state
+}
+
+fn ids(values: &[&str]) -> Vec<String> {
+    values.iter().map(|id| id.to_string()).collect()
+}
+
+#[test]
+fn a_source_that_feeds_another_source_materialises_first() {
+    let state = source_ordering(
+        &["a", "b", "c"],
+        vec![edge("snapshot", "c", "a", 0, "final_value")],
+    );
+    let ordered = order_source_phase_materialization(&state, ids(&["a", "b", "c"])).unwrap();
+    assert_eq!(ordered, ids(&["b", "c", "a"]));
+}
+
+#[test]
+fn independent_sources_keep_the_flows_order() {
+    let state = source_ordering(&["c", "a", "b"], vec![]);
+    let ordered = order_source_phase_materialization(&state, ids(&["a", "b", "c"])).unwrap();
+    assert_eq!(ordered, ids(&["c", "a", "b"]));
+}
+
+#[test]
+fn edges_from_non_source_nodes_do_not_constrain_source_order() {
+    let mut late = edge("late", "join", "a", 0, "final_value");
+    late["target_port"] = json!("late");
+    let state = source_ordering(&["a", "b", "c"], vec![late]);
+    let ordered = order_source_phase_materialization(&state, ids(&["a", "b", "c"])).unwrap();
+    assert_eq!(ordered, ids(&["a", "b", "c"]));
+}
+
+#[test]
+fn source_ordering_returns_only_the_given_sources() {
+    let state = source_ordering(
+        &["a", "b", "c"],
+        vec![edge("snapshot", "c", "a", 0, "final_value")],
+    );
+    let ordered =
+        order_source_phase_materialization(&state, ids(&["a", "c", "join", "missing"])).unwrap();
+    assert_eq!(ordered, ids(&["c", "a"]));
+    assert!(order_source_phase_materialization(&state, vec![])
+        .unwrap()
+        .is_empty());
+}
+
+#[test]
+fn an_inline_node_is_ready_once_every_connected_input_holds_a_token() {
+    let deliver = |state: &mut Run, port: &str| {
+        let token = Token {
+            token_type: "text".into(),
+            value: json!(port),
+        };
+        let token = state.retention.retain("join", token).unwrap();
+        state
+            .input_tokens
+            .insert(("join".into(), port.into()), token);
+    };
+    let mut second = edge("second", "second", "join", 0, "final_value");
+    second["target_port"] = json!("unused");
+    let nodes = || {
+        vec![
+            node("first", "Source", json!({})),
+            node("second", "Source", json!({})),
+            node("join", "Join", json!({})),
+        ]
+    };
+
+    // `unused` has no incoming edge, so it is not waited on.
+    let (host, mut state) = fixture(
+        nodes(),
+        vec![edge("first", "first", "join", 0, "final_value")],
+        "final_value",
+    );
+    assert_eq!(host.connected_input_ports(&state, "join"), ["in"]);
+    assert!(!host.inline_node_ready(&state, "join"));
+    deliver(&mut state, "in");
+    assert!(host.inline_node_ready(&state, "join"));
+
+    let (host, mut state) = fixture(
+        nodes(),
+        vec![edge("first", "first", "join", 0, "final_value"), second],
+        "final_value",
+    );
+    assert_eq!(host.connected_input_ports(&state, "join"), ["in", "unused"]);
+    deliver(&mut state, "in");
+    assert!(!host.inline_node_ready(&state, "join"));
+    deliver(&mut state, "unused");
+    assert!(host.inline_node_ready(&state, "join"));
+
+    let taken = host
+        .take_flow_input_token(&mut state, "join", "in")
+        .unwrap();
+    assert_eq!(taken.value, json!("in"));
+    assert!(!host.inline_node_ready(&state, "join"));
+    let Err(error) = host.take_flow_input_token(&mut state, "join", "in") else {
+        panic!("a port's token is taken once");
+    };
+    assert_eq!(error.reason_code(), Some(error_codes::MISSING_INPUT_VALUE));
+    let Err(error) = host.take_flow_input_token(&mut state, "join", "missing") else {
+        panic!("an undeclared port holds no token");
+    };
+    assert_eq!(error.reason_code(), Some(error_codes::MISSING_INPUT_VALUE));
+
+    // An edge from a source whose output is disabled is no longer a connection.
+    state.disabled_output_nodes.insert("second".into());
+    assert_eq!(host.connected_input_ports(&state, "join"), ["in"]);
+}
