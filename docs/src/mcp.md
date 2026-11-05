@@ -8,9 +8,11 @@ the effect. All servers run locally and use application-owned temporary storage.
 ## Host composition
 
 Create an `McpConfig` with a stable server identity, credential-scope revision, finite bounds
-and an operation timeout. The host supplies streams to `McpConnection::stdio`, or an approved
-endpoint and resolved bearer credential to `McpConnection::http`. The example's `StdioHost`
-launches and reaps its child; the adapter's shutdown token signals when that work can stop.
+and an operation timeout. The example's `McpClock` runs that timeout on the host's `Clock`, so
+tests advance it with the provider's deadlines. The host supplies streams to
+`McpConnection::stdio`, or an approved endpoint and resolved bearer credential to
+`McpConnection::http`. The example's `StdioHost` launches and reaps its child; the adapter's
+shutdown token signals when that work can stop.
 
 Discovery returns raw provenance, admitted tool names and diagnostics. Bind the admitted names the
 host selects; `McpToolBinding::contribution` contributes them as operations under the connection's
@@ -24,7 +26,7 @@ revision, an absolute deadline on the host's clock and a call capacity. Pass its
 `ToolCallCompleted` retains content and completion evidence. Provider projections preserve text
 and resource references. A tool-reported error reaches the provider as a result; protocol or
 delivery failures stop the conversation with separate tool outcome evidence. See Clapham's
-[MCP client](https://github.com/thirtytwobits/clapham/blob/v0.4.0/docs/mcp.md) and the
+[MCP client](https://github.com/thirtytwobits/clapham/blob/v0.5.0/docs/mcp.md) and the
 [tool contract](contracts/tools.md).
 
 ## Effect ownership
