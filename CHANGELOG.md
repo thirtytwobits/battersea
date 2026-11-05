@@ -38,6 +38,11 @@
 - `flow.token.emit` and `flow.signal.emit` records list the edges they leave along as
   `targets: [{edgeId, targetNodeId, targetPort}]`, so the editor lights an edge on emit.
 
+### Documentation
+
+- `contracts/kits.md` proposes how a domain node set is packaged as a kit, with a port, a
+  reference host and a conformance suite; the handbook gains **Build a kit**.
+
 ## 0.23.0
 
 ### Breaking
