@@ -33,6 +33,8 @@
 
 - The deserialisation schemas of the `battersea-flow` types mark the optional fields optional.
   The 33 affected fields include `FlowDocument`'s `description`, `layout` and `metadata`.
+- The prompt scanner flags a raw string literal after a `schema_name`, `description`, `system`,
+  `summary`, `prompt_text` or `negative_prompt` key.
 
 ## 0.23.0
 
