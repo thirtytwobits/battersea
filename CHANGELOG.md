@@ -35,6 +35,8 @@
   The 33 affected fields include `FlowDocument`'s `description`, `layout` and `metadata`.
 - The prompt scanner flags a raw string literal after a `schema_name`, `description`, `system`,
   `summary`, `prompt_text` or `negative_prompt` key.
+- `flow.token.emit` and `flow.signal.emit` records list the edges they leave along as
+  `targets: [{edgeId, targetNodeId, targetPort}]`, so the editor lights an edge on emit.
 
 ## 0.23.0
 

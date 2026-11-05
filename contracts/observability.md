@@ -6,6 +6,11 @@ extend node records; existing records retain their representation when read.
 
 Status: implemented; the independent editor server exposes the runtime view.
 
+Emit records list the edges they leave along, in delivery order, as
+`targets: [{edgeId, targetNodeId, targetPort}]`. Receive records name their edge as `edgeId`.
+`crates/battersea-runtime/fixtures/edge-activity.json` holds the records of one run; the editor's
+edge activity is tested against it.
+
 `battersea-telemetry` owns typed records and revisioned views independently of tracing.
 Hosts serialise writes; reads never evict or mutate. Retention bounds records, encoded bytes,
 delta count and delta bytes. Expiry is a lifecycle write. A foreign, expired or future cursor

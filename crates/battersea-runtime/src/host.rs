@@ -10,6 +10,16 @@ use serde_json::{json, Value};
 use std::collections::{HashMap, HashSet};
 use tokio_util::sync::CancellationToken;
 
+/// The edges an emit record leaves along, in delivery order.
+fn edge_targets<'a>(edges: impl IntoIterator<Item = &'a FlowEdge>) -> Value {
+    edges
+        .into_iter()
+        .map(|edge| {
+            json!({"edgeId":edge.id,"targetNodeId":edge.target_node_id,"targetPort":edge.target_port})
+        })
+        .collect()
+}
+
 // async_trait adds must_use to boxed futures; dispatch arguments retain the port contract.
 #[allow(clippy::double_must_use, clippy::too_many_arguments)]
 #[async_trait]
@@ -735,7 +745,7 @@ pub trait ExecutionHost: Sized + Send + Sync {
         }
         runtime.emitted_tokens += 1;
         self.observe_token(runtime, source_node_id, source_port, &value);
-        self.publish_execution_record(runtime, source_node_id, EventKind::TokenEmit, format!("Emitted {} on {source_port}.", value.token_type), Some(json!({"sourcePort":source_port,"tokenType":value.token_type,"targetCount":edges.len(),"value":value.value}))).await;
+        self.publish_execution_record(runtime, source_node_id, EventKind::TokenEmit, format!("Emitted {} on {source_port}.", value.token_type), Some(json!({"sourcePort":source_port,"tokenType":value.token_type,"targetCount":edges.len(),"targets":edge_targets(&edges),"value":value.value}))).await;
         let mut charges = charges;
         let emission = runtime.delivery_sequence;
         for edge in edges {
@@ -1201,7 +1211,7 @@ pub trait ExecutionHost: Sized + Send + Sync {
             &node.id,
             EventKind::SignalEmit,
             format!("Emitted signal {signal_port}."),
-            Some(json!({"signalPort":signal_port,"targetCount":usize::from(edge.is_some())})),
+            Some(json!({"signalPort":signal_port,"targetCount":usize::from(edge.is_some()),"targets":edge_targets(&edge)})),
         )
         .await;
         Ok(())
