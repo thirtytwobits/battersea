@@ -93,11 +93,14 @@ async fn main() -> Result<()> {
     }
     let directory = tempfile::tempdir()?;
     let ledger = directory.path().join("effects");
+    // MCP deadlines run on a clock no one advances; the fixtures answer every request.
+    let clock: Arc<dyn battersea_model::Clock> =
+        Arc::new(battersea_model::ManualClock::new(1_800_000_000_000));
     let stdio = host::StdioHost::start(
         &std::env::current_exe()?,
         &ledger,
         Fault::None,
-        host::mcp_config(Duration::from_secs(10)),
+        host::mcp_config(Duration::from_secs(10), clock.clone()),
     )
     .await?;
     conversation(&stdio.connection, "stdio-conversation").await?;
@@ -108,7 +111,7 @@ async fn main() -> Result<()> {
             fixture::mcp_http(fixture::McpFixture::new(ledger.clone(), Fault::None), sse).await?;
         let connection = McpConnection::http(
             McpHttpOptions::new(format!("{}/mcp", server.endpoint)),
-            host::mcp_config(Duration::from_secs(10)),
+            host::mcp_config(Duration::from_secs(10), clock.clone()),
         )
         .await?;
         conversation(

@@ -10,9 +10,22 @@ use clapham_mcp_client::{McpConfig, McpConnection, McpSelection, McpToolBinding}
 use std::{path::Path, process::Stdio, sync::Arc, time::Duration};
 use tokio_util::sync::CancellationToken;
 
-pub fn mcp_config(timeout: Duration) -> McpConfig {
+/// Runs Clapham's MCP deadlines on a Battersea clock.
+pub struct McpClock(pub Arc<dyn Clock>);
+impl clapham_mcp_client::Clock for McpClock {
+    fn now(&self) -> tokio::time::Instant {
+        self.0.instant()
+    }
+    fn sleep_until(&self, deadline: tokio::time::Instant) -> clapham_mcp_client::Sleep {
+        self.0.sleep_until(deadline)
+    }
+}
+
+/// An MCP configuration whose operation deadline is `timeout` on `clock`.
+pub fn mcp_config(timeout: Duration, clock: Arc<dyn Clock>) -> McpConfig {
     let mut config = McpConfig::new("remote", "example-account-1");
     config.operation_timeout = timeout;
+    config.clock = Arc::new(McpClock(clock));
     config.bounds.message_bytes = 64 * 1024;
     config.bounds.schema_bytes = 32 * 1024;
     config

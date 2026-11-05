@@ -94,7 +94,7 @@ async fn remote_approval_precedes_effects_and_provider_retries_reuse_the_decisio
             ToolApprovalDecision::Pending,
         ] {
             let (_directory, ledger) = temporary_ledger();
-            let remote = Remote::start(transport, &ledger, Fault::None, Duration::from_secs(10))
+            let remote = Remote::start(transport, &ledger, Fault::None)
                 .await
                 .unwrap();
             let (_binding, tools) = host::bind(&remote.connection).await.unwrap();
@@ -164,19 +164,19 @@ async fn remote_approval_precedes_effects_and_provider_retries_reuse_the_decisio
         }
     }
 }
+/// The operation deadline of every test MCP connection, on that connection's clock.
+const MCP_TIMEOUT: Duration = Duration::from_secs(10);
 struct Remote {
     connection: McpConnection,
+    /// Drives the connection's MCP deadlines.
+    clock: Arc<battersea_model::ManualClock>,
     stdio: Option<StdioHost>,
     http: Option<HttpServer>,
 }
 impl Remote {
-    async fn start(
-        transport: Transport,
-        ledger: &Path,
-        fault: Fault,
-        timeout: Duration,
-    ) -> Result<Self> {
-        let config = host::mcp_config(timeout);
+    async fn start(transport: Transport, ledger: &Path, fault: Fault) -> Result<Self> {
+        let clock = clock();
+        let config = host::mcp_config(MCP_TIMEOUT, clock.clone());
         match transport {
             Transport::Stdio => {
                 let stdio = StdioHost::start(
@@ -188,6 +188,7 @@ impl Remote {
                 .await?;
                 Ok(Self {
                     connection: stdio.connection.clone(),
+                    clock,
                     stdio: Some(stdio),
                     http: None,
                 })
@@ -205,6 +206,7 @@ impl Remote {
                 .await?;
                 Ok(Self {
                     connection,
+                    clock,
                     stdio: None,
                     http: Some(http),
                 })
@@ -278,9 +280,7 @@ async fn provider_continuation_retries_reuse_mcp_results_and_exclude_metadata() 
     for transport in TRANSPORTS {
         for fault in [Fault::None, Fault::ToolError] {
             let (_directory, ledger) = temporary_ledger();
-            let remote = Remote::start(transport, &ledger, fault, Duration::from_secs(10))
-                .await
-                .unwrap();
+            let remote = Remote::start(transport, &ledger, fault).await.unwrap();
             let (_binding, tools) = host::bind(&remote.connection).await.unwrap();
             assert!(tools.for_profile("forged").definitions().is_empty());
             let fixture = ProviderFixture::new(json!({"value":1}), true);
@@ -350,17 +350,25 @@ async fn remote_failures_preserve_tool_outcomes_without_provider_replay() {
             (Fault::InvalidOutput, ToolCallOutcome::Completed),
         ] {
             let (_directory, ledger) = temporary_ledger();
-            let remote = Remote::start(transport, &ledger, fault, Duration::from_secs(10))
-                .await
-                .unwrap();
+            let remote = Remote::start(transport, &ledger, fault).await.unwrap();
             let (_binding, tools) = host::bind(&remote.connection).await.unwrap();
             let fixture = ProviderFixture::new(json!({"value":1}), true);
             let provider = fixture::provider_http(fixture.clone()).await.unwrap();
             let (adapter, chat) = host::provider(&provider.endpoint, provider_clock()).unwrap();
-            let error = collect(&adapter, host::request(&tools, "operator", chat))
-                .await
-                .unwrap_err();
-            let evidence = error.tool_call.unwrap();
+            let lost_reply = async {
+                if fault == Fault::LostReply {
+                    // The fixture applies the effect and never replies; the call deadline elapses.
+                    while fixture::effect_count(&ledger).ok() != Some(1) {
+                        tokio::task::yield_now().await;
+                    }
+                    remote.clock.advance(MCP_TIMEOUT);
+                }
+            };
+            let (result, ()) = tokio::join!(
+                collect(&adapter, host::request(&tools, "operator", chat)),
+                lost_reply
+            );
+            let evidence = result.unwrap_err().tool_call.unwrap();
             assert_eq!(evidence.outcome, outcome, "{transport:?} {fault:?}");
             assert_eq!(evidence.call_id, "effect-1");
             assert_eq!(fixture.requests.lock().unwrap().len(), 1);
@@ -368,10 +376,9 @@ async fn remote_failures_preserve_tool_outcomes_without_provider_replay() {
             remote.close().await;
             if outcome == ToolCallOutcome::Uncertain {
                 // Restart the controlled server with its retained effect ledger, then reconnect.
-                let restarted =
-                    Remote::start(transport, &ledger, Fault::None, Duration::from_secs(10))
-                        .await
-                        .unwrap();
+                let restarted = Remote::start(transport, &ledger, Fault::None)
+                    .await
+                    .unwrap();
                 host::bind(&restarted.connection).await.unwrap();
                 assert_eq!(fixture::effect_count(&ledger).unwrap(), 1);
                 assert_eq!(evidence.outcome, ToolCallOutcome::Uncertain);
@@ -386,14 +393,9 @@ async fn remote_failures_preserve_tool_outcomes_without_provider_replay() {
 async fn cancellation_after_remote_dispatch_does_not_resume_or_repeat_the_effect() {
     for transport in TRANSPORTS {
         let (_directory, ledger) = temporary_ledger();
-        let remote = Remote::start(
-            transport,
-            &ledger,
-            Fault::LostReply,
-            Duration::from_secs(10),
-        )
-        .await
-        .unwrap();
+        let remote = Remote::start(transport, &ledger, Fault::LostReply)
+            .await
+            .unwrap();
         let (_binding, tools) = host::bind(&remote.connection).await.unwrap();
         let fixture = ProviderFixture::new(json!({"value":1}), true);
         let provider = fixture::provider_http(fixture.clone()).await.unwrap();
@@ -417,7 +419,7 @@ async fn cancellation_after_remote_dispatch_does_not_resume_or_repeat_the_effect
         }
         drop(stream);
         remote.close().await;
-        let restarted = Remote::start(transport, &ledger, Fault::None, Duration::from_secs(10))
+        let restarted = Remote::start(transport, &ledger, Fault::None)
             .await
             .unwrap();
         host::bind(&restarted.connection).await.unwrap();
@@ -435,7 +437,7 @@ async fn schema_and_host_profile_refusals_precede_remote_dispatch() {
             (json!({"value":1}), "forged"),
         ] {
             let (_directory, ledger) = temporary_ledger();
-            let remote = Remote::start(transport, &ledger, Fault::None, Duration::from_secs(10))
+            let remote = Remote::start(transport, &ledger, Fault::None)
                 .await
                 .unwrap();
             let (_binding, tools) = host::bind(&remote.connection).await.unwrap();
@@ -464,7 +466,7 @@ async fn changed_definitions_stop_a_pinned_provider_conversation() {
         let remote = fixture::mcp_http(server.clone(), sse).await.unwrap();
         let connection = McpConnection::http(
             McpHttpOptions::new(format!("{}/mcp", remote.endpoint)),
-            host::mcp_config(Duration::from_secs(10)),
+            host::mcp_config(MCP_TIMEOUT, clock()),
         )
         .await
         .unwrap();
@@ -505,7 +507,7 @@ async fn catalogue_admission_and_alias_collisions_use_shared_registry_rules() {
     let remote = fixture::mcp_http(server, false).await.unwrap();
     let connection = McpConnection::http(
         McpHttpOptions::new(format!("{}/mcp", remote.endpoint)),
-        host::mcp_config(Duration::from_secs(10)),
+        host::mcp_config(MCP_TIMEOUT, clock()),
     )
     .await
     .unwrap();
@@ -534,7 +536,7 @@ async fn durable_pending_calls_resume_from_disk_once_without_regenerating() {
     use mcp_example::journal::FileApprovalStore;
     for transport in TRANSPORTS {
         let (directory, ledger) = temporary_ledger();
-        let remote = Remote::start(transport, &ledger, Fault::None, Duration::from_secs(10))
+        let remote = Remote::start(transport, &ledger, Fault::None)
             .await
             .unwrap();
         let (binding, tools) = host::bind(&remote.connection).await.unwrap();
@@ -755,7 +757,7 @@ async fn durable_provider_continuation_reopens_both_journals_and_retries_the_sav
     }) {
         let responses = api == Api::Responses;
         let (directory, ledger) = temporary_ledger();
-        let remote = Remote::start(transport, &ledger, Fault::None, Duration::from_secs(10))
+        let remote = Remote::start(transport, &ledger, Fault::None)
             .await
             .unwrap();
         let (binding, tools) = host::bind(&remote.connection).await.unwrap();
@@ -1131,14 +1133,9 @@ async fn interrupted_or_invalid_provider_continuations_keep_the_tool_result_and_
     .flat_map(|r| (0..3).map(move |f| (r, f)))
     {
         let (directory, ledger) = temporary_ledger();
-        let remote = Remote::start(
-            Transport::Json,
-            &ledger,
-            Fault::None,
-            Duration::from_secs(10),
-        )
-        .await
-        .unwrap();
+        let remote = Remote::start(Transport::Json, &ledger, Fault::None)
+            .await
+            .unwrap();
         let (binding, tools) = host::bind(&remote.connection).await.unwrap();
         let fixture = ProviderFixture::new(json!({"value":1}), false);
         fixture
@@ -1315,14 +1312,9 @@ async fn reconciled_and_reopened_calls_must_match_the_provider_transcript() {
         let anthropic = api == Api::Anthropic;
         let google = api == Api::Google;
         let (directory, ledger) = temporary_ledger();
-        let remote = Remote::start(
-            Transport::Json,
-            &ledger,
-            Fault::None,
-            Duration::from_secs(10),
-        )
-        .await
-        .unwrap();
+        let remote = Remote::start(Transport::Json, &ledger, Fault::None)
+            .await
+            .unwrap();
         let (binding, tools) = host::bind(&remote.connection).await.unwrap();
         let mut fixture = ProviderFixture::new(json!({"value":1}), false);
         Arc::get_mut(&mut fixture).unwrap().final_text = r#"{"received":true}"#.into();
@@ -2197,14 +2189,9 @@ async fn native_turns_admit_complete_evidence_and_whole_call_batches(api: Api) {
     use mcp_example::conversation_journal::FileConversationStore;
 
     let (_ledger_directory, ledger) = temporary_ledger();
-    let remote = Remote::start(
-        Transport::Json,
-        &ledger,
-        Fault::None,
-        Duration::from_secs(10),
-    )
-    .await
-    .unwrap();
+    let remote = Remote::start(Transport::Json, &ledger, Fault::None)
+        .await
+        .unwrap();
     let (binding, tools) = host::bind(&remote.connection).await.unwrap();
     let conversation = |first_message: Option<Value>| {
         let tools = &tools;
