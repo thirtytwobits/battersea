@@ -393,14 +393,17 @@ fn normalize_manifest_definition_with_blocks(
     })
 }
 
+fn parse_manifest_catalog(source: &str) -> Result<FlowManifestCatalog, String> {
+    let root: FlowManifestRoot = serde_yaml::from_str(source).map_err(|error| error.to_string())?;
+    Ok(FlowManifestCatalog::from(root))
+}
+
 /// Parse an explicit manifest for host composition before `Catalog` validates the combined definitions.
 pub fn parse_definition_manifest(
     registry: &Registry,
     source: &str,
 ) -> Result<Vec<FlowNodeDefinition>, String> {
-    let root: FlowManifestRoot = serde_yaml::from_str(source).map_err(|error| error.to_string())?;
-    let catalog = FlowManifestCatalog::from(root);
-
+    let catalog = parse_manifest_catalog(source)?;
     catalog
         .node_definitions
         .into_iter()
@@ -412,6 +415,33 @@ pub fn parse_definition_manifest(
             )
         })
         .collect()
+}
+
+/// Parse several manifests as one catalogue. Formatter blocks resolve across all sources: a
+/// block named in a later source replaces the earlier block of that name, and a manifest
+/// holding only `formatter_blocks` overrides the text of the manifests before it. Definitions
+/// keep their source order; `Catalog` refuses a later definition of the same class.
+pub fn parse_definition_manifests(
+    registry: &Registry,
+    sources: &[(&str, &str)],
+) -> Result<Vec<FlowNodeDefinition>, String> {
+    let mut formatter_blocks = BTreeMap::new();
+    let mut catalogs = Vec::with_capacity(sources.len());
+    for (name, source) in sources {
+        let catalog = parse_manifest_catalog(source).map_err(|error| format!("{name}: {error}"))?;
+        formatter_blocks.extend(catalog.formatter_blocks.clone());
+        catalogs.push((*name, catalog));
+    }
+    let mut entries = Vec::new();
+    for (name, catalog) in catalogs {
+        for definition in catalog.node_definitions {
+            entries.push(
+                normalize_manifest_definition_with_blocks(registry, definition, &formatter_blocks)
+                    .map_err(|error| format!("{name}: {error}"))?,
+            );
+        }
+    }
+    Ok(entries)
 }
 
 /// Metadata attached to a Rust node type, normalised with the host's datatype registry.
@@ -438,14 +468,10 @@ impl Catalog {
         let entries = parse_definition_manifest(&registry, source).map_err(anyhow::Error::msg)?;
         Self::from_definitions(entries, registry)
     }
+    /// Compose several manifests; see [`parse_definition_manifests`] for how formatter blocks
+    /// resolve across them.
     pub fn from_manifests(sources: &[(&str, &str)], registry: Registry) -> anyhow::Result<Self> {
-        let mut entries = Vec::new();
-        for (name, source) in sources {
-            entries.extend(
-                parse_definition_manifest(&registry, source)
-                    .map_err(|error| anyhow::anyhow!("{name}: {error}"))?,
-            );
-        }
+        let entries = parse_definition_manifests(&registry, sources).map_err(anyhow::Error::msg)?;
         Self::from_definitions(entries, registry)
     }
     pub fn from_definitions(

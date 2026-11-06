@@ -1,47 +1,28 @@
 //! Copyright (c) Scott A Dixon
+//!
+//! The generic kit `battersea`: node manifests and handlers that run on any
+//! `ExecutionHost`. Its class names and token types are the shared vocabulary every kit
+//! may reference; see `contracts/kits.md`.
 pub mod concatenate;
 pub mod logic;
 pub mod multiplexer;
-#[derive(Debug, thiserror::Error)]
-pub enum NodeError {
-    /// A refusal named by a code from [`battersea_runtime::error_codes`].
-    #[error("{message}")]
-    InvalidRequest {
-        reason: &'static str,
-        message: String,
-    },
-    #[error("{0}")]
-    Internal(String),
-}
-pub type NodeResult<T> = Result<T, NodeError>;
-impl NodeError {
-    pub fn internal(message: impl Into<String>) -> Self {
-        Self::Internal(message.into())
-    }
-    pub fn invalid_request(reason: &'static str, message: impl Into<String>) -> Self {
-        Self::InvalidRequest {
-            reason,
-            message: message.into(),
-        }
-    }
-    /// The code naming a refusal; `None` for an internal fault.
-    pub fn reason_code(&self) -> Option<&'static str> {
-        match self {
-            Self::InvalidRequest { reason, .. } => Some(reason),
-            Self::Internal(_) => None,
-        }
-    }
-}
+pub use battersea_kit::text;
+pub use battersea_kit::{NodeError, NodeResult};
 
 /// Generic node catalogue; pass it explicitly when composing an application catalogue.
 pub const MANIFEST: &str = include_str!("nodes.yaml");
-pub mod text;
+/// The generic kit's descriptor.
+pub const KIT: battersea_kit::Kit = battersea_kit::Kit {
+    name: battersea_kit::GENERIC_KIT,
+    manifest: MANIFEST,
+    token_types: battersea_kit::SHARED_TOKEN_TYPES,
+};
 
 /// Register the nominal token contracts used by this node library.
 pub fn register_token_types(
     registry: &mut battersea_flow::registry::Registry,
 ) -> Result<(), String> {
-    for name in ["prompt.fragment", "prompt.fragmentArray", "chat.raw"] {
+    for name in KIT.token_types {
         registry
             .register_token_type(name, serde_json::Value::Bool(true))
             .map_err(|error| error.to_string())?;
@@ -61,6 +42,8 @@ pub fn register_handlers<H: battersea_runtime::ExecutionHost>(
     builder.register(logic::InvertGateHandler)?;
     Ok(())
 }
+#[cfg(feature = "conformance")]
+pub mod conformance;
 #[cfg(test)]
 fn test_catalog() -> battersea_flow::catalog::Catalog {
     let mut registry = battersea_flow::registry::Registry::default();

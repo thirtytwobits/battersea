@@ -42,7 +42,9 @@ Its versioned provider configuration binds service identities to registered prot
 with explicit endpoints, credential references and capabilities. OpenAI Responses and Chat
 Completions have separate adapters. See [provider contract](contracts/providers.md) and
 `examples/declarative-providers`.
-`battersea-nodes` supplies explicit node manifests and generic handlers. `battersea-guard`
+`battersea-nodes` supplies explicit node manifests and generic handlers; it is the generic kit.
+`battersea-kit` supplies the kit descriptor, the in-memory reference host and the conformance
+harness that [kits](contracts/kits.md) are built on. `battersea-guard`
 scans source against the application's declared prompt roots. Applications retain their
 prompts, product tools, storage and asset ownership.
 

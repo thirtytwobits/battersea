@@ -17,7 +17,6 @@ use tokio_util::sync::CancellationToken;
 /// The application's own refusal codes, beside the runtime's `error_codes`.
 mod codes {
     pub const INVALID_PARAMETER_WRITE: &str = "invalid_parameter_write";
-    pub const NO_LOGIC_NODES: &str = "no_logic_nodes";
     pub const INVALID_FLOW: &str = "invalid_flow";
     pub const ALREADY_ACCEPTED: &str = "already_accepted";
 }
@@ -215,17 +214,17 @@ impl ExecutionHost for Application {
     }
     fn prepare_logic_outputs(
         &self,
-        _node: &FlowNode,
-        _definition: &FlowNodeDefinition,
-        _actions: &[FlowActionPortDefinition],
-        _signals: &[FlowSignalPortDefinition],
-        _fired: &HashSet<String>,
-        _enabled: bool,
+        node: &FlowNode,
+        definition: &FlowNodeDefinition,
+        actions: &[FlowActionPortDefinition],
+        signals: &[FlowSignalPortDefinition],
+        fired: &HashSet<String>,
+        enabled: bool,
     ) -> Result<Vec<String>, Error> {
-        Err(Error::invalid_request(
-            codes::NO_LOGIC_NODES,
-            "No logic nodes registered",
-        ))
+        battersea_nodes::logic::prepare_logic_outputs(
+            node, definition, actions, signals, fired, enabled,
+        )
+        .map_err(battersea_nodes::NodeError::into_host)
     }
     fn logic_gate_label(&self, _node: &FlowNode, definition: &FlowNodeDefinition) -> String {
         definition.class_name.clone()
@@ -292,6 +291,7 @@ fn application() -> Application {
     builder.register_defined(Source, &registry).unwrap();
     builder.register_defined(Sink, &registry).unwrap();
     battersea_nodes::register_handlers(&mut builder).unwrap();
+    battersea_nodes::conformance::register_probe_handlers(&mut builder).unwrap();
     Application {
         handlers: builder.build(),
         phases: Mutex::default(),
@@ -470,6 +470,34 @@ mod tests {
             events.last().unwrap().kind,
             EventKind::ActivationExecutionFinished
         ));
+    }
+    /// The generic kit's suite reaches this host only through its fixture.
+    struct Fixture;
+    impl battersea_kit::conformance::Fixture for Fixture {
+        type Host = Application;
+        fn host(&self, _clock: std::sync::Arc<battersea_kit::ManualClock>) -> Application {
+            application()
+        }
+        fn state(&self, _host: &Application, scheduler: SchedulerState) -> Run {
+            Run {
+                scheduler,
+                output: vec![],
+                order: vec![],
+            }
+        }
+        fn events(&self, host: &Application, run_id: &str) -> Vec<ExecutionEvent> {
+            host.events
+                .lock()
+                .unwrap()
+                .iter()
+                .filter(|event| event.run_id == run_id)
+                .cloned()
+                .collect()
+        }
+    }
+    #[tokio::test]
+    async fn the_generic_kit_suite_passes_on_this_host() {
+        battersea_nodes::conformance::run(&Fixture).await.unwrap();
     }
     #[test]
     fn a_host_without_durable_state_refuses_checkpoints() {

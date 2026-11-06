@@ -22,10 +22,16 @@
     "battersea-flow",
     "battersea-model"
   ],
-  "battersea-nodes": [
+  "battersea-kit": [
     "battersea-flow",
     "battersea-runtime",
     "battersea-model"
+  ],
+  "battersea-nodes": [
+    "battersea-flow",
+    "battersea-runtime",
+    "battersea-model",
+    "battersea-kit"
   ],
   "battersea-pianola": [
     "battersea-flow",

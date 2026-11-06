@@ -45,6 +45,7 @@ pub fn battersea_flow::catalog::NodeDefinition::definition(&battersea_flow::regi
 pub fn battersea_flow::catalog::node_definition<'a>(&'a std::collections::hash::map::HashMap<alloc::string::String, battersea_flow::FlowNodeDefinition>, &battersea_flow::FlowNode) -> core::option::Option<&'a battersea_flow::FlowNodeDefinition>
 pub fn battersea_flow::catalog::node_implements_interface(&std::collections::hash::map::HashMap<alloc::string::String, battersea_flow::FlowNodeDefinition>, &battersea_flow::FlowNode, &str) -> bool
 pub fn battersea_flow::catalog::parse_definition_manifest(&battersea_flow::registry::Registry, &str) -> core::result::Result<alloc::vec::Vec<battersea_flow::FlowNodeDefinition>, alloc::string::String>
+pub fn battersea_flow::catalog::parse_definition_manifests(&battersea_flow::registry::Registry, &[(&str, &str)]) -> core::result::Result<alloc::vec::Vec<battersea_flow::FlowNodeDefinition>, alloc::string::String>
 pub mod battersea_flow::document
 pub enum battersea_flow::document::DocumentInspection
 pub battersea_flow::document::DocumentInspection::Incompatible

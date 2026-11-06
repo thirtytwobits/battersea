@@ -332,6 +332,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "battersea-kit"
+version = "0.23.0"
+dependencies = [
+ "async-trait",
+ "battersea-flow",
+ "battersea-model",
+ "battersea-runtime",
+ "futures-util",
+ "serde",
+ "serde_json",
+ "serde_yaml",
+ "thiserror 2.0.21",
+ "tokio",
+ "tokio-util",
+]
+
+[[package]]
 name = "battersea-model"
 version = "0.23.0"
 dependencies = [
@@ -357,10 +374,12 @@ version = "0.23.0"
 dependencies = [
  "async-trait",
  "battersea-flow",
+ "battersea-kit",
  "battersea-runtime",
  "serde",
  "serde_json",
  "thiserror 2.0.21",
+ "tokio",
  "tokio-util",
 ]
 
@@ -820,6 +839,7 @@ dependencies = [
  "async-trait",
  "battersea-derive",
  "battersea-flow",
+ "battersea-kit",
  "battersea-nodes",
  "battersea-runtime",
  "serde_json",

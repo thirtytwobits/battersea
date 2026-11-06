@@ -1,6 +1,7 @@
 # Kits
 
-Status: proposed; see [#70](https://github.com/thirtytwobits/battersea/issues/70).
+Status: implemented; designed in [#70](https://github.com/thirtytwobits/battersea/issues/70).
+`battersea-nodes` is the generic kit.
 
 A kit is a domain-specific set of nodes that applications share. It is one Cargo crate. Its
 handlers reach the application only through its port, so an application that implements the
@@ -33,8 +34,9 @@ are persisted in flows and are never renamed; a rename is a registered document 
 `prompt.fragmentArray` and `chat.raw` are the shared vocabulary every kit may reference, and the
 only names outside a kit's namespace it may register or reference.
 
-A kit in this repository is the crate `battersea-kit-NAME`. Its editor package, when it has one,
-is `@battersea/kit-NAME` under `typescript/packages/kit-NAME`.
+A kit in this repository is the crate `battersea-kit-NAME`, with its manifest at `src/nodes.yaml`,
+its contract at `contracts/kit-NAME.md` and its example host under `examples/kit-NAME`. Its
+editor package, when it has one, is `@battersea/kit-NAME` under `typescript/packages/kit-NAME`.
 
 ## Port
 
@@ -79,18 +81,26 @@ application's port implementation behaves as the reference host does.
 Each case is a flow in [text source](text-source.md), activation values, the clock steps taken
 during the run, and the port operations performed before it. `conformance::run(&fixture)` plays
 every case on the reference host and on the application's host, both on a `ManualClock` the
-suite owns, and reports the first divergence in execution events, emitted tokens and the port's
-observable state. The suite reaches the application only through `Port` and `Fixture`:
+suite owns, and reports the first divergence in outcome, execution events and the port's
+observable state. Emitted tokens are compared through the runtime's receive events, which
+carry each value. The suite reaches the application only through `Port` and
+`battersea_kit::conformance::Fixture`:
 
 ```rust
 pub trait Fixture {
-    type Host: Port;
+    type Host: ActivationHost;
     /// A host with no state, running on `clock`.
     fn host(&self, clock: Arc<ManualClock>) -> Self::Host;
+    /// The host's run state around `scheduler`, with no kit state.
+    fn state(&self, host: &Self::Host, scheduler: SchedulerState) -> <Self::Host as ExecutionHost>::State;
     /// The execution events the host recorded for `run_id`.
     fn events(&self, host: &Self::Host, run_id: &str) -> Vec<ExecutionEvent>;
 }
 ```
+
+A clock step is taken once the activation waits on a timer; a case whose steps outnumber the
+host's waits fails. The kit's `conformance::run` adds the `Port` bound and applies the case's
+port operations through it.
 
 The application adds the kit with the `conformance` feature as a dev-dependency and runs the
 suite in a test. A kit in this repository has an example host under `examples/` that implements
@@ -122,10 +132,13 @@ the crate's version.
 
 ## The generic kit
 
-`battersea-nodes` is the kit `battersea`, without renaming. It gains `KIT`, the `conformance`
+`battersea-nodes` is the kit `battersea`, without renaming. It has `KIT`, the `conformance`
 feature and tests on the reference host. Its handlers require only `ExecutionHost`, so it has
 no port and its suite proves catalogue composition and handler behaviour on the application's
-host. Other kits do not depend on it; the application composes it beside them.
+host: `conformance::PROBE_MANIFEST` adds a source that emits activation values and a sink,
+whose handlers the application registers beside the generic handlers in its test host. Other
+kits do not depend on it; the application composes it beside them. `battersea_kit` holds the
+`NodeError` and `text` helpers kits share, and `battersea-nodes` re-exports them.
 
 ## Verification
 

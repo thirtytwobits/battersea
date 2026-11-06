@@ -1097,6 +1097,8 @@ pub trait ExecutionHost: Sized + Send + Sync {
             };
 
             runtime.logic_nodes_evaluated.insert(node.id.clone());
+            let mut received_inputs = fired_ports.iter().cloned().collect::<Vec<_>>();
+            received_inputs.sort();
             self.publish_execution_record(
                 runtime,
                 &node.id,
@@ -1111,7 +1113,7 @@ pub trait ExecutionHost: Sized + Send + Sync {
                     "handlerId": definition.handler_id,
                     "gate": self.logic_gate_label(node, &definition),
                     "enabled": enabled,
-                    "receivedInputs": fired_ports.iter().cloned().collect::<Vec<_>>(),
+                    "receivedInputs": received_inputs,
                     "emittedSignals": output_ports,
                 })),
             )
