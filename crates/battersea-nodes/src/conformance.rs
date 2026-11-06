@@ -5,7 +5,7 @@
 //! generic handlers in its test host and runs the suite against it.
 use async_trait::async_trait;
 use battersea_flow::{FlowExecutionLimits, FlowNode, FlowNodeDefinition};
-use battersea_kit::conformance::{self, Case, Failure, Fixture, Suite};
+use battersea_kit::conformance::{self, Case, Failure, Fixture, NoPort, Suite};
 use battersea_kit::{ManualClock, ReferenceHost, ReferenceState};
 use battersea_runtime::{
     ExecutionEvent, ExecutionHost, NodeHandler, RegistryBuilder, Retained, SchedulerState, Token,
@@ -221,12 +221,5 @@ impl Fixture for ReferenceFixture {
 /// Plays every case on the reference host and on the fixture's host and reports the first
 /// divergence.
 pub async fn run<F: Fixture>(fixture: &F) -> Result<(), Failure> {
-    conformance::run(
-        &suite(),
-        &ReferenceFixture,
-        fixture,
-        async |_, _, _: &()| Ok(()),
-        async |_, _, _: &()| Ok(()),
-    )
-    .await
+    conformance::run(&suite(), &ReferenceFixture, fixture, &NoPort).await
 }

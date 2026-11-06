@@ -53,7 +53,6 @@ formatter_blocks:
     template:
       kind: text
       text: "{greeting}"
-node_definitions: []
 "#
     )
 }

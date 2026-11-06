@@ -143,6 +143,8 @@ struct FlowManifestNodeDefinition {
 struct FlowManifestDocument {
     #[serde(default)]
     formatter_blocks: BTreeMap<String, FlowPromptTemplateDefinition>,
+    /// Absent in a manifest that only overrides formatter blocks.
+    #[serde(default)]
     node_definitions: Vec<FlowManifestNodeDefinition>,
 }
 

@@ -18,7 +18,8 @@ defines its parts, names and release rules.
    its `ManualClock` rather than waiting.
 5. Export `conformance::run` behind the `conformance` feature. Each case is a flow in text
    source, its activation values, the clock steps during the run and the port operations
-   before it.
+   before it. Implement `PortAccess<H: Port>` once: it applies those operations and observes
+   the port's state for the comparison.
 6. Add an example host under `examples/kit-NAME` that implements the port over something other
    than the reference host's maps and runs the suite.
 

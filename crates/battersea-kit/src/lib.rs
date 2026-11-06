@@ -4,6 +4,7 @@
 //! [`ReferenceHost`] on a manual clock, and, behind the `conformance` feature, the
 //! differential harness an application runs against its own host. `contracts/kits.md`
 //! defines the parts of a kit and the rules this crate enforces.
+pub use battersea_model::clock;
 pub use battersea_model::{Clock, ManualClock};
 pub mod error;
 pub use error::{NodeError, NodeResult};

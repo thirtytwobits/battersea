@@ -174,10 +174,11 @@ impl Kit {
         Ok(())
     }
 
-    /// The manifest text that reaches a model, keyed by formatter block
-    /// (`formatter_blocks.NAME`) and by inline port formatter
-    /// (`CLASS.PORT.default` or `CLASS.PORT.VARIANT`), each as canonical JSON. An
-    /// application pins the map in a snapshot test.
+    /// The manifest text that reaches a model, as canonical JSON keyed by formatter block
+    /// (`formatter_blocks.NAME`) and by port formatter (`CLASS.PORT.default` or
+    /// `CLASS.PORT.VARIANT`), each port formatter resolved to the template it names. An
+    /// application pins the map in a snapshot test; a change to a block, an inline template
+    /// or a reference changes the map.
     pub fn model_facing_text(&self) -> Result<BTreeMap<String, String>, KitError> {
         let manifest = |message: String| KitError::Manifest {
             kit: self.name.into(),
@@ -189,12 +190,12 @@ impl Kit {
             RawRoot::Document(document) => (document.formatter_blocks, document.node_definitions),
             RawRoot::List(definitions) => (BTreeMap::new(), definitions),
         };
+        let canonical = |template: &FlowPromptTemplateDefinition| {
+            serde_json::to_string(template).map_err(|e| manifest(e.to_string()))
+        };
         let mut text = BTreeMap::new();
-        for (name, block) in blocks {
-            text.insert(
-                format!("formatter_blocks.{name}"),
-                serde_json::to_string(&block).map_err(|e| manifest(e.to_string()))?,
-            );
+        for (name, block) in &blocks {
+            text.insert(format!("formatter_blocks.{name}"), canonical(block)?);
         }
         for definition in definitions {
             for port in definition
@@ -205,7 +206,7 @@ impl Kit {
                 let Some(formatter) = &port.formatter else {
                     continue;
                 };
-                let inline = formatter
+                let entries = formatter
                     .default
                     .iter()
                     .map(|value| ("default".to_string(), value))
@@ -215,16 +216,20 @@ impl Kit {
                             .iter()
                             .map(|(key, value)| (key.clone(), value)),
                     );
-                for (key, value) in inline {
-                    if value.get("ref").is_some() {
-                        continue;
-                    }
-                    let template: FlowPromptTemplateDefinition =
-                        serde_yaml::from_value(value.clone())
-                            .map_err(|e| manifest(e.to_string()))?;
+                for (key, value) in entries {
+                    let template = match value.get("ref").and_then(serde_yaml::Value::as_str) {
+                        Some(reference) => blocks.get(reference.trim()).cloned().ok_or_else(|| {
+                            manifest(format!(
+                                "{}.{} references formatter block {reference:?}, which the manifest does not define",
+                                definition.class_name, port.name
+                            ))
+                        })?,
+                        None => serde_yaml::from_value(value.clone())
+                            .map_err(|e| manifest(e.to_string()))?,
+                    };
                     text.insert(
                         format!("{}.{}.{key}", definition.class_name, port.name),
-                        serde_json::to_string(&template).map_err(|e| manifest(e.to_string()))?,
+                        canonical(&template)?,
                     );
                 }
             }

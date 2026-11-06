@@ -578,6 +578,10 @@ fn package(root: &Path) -> Result<()> {
                 unpack_root.path().join("consumer-target").to_str().unwrap(),
                 "--config",
                 "resolver.incompatible-rust-versions=\"fallback\"",
+                // Consumers prove that the archives compile and run; their debug information
+                // is the bulk of the build and exceeds a CI runner's disk.
+                "--config",
+                "profile.dev.debug=false",
             ],
         )?;
     }

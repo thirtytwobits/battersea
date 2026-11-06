@@ -1,6 +1,7 @@
 pub mod battersea_kit
 pub use battersea_kit::Clock
 pub use battersea_kit::ManualClock
+pub use battersea_kit::clock
 pub mod battersea_kit::conformance
 pub enum battersea_kit::conformance::Divergence
 pub battersea_kit::conformance::Divergence::Event
@@ -13,9 +14,15 @@ pub battersea_kit::conformance::Divergence::Outcome::reference: battersea_kit::c
 pub battersea_kit::conformance::Divergence::Setup
 pub battersea_kit::conformance::Divergence::Setup::message: alloc::string::String
 pub battersea_kit::conformance::Divergence::Setup::side: battersea_kit::conformance::Side
+pub battersea_kit::conformance::Divergence::State
+pub battersea_kit::conformance::Divergence::State::candidate: serde_json::value::Value
+pub battersea_kit::conformance::Divergence::State::reference: serde_json::value::Value
 pub battersea_kit::conformance::Divergence::UnusedClockSteps
 pub battersea_kit::conformance::Divergence::UnusedClockSteps::remaining: usize
 pub battersea_kit::conformance::Divergence::UnusedClockSteps::side: battersea_kit::conformance::Side
+pub battersea_kit::conformance::Divergence::WaitBeyondSteps
+pub battersea_kit::conformance::Divergence::WaitBeyondSteps::remaining: core::time::Duration
+pub battersea_kit::conformance::Divergence::WaitBeyondSteps::side: battersea_kit::conformance::Side
 impl core::clone::Clone for battersea_kit::conformance::Divergence
 pub fn battersea_kit::conformance::Divergence::clone(&self) -> Self
 impl core::fmt::Debug for battersea_kit::conformance::Divergence
@@ -62,6 +69,8 @@ pub battersea_kit::conformance::Outcome::Failed
 pub battersea_kit::conformance::Outcome::Failed::code: alloc::string::String
 pub battersea_kit::conformance::Outcome::Failed::message: alloc::string::String
 pub battersea_kit::conformance::Outcome::Failed::reason: core::option::Option<alloc::string::String>
+pub battersea_kit::conformance::Outcome::Waiting
+pub battersea_kit::conformance::Outcome::Waiting::remaining: core::time::Duration
 impl battersea_kit::conformance::Outcome
 pub fn battersea_kit::conformance::Outcome::agrees_with(&self, &Self) -> bool
 impl core::clone::Clone for battersea_kit::conformance::Outcome
@@ -265,9 +274,42 @@ pub fn battersea_kit::conformance::Failure::__clone_box(&self, dyn_clone::sealed
 impl<T> typenum::type_operators::Same for battersea_kit::conformance::Failure
 pub type battersea_kit::conformance::Failure::Output = T
 impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_kit::conformance::Failure where T: ?core::marker::Sized
+pub struct battersea_kit::conformance::NoPort
+impl<H: battersea_runtime::host::ExecutionHost> battersea_kit::conformance::PortAccess<H, ()> for battersea_kit::conformance::NoPort
+pub async fn battersea_kit::conformance::NoPort::observe(&self, &H, &<H as battersea_runtime::host::ExecutionHost>::State) -> core::result::Result<serde_json::value::Value, alloc::string::String>
+pub async fn battersea_kit::conformance::NoPort::prepare(&self, &H, &mut <H as battersea_runtime::host::ExecutionHost>::State, &()) -> core::result::Result<(), alloc::string::String>
+impl core::marker::Freeze for battersea_kit::conformance::NoPort
+impl core::marker::Send for battersea_kit::conformance::NoPort
+impl core::marker::Sync for battersea_kit::conformance::NoPort
+impl core::marker::Unpin for battersea_kit::conformance::NoPort
+impl core::marker::UnsafeUnpin for battersea_kit::conformance::NoPort
+impl core::panic::unwind_safe::RefUnwindSafe for battersea_kit::conformance::NoPort
+impl core::panic::unwind_safe::UnwindSafe for battersea_kit::conformance::NoPort
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_kit::conformance::NoPort where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_kit::conformance::NoPort where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<T, U> core::convert::Into<U> for battersea_kit::conformance::NoPort where U: core::convert::From<T>
+pub fn battersea_kit::conformance::NoPort::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_kit::conformance::NoPort where U: core::convert::Into<T>
+pub type battersea_kit::conformance::NoPort::Error = never
+pub fn battersea_kit::conformance::NoPort::try_from(U) -> core::result::Result<T, never>
+impl<T, U> core::convert::TryInto<U> for battersea_kit::conformance::NoPort where U: core::convert::TryFrom<T>
+pub type battersea_kit::conformance::NoPort::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_kit::conformance::NoPort::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> core::any::Any for battersea_kit::conformance::NoPort where T: 'static + ?core::marker::Sized
+pub fn battersea_kit::conformance::NoPort::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_kit::conformance::NoPort where T: ?core::marker::Sized
+pub fn battersea_kit::conformance::NoPort::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_kit::conformance::NoPort where T: ?core::marker::Sized
+pub fn battersea_kit::conformance::NoPort::borrow_mut(&mut self) -> &mut T
+impl<T> core::convert::From<T> for battersea_kit::conformance::NoPort
+pub fn battersea_kit::conformance::NoPort::from(T) -> T
+impl<T> typenum::type_operators::Same for battersea_kit::conformance::NoPort
+pub type battersea_kit::conformance::NoPort::Output = T
+impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_kit::conformance::NoPort where T: ?core::marker::Sized
 pub struct battersea_kit::conformance::Played
 pub battersea_kit::conformance::Played::events: alloc::vec::Vec<serde_json::value::Value>
 pub battersea_kit::conformance::Played::outcome: battersea_kit::conformance::Outcome
+pub battersea_kit::conformance::Played::state: serde_json::value::Value
 pub battersea_kit::conformance::Played::unused_steps: usize
 impl core::clone::Clone for battersea_kit::conformance::Played
 pub fn battersea_kit::conformance::Played::clone(&self) -> Self
@@ -348,8 +390,15 @@ pub type battersea_kit::conformance::Fixture::Host: battersea_runtime::lifecycle
 pub fn battersea_kit::conformance::Fixture::events(&self, &Self::Host, &str) -> alloc::vec::Vec<battersea_runtime::event::ExecutionEvent>
 pub fn battersea_kit::conformance::Fixture::host(&self, alloc::rcs::arc::Arc<battersea_model::clock::ManualClock>) -> Self::Host
 pub fn battersea_kit::conformance::Fixture::state(&self, &Self::Host, battersea_runtime::state::SchedulerState) -> <Self::Host as battersea_runtime::host::ExecutionHost>::State
-pub async fn battersea_kit::conformance::play<Op, F: battersea_kit::conformance::Fixture>(&battersea_kit::conformance::Suite<Op>, &F, &battersea_kit::conformance::Case<Op>, impl core::ops::async_function::AsyncFn(&<F as battersea_kit::conformance::Fixture>::Host, &mut <<F as battersea_kit::conformance::Fixture>::Host as battersea_runtime::host::ExecutionHost>::State, &Op) -> core::result::Result<(), alloc::string::String>) -> core::result::Result<battersea_kit::conformance::Played, alloc::string::String>
-pub async fn battersea_kit::conformance::run<Op, R: battersea_kit::conformance::Fixture, C: battersea_kit::conformance::Fixture>(&battersea_kit::conformance::Suite<Op>, &R, &C, impl core::ops::async_function::AsyncFn(&<R as battersea_kit::conformance::Fixture>::Host, &mut <<R as battersea_kit::conformance::Fixture>::Host as battersea_runtime::host::ExecutionHost>::State, &Op) -> core::result::Result<(), alloc::string::String>, impl core::ops::async_function::AsyncFn(&<C as battersea_kit::conformance::Fixture>::Host, &mut <<C as battersea_kit::conformance::Fixture>::Host as battersea_runtime::host::ExecutionHost>::State, &Op) -> core::result::Result<(), alloc::string::String>) -> core::result::Result<(), battersea_kit::conformance::Failure>
+pub trait battersea_kit::conformance::PortAccess<H: battersea_runtime::host::ExecutionHost, Op>
+pub fn battersea_kit::conformance::PortAccess::observe(&self, &H, &<H as battersea_runtime::host::ExecutionHost>::State) -> impl core::future::future::Future<Output = core::result::Result<serde_json::value::Value, alloc::string::String>> + core::marker::Send
+pub fn battersea_kit::conformance::PortAccess::prepare(&self, &H, &mut <H as battersea_runtime::host::ExecutionHost>::State, &Op) -> impl core::future::future::Future<Output = core::result::Result<(), alloc::string::String>> + core::marker::Send
+impl<H: battersea_runtime::host::ExecutionHost> battersea_kit::conformance::PortAccess<H, ()> for battersea_kit::conformance::NoPort
+pub async fn battersea_kit::conformance::NoPort::observe(&self, &H, &<H as battersea_runtime::host::ExecutionHost>::State) -> core::result::Result<serde_json::value::Value, alloc::string::String>
+pub async fn battersea_kit::conformance::NoPort::prepare(&self, &H, &mut <H as battersea_runtime::host::ExecutionHost>::State, &()) -> core::result::Result<(), alloc::string::String>
+pub fn battersea_kit::conformance::comparable(&serde_json::value::Value) -> serde_json::value::Value
+pub async fn battersea_kit::conformance::play<Op, F: battersea_kit::conformance::Fixture, A: battersea_kit::conformance::PortAccess<<F as battersea_kit::conformance::Fixture>::Host, Op>>(&battersea_kit::conformance::Suite<Op>, &F, &battersea_kit::conformance::Case<Op>, &A) -> core::result::Result<battersea_kit::conformance::Played, alloc::string::String>
+pub async fn battersea_kit::conformance::run<Op, R, C, A>(&battersea_kit::conformance::Suite<Op>, &R, &C, &A) -> core::result::Result<(), battersea_kit::conformance::Failure> where R: battersea_kit::conformance::Fixture, C: battersea_kit::conformance::Fixture, A: battersea_kit::conformance::PortAccess<<R as battersea_kit::conformance::Fixture>::Host, Op> + battersea_kit::conformance::PortAccess<<C as battersea_kit::conformance::Fixture>::Host, Op>
 pub mod battersea_kit::error
 pub enum battersea_kit::error::NodeError
 pub battersea_kit::error::NodeError::Internal(alloc::string::String)
