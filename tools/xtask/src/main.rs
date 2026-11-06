@@ -438,8 +438,8 @@ fn package(root: &Path) -> Result<()> {
             manifest.push_str("axum = { version = \"0.8\", features = [\"json\"] }\nclap = { version = \"4\", features = [\"derive\"] }\ntempfile = \"3\"\n");
         }
         for name in crates.keys() {
-            let features = if conformance && name.starts_with("battersea-kit")
-                || conformance && name == "battersea-nodes"
+            let features = if conformance
+                && (name.starts_with("battersea-kit") || name == "battersea-nodes")
             {
                 ", features = [\"conformance\"]"
             } else {
