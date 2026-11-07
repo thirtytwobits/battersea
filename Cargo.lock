@@ -349,6 +349,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "battersea-kit-conversation"
+version = "0.23.0"
+dependencies = [
+ "async-trait",
+ "battersea-flow",
+ "battersea-kit",
+ "battersea-model",
+ "battersea-runtime",
+ "futures-util",
+ "schemars",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.21",
+ "tokio",
+ "tokio-util",
+]
+
+[[package]]
 name = "battersea-model"
 version = "0.23.0"
 dependencies = [
@@ -1776,6 +1794,21 @@ dependencies = [
  "num-traits",
  "serde_json",
  "zmij",
+]
+
+[[package]]
+name = "kit-conversation-example"
+version = "0.23.0"
+dependencies = [
+ "async-trait",
+ "battersea-flow",
+ "battersea-kit",
+ "battersea-kit-conversation",
+ "battersea-model",
+ "battersea-runtime",
+ "serde_json",
+ "tokio",
+ "tokio-util",
 ]
 
 [[package]]

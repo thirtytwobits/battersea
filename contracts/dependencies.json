@@ -27,6 +27,12 @@
     "battersea-runtime",
     "battersea-model"
   ],
+  "battersea-kit-conversation": [
+    "battersea-flow",
+    "battersea-runtime",
+    "battersea-model",
+    "battersea-kit"
+  ],
   "battersea-nodes": [
     "battersea-flow",
     "battersea-runtime",

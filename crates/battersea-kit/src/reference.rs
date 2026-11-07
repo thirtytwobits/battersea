@@ -111,6 +111,9 @@ pub type LogicOutputs = dyn Fn(
     + Send
     + Sync;
 
+/// What a kit's port does to the run state when an activation completes.
+pub type Completion<X> = dyn Fn(&mut ReferenceState<X>) -> Result<(), String> + Send + Sync;
+
 /// An in-memory [`ExecutionHost`] whose state carries the kit's `X` and whose clock is a
 /// [`ManualClock`]. It records execution events and run phases.
 pub struct ReferenceHost<X: Send + Sync + 'static> {
@@ -118,6 +121,7 @@ pub struct ReferenceHost<X: Send + Sync + 'static> {
     clock: Arc<ManualClock>,
     registry: Registry,
     logic: Option<Arc<LogicOutputs>>,
+    completion: Option<Arc<Completion<X>>>,
     events: Mutex<Vec<ExecutionEvent>>,
     phases: Mutex<HashMap<String, RunPhase>>,
     _kit: PhantomData<fn() -> X>,
@@ -130,6 +134,7 @@ impl<X: Send + Sync + 'static> ReferenceHost<X> {
             clock,
             registry: Registry::default(),
             logic: None,
+            completion: None,
             events: Mutex::default(),
             phases: Mutex::default(),
             _kit: PhantomData,
@@ -157,6 +162,15 @@ impl<X: Send + Sync + 'static> ReferenceHost<X> {
             + 'static,
     ) -> Self {
         self.logic = Some(Arc::new(logic));
+        self
+    }
+    /// Runs `completion` on the run state when an activation completes, before the host
+    /// retains the completion phase; its error is an internal error of the activation.
+    pub fn with_completion(
+        mut self,
+        completion: impl Fn(&mut ReferenceState<X>) -> Result<(), String> + Send + Sync + 'static,
+    ) -> Self {
+        self.completion = Some(Arc::new(completion));
         self
     }
     pub fn clock(&self) -> &Arc<ManualClock> {
@@ -281,8 +295,11 @@ impl<X: Send + Sync + 'static> ActivationHost for ReferenceHost<X> {
     async fn preflight_activation(&self, _runtime: &mut Self::State) -> Result<(), ReferenceError> {
         Ok(())
     }
-    async fn complete_execution(&self, _runtime: &mut Self::State) -> Result<(), ReferenceError> {
-        Ok(())
+    async fn complete_execution(&self, runtime: &mut Self::State) -> Result<(), ReferenceError> {
+        match &self.completion {
+            Some(completion) => completion(runtime).map_err(ReferenceError::internal),
+            None => Ok(()),
+        }
     }
     async fn retain_execution_phase(
         &self,

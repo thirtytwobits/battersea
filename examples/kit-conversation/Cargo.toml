@@ -1,0 +1,17 @@
+[package]
+name = "kit-conversation-example"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish = false
+[dependencies]
+battersea-kit-conversation = { path = "../../crates/battersea-kit-conversation", features = ["conformance"] }
+battersea-kit = { path = "../../crates/battersea-kit", features = ["conformance"] }
+battersea-flow = { path = "../../crates/battersea-flow" }
+battersea-runtime = { path = "../../crates/battersea-runtime" }
+battersea-model = { path = "../../crates/battersea-model" }
+async-trait = "0.1"
+serde_json.workspace = true
+tokio = { version = "1", features = ["macros", "rt"] }
+tokio-util = "0.7"
