@@ -650,6 +650,7 @@ pub fn battersea_kit::reference::ReferenceHost<X>::phase(&self, &str) -> core::o
 pub fn battersea_kit::reference::ReferenceHost<X>::run_events(&self, &str) -> alloc::vec::Vec<battersea_runtime::event::ExecutionEvent>
 pub fn battersea_kit::reference::ReferenceHost<X>::state(&self, battersea_runtime::state::SchedulerState, X) -> battersea_kit::reference::ReferenceState<X>
 pub fn battersea_kit::reference::ReferenceHost<X>::with_logic(self, impl core::ops::function::Fn(&battersea_flow::types::FlowNode, &battersea_flow::types::FlowNodeDefinition, &[battersea_flow::types::FlowActionPortDefinition], &[battersea_flow::types::FlowSignalPortDefinition], &std::collections::hash::set::HashSet<alloc::string::String>, bool) -> core::result::Result<alloc::vec::Vec<alloc::string::String>, alloc::string::String> + core::marker::Send + core::marker::Sync + 'static) -> Self
+pub fn battersea_kit::reference::ReferenceHost<X>::with_registry(self, battersea_flow::registry::Registry) -> Self
 impl<X: core::marker::Send + core::marker::Sync + 'static> battersea_runtime::host::ExecutionHost for battersea_kit::reference::ReferenceHost<X>
 pub type battersea_kit::reference::ReferenceHost<X>::Error = battersea_kit::reference::ReferenceError
 pub type battersea_kit::reference::ReferenceHost<X>::State = battersea_kit::reference::ReferenceState<X>
@@ -1030,6 +1031,7 @@ pub fn battersea_kit::reference::ReferenceHost<X>::phase(&self, &str) -> core::o
 pub fn battersea_kit::reference::ReferenceHost<X>::run_events(&self, &str) -> alloc::vec::Vec<battersea_runtime::event::ExecutionEvent>
 pub fn battersea_kit::reference::ReferenceHost<X>::state(&self, battersea_runtime::state::SchedulerState, X) -> battersea_kit::reference::ReferenceState<X>
 pub fn battersea_kit::reference::ReferenceHost<X>::with_logic(self, impl core::ops::function::Fn(&battersea_flow::types::FlowNode, &battersea_flow::types::FlowNodeDefinition, &[battersea_flow::types::FlowActionPortDefinition], &[battersea_flow::types::FlowSignalPortDefinition], &std::collections::hash::set::HashSet<alloc::string::String>, bool) -> core::result::Result<alloc::vec::Vec<alloc::string::String>, alloc::string::String> + core::marker::Send + core::marker::Sync + 'static) -> Self
+pub fn battersea_kit::reference::ReferenceHost<X>::with_registry(self, battersea_flow::registry::Registry) -> Self
 impl<X: core::marker::Send + core::marker::Sync + 'static> battersea_runtime::host::ExecutionHost for battersea_kit::reference::ReferenceHost<X>
 pub type battersea_kit::reference::ReferenceHost<X>::Error = battersea_kit::reference::ReferenceError
 pub type battersea_kit::reference::ReferenceHost<X>::State = battersea_kit::reference::ReferenceState<X>

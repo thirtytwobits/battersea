@@ -13,7 +13,8 @@ defines its parts, names and release rules.
 3. Define `Port` in the kit's own terms: the records it stores, the services it calls and the
    run state it keeps. Its only supertrait is `ExecutionHost`. Handlers are generic over
    `H: Port` and never name a concrete host.
-4. Implement `Port` for `ReferenceHost<reference::State>` in memory. Write the kit's contract
+4. Implement `Port` for `ReferenceHost<reference::State>` in memory, built `with_registry`
+   when the kit registers parameter datatypes. Write the kit's contract
    with a distinguishing-proof table and test each clause against the reference host, advancing
    its `ManualClock` rather than waiting.
 5. Export `conformance::run` behind the `conformance` feature. Each case is a flow in text

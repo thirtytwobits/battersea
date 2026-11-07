@@ -71,6 +71,8 @@ shared vocabulary, never through each other's ports.
 kit's `X` and whose clock is a `ManualClock`. A kit implements its port for
 `ReferenceHost<reference::State>`. The reference host is the kit's own test host and the oracle
 its conformance suite compares against. It makes no durable commitment and has no checkpoints.
+A kit that registers parameter datatypes builds the reference host `with_registry`, so its
+automation writes convert as an application's registry does.
 
 ## Conformance
 
@@ -98,13 +100,15 @@ pub trait Fixture {
 }
 ```
 
-A clock step is taken once the activation waits on a timer. A case whose steps outnumber a
-host's waits fails, and so does a host that waits after the last step; neither waits on the wall
-clock. The kit reaches its port through `PortAccess<H: Port>`, which applies a case's port
-operations before the activation and observes the port's state after it; the kit's
-`conformance::run` passes it for both hosts, and a kit without a port passes `NoPort`. Event
-comparison ignores the host's own error wording: the summary and error message of a failure
-record and the message of a terminal outcome. Codes are compared.
+A clock step is taken once the activation waits on a timer, and the next once the activation
+has completed or dropped every timer the step reached, so a wait racing a longer timeout
+completes. A case whose steps outnumber a host's waits fails, and so does a host that waits
+after the last step; neither waits on the wall clock. The kit reaches its port through
+`PortAccess<H: Port>`, which applies a case's port operations before the activation and
+observes the port's state after it; the kit's `conformance::run` passes it for both hosts, and
+a kit without a port passes `NoPort`. Event comparison ignores the host's own error wording: the
+summary and error message of a failure record and the message of a terminal outcome. Codes are
+compared.
 
 The application adds the kit with the `conformance` feature as a dev-dependency and runs the
 suite in a test. A kit in this repository has an example host under `examples/` that implements

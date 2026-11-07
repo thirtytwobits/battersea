@@ -49,6 +49,8 @@ pub struct Suite<Op = ()> {
     pub kit: &'static Kit,
     /// The manifests of the catalogue, the kit's first.
     pub manifests: Vec<(&'static str, &'static str)>,
+    /// Registers the kit's token types, and its parameter datatypes, on the catalogue's
+    /// registry.
     pub register_token_types: fn(&mut Registry) -> Result<(), String>,
     pub cases: Vec<Case<Op>>,
 }
@@ -289,12 +291,14 @@ pub async fn play<Op, F: Fixture, A: PortAccess<F::Host, Op>>(
         access.prepare(&host, &mut state, operation).await?;
     }
     let taken = AtomicUsize::new(0);
-    // Advances the clock at each wait the case steps, then reports the next wait.
+    // Advances the clock at each wait the case steps, lets the activation complete the timers
+    // the advance reached, then reports the next wait.
     let stepper = async {
         for step in &case.steps {
             clock.timer_within(Duration::MAX).await;
             clock.advance(*step);
             taken.fetch_add(1, Ordering::SeqCst);
+            clock.settled().await;
         }
         clock.timer_within(Duration::MAX).await
     };

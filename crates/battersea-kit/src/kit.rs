@@ -175,8 +175,9 @@ impl Kit {
     }
 
     /// The manifest text that reaches a model, as canonical JSON keyed by formatter block
-    /// (`formatter_blocks.NAME`) and by port formatter (`CLASS.PORT.default` or
-    /// `CLASS.PORT.VARIANT`), each port formatter resolved to the template it names. An
+    /// (`formatter_blocks.NAME`) and by port formatter (`CLASS.PORT.default` for the default
+    /// template, `CLASS.PORT.variants.NAME` for a variant), each port formatter resolved to
+    /// the template it names. An
     /// application pins the map in a snapshot test; a change to a block, an inline template
     /// or a reference changes the map.
     pub fn model_facing_text(&self) -> Result<BTreeMap<String, String>, KitError> {
@@ -214,7 +215,7 @@ impl Kit {
                         formatter
                             .variants
                             .iter()
-                            .map(|(key, value)| (key.clone(), value)),
+                            .map(|(key, value)| (format!("variants.{key}"), value)),
                     );
                 for (key, value) in entries {
                     let template = match value.get("ref").and_then(serde_yaml::Value::as_str) {

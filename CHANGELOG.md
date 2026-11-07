@@ -8,8 +8,8 @@
   `McpConfig::clock` runs MCP deadlines on a host clock.
 - `ExpiryClock` is `Clock` and adds `sleep_until`. Library code takes its time and timers from the
   host's clock: `battersea_model::clock` provides `sleep`, `timeout`, `timeout_at`,
-  `deadline_after` and `utc_now`. `ManualClock` completes timers when advanced and reports pending
-  timers to tests.
+  `deadline_after` and `utc_now`. `ManualClock` completes timers when advanced, reports pending
+  timers to tests and `settled` waits until the timers an advance reached complete.
 - `ProviderRegistry::create_chat` and `create_media`, chat and media factories, and
   `ValidatedProviderConfiguration::bind` take an `Arc<dyn Clock>`. Adapters run deadlines, retry
   backoff, Retry-After dates, polling and idle watchdogs on it; their HTTP clients apply no timeout

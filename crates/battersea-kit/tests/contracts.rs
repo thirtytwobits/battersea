@@ -1,7 +1,11 @@
 //! Distinguishing cases from contracts/kits.md: names, model-facing text, the reference
 //! host and the conformance harness.
 use async_trait::async_trait;
-use battersea_flow::{registry::Registry, FlowNode, FlowNodeDefinition};
+use battersea_flow::{
+    registry::{ParameterType, Registry},
+    FlowNode, FlowNodeDefinition, FlowParameterDataType, FlowParameterDefinition,
+    FlowParameterEditor, FlowParameterEditorKind,
+};
 use battersea_kit::conformance::{self, Case, Divergence, Fixture, PortAccess, Suite, EPOCH_MS};
 use battersea_kit::{Clock, Kit, KitError, ManualClock, ReferenceHost, ReferenceState};
 use battersea_runtime::{
@@ -159,7 +163,7 @@ fn model_facing_text_changes_with_a_block_a_reference_or_an_inline_template() {
         text.keys().collect::<Vec<_>>(),
         [
             "ExampleSource.text.default",
-            "ExampleSource.text.shout",
+            "ExampleSource.text.variants.shout",
             "formatter_blocks.farewell",
             "formatter_blocks.greeting"
         ]
@@ -180,8 +184,8 @@ fn model_facing_text_changes_with_a_block_a_reference_or_an_inline_template() {
         block["ExampleSource.text.default"]
     );
     assert_eq!(
-        text["ExampleSource.text.shout"],
-        block["ExampleSource.text.shout"]
+        text["ExampleSource.text.variants.shout"],
+        block["ExampleSource.text.variants.shout"]
     );
     let reference = kit(leak(MANIFEST.replace("ref: greeting", "ref: farewell")))
         .model_facing_text()
@@ -198,8 +202,8 @@ fn model_facing_text_changes_with_a_block_a_reference_or_an_inline_template() {
         .model_facing_text()
         .unwrap();
     assert_ne!(
-        text["ExampleSource.text.shout"],
-        inline["ExampleSource.text.shout"]
+        text["ExampleSource.text.variants.shout"],
+        inline["ExampleSource.text.variants.shout"]
     );
     assert!(matches!(
         kit(leak(MANIFEST.replace("ref: greeting", "ref: missing"))).model_facing_text(),
@@ -207,14 +211,42 @@ fn model_facing_text_changes_with_a_block_a_reference_or_an_inline_template() {
     ));
 }
 
+#[test]
+fn model_facing_text_keeps_the_default_template_apart_from_a_variant_named_default() {
+    let manifest = leak(MANIFEST.replace("shout:", "default:"));
+    kit(manifest).check().unwrap();
+    let text = kit(manifest).model_facing_text().unwrap();
+    assert_eq!(
+        text["ExampleSource.text.default"],
+        text["formatter_blocks.greeting"]
+    );
+    assert_ne!(
+        text["ExampleSource.text.variants.default"],
+        text["ExampleSource.text.default"]
+    );
+    let changed = kit(leak(manifest.replace("Hello {name}", "Good day {name}")))
+        .model_facing_text()
+        .unwrap();
+    assert_ne!(
+        changed["ExampleSource.text.default"],
+        text["ExampleSource.text.default"]
+    );
+    assert_eq!(
+        changed["ExampleSource.text.variants.default"],
+        text["ExampleSource.text.variants.default"]
+    );
+}
+
 struct Source;
 struct Sink {
     fail_on: Option<&'static str>,
     message: &'static str,
 }
-/// A sink that waits on the host's clock before accepting each token.
+/// A sink that waits on the host's clock before accepting each token, within `timeout` when
+/// one is set.
 struct SleepySink {
     wait: Duration,
+    timeout: Option<Duration>,
 }
 #[async_trait]
 impl<H: ExecutionHost> NodeHandler<H> for Source {
@@ -282,8 +314,17 @@ impl NodeHandler<ReferenceHost<Vec<String>>> for SleepySink {
         _port: &str,
         _value: Retained<Token>,
     ) -> Result<(), battersea_kit::ReferenceError> {
-        battersea_kit::clock::sleep(host.clock().as_ref(), self.wait).await;
-        Ok(())
+        let clock = host.clock().as_ref();
+        let work = battersea_kit::clock::sleep(clock, self.wait);
+        match self.timeout {
+            Some(limit) => battersea_kit::clock::timeout(clock, limit, work)
+                .await
+                .map_err(|_| battersea_kit::ReferenceError::internal("the work timed out")),
+            None => {
+                work.await;
+                Ok(())
+            }
+        }
     }
 }
 
@@ -299,6 +340,8 @@ struct Example {
     message: &'static str,
     /// A sink that waits this long on the clock replaces the plain sink.
     wait: Option<Duration>,
+    /// The sleepy sink's wait is bounded by this timeout.
+    timeout: Option<Duration>,
     /// The kit state every run starts with.
     state: Vec<String>,
 }
@@ -308,7 +351,12 @@ impl Fixture for Example {
         let mut builder = RegistryBuilder::default();
         builder.register(Source).unwrap();
         match self.wait {
-            Some(wait) => builder.register(SleepySink { wait }).unwrap(),
+            Some(wait) => builder
+                .register(SleepySink {
+                    wait,
+                    timeout: self.timeout,
+                })
+                .unwrap(),
             None => builder
                 .register(Sink {
                     fail_on: self.fail_on,
@@ -382,6 +430,68 @@ fn suite() -> Suite {
     suite_of(vec![case("first", "one"), case("second", "two")])
 }
 
+/// The scheduler state of the example flow `name` on `host`.
+fn scheduler(host: &ReferenceHost<Vec<String>>, name: &str) -> SchedulerState {
+    let mut registry = Registry::default();
+    register_token_types(&mut registry).unwrap();
+    for id in host.handlers().ids() {
+        registry.register_handler(id).unwrap();
+    }
+    let catalog = battersea_flow::catalog::Catalog::from_manifest(MANIFEST, registry).unwrap();
+    let catalog = host.handlers().bind_catalog(catalog).unwrap();
+    let flow = battersea_flow::dsl::parse_flow_dsl(&flow(name)).unwrap();
+    SchedulerState::new(name.into(), &flow, catalog.definitions().clone()).unwrap()
+}
+
+#[tokio::test]
+async fn the_reference_host_converts_automation_writes_with_the_kits_registry() {
+    let mut registry = Registry::default();
+    registry
+        .register_parameter_type(
+            "example.shout",
+            ParameterType::new(json!({"type": "string"}), None, |_| Ok(()))
+                .with_automation_conversion(|value| {
+                    Ok(json!(value.as_str().unwrap_or_default().to_uppercase()))
+                }),
+        )
+        .unwrap();
+    let clock = Arc::new(ManualClock::new(EPOCH_MS));
+    let bare = Example::default().host(clock.clone());
+    let kit = Example::default().host(clock).with_registry(registry);
+    let parameter = FlowParameterDefinition {
+        name: "volume".into(),
+        datatype: FlowParameterDataType::named("example.shout"),
+        editor: FlowParameterEditor {
+            kind: FlowParameterEditorKind::String,
+            min: None,
+            max: None,
+            values: vec![],
+            source: None,
+            default_value: None,
+        },
+        controller: None,
+        short_description: None,
+        long_description: None,
+    };
+    let state = kit.state(scheduler(&kit, "writes"), vec![]);
+    let node = state.flow.nodes[0].clone();
+    assert_eq!(
+        kit.resolve_parameter_write(&state, &node, &parameter, &json!("loud"))
+            .await
+            .unwrap(),
+        json!("LOUD")
+    );
+    let refused = bare
+        .resolve_parameter_write(&state, &node, &parameter, &json!("loud"))
+        .await
+        .unwrap_err();
+    assert_eq!(
+        refused.reason_code(),
+        Some(battersea_kit::reference::codes::INVALID_PARAMETER_WRITE)
+    );
+    assert!(refused.message().contains("Unknown datatype"), "{refused}");
+}
+
 #[tokio::test]
 async fn the_reference_host_runs_a_flow_on_its_manual_clock() {
     let fixture = Example::default();
@@ -408,17 +518,7 @@ async fn the_reference_host_runs_a_flow_on_its_manual_clock() {
         .any(|event| event["kind"] == "token_receive" && event["detail"]["value"] == "value"));
     let clock = Arc::new(ManualClock::new(EPOCH_MS));
     let host = fixture.host(clock.clone());
-    let mut registry = Registry::default();
-    register_token_types(&mut registry).unwrap();
-    for id in host.handlers().ids() {
-        registry.register_handler(id).unwrap();
-    }
-    let catalog = battersea_flow::catalog::Catalog::from_manifest(MANIFEST, registry).unwrap();
-    let catalog = host.handlers().bind_catalog(catalog).unwrap();
-    let flow = battersea_flow::dsl::parse_flow_dsl(&flow("direct")).unwrap();
-    let scheduler =
-        SchedulerState::new("direct".into(), &flow, catalog.definitions().clone()).unwrap();
-    let mut state = host.state(scheduler, vec!["kit state".into()]);
+    let mut state = host.state(scheduler(&host, "direct"), vec!["kit state".into()]);
     battersea_runtime::ActivationHost::run_activation(
         &host,
         &mut state,
@@ -526,6 +626,41 @@ async fn the_harness_ignores_the_hosts_own_error_wording() {
         conformance::comparable(finished)["detail"]["outcome"]["message"],
         ""
     );
+}
+
+#[tokio::test]
+async fn a_step_completes_a_wait_that_races_a_longer_timeout() {
+    let (work, limit) = (Duration::from_secs(1), Duration::from_secs(5));
+    let racing = |wait| Example {
+        wait: Some(wait),
+        timeout: Some(limit),
+        ..Example::default()
+    };
+    let stepped = suite_of(vec![Case {
+        steps: vec![work],
+        ..case("raced", "value")
+    }]);
+    let played = conformance::play(&stepped, &racing(work), &stepped.cases[0], &Access)
+        .await
+        .unwrap();
+    assert_eq!(played.outcome, conformance::Outcome::Completed);
+    assert_eq!(played.unused_steps, 0);
+    conformance::run(&stepped, &racing(work), &racing(work), &Access)
+        .await
+        .unwrap();
+    let late = suite_of(vec![Case {
+        steps: vec![limit],
+        ..case("late", "value")
+    }]);
+    let played = conformance::play(&late, &racing(limit * 2), &late.cases[0], &Access)
+        .await
+        .unwrap();
+    assert!(
+        matches!(&played.outcome, conformance::Outcome::Failed { code, .. } if code == "internal"),
+        "{:?}",
+        played.outcome
+    );
+    assert_eq!(played.unused_steps, 0);
 }
 
 #[tokio::test]

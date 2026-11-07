@@ -116,6 +116,7 @@ pub type LogicOutputs = dyn Fn(
 pub struct ReferenceHost<X: Send + Sync + 'static> {
     handlers: HandlerRegistry<Self>,
     clock: Arc<ManualClock>,
+    registry: Registry,
     logic: Option<Arc<LogicOutputs>>,
     events: Mutex<Vec<ExecutionEvent>>,
     phases: Mutex<HashMap<String, RunPhase>>,
@@ -127,11 +128,18 @@ impl<X: Send + Sync + 'static> ReferenceHost<X> {
         Self {
             handlers,
             clock,
+            registry: Registry::default(),
             logic: None,
             events: Mutex::default(),
             phases: Mutex::default(),
             _kit: PhantomData,
         }
+    }
+    /// Converts automation writes with `registry`, which holds the kit's parameter datatypes.
+    /// Without one the host knows the built-in datatypes only.
+    pub fn with_registry(mut self, registry: Registry) -> Self {
+        self.registry = registry;
+        self
     }
     /// Evaluates logic nodes with `logic`; without one the host refuses them.
     pub fn with_logic(
@@ -209,7 +217,7 @@ impl<X: Send + Sync + 'static> ExecutionHost for ReferenceHost<X> {
         parameter: &FlowParameterDefinition,
         value: &Value,
     ) -> Result<Value, ReferenceError> {
-        Registry::default()
+        self.registry
             .convert_automation_value(parameter, value)
             .map_err(|error| {
                 ReferenceError::invalid_request(codes::INVALID_PARAMETER_WRITE, error.to_string())
