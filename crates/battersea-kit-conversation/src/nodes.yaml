@@ -1,0 +1,441 @@
+formatter_blocks:
+  # ------------------------------------------------------------------
+  # The text the kit's sources render for a model. ConversationTranscript.text
+  # and ConversationMemory.context reference these blocks; an application
+  # overrides one by listing a manifest holding only formatter_blocks after
+  # the kit's. The handlers bind role and text per turn.
+  # ------------------------------------------------------------------
+  conversation.turn:
+    bindings:
+      - role
+      - text
+    template:
+      kind: text
+      text: "{role}: {text}"
+  conversation.transcript:
+    bindings:
+      - turns
+    template:
+      kind: list
+      binding: turns
+      separator: "\n\n"
+      item_bindings:
+        - role
+        - text
+      template:
+        kind: text
+        text: "{role}: {text}"
+  conversation.memory:
+    bindings:
+      - summary
+      - turns
+    template:
+      kind: sequence
+      separator: "\n\n"
+      items:
+        - kind: text
+          text: "Summary of the conversation so far:\n{summary}"
+        - kind: list
+          binding: turns
+          separator: "\n\n"
+          item_bindings:
+            - role
+            - text
+          template:
+            kind: text
+            text: "{role}: {text}"
+
+node_definitions:
+  - class_name: ConversationPrompt
+    handler_id: conversation.prompt
+    short_description: The prompt that starts a run.
+    long_description: Emits the activation's prompt value as a prompt fragment and as an unstaged user turn.
+    kind: source
+    interfaces:
+      - IFlowNodeActivate
+    output_ports:
+      - name: text
+        kind: output
+        token_type: prompt.fragment
+        mode: final_value
+        phase: snapshot
+        short_description: The prompt as text.
+      - name: turn
+        kind: output
+        token_type: conversation.turn
+        mode: final_value
+        phase: snapshot
+        short_description: The prompt as a user turn, not yet staged.
+
+  - class_name: ConversationStaticPrompt
+    handler_id: conversation.static_prompt
+    short_description: A fixed prompt.
+    long_description: Emits its text parameter as a prompt fragment.
+    kind: source
+    parameters:
+      - name: text
+        datatype:
+          kind: string
+        editor:
+          kind: text
+        short_description: The text to emit.
+    output_ports:
+      - name: text
+        kind: output
+        token_type: prompt.fragment
+        mode: final_value
+        phase: snapshot
+
+  - class_name: ConversationTranscript
+    handler_id: conversation.transcript.source
+    short_description: The transcript's committed turns.
+    long_description: Emits the run's transcript as turns and renders it as text.
+    kind: source
+    output_ports:
+      - name: turns
+        kind: output
+        token_type: conversation.turns
+        mode: final_value
+        phase: snapshot
+        short_description: The committed turns in order.
+      - name: text
+        kind: output
+        token_type: prompt.fragment
+        mode: final_value
+        phase: snapshot
+        short_description: The turns rendered as text.
+        formatter:
+          kind: prompt_template
+          default:
+            ref: conversation.transcript
+
+  - class_name: ConversationMemory
+    handler_id: conversation.memory
+    short_description: The transcript's summary and recent turns.
+    long_description: Emits the latest summary and the turns after it that fit the budget, newest first, and renders them as context. An assistant turn that calls tools stays with the tool turns that answer it.
+    kind: source
+    parameters:
+      - name: budget
+        datatype:
+          kind: int
+        editor:
+          kind: unsigned
+          min: 0
+          default_value: 4000
+        short_description: The tokens the recent turns may measure.
+    output_ports:
+      - name: turns
+        kind: output
+        token_type: conversation.turns
+        mode: final_value
+        phase: snapshot
+        short_description: The turns after the summary that fit the budget.
+      - name: context
+        kind: output
+        token_type: prompt.fragment
+        mode: final_value
+        phase: snapshot
+        short_description: The summary and the fitted turns as text.
+        formatter:
+          kind: prompt_template
+          default:
+            ref: conversation.memory
+
+  - class_name: ConversationChat
+    handler_id: conversation.chat
+    short_description: Calls the model.
+    long_description: Builds one request from the system text, the history and the prompt, checks it against the budget, reserves spend, streams the reply and records the call.
+    kind: inline
+    parameters:
+      - name: budget
+        datatype:
+          kind: int
+        editor:
+          kind: unsigned
+          min: 1
+          default_value: 8000
+        short_description: The input tokens the request may count before dispatch is refused.
+      - name: max_output_tokens
+        datatype:
+          kind: int
+        editor:
+          kind: unsigned
+          min: 1
+          default_value: 1024
+      - name: max_tool_rounds
+        datatype:
+          kind: int
+        editor:
+          kind: unsigned
+          min: 0
+          default_value: 4
+    input_ports:
+      - name: system
+        kind: input
+        token_type: prompt.fragment
+        mode: final_value
+        phase: execution
+        short_description: The system text, if any.
+      - name: history
+        kind: input
+        token_type: conversation.turns
+        mode: final_value
+        phase: execution
+        short_description: The turns before the prompt.
+      - name: prompt
+        kind: input
+        token_type: prompt.fragment
+        mode: final_value
+        phase: execution
+    output_ports:
+      - name: text
+        kind: output
+        token_type: chat.raw
+        mode: stream
+        phase: execution
+        short_description: The reply's text as it streams.
+      - name: reasoning
+        kind: output
+        token_type: chat.raw
+        mode: stream
+        phase: execution
+        short_description: The model's reasoning as it streams.
+      - name: reply
+        kind: output
+        token_type: conversation.turn
+        mode: final_value
+        phase: execution
+        short_description: The reply as an unstaged assistant turn.
+      - name: status
+        kind: output
+        token_type: conversation.call_status
+        mode: final_value
+        phase: execution
+      - name: tool_rounds
+        kind: output
+        token_type: conversation.tool_rounds
+        mode: final_value
+        phase: execution
+    signal_ports:
+      - name: completed
+        short_description: Fires when a reply is published.
+      - name: over_budget
+        short_description: Fires when the budget check refuses dispatch.
+    failure_ports:
+      - name: failure
+        phase: execution
+
+  - class_name: ConversationBuffer
+    handler_id: conversation.buffer
+    short_description: Collects a stream into one fragment.
+    long_description: Holds at most the retained bytes of a stream's text and emits it once the stream closes.
+    kind: inline
+    parameters:
+      - name: retain
+        datatype:
+          kind: int
+        editor:
+          kind: unsigned
+          min: 1
+          default_value: 65536
+        short_description: The bytes the buffer may hold.
+    input_ports:
+      - name: stream
+        kind: input
+        token_type: chat.raw
+        mode: stream
+        phase: execution
+    output_ports:
+      - name: text
+        kind: output
+        token_type: prompt.fragment
+        mode: final_value
+        phase: execution
+    failure_ports:
+      - name: failure
+        phase: execution
+
+  - class_name: ConversationSignalTap
+    handler_id: conversation.tap
+    short_description: Signals when a value arrives.
+    long_description: Passes its input through unchanged and fires the received signal.
+    kind: inline
+    input_ports:
+      - name: input
+        kind: input
+        token_type: oneof
+        accepted_token_types:
+          - prompt.fragment
+          - chat.raw
+          - conversation.turn
+          - conversation.turns
+        mode: final_value
+        phase: execution
+    output_ports:
+      - name: output
+        kind: output
+        token_type: auto
+        mode: final_value
+        phase: execution
+        short_description: The input, unchanged.
+    signal_ports:
+      - name: received
+
+  - class_name: ConversationOutput
+    handler_id: conversation.output
+    short_description: Delivers text to the application.
+    long_description: Hands the text it receives to the application through the port.
+    kind: sink
+    input_ports:
+      - name: text
+        kind: input
+        token_type: oneof
+        accepted_token_types:
+          - prompt.fragment
+          - chat.raw
+        mode: final_value
+        phase: execution
+
+  - class_name: ConversationTranscriptOutput
+    handler_id: conversation.transcript.output
+    short_description: Stages turns for the application to commit.
+    long_description: Stages each turn it receives, in delivery order, on the run's transcript.
+    kind: sink
+    input_ports:
+      - name: turns
+        kind: input
+        token_type: oneof
+        accepted_token_types:
+          - conversation.turn
+          - conversation.turns
+        mode: final_value
+        phase: execution
+
+  - class_name: ConversationCompactionRequest
+    handler_id: conversation.compaction.request
+    short_description: Asks for compaction when the policy says so.
+    long_description: Evaluates the transcript's compaction policy and requests a job when the evaluation decides to compact.
+    kind: sink
+    input_ports:
+      - name: turns
+        kind: input
+        token_type: conversation.turns
+        mode: final_value
+        phase: execution
+        short_description: The turns the run adds, measured with the transcript's memory.
+    signal_ports:
+      - name: requested
+      - name: held
+
+  - class_name: ConversationCompactionParser
+    handler_id: conversation.compaction.parse
+    short_description: Reads a compaction response.
+    long_description: Parses the model's compaction response into a summary of the turns it was given.
+    kind: inline
+    input_ports:
+      - name: turns
+        kind: input
+        token_type: conversation.turns
+        mode: final_value
+        phase: execution
+        short_description: The turns the summary covers.
+      - name: text
+        kind: input
+        token_type: oneof
+        accepted_token_types:
+          - prompt.fragment
+          - chat.raw
+        mode: final_value
+        phase: execution
+        short_description: The model's response.
+    output_ports:
+      - name: summary
+        kind: output
+        token_type: conversation.summary
+        mode: final_value
+        phase: execution
+    failure_ports:
+      - name: failure
+        phase: execution
+
+  - class_name: ConversationMemoryOutput
+    handler_id: conversation.memory.output
+    short_description: Writes a summary as the transcript's memory.
+    long_description: Writes the summary it receives and completes the compaction job it names.
+    kind: sink
+    input_ports:
+      - name: summary
+        kind: input
+        token_type: conversation.summary
+        mode: final_value
+        phase: execution
+    failure_ports:
+      - name: failure
+        phase: execution
+
+  - class_name: ConversationRefinementSource
+    handler_id: conversation.refine.source
+    short_description: The turn to refine.
+    long_description: Emits the committed turn the activation names and its text.
+    kind: source
+    interfaces:
+      - IFlowNodeActivate
+    output_ports:
+      - name: turn
+        kind: output
+        token_type: conversation.turn
+        mode: final_value
+        phase: snapshot
+      - name: text
+        kind: output
+        token_type: prompt.fragment
+        mode: final_value
+        phase: snapshot
+        formatter:
+          kind: prompt_template
+          default:
+            ref: conversation.turn
+
+  - class_name: ConversationRefinementParser
+    handler_id: conversation.refine.parse
+    short_description: Reads a refinement response.
+    long_description: Parses the model's refinement response into a revision of the turn it was given.
+    kind: inline
+    input_ports:
+      - name: turn
+        kind: input
+        token_type: conversation.turn
+        mode: final_value
+        phase: execution
+      - name: text
+        kind: input
+        token_type: oneof
+        accepted_token_types:
+          - prompt.fragment
+          - chat.raw
+        mode: final_value
+        phase: execution
+    output_ports:
+      - name: revision
+        kind: output
+        token_type: conversation.revision
+        mode: final_value
+        phase: execution
+    failure_ports:
+      - name: failure
+        phase: execution
+
+  - class_name: ConversationRefinementOutput
+    handler_id: conversation.refine.output
+    short_description: Applies a revision.
+    long_description: Revises the committed turn the revision names through the port.
+    kind: sink
+    input_ports:
+      - name: revision
+        kind: input
+        token_type: conversation.revision
+        mode: final_value
+        phase: execution
+    failure_ports:
+      - name: failure
+        phase: execution

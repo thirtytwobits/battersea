@@ -110,6 +110,14 @@
       "LICENSE",
       "NOTICE"
     ],
+    "battersea-kit-conversation": [
+      "Cargo.toml",
+      "src/lib.rs",
+      "README.md",
+      "LICENSE",
+      "NOTICE",
+      "src/nodes.yaml"
+    ],
     "battersea-nodes": [
       "Cargo.toml",
       "src/lib.rs",

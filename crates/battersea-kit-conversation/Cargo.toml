@@ -1,0 +1,31 @@
+[package]
+name = "battersea-kit-conversation"
+description = "Battersea conversation kit: the nodes of a chat loop over an application transcript port"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+readme = "../../README.md"
+publish = false
+include = ["src/**", "Cargo.toml", "LICENSE", "NOTICE"]
+
+[features]
+conformance = ["battersea-kit/conformance"]
+
+[dependencies]
+battersea-flow = { path = "../battersea-flow", version = "0.23.0" }
+battersea-runtime = { path = "../battersea-runtime", version = "0.23.0" }
+battersea-model = { path = "../battersea-model", version = "0.23.0" }
+battersea-kit = { path = "../battersea-kit", version = "0.23.0" }
+async-trait.workspace = true
+futures-util.workspace = true
+schemars.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+tokio-util.workspace = true
+
+[dev-dependencies]
+battersea-kit = { path = "../battersea-kit", version = "0.23.0", features = ["conformance"] }
+tokio.workspace = true
