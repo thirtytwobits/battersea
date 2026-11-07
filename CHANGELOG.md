@@ -55,6 +55,8 @@
 
 - `contracts/kits.md` proposes how a domain node set is packaged as a kit, with a port, a
   reference host and a conformance suite; the handbook gains **Build a kit**.
+- `contracts/kit-conversation.md` proposes the conversation kit: the nodes of a chat loop, its
+  port over the application's transcript, model, tools and spend, and compaction.
 
 ## 0.23.0
 
