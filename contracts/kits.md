@@ -27,8 +27,10 @@ conformance harness. It depends on `battersea-flow`, `battersea-runtime` and `ba
 
 A kit's name matches `[a-z][a-z0-9_]*` and is its namespace: every handler id is `NAME.*`,
 every token type it registers is `NAME.*`, and every class name begins with the name in
-PascalCase. `Kit::check` refuses a manifest that breaks these rules. Class names and handler ids
-are persisted in flows and are never renamed; a rename is a registered document upgrade.
+PascalCase. `Kit::check` refuses a manifest that breaks these rules, reading the manifest as
+written; `Kit::definitions` normalises it with the registry holding the kit's parameter
+datatypes. Class names and handler ids are persisted in flows and are never renamed; a rename
+is a registered document upgrade.
 
 `battersea` is the generic kit's name. Its class names and the token types `prompt.fragment`,
 `prompt.fragmentArray` and `chat.raw` are the shared vocabulary every kit may reference, and the

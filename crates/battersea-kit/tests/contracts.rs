@@ -124,6 +124,43 @@ fn check_refuses_each_name_outside_the_namespace() {
 }
 
 #[test]
+fn check_reads_the_manifest_without_the_kits_datatypes() {
+    let manifest = leak(MANIFEST.replace(
+        "    kind: sink\n",
+        "    kind: sink\n    parameters:\n      - name: volume\n        datatype: {kind: example.shout}\n        editor: {}\n",
+    ));
+    kit(manifest).check().unwrap();
+    assert!(matches!(
+        kit(manifest).definitions(&Registry::default()),
+        Err(KitError::Manifest { .. })
+    ));
+    let mut registry = Registry::default();
+    registry
+        .register_parameter_type(
+            "example.shout",
+            ParameterType::new(
+                json!({"type": "string"}),
+                Some(FlowParameterEditorKind::String),
+                |_| Ok(()),
+            ),
+        )
+        .unwrap();
+    let definitions = kit(manifest).definitions(&registry).unwrap();
+    let sink = definitions
+        .iter()
+        .find(|definition| definition.class_name == "ExampleSink")
+        .unwrap();
+    assert_eq!(
+        sink.parameters[0].editor.kind,
+        FlowParameterEditorKind::String
+    );
+    assert!(matches!(
+        kit("class_name: [").check(),
+        Err(KitError::Manifest { .. })
+    ));
+}
+
+#[test]
 fn check_accepts_the_shared_vocabulary_only_from_the_generic_kit() {
     let shared = leak(
         MANIFEST

@@ -111,18 +111,31 @@ impl Kit {
             || STRUCTURAL_TOKEN_TYPES.contains(&token_type)
     }
 
-    /// The manifest's definitions, normalised without an application registry.
-    pub fn definitions(&self) -> Result<Vec<FlowNodeDefinition>, KitError> {
-        parse_definition_manifest(&Registry::default(), self.manifest).map_err(|message| {
-            KitError::Manifest {
+    /// The manifest's definitions, normalised with `registry`, which holds the kit's
+    /// parameter datatypes.
+    pub fn definitions(&self, registry: &Registry) -> Result<Vec<FlowNodeDefinition>, KitError> {
+        parse_definition_manifest(registry, self.manifest).map_err(|message| KitError::Manifest {
+            kit: self.name.into(),
+            message,
+        })
+    }
+
+    /// The manifest's formatter blocks and definitions as written, without normalisation.
+    fn raw(&self) -> Result<(RawBlocks, Vec<RawDefinition>), KitError> {
+        let root: RawRoot =
+            serde_yaml::from_str(self.manifest).map_err(|e| KitError::Manifest {
                 kit: self.name.into(),
-                message,
-            }
+                message: e.to_string(),
+            })?;
+        Ok(match root {
+            RawRoot::Document(document) => (document.formatter_blocks, document.node_definitions),
+            RawRoot::List(definitions) => (BTreeMap::new(), definitions),
         })
     }
 
     /// Refuses a name, a registered token type, a handler id, a class name or a token
-    /// reference outside the rules of `contracts/kits.md`.
+    /// reference outside the rules of `contracts/kits.md`. The check reads the manifest as
+    /// written and needs no registry.
     pub fn check(&self) -> Result<(), KitError> {
         if !valid_name(self.name) {
             return Err(KitError::Name(self.name.into()));
@@ -137,7 +150,7 @@ impl Kit {
             }
         }
         let prefix = self.class_prefix();
-        for definition in self.definitions()? {
+        for definition in self.raw()?.1 {
             let kit = self.name.to_string();
             let class_name = definition.class_name.clone();
             if !self.owns(&definition.handler_id) {
@@ -185,12 +198,7 @@ impl Kit {
             kit: self.name.into(),
             message,
         };
-        let root: RawRoot =
-            serde_yaml::from_str(self.manifest).map_err(|e| manifest(e.to_string()))?;
-        let (blocks, definitions) = match root {
-            RawRoot::Document(document) => (document.formatter_blocks, document.node_definitions),
-            RawRoot::List(definitions) => (BTreeMap::new(), definitions),
-        };
+        let (blocks, definitions) = self.raw()?;
         let canonical = |template: &FlowPromptTemplateDefinition| {
             serde_json::to_string(template).map_err(|e| manifest(e.to_string()))
         };
@@ -239,30 +247,29 @@ impl Kit {
     }
 }
 
-fn referenced_token_types(definition: &FlowNodeDefinition) -> Vec<String> {
+fn referenced_token_types(definition: &RawDefinition) -> Vec<String> {
     let mut names = Vec::new();
     for port in definition
         .input_ports
         .iter()
         .chain(&definition.output_ports)
     {
-        names.push(port.token_type.clone());
+        names.extend(port.token_type.iter().cloned());
         names.extend(port.accepted_token_types.iter().cloned());
     }
-    for group in definition
+    for port in definition
         .dynamic_input_ports
         .iter()
         .chain(&definition.dynamic_output_ports)
+        .chain(&definition.automation_ports)
     {
-        names.push(group.token_type.clone());
-        names.extend(group.accepted_token_types.iter().cloned());
-    }
-    for port in &definition.automation_ports {
-        names.push(port.token_type.clone());
+        names.extend(port.token_type.iter().cloned());
         names.extend(port.accepted_token_types.iter().cloned());
     }
     names
 }
+
+type RawBlocks = BTreeMap<String, FlowPromptTemplateDefinition>;
 
 #[derive(Deserialize)]
 #[serde(untagged)]
@@ -280,16 +287,35 @@ struct RawDocument {
 #[derive(Deserialize)]
 struct RawDefinition {
     class_name: String,
+    handler_id: String,
     #[serde(default)]
     input_ports: Vec<RawPort>,
     #[serde(default)]
     output_ports: Vec<RawPort>,
+    #[serde(default)]
+    dynamic_input_ports: Vec<RawTokenPort>,
+    #[serde(default)]
+    dynamic_output_ports: Vec<RawTokenPort>,
+    #[serde(default)]
+    automation_ports: Vec<RawTokenPort>,
 }
 #[derive(Deserialize)]
 struct RawPort {
     name: String,
     #[serde(default)]
+    token_type: Option<String>,
+    #[serde(default)]
+    accepted_token_types: Vec<String>,
+    #[serde(default)]
     formatter: Option<RawFormatter>,
+}
+/// A dynamic port group or an automation port: the token types it names.
+#[derive(Deserialize)]
+struct RawTokenPort {
+    #[serde(default)]
+    token_type: Option<String>,
+    #[serde(default)]
+    accepted_token_types: Vec<String>,
 }
 #[derive(Deserialize)]
 struct RawFormatter {

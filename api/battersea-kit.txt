@@ -531,7 +531,7 @@ pub battersea_kit::kit::Kit::token_types: &'static [&'static str]
 impl battersea_kit::kit::Kit
 pub fn battersea_kit::kit::Kit::check(&self) -> core::result::Result<(), battersea_kit::kit::KitError>
 pub fn battersea_kit::kit::Kit::class_prefix(&self) -> alloc::string::String
-pub fn battersea_kit::kit::Kit::definitions(&self) -> core::result::Result<alloc::vec::Vec<battersea_flow::types::FlowNodeDefinition>, battersea_kit::kit::KitError>
+pub fn battersea_kit::kit::Kit::definitions(&self, &battersea_flow::registry::Registry) -> core::result::Result<alloc::vec::Vec<battersea_flow::types::FlowNodeDefinition>, battersea_kit::kit::KitError>
 pub fn battersea_kit::kit::Kit::is_generic(&self) -> bool
 pub fn battersea_kit::kit::Kit::may_reference(&self, &str) -> bool
 pub fn battersea_kit::kit::Kit::model_facing_text(&self) -> core::result::Result<alloc::collections::btree::map::BTreeMap<alloc::string::String, alloc::string::String>, battersea_kit::kit::KitError>
@@ -920,7 +920,7 @@ pub battersea_kit::Kit::token_types: &'static [&'static str]
 impl battersea_kit::kit::Kit
 pub fn battersea_kit::kit::Kit::check(&self) -> core::result::Result<(), battersea_kit::kit::KitError>
 pub fn battersea_kit::kit::Kit::class_prefix(&self) -> alloc::string::String
-pub fn battersea_kit::kit::Kit::definitions(&self) -> core::result::Result<alloc::vec::Vec<battersea_flow::types::FlowNodeDefinition>, battersea_kit::kit::KitError>
+pub fn battersea_kit::kit::Kit::definitions(&self, &battersea_flow::registry::Registry) -> core::result::Result<alloc::vec::Vec<battersea_flow::types::FlowNodeDefinition>, battersea_kit::kit::KitError>
 pub fn battersea_kit::kit::Kit::is_generic(&self) -> bool
 pub fn battersea_kit::kit::Kit::may_reference(&self, &str) -> bool
 pub fn battersea_kit::kit::Kit::model_facing_text(&self) -> core::result::Result<alloc::collections::btree::map::BTreeMap<alloc::string::String, alloc::string::String>, battersea_kit::kit::KitError>
