@@ -145,6 +145,15 @@ impl FileHost {
     fn next(&self, kind: &str) -> String {
         format!("{kind}-{}", self.next.fetch_add(1, Ordering::SeqCst) + 1)
     }
+    /// Keeps generated ids clear of a seeded `id` of the generated form.
+    fn reserve(&self, id: &str) {
+        if let Some(number) = id
+            .rsplit_once('-')
+            .and_then(|(_, number)| number.parse::<u64>().ok())
+        {
+            self.next.fetch_max(number, Ordering::SeqCst);
+        }
+    }
     fn path(&self, transcript: &TranscriptId) -> PathBuf {
         self.dir.join(format!("{transcript}.json"))
     }
@@ -467,6 +476,12 @@ impl Probe for FileHost {
         turns: Vec<Turn<Value>>,
         summary: Option<Summary<Value>>,
     ) -> Result<(), Error> {
+        for id in turns.iter().filter_map(|turn| turn.id.as_ref()) {
+            self.reserve(id.as_str());
+        }
+        if let Some(job) = summary.as_ref().and_then(|summary| summary.job.as_ref()) {
+            self.reserve(job.as_str());
+        }
         let turns = turns
             .into_iter()
             .map(|mut turn| {

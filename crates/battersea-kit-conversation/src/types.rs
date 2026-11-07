@@ -357,13 +357,17 @@ fn embed_at(node: &mut Value, extension: &Value, pointer: &mut String) {
         _ => {}
     }
 }
-/// Prefixes every local `$ref` under `node` with `pointer`, outside subschemas with an `$id`.
+/// Prefixes every local pointer `$ref` under `node` with `pointer`, outside subschemas with
+/// an `$id`. A reference to a named anchor stays as it is: without an `$id`, the anchor
+/// belongs to the token schema the extension is embedded in.
 fn rebase(node: &mut Value, pointer: &str) {
     match node {
         Value::Object(map) => {
             if let Some(Value::String(target)) = map.get_mut("$ref") {
                 if let Some(local) = target.strip_prefix('#') {
-                    *target = format!("#{pointer}{local}");
+                    if local.is_empty() || local.starts_with('/') {
+                        *target = format!("#{pointer}{local}");
+                    }
                 }
             }
             for (key, value) in map.iter_mut() {

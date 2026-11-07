@@ -165,6 +165,36 @@ fn an_extension_schema_keeps_its_local_references_when_embedded() {
 }
 
 #[test]
+fn an_extension_schema_keeps_its_anchors_when_embedded() {
+    let mut registry = Registry::default();
+    battersea_kit_conversation::register_token_types(
+        &mut registry,
+        &Options {
+            extension_schema: json!({
+                "type": "object",
+                "properties": {"author": {"$ref": "#Author"}},
+                "required": ["author"],
+                "$defs": {"Author": {"$anchor": "Author", "type": "string", "minLength": 1}}
+            }),
+        },
+    )
+    .unwrap();
+    let turn = |author: &str| {
+        serde_json::to_value(Turn {
+            extension: json!({"author": author}),
+            ..Turn::text(Role::User, "hello", Value::Null)
+        })
+        .unwrap()
+    };
+    registry
+        .validate_token("conversation.turn", &turn("ada"))
+        .unwrap();
+    assert!(registry
+        .validate_token("conversation.turn", &turn(""))
+        .is_err());
+}
+
+#[test]
 fn a_comparable_snapshot_renames_ids_and_keeps_content() {
     use battersea_kit_conversation::conformance::{Snapshot, TranscriptSnapshot};
     let snapshot = |id: &str, extension: Value| {
@@ -284,10 +314,22 @@ async fn the_reference_port_stages_turns_and_commits_them_on_completion() {
             .reason_code(),
         Some(codes::UNKNOWN_TRANSCRIPT)
     ));
+    host.seed(
+        &mut state,
+        "seeded".into(),
+        vec![Turn {
+            id: Some("turn-7".into()),
+            ..Turn::text(Role::User, "seeded", Value::Null)
+        }],
+        None,
+    )
+    .await
+    .unwrap();
     let turn = Turn::text(Role::User, "hello", Value::Null);
     assert_eq!(turn.id, None);
     clock.advance(std::time::Duration::from_millis(5));
     let id = host.stage(&mut state, turn).await.unwrap();
+    assert_ne!(id, "turn-7".into());
     let staged = &<ReferenceHost<State> as Port>::run_state(&mut state).staged;
     assert_eq!(staged[0].id, Some(id.clone()));
     assert_eq!(staged[0].created_at, Some(EPOCH_MS + 5));
@@ -707,13 +749,25 @@ async fn the_scripted_engine_counts_words_and_streams_its_script() {
     ));
     assert_eq!(engine.remaining(), 0);
     engine.extend([
-        ScriptedResponse::ToolCalls(vec![]),
+        ScriptedResponse::ToolCalls(vec![EngineLocalToolCall {
+            id: "call-2".into(),
+            name: "echo".into(),
+            arguments: json!({"n": 2}),
+        }]),
         ScriptedResponse::ToolCalls(vec![]),
     ]);
-    assert!(engine
+    let events = engine
         .stream_text(request("hi", Some(Arc::new(Echo))))
         .await
-        .is_err());
+        .unwrap()
+        .collect::<Vec<_>>()
+        .await;
+    assert!(matches!(
+        events.get(2),
+        Some(Ok(EngineTextStreamEvent::ToolCallCompleted { id, ok: true, .. })) if id == "call-2"
+    ));
+    assert!(matches!(events.last(), Some(Err(_))));
+    assert_eq!(events.len(), 6);
 }
 
 #[tokio::test]

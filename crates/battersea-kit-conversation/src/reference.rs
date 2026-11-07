@@ -52,6 +52,18 @@ impl Store {
         self.next += 1;
         self.next
     }
+    /// Keeps generated ids clear of a seeded `id` of the generated form.
+    fn reserve(&mut self, id: &str) {
+        if let Some(number) = numbered(id) {
+            self.next = self.next.max(number);
+        }
+    }
+}
+
+/// The number of an id of the generated form `KIND-N`.
+fn numbered(id: &str) -> Option<u64> {
+    id.rsplit_once('-')
+        .and_then(|(_, number)| number.parse().ok())
 }
 
 /// The kit's state on the reference host: a store shared by every run on it and the run's
@@ -424,25 +436,34 @@ impl EngineAdapter for ScriptedEngine {
         request: EngineTextStreamRequest,
     ) -> Result<EngineTextStream, EngineAdapterRequestError> {
         let input = Self::words(&request);
-        let mut events = vec![];
+        // Events already produced, tool evidence among them, reach the caller before an
+        // error ends the stream.
+        let mut events: Vec<Result<EngineTextStreamEvent, EngineAdapterRequestError>> = vec![];
         let mut round = 0u32;
         loop {
             let Some(response) = self.take() else {
-                return Err(EngineAdapterRequestError::new(
+                let error = EngineAdapterRequestError::new(
                     "reference",
                     "The script has no response left.",
                     ErrorKind::Mock,
-                ));
+                );
+                if events.is_empty() {
+                    return Err(error);
+                }
+                events.push(Err(error));
+                break;
             };
-            events.push(EngineTextStreamEvent::MessageStart { turn_index: round });
+            events.push(Ok(EngineTextStreamEvent::MessageStart {
+                turn_index: round,
+            }));
             match response {
                 ScriptedResponse::Text(text) => {
                     let output = text.split_whitespace().count() as u64;
-                    events.push(EngineTextStreamEvent::TextDelta { text });
-                    events.push(EngineTextStreamEvent::MessageStop {
+                    events.push(Ok(EngineTextStreamEvent::TextDelta { text }));
+                    events.push(Ok(EngineTextStreamEvent::MessageStop {
                         reason: StopReason::Complete,
-                    });
-                    events.push(EngineTextStreamEvent::TokenUsage {
+                    }));
+                    events.push(Ok(EngineTextStreamEvent::TokenUsage {
                         usage: EngineTokenUsage {
                             turn_index: round,
                             input_tokens: Some(input),
@@ -450,24 +471,29 @@ impl EngineAdapter for ScriptedEngine {
                             total_tokens: Some(input + output),
                             ..EngineTokenUsage::default()
                         },
-                    });
+                    }));
                     break;
                 }
                 ScriptedResponse::ToolCalls(calls) => {
                     if round as usize >= request.max_tool_rounds {
-                        return Err(EngineAdapterRequestError::new(
+                        let error = EngineAdapterRequestError::new(
                             "reference",
                             "The script asks for more tool rounds than the request allows.",
                             ErrorKind::InvalidRequest,
-                        ));
+                        );
+                        if events.len() == 1 {
+                            return Err(error);
+                        }
+                        events.push(Err(error));
+                        break;
                     }
                     for call in calls {
-                        events.push(EngineTextStreamEvent::ToolCallStarted {
+                        events.push(Ok(EngineTextStreamEvent::ToolCallStarted {
                             id: call.id.clone(),
                             name: call.name.clone(),
                             arguments: call.arguments.clone(),
                             started_at: self.now(),
-                        });
+                        }));
                         let result = match &request.local_tool_executor {
                             Some(executor) => executor.call(call.clone()).await,
                             None => Err(EngineAdapterRequestError::new(
@@ -496,7 +522,7 @@ impl EngineAdapter for ScriptedEngine {
                                 })
                             }
                         };
-                        events.push(match result {
+                        events.push(Ok(match result {
                             Ok(result) => EngineTextStreamEvent::ToolCallCompleted {
                                 id: call.id,
                                 name: call.name,
@@ -521,16 +547,16 @@ impl EngineAdapter for ScriptedEngine {
                                 tool_call: Some(evidence),
                                 finished_at: self.now(),
                             },
-                        });
+                        }));
                     }
-                    events.push(EngineTextStreamEvent::MessageStop {
+                    events.push(Ok(EngineTextStreamEvent::MessageStop {
                         reason: StopReason::ToolUse,
-                    });
+                    }));
                     round += 1;
                 }
             }
         }
-        Ok(Box::pin(stream::iter(events.into_iter().map(Ok))))
+        Ok(Box::pin(stream::iter(events)))
     }
 }
 
@@ -548,6 +574,12 @@ impl crate::conformance::Probe for ReferenceHost<State> {
         summary: Option<Summary<Extension>>,
     ) -> Result<(), ReferenceError> {
         let mut store = state.kit.store();
+        for id in turns.iter().filter_map(|turn| turn.id.as_ref()) {
+            store.reserve(id.as_str());
+        }
+        if let Some(job) = summary.as_ref().and_then(|summary| summary.job.as_ref()) {
+            store.reserve(job.as_str());
+        }
         let turns = turns
             .into_iter()
             .map(|mut turn| {
