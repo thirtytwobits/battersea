@@ -22,7 +22,7 @@ use battersea_runtime::{ExecutionError, NodeHandler, ProviderEvent, Token};
 use futures_util::{stream, Stream, StreamExt};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeMap, HashMap, HashSet};
 use tokio_util::sync::CancellationToken;
 
 pub struct ChatHandler;
@@ -44,19 +44,54 @@ struct Progress {
     stream: EngineTextStream,
     text: String,
     rounds: Vec<ToolRound>,
+    /// The tool calls of the round in progress.
     open: Vec<ToolCall>,
-    usage: EngineTokenUsage,
+    /// The latest usage each provider turn reported.
+    usage: BTreeMap<u32, EngineTokenUsage>,
     stop_reason: Option<String>,
     started_at: u64,
     done: bool,
 }
 impl Progress {
+    /// Closes the round in progress, if it holds a call.
+    fn flush_round(&mut self) {
+        if !self.open.is_empty() {
+            let round = self.rounds.len() as u32;
+            self.rounds.push(ToolRound {
+                round,
+                calls: std::mem::take(&mut self.open),
+            });
+        }
+    }
+    /// Keeps the latest fields a turn reports; a provider's snapshots within a turn are
+    /// cumulative, not additive.
+    fn observe(&mut self, usage: EngineTokenUsage) {
+        let turn = self.usage.entry(usage.turn_index).or_default();
+        turn.turn_index = usage.turn_index;
+        for (held, next) in [
+            (&mut turn.cached_input_tokens, usage.cached_input_tokens),
+            (
+                &mut turn.cache_write_input_tokens,
+                usage.cache_write_input_tokens,
+            ),
+            (
+                &mut turn.reasoning_output_tokens,
+                usage.reasoning_output_tokens,
+            ),
+            (&mut turn.input_tokens, usage.input_tokens),
+            (&mut turn.output_tokens, usage.output_tokens),
+            (&mut turn.total_tokens, usage.total_tokens),
+        ] {
+            *held = next.or(*held);
+        }
+    }
     fn completion(&mut self, failure: Option<EngineAdapterRequestError>) -> ProviderEvent {
         self.done = true;
+        self.flush_round();
         let completion = Completion {
             text: std::mem::take(&mut self.text),
             rounds: std::mem::take(&mut self.rounds),
-            usage: self.usage,
+            usage: total(self.usage.values()),
             stop_reason: self.stop_reason.take(),
             started_at: self.started_at,
             failure,
@@ -67,26 +102,31 @@ impl Progress {
     }
 }
 
-/// `usage` added to `total`, field by field; a field neither reports stays unreported.
-fn add(total: &mut EngineTokenUsage, usage: EngineTokenUsage) {
+/// The usage of every turn summed, field by field; a field no turn reports stays unreported,
+/// and `turn_index` is the last turn's.
+fn total<'a>(turns: impl Iterator<Item = &'a EngineTokenUsage>) -> EngineTokenUsage {
     fn sum(total: &mut Option<u64>, next: Option<u64>) {
         if total.is_some() || next.is_some() {
             *total = Some(total.unwrap_or(0) + next.unwrap_or(0));
         }
     }
-    total.turn_index = usage.turn_index;
-    sum(&mut total.cached_input_tokens, usage.cached_input_tokens);
-    sum(
-        &mut total.cache_write_input_tokens,
-        usage.cache_write_input_tokens,
-    );
-    sum(
-        &mut total.reasoning_output_tokens,
-        usage.reasoning_output_tokens,
-    );
-    sum(&mut total.input_tokens, usage.input_tokens);
-    sum(&mut total.output_tokens, usage.output_tokens);
-    sum(&mut total.total_tokens, usage.total_tokens);
+    let mut all = EngineTokenUsage::default();
+    for usage in turns {
+        all.turn_index = usage.turn_index;
+        sum(&mut all.cached_input_tokens, usage.cached_input_tokens);
+        sum(
+            &mut all.cache_write_input_tokens,
+            usage.cache_write_input_tokens,
+        );
+        sum(
+            &mut all.reasoning_output_tokens,
+            usage.reasoning_output_tokens,
+        );
+        sum(&mut all.input_tokens, usage.input_tokens);
+        sum(&mut all.output_tokens, usage.output_tokens);
+        sum(&mut all.total_tokens, usage.total_tokens);
+    }
+    all
 }
 
 /// The stop reason as the model crate spells it.
@@ -121,7 +161,7 @@ fn provider_events(
         text: String::new(),
         rounds: vec![],
         open: vec![],
-        usage: EngineTokenUsage::default(),
+        usage: BTreeMap::new(),
         stop_reason: None,
         started_at,
         done: false,
@@ -178,20 +218,12 @@ fn provider_events(
                             }),
                         },
                         EngineTextStreamEvent::MessageStop { reason } => {
-                            if !progress.open.is_empty() {
-                                let round = progress.rounds.len() as u32;
-                                progress.rounds.push(ToolRound {
-                                    round,
-                                    calls: std::mem::take(&mut progress.open),
-                                });
-                            }
+                            progress.flush_round();
                             progress.stop_reason = Some(spelled(reason));
                         }
-                        EngineTextStreamEvent::TokenUsage { usage } => {
-                            add(&mut progress.usage, usage)
-                        }
-                        EngineTextStreamEvent::MessageStart { .. }
-                        | EngineTextStreamEvent::ContentBlock { .. }
+                        EngineTextStreamEvent::MessageStart { .. } => progress.flush_round(),
+                        EngineTextStreamEvent::TokenUsage { usage } => progress.observe(usage),
+                        EngineTextStreamEvent::ContentBlock { .. }
                         | EngineTextStreamEvent::StructuredOutput { .. }
                         | EngineTextStreamEvent::TextDelta { .. }
                         | EngineTextStreamEvent::ReasoningDelta { .. } => {}
@@ -414,5 +446,105 @@ impl<H: Port> NodeHandler<H> for ChatHandler {
             (Some(code), Some(error)) => Err(refuse(code, error.message.to_string())),
             _ => host.emit_flow_signal(runtime, node, "completed").await,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use battersea_model::EngineAdapterRequestError;
+    use serde_json::json;
+
+    /// The completion the stream of `events` ends with.
+    async fn completion_of(
+        events: Vec<Result<EngineTextStreamEvent, EngineAdapterRequestError>>,
+    ) -> (Vec<ProviderEvent>, Completion) {
+        let mut events = provider_events(Box::pin(stream::iter(events)), 7)
+            .collect::<Vec<_>>()
+            .await;
+        let last = events.pop().expect("a completion event");
+        let ProviderEvent::Data { value } = last else {
+            panic!("the stream ends with its completion, not {last:?}");
+        };
+        (events, serde_json::from_value(value).expect("a completion"))
+    }
+
+    fn usage(turn_index: u32, input: Option<u64>, output: Option<u64>) -> EngineTextStreamEvent {
+        EngineTextStreamEvent::TokenUsage {
+            usage: EngineTokenUsage {
+                turn_index,
+                input_tokens: input,
+                output_tokens: output,
+                ..EngineTokenUsage::default()
+            },
+        }
+    }
+
+    fn started(id: &str) -> EngineTextStreamEvent {
+        EngineTextStreamEvent::ToolCallStarted {
+            id: id.into(),
+            name: "echo".into(),
+            arguments: json!({}),
+            started_at: String::new(),
+        }
+    }
+
+    #[tokio::test]
+    async fn usage_keeps_a_turns_latest_snapshot_and_sums_across_turns() {
+        let (deltas, completion) = completion_of(vec![
+            Ok(EngineTextStreamEvent::MessageStart { turn_index: 0 }),
+            Ok(usage(0, Some(10), Some(1))),
+            Ok(EngineTextStreamEvent::TextDelta { text: "Hel".into() }),
+            Ok(EngineTextStreamEvent::TextDelta { text: "lo".into() }),
+            Ok(usage(0, None, Some(5))),
+            Ok(EngineTextStreamEvent::MessageStart { turn_index: 1 }),
+            Ok(usage(1, Some(4), Some(2))),
+            Ok(EngineTextStreamEvent::MessageStop {
+                reason: StopReason::Complete,
+            }),
+        ])
+        .await;
+        assert_eq!(deltas.len(), 2);
+        assert_eq!(completion.text, "Hello");
+        assert_eq!(completion.usage.input_tokens, Some(14));
+        assert_eq!(completion.usage.output_tokens, Some(7));
+        assert_eq!(completion.usage.total_tokens, None);
+        assert_eq!(completion.usage.turn_index, 1);
+        assert_eq!(completion.stop_reason.as_deref(), Some("complete"));
+        assert!(completion.failure.is_none());
+    }
+
+    #[tokio::test]
+    async fn tool_rounds_close_at_the_next_message_and_at_a_failed_end() {
+        let error = EngineAdapterRequestError::new("test", "rounds", ErrorKind::Request)
+            .with_tool_code(ToolCode::ToolRoundsExceeded);
+        let (_, completion) = completion_of(vec![
+            Ok(EngineTextStreamEvent::MessageStart { turn_index: 0 }),
+            Ok(started("call-1")),
+            Ok(EngineTextStreamEvent::ToolCallCompleted {
+                id: "call-1".into(),
+                name: "echo".into(),
+                ok: true,
+                result: json!(1),
+                error_message: None,
+                error_classification: None,
+                tool_result: None,
+                tool_call: None,
+                finished_at: String::new(),
+            }),
+            Ok(EngineTextStreamEvent::MessageStart { turn_index: 1 }),
+            Ok(started("call-2")),
+            Err(error),
+        ])
+        .await;
+        assert_eq!(completion.rounds.len(), 2);
+        assert_eq!(completion.rounds[0].calls[0].id, "call-1");
+        assert!(completion.rounds[0].calls[0].ok);
+        assert_eq!(completion.rounds[1].round, 1);
+        assert_eq!(completion.rounds[1].calls[0].id, "call-2");
+        assert_eq!(
+            completion.failure.and_then(|error| error.tool_code),
+            Some(ToolCode::ToolRoundsExceeded)
+        );
     }
 }

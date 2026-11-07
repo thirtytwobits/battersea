@@ -114,8 +114,8 @@ pub struct Runner<H: Port> {
 }
 #[derive(Default)]
 struct Inner {
-    /// The job requested for each transcript that has one open.
-    requested: BTreeMap<TranscriptId, JobId>,
+    /// Each transcript with an evaluation in flight (`None`) or a job open (`Some`).
+    requested: BTreeMap<TranscriptId, Option<JobId>>,
     /// When each armed transcript's idle timer elapses.
     deadlines: BTreeMap<TranscriptId, Instant>,
 }
@@ -138,12 +138,14 @@ impl<H: Port> Runner<H> {
     }
     /// The job the runner has open for `transcript`.
     pub fn requested(&self, transcript: &TranscriptId) -> Option<JobId> {
-        self.inner().requested.get(transcript).cloned()
+        self.inner().requested.get(transcript).cloned().flatten()
     }
     /// Forgets `job`, so the runner may request another for its transcript. The application
     /// calls this when its port transitions the job to `completed` or `failed`.
     pub fn job_ended(&self, job: &JobId) {
-        self.inner().requested.retain(|_, held| held != job);
+        self.inner()
+            .requested
+            .retain(|_, held| held.as_ref() != Some(job));
     }
     /// Evaluates `transcript` with the `after_run` trigger, requests a job on `compact` unless
     /// one is open, and arms the idle timer where the policy sets `idle`.
@@ -206,9 +208,36 @@ impl<H: Port> Runner<H> {
         policy: &Policy,
         trigger: Trigger,
     ) -> Result<Option<JobId>, H::Error> {
-        if self.inner().requested.contains_key(transcript) {
-            return Ok(None);
+        // The transcript is held from here until the evaluation ends, so two evaluations of
+        // one transcript cannot both request a job.
+        {
+            let mut inner = self.inner();
+            if inner.requested.contains_key(transcript) {
+                return Ok(None);
+            }
+            inner.requested.insert(transcript.clone(), None);
         }
+        let requested = self.request(state, transcript, policy, trigger).await;
+        let mut inner = self.inner();
+        match &requested {
+            Ok(Some(job)) => {
+                inner
+                    .requested
+                    .insert(transcript.clone(), Some(job.clone()));
+            }
+            Ok(None) | Err(_) => {
+                inner.requested.remove(transcript);
+            }
+        }
+        requested
+    }
+    async fn request(
+        &self,
+        state: &mut H::State,
+        transcript: &TranscriptId,
+        policy: &Policy,
+        trigger: Trigger,
+    ) -> Result<Option<JobId>, H::Error> {
         let memory = self.host.memory(state, transcript).await?;
         let engine = self.host.engine(state, Self::NODE)?;
         let tokens = crate::nodes::count(engine.as_ref(), crate::nodes::messages(&memory.turns))
@@ -218,10 +247,6 @@ impl<H: Port> Runner<H> {
         if evaluation.decision != Decision::Compact {
             return Ok(None);
         }
-        let job = self.host.request_compaction(state, evaluation).await?;
-        self.inner()
-            .requested
-            .insert(transcript.clone(), job.clone());
-        Ok(Some(job))
+        Ok(Some(self.host.request_compaction(state, evaluation).await?))
     }
 }

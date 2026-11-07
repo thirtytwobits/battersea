@@ -144,13 +144,16 @@ pub(crate) fn request(
 }
 
 /// The input tokens `engine` counts for `messages`, as it counts a chat request without tools.
+/// The request keeps the default round limit, which the adapters validate although no tool is
+/// offered.
 pub(crate) async fn count(
     engine: &dyn EngineAdapter,
     messages: Vec<Message>,
 ) -> Result<u64, EngineAdapterRequestError> {
     let chat = EngineChatParameters::default_for_provider(crate::NAME);
+    let rounds = chat.max_tool_rounds();
     engine
-        .count_text_stream_input_tokens(request(messages, chat, &ToolPlan::default(), 0))
+        .count_text_stream_input_tokens(request(messages, chat, &ToolPlan::default(), rounds))
         .await
 }
 
@@ -199,4 +202,75 @@ pub(crate) fn now<H: Port>(host: &H) -> Result<u64, H::Error> {
 /// A refusal with one of the kit's codes.
 pub(crate) fn refuse<E: ExecutionError>(code: &'static str, message: impl Into<String>) -> E {
     E::invalid_request(code, message)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use async_trait::async_trait;
+    use battersea_model::{
+        engine::EngineBackendCapabilities, EngineAdapterDebugContext, EngineAuthConfig,
+        EngineBackendConfig, EngineTextStream, Role,
+    };
+
+    /// Counts as the built-in adapters do: the request is validated first.
+    struct Validating;
+    #[async_trait]
+    impl EngineAdapter for Validating {
+        fn describe_debug_context(&self) -> EngineAdapterDebugContext {
+            EngineAdapterDebugContext {
+                provider: "test".into(),
+                backend: "validating".into(),
+                model: "validating".into(),
+                sdk: "test".into(),
+                base_url: None,
+                timeout_ms: None,
+                max_retries: None,
+            }
+        }
+        async fn count_text_stream_input_tokens(
+            &self,
+            request: EngineTextStreamRequest,
+        ) -> Result<u64, EngineAdapterRequestError> {
+            let backend = EngineBackendConfig {
+                binding: None,
+                id: "test".into(),
+                provider: "test".into(),
+                label: "Test".into(),
+                enabled: true,
+                endpoint: String::new(),
+                model: "validating".into(),
+                display_order: None,
+                chat: EngineChatParameters::default_for_provider("test"),
+                capabilities: EngineBackendCapabilities::mock(),
+                context_window_tokens: 1_000,
+                options: Default::default(),
+                auth: EngineAuthConfig {
+                    auth_type: "api-key".into(),
+                    api_key: None,
+                    api_key_env: String::new(),
+                    header: None,
+                    version_header: None,
+                    version: None,
+                    has_api_key: false,
+                },
+                short_description: String::new(),
+                long_description: String::new(),
+            };
+            battersea_model::validate_chat_request(&backend, &request)?;
+            Ok(request.shared.messages.len() as u64)
+        }
+        async fn stream_text(
+            &self,
+            _request: EngineTextStreamRequest,
+        ) -> Result<EngineTextStream, EngineAdapterRequestError> {
+            unreachable!("counting only")
+        }
+    }
+
+    #[tokio::test]
+    async fn a_counting_request_passes_the_adapters_validation() {
+        let messages = vec![Message::text(Role::User, "hello".into())];
+        assert_eq!(count(&Validating, messages).await.unwrap(), 1);
+    }
 }
