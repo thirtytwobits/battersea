@@ -78,8 +78,9 @@ reservation it settled, `started_at`, `finished_at`); and `SpendEstimate`
 
 ```rust
 pub trait Port: ExecutionHost {
-    type Extension: Serialize + DeserializeOwned + Clone + Send + Sync;
+    type Extension: Serialize + DeserializeOwned + Clone + Default + Send + Sync;
     fn run_state(state: &mut Self::State) -> &mut RunState<Self::Extension>;
+    fn clock(&self) -> Arc<dyn Clock>;
 
     // Transcript
     async fn turns(&self, state: &Self::State, transcript: &TranscriptId) -> Result<Vec<Turn<Self::Extension>>, Self::Error>;
@@ -108,13 +109,15 @@ pub trait Port: ExecutionHost {
 ```
 
 `Memory<X>` is the latest `Summary<X>`, if any, and the turns after it. `ToolPlan` is the
-run's `EngineLocalToolDefinition`s, its `EngineLocalToolExecutor` and the round limit; a plan
-without definitions runs the call without tools. `Policy` is the compaction policy in force for
-the transcript, the flow's overrides applied.
+run's `EngineLocalToolDefinition`s, its `EngineLocalToolExecutor` and a round limit that caps a
+chat node's `max_tool_rounds`; a plan without definitions runs the call without tools. `Policy`
+is the compaction policy in force for the transcript. A record the kit creates, such as the
+prompt's turn or a parsed summary, carries `Extension::default()`; the port replaces it when it
+stages, writes or applies the record. The kit's timestamps read the port's clock.
 
 `RunState<X>` declares `STATE_VERSION`. It holds the run's `transcript`, the turns the run has
-staged, its call records, its reservations and its deliveries. The application includes it in
-its versioned host state, and resume refuses another version.
+staged, its call records, its reservations, its deliveries and the text its buffers hold. The
+application includes it in its versioned host state, and resume refuses another version.
 
 The port waits for no job and lists no memory artifacts: the application runs the compaction
 flow when it chooses and reads its own records. The kit never commits a turn. Staged turns
@@ -126,15 +129,17 @@ cancelled activation leaves them uncommitted.
 `ConversationChat` builds one `EngineTextStreamRequest` from `system`, the `history` turns and
 `prompt`, with the run's tool plan and the node's `parameters` for `EngineChatParameters`. It
 counts the request's input tokens with `count_text_stream_input_tokens`; a count above `budget`
-refuses dispatch with the recoverable failure `conversation.over_budget`, fires `over_budget`
-and publishes a `status` with that outcome. It then reserves spend; a refused reservation is
-`conversation.spend_refused`. It streams through `start_provider`: each `TextDelta` is a
-`chat.raw` delta on `text`, each `ReasoningDelta` one on `reasoning`, tool events accumulate
-`tool_rounds`, and the stream's final text is the assistant `reply`. Token usage settles the
-reservation and the call is recorded with its status before the node's outputs close. The
-activation token cancels the stream; cancellation retains its control outcome. A provider error
-that the model crate classifies as a request error is `conversation.provider_failed`; exhausted
-tool rounds are `conversation.tool_rounds_exhausted`.
+refuses dispatch with the recoverable failure `conversation.over_budget`, fires `over_budget`,
+records the call and publishes a `status` with that outcome. It then reserves spend; a refused
+reservation is `conversation.spend_refused`. It streams through `start_provider`: each
+`TextDelta` is a `chat.raw` delta on `text`, each `ReasoningDelta` one on `reasoning`, tool
+events accumulate `tool_rounds`, and the stream's final text is the assistant `reply`. Token
+usage settles the reservation and the call is recorded with its status before the node's
+outputs close. The activation token cancels the stream; cancellation retains its control
+outcome, records no call and leaves the reservation open for the application to settle. A
+provider error ends the call with the failed status published and the reservation settled with
+the usage reported: `conversation.tool_rounds_exhausted` where the model crate names exhausted
+tool rounds, `conversation.provider_failed` otherwise.
 
 `ConversationMemory` fits turns newest first until adding one would exceed `budget`, measured by
 the port's engine as it measures the chat request. The summary is not counted. An assistant turn
@@ -142,12 +147,18 @@ that calls tools and the tool turns answering it are one unit, kept or dropped t
 history is a request `validate_messages` accepts.
 
 `ConversationBuffer` holds at most `retain` bytes of collected text and refuses a stream that
-exceeds it. `ConversationTranscriptOutput` stages turns in delivery order; a `conversation.turns`
-value stages each turn in turn. `ConversationMemoryOutput` writes the summary and transitions the
-summary's job to `completed`; a job the port no longer knows is `conversation.unknown_job`.
-`ConversationCompactionParser` and `ConversationRefinementParser` refuse a response they cannot
-parse as `conversation.unparsable_response`. `ConversationRefinementOutput` refuses a revision
-of a turn the transcript does not hold as `conversation.unknown_turn`.
+exceeds it with the runtime's `capacity_exhausted`. `ConversationTranscriptOutput` stages turns in
+delivery order; a `conversation.turns` value stages each turn in turn.
+`ConversationCompactionRequest` measures the turns it receives with the transcript's memory and
+evaluates with the `after_run` trigger. `ConversationCompactionParser` reads the response as the
+summary's text, covering the turns it was given through the last, and names the job in the
+activation's `job` value, if any. `ConversationMemoryOutput` writes the summary and transitions
+the summary's job to `completed`; a job the port no longer knows is `conversation.unknown_job`.
+`ConversationCompactionParser` and `ConversationRefinementParser` refuse a response without text
+as `conversation.unparsable_response` and a turn without an id as `conversation.unknown_turn`.
+`ConversationRefinementSource` emits the committed turn the activation's `turn` value names.
+`ConversationRefinementOutput` refuses a revision of a turn the transcript does not hold as
+`conversation.unknown_turn`.
 
 The codes above are recoverable node failures: classified, with external effects settled, so
 `emit` and `skip` apply to them. Cancellation, capacity and contract violations retain their
@@ -155,20 +166,23 @@ control outcomes.
 
 ## Compaction
 
-`compaction::Policy` is `max_turns`, `max_tokens` and `idle`, each optional; a flow overrides
-any of them. `compaction::evaluate(policy, trigger, memory, measure)` is pure. With the
-`after_run` trigger it decides `compact` when the turns after the summary exceed `max_turns`
-or their measured tokens exceed `max_tokens`. With the `idle` trigger it decides `compact` when
-any turn follows the summary. Otherwise it decides `hold`. The evaluation records the trigger
-and what it measured.
+`compaction::Policy` is `max_turns`, `max_tokens` and `idle`, each optional;
+`ConversationCompactionRequest`'s parameters override the first two.
+`compaction::evaluate(policy, trigger, memory, measure)` is pure. With the `after_run` trigger
+it decides `compact` when the turns after the summary exceed `max_turns` or their measured
+tokens exceed `max_tokens`. With the `idle` trigger it decides `compact` when any turn follows
+the summary. Otherwise it decides `hold`. The evaluation records the trigger and what it
+measured.
 
 `compaction::Runner<H: Port>` holds the port and its clock. `after_run(state, transcript)`
 evaluates with `after_run` once a run completes and requests a job on `compact`. Where the
 policy sets `idle`, it then arms a timer for `idle` on the clock; a run on the transcript
-re-arms it, and when it elapses the runner evaluates once with `idle`. The runner requests at
-most one job per transcript until the port transitions it to `completed` or `failed`. It never
-activates a flow: the application runs the compaction flow for a requested job, and that
-flow's `ConversationMemoryOutput` completes it.
+re-arms it. `idle_elapsed()` completes when a timer elapses, naming the transcript, and
+`idle(state, transcript)` then evaluates once with `idle`. The runner requests at most one job
+per transcript until the application reports the job ended with `job_ended`, which it does when
+its port transitions the job to `completed` or `failed`. The runner never activates a flow: the
+application runs the compaction flow for a requested job, and that flow's
+`ConversationMemoryOutput` completes it.
 
 ## Reference host
 
@@ -193,21 +207,29 @@ the `conformance` feature that a host implements for the suite beside `Port`:
 
 ```rust
 pub trait Probe: Port {
+    /// The extension the suite's seeded records carry.
+    fn extension(&self) -> Self::Extension;
     /// Creates `transcript` holding `turns` committed and `summary` as its memory.
     async fn seed(&self, state: &mut Self::State, transcript: TranscriptId, turns: Vec<Turn<Self::Extension>>, summary: Option<Summary<Self::Extension>>) -> Result<(), Self::Error>;
+    /// Creates `job` as the port holds it, under its id.
+    async fn seed_job(&self, state: &mut Self::State, job: CompactionJob<Self::Extension>) -> Result<(), Self::Error>;
     /// Installs the responses the engine returns, in order.
     async fn script(&self, state: &mut Self::State, responses: Vec<ScriptedResponse>) -> Result<(), Self::Error>;
-    /// The observable state: the transcript's turns, the run's staged turns, summaries, jobs,
-    /// call records, reservations and deliveries.
-    async fn snapshot(&self, state: &Self::State) -> Result<Value, Self::Error>;
+    /// Offers `plan` to every chat node of the run.
+    async fn offer_tools(&self, state: &mut Self::State, plan: ToolPlan) -> Result<(), Self::Error>;
+    /// The observable state: the transcripts' turns and summaries, the run's staged turns,
+    /// jobs, call records, open reservations and deliveries.
+    async fn snapshot(&self, state: &Self::State) -> Result<Snapshot<Self::Extension>, Self::Error>;
 }
 ```
 
-The kit implements `PortAccess<H: Probe>` once over these three operations: a case's
-`Seed { transcript, turns, summary }` and `Script { responses }` operations run before the
-activation, and `snapshot` is compared after it. The reference host and the example host
-implement `Probe`; an application implements it on its test host. A `ScriptedResponse` is a
-text or a tool-call batch.
+The kit implements `PortAccess<H: Probe>` once over these operations: a case's `Seed`, `Job`,
+`Script` and `Tools` operations run before the activation, and `snapshot` is compared after
+it, each turn, job and reservation id replaced by its order of appearance and the extensions
+removed. The reference host and the example host implement `Probe`; an application implements
+it on its test host. A `ScriptedResponse` is a text, a reasoning delta, a tool-call batch or a
+wait on the clock; the suite's `Tools` operation answers every call with `Echo`, which returns
+the call's arguments. A case may cancel the activation at the wait after its last clock step.
 
 | Case | Proves |
 |---|---|
@@ -217,13 +239,12 @@ text or a tool-call batch.
 | `chat-stream` | Text and reasoning deltas, the reply, the status and a settled reservation |
 | `chat-tools` | One tool round through the plan's executor; `tool_rounds` carries its evidence |
 | `chat-over-budget` | No dispatch, `over_budget` fires, the status says so, nothing is reserved |
-| `chat-cancelled` | The activation token stops the stream; the status is `cancelled` |
+| `chat-cancelled` | Cancelling the activation while the engine waits on the clock stops the stream with the cancelled outcome; no reply or status is published and the reservation stays open |
+| `buffer-overflow` | A stream beyond `retain` fails the buffer with the runtime's capacity code; `chat-stream` collects one within it |
 | `stage` | Turns are staged in delivery order and committed on completion |
-| `compaction-request` | A transcript over `max_turns` requests one job; under it, `held` fires |
-| `compaction-idle` | A transcript under both size thresholds requests a job once the idle step elapses and not before |
-| `memory-output` | The summary is written and its job completes |
+| `compaction-request` | A transcript over the node's `max_turns` requests one job; under it, `held` fires |
+| `memory-output` | The summary is written, naming the activation's `job`, and that job completes |
 | `refine` | The named turn is emitted, the revision parsed and applied, and `revision` increments |
-| `buffer` | A stream within `retain` collects; one beyond it fails the node |
 
 The example host keeps transcripts in files under a directory the test owns, one file per
 transcript, and runs the suite against them.
@@ -242,11 +263,11 @@ storage and durable commits. Battersea owns the conversation nodes and compactio
 | Turn identity | A turn emitted by the prompt source has no id; the staged turn has the id the port assigned |
 | Budget | A request one token over `budget` is not dispatched; one at the budget is |
 | Spend | Usage from the stream settles the reservation; a refused reservation dispatches nothing |
-| Cancellation | Cancelling mid-stream records a `cancelled` status, settles the reservation and stages no reply |
+| Cancellation | Cancelling mid-stream ends the activation cancelled with no call recorded, the reservation open and no reply staged |
 | Tool rounds | A scripted tool call runs through the plan's executor; the limit yields `conversation.tool_rounds_exhausted` |
 | Staging | A failed activation commits nothing on the reference host; a completed one commits in order |
 | Memory | The summary is not counted against `budget`; turns are fitted newest first; a tool call and its results leave together |
-| Compaction | `evaluate` decides from the policy and trigger alone; the runner requests one job per transcript until it ends |
+| Compaction | `evaluate` decides from the policy and trigger alone; the runner requests one job per transcript until `job_ended` |
 | Idle | Advancing the clock past `idle` compacts a transcript under both size thresholds; a run before that re-arms the timer; an idle-only policy compacts on no other trigger |
 | Refinement | A revision increments `revision` and leaves the turn's id; an unknown turn is refused |
 | Model-facing text | `model_facing_text` has the three blocks and the two references; changing a block changes it |

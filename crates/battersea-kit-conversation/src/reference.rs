@@ -12,9 +12,9 @@ use crate::{
 use async_trait::async_trait;
 use battersea_kit::{ManualClock, ReferenceError, ReferenceHost, ReferenceState};
 use battersea_model::{
-    utc_now, Clock, EngineAdapter, EngineAdapterDebugContext, EngineAdapterRequestError,
+    sleep, utc_now, Clock, EngineAdapter, EngineAdapterDebugContext, EngineAdapterRequestError,
     EngineLocalToolCall, EngineTextStream, EngineTextStreamEvent, EngineTextStreamRequest,
-    EngineTokenUsage, ErrorKind, StopReason, ToolCallEvidence, ToolCallOutcome,
+    EngineTokenUsage, ErrorKind, StopReason, ToolCallEvidence, ToolCallOutcome, ToolCode,
 };
 use battersea_runtime::{ExecutionError, HandlerRegistry};
 use futures_util::stream;
@@ -22,6 +22,7 @@ use serde_json::Value;
 use std::{
     collections::{BTreeMap, VecDeque},
     sync::{Arc, Mutex, MutexGuard, PoisonError},
+    time::Duration,
 };
 
 /// The reference host's extension: any JSON.
@@ -138,6 +139,9 @@ impl Port for ReferenceHost<State> {
     type Extension = Extension;
     fn run_state(state: &mut Self::State) -> &mut RunState<Extension> {
         &mut state.kit.run
+    }
+    fn clock(&self) -> Arc<dyn Clock> {
+        self.clock().clone()
     }
     async fn turns(
         &self,
@@ -357,12 +361,25 @@ impl Port for ReferenceHost<State> {
     }
 }
 
-/// One response a [`ScriptedEngine`] returns: text, or a batch of tool calls it runs
-/// through the request's executor before taking the next response as the model's next turn.
+/// One response a [`ScriptedEngine`] returns. A text ends the model's message; a reasoning
+/// delta precedes the response after it; a batch of tool calls runs through the request's
+/// executor before the next response; a wait sleeps on the engine's clock before the next
+/// event.
 #[derive(Debug, Clone, PartialEq)]
 pub enum ScriptedResponse {
     Text(String),
+    Reasoning(String),
     ToolCalls(Vec<EngineLocalToolCall>),
+    Wait(Duration),
+}
+
+/// One item of a scripted stream.
+enum Item {
+    Event(Box<Result<EngineTextStreamEvent, EngineAdapterRequestError>>),
+    Wait(Duration),
+}
+fn event(event: Result<EngineTextStreamEvent, EngineAdapterRequestError>) -> Item {
+    Item::Event(Box::new(event))
 }
 
 /// An [`EngineAdapter`] that returns scripted responses in order and counts a request's
@@ -438,7 +455,9 @@ impl EngineAdapter for ScriptedEngine {
         let input = Self::words(&request);
         // Events already produced, tool evidence among them, reach the caller before an
         // error ends the stream.
-        let mut events: Vec<Result<EngineTextStreamEvent, EngineAdapterRequestError>> = vec![];
+        let mut items: Vec<Item> = vec![];
+        let mut produced = false;
+        let mut open = false;
         let mut round = 0u32;
         loop {
             let Some(response) = self.take() else {
@@ -447,23 +466,35 @@ impl EngineAdapter for ScriptedEngine {
                     "The script has no response left.",
                     ErrorKind::Mock,
                 );
-                if events.is_empty() {
+                if !produced {
                     return Err(error);
                 }
-                events.push(Err(error));
+                items.push(event(Err(error)));
                 break;
             };
-            events.push(Ok(EngineTextStreamEvent::MessageStart {
-                turn_index: round,
-            }));
+            if let ScriptedResponse::Wait(duration) = response {
+                items.push(Item::Wait(duration));
+                continue;
+            }
+            if !open {
+                items.push(event(Ok(EngineTextStreamEvent::MessageStart {
+                    turn_index: round,
+                })));
+                open = true;
+            }
             match response {
+                ScriptedResponse::Wait(_) => unreachable!("waits are queued above"),
+                ScriptedResponse::Reasoning(text) => {
+                    produced = true;
+                    items.push(event(Ok(EngineTextStreamEvent::ReasoningDelta { text })));
+                }
                 ScriptedResponse::Text(text) => {
                     let output = text.split_whitespace().count() as u64;
-                    events.push(Ok(EngineTextStreamEvent::TextDelta { text }));
-                    events.push(Ok(EngineTextStreamEvent::MessageStop {
+                    items.push(event(Ok(EngineTextStreamEvent::TextDelta { text })));
+                    items.push(event(Ok(EngineTextStreamEvent::MessageStop {
                         reason: StopReason::Complete,
-                    }));
-                    events.push(Ok(EngineTextStreamEvent::TokenUsage {
+                    })));
+                    items.push(event(Ok(EngineTextStreamEvent::TokenUsage {
                         usage: EngineTokenUsage {
                             turn_index: round,
                             input_tokens: Some(input),
@@ -471,7 +502,7 @@ impl EngineAdapter for ScriptedEngine {
                             total_tokens: Some(input + output),
                             ..EngineTokenUsage::default()
                         },
-                    }));
+                    })));
                     break;
                 }
                 ScriptedResponse::ToolCalls(calls) => {
@@ -479,21 +510,23 @@ impl EngineAdapter for ScriptedEngine {
                         let error = EngineAdapterRequestError::new(
                             "reference",
                             "The script asks for more tool rounds than the request allows.",
-                            ErrorKind::InvalidRequest,
-                        );
-                        if events.len() == 1 {
+                            ErrorKind::Request,
+                        )
+                        .with_tool_code(ToolCode::ToolRoundsExceeded);
+                        if !produced {
                             return Err(error);
                         }
-                        events.push(Err(error));
+                        items.push(event(Err(error)));
                         break;
                     }
+                    produced = true;
                     for call in calls {
-                        events.push(Ok(EngineTextStreamEvent::ToolCallStarted {
+                        items.push(event(Ok(EngineTextStreamEvent::ToolCallStarted {
                             id: call.id.clone(),
                             name: call.name.clone(),
                             arguments: call.arguments.clone(),
                             started_at: self.now(),
-                        }));
+                        })));
                         let result = match &request.local_tool_executor {
                             Some(executor) => executor.call(call.clone()).await,
                             None => Err(EngineAdapterRequestError::new(
@@ -522,7 +555,7 @@ impl EngineAdapter for ScriptedEngine {
                                 })
                             }
                         };
-                        events.push(Ok(match result {
+                        items.push(event(Ok(match result {
                             Ok(result) => EngineTextStreamEvent::ToolCallCompleted {
                                 id: call.id,
                                 name: call.name,
@@ -547,16 +580,28 @@ impl EngineAdapter for ScriptedEngine {
                                 tool_call: Some(evidence),
                                 finished_at: self.now(),
                             },
-                        }));
+                        })));
                     }
-                    events.push(Ok(EngineTextStreamEvent::MessageStop {
+                    items.push(event(Ok(EngineTextStreamEvent::MessageStop {
                         reason: StopReason::ToolUse,
-                    }));
+                    })));
+                    open = false;
                     round += 1;
                 }
             }
         }
-        Ok(Box::pin(stream::iter(events)))
+        let clock = self.clock.clone();
+        Ok(Box::pin(stream::unfold(
+            (VecDeque::from(items), clock),
+            |(mut items, clock)| async move {
+                loop {
+                    match items.pop_front()? {
+                        Item::Wait(duration) => sleep(clock.as_ref(), duration).await,
+                        Item::Event(event) => return Some((*event, (items, clock))),
+                    }
+                }
+            },
+        )))
     }
 }
 
@@ -594,12 +639,30 @@ impl crate::conformance::Probe for ReferenceHost<State> {
             .insert(transcript, Transcript { turns, summary });
         Ok(())
     }
+    async fn seed_job(
+        &self,
+        state: &mut Self::State,
+        job: CompactionJob<Extension>,
+    ) -> Result<(), ReferenceError> {
+        let mut store = state.kit.store();
+        store.reserve(job.id.as_str());
+        store.jobs.insert(job.id.clone(), job);
+        Ok(())
+    }
     async fn script(
         &self,
         state: &mut Self::State,
         responses: Vec<ScriptedResponse>,
     ) -> Result<(), ReferenceError> {
         state.kit.engine().extend(responses);
+        Ok(())
+    }
+    async fn offer_tools(
+        &self,
+        state: &mut Self::State,
+        plan: ToolPlan,
+    ) -> Result<(), ReferenceError> {
+        state.kit.store().tools = plan;
         Ok(())
     }
     async fn snapshot(

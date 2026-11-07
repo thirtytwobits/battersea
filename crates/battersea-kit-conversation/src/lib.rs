@@ -7,10 +7,12 @@ use battersea_flow::registry::Registry;
 use serde_json::Value;
 
 pub mod compaction;
+pub mod nodes;
 pub mod port;
 pub mod reference;
 pub mod types;
-pub use compaction::{Decision, Measured, Policy, PolicyEvaluation, Trigger};
+pub use compaction::{Decision, Measured, Policy, PolicyEvaluation, Runner, Trigger};
+pub use nodes::register_handlers;
 pub use port::Port;
 pub use types::*;
 #[cfg(feature = "conformance")]

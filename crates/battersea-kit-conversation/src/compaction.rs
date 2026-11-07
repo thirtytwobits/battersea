@@ -2,10 +2,16 @@
 //!
 //! Compaction: the policy that bounds a transcript and the evaluation that decides whether
 //! to compact it.
-use crate::{Memory, TranscriptId};
+use crate::{JobId, Memory, Port, TranscriptId};
+use battersea_model::Clock;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use std::time::Duration;
+use std::{
+    collections::BTreeMap,
+    sync::{Arc, Mutex, MutexGuard, PoisonError},
+    time::Duration,
+};
+use tokio::{sync::Notify, time::Instant};
 
 /// The thresholds that bound a transcript. Each is optional; a flow overrides any of them.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
@@ -94,5 +100,128 @@ pub fn evaluate<X>(
         },
         measured: Measured { turns, tokens },
         policy: policy.clone(),
+    }
+}
+
+/// Drives compaction outside flows: evaluates after a run, arms a transcript's idle timer on
+/// the port's clock and evaluates once it elapses. It requests at most one job per transcript
+/// until the application reports that job ended; it never activates a flow.
+pub struct Runner<H: Port> {
+    host: Arc<H>,
+    clock: Arc<dyn Clock>,
+    inner: Mutex<Inner>,
+    changed: Notify,
+}
+#[derive(Default)]
+struct Inner {
+    /// The job requested for each transcript that has one open.
+    requested: BTreeMap<TranscriptId, JobId>,
+    /// When each armed transcript's idle timer elapses.
+    deadlines: BTreeMap<TranscriptId, Instant>,
+}
+impl<H: Port> Runner<H> {
+    /// The node name the runner measures and requests under.
+    pub const NODE: &'static str = "conversation.compaction.runner";
+
+    /// A runner over `host`, on the host's clock.
+    pub fn new(host: Arc<H>) -> Self {
+        let clock = host.clock();
+        Self {
+            host,
+            clock,
+            inner: Mutex::default(),
+            changed: Notify::new(),
+        }
+    }
+    fn inner(&self) -> MutexGuard<'_, Inner> {
+        self.inner.lock().unwrap_or_else(PoisonError::into_inner)
+    }
+    /// The job the runner has open for `transcript`.
+    pub fn requested(&self, transcript: &TranscriptId) -> Option<JobId> {
+        self.inner().requested.get(transcript).cloned()
+    }
+    /// Forgets `job`, so the runner may request another for its transcript. The application
+    /// calls this when its port transitions the job to `completed` or `failed`.
+    pub fn job_ended(&self, job: &JobId) {
+        self.inner().requested.retain(|_, held| held != job);
+    }
+    /// Evaluates `transcript` with the `after_run` trigger, requests a job on `compact` unless
+    /// one is open, and arms the idle timer where the policy sets `idle`.
+    pub async fn after_run(
+        &self,
+        state: &mut H::State,
+        transcript: &TranscriptId,
+    ) -> Result<Option<JobId>, H::Error> {
+        let policy = self.host.policy(state, transcript)?;
+        if let Some(idle) = policy.idle {
+            let deadline = self.clock.instant() + idle;
+            self.inner().deadlines.insert(transcript.clone(), deadline);
+            self.changed.notify_waiters();
+        }
+        self.evaluate(state, transcript, &policy, Trigger::AfterRun)
+            .await
+    }
+    /// Completes when a transcript's idle timer elapses, naming the transcript; pending while
+    /// none is armed.
+    pub async fn idle_elapsed(&self) -> TranscriptId {
+        loop {
+            let notified = self.changed.notified();
+            let next = self
+                .inner()
+                .deadlines
+                .iter()
+                .min_by_key(|(_, deadline)| **deadline)
+                .map(|(transcript, deadline)| (transcript.clone(), *deadline));
+            let Some((transcript, deadline)) = next else {
+                notified.await;
+                continue;
+            };
+            tokio::select! {
+                () = self.clock.sleep_until(deadline) => {
+                    let mut inner = self.inner();
+                    if inner.deadlines.get(&transcript) == Some(&deadline) {
+                        inner.deadlines.remove(&transcript);
+                        return transcript;
+                    }
+                }
+                () = notified => {}
+            }
+        }
+    }
+    /// Evaluates `transcript` with the `idle` trigger and requests a job on `compact` unless one
+    /// is open.
+    pub async fn idle(
+        &self,
+        state: &mut H::State,
+        transcript: &TranscriptId,
+    ) -> Result<Option<JobId>, H::Error> {
+        let policy = self.host.policy(state, transcript)?;
+        self.evaluate(state, transcript, &policy, Trigger::Idle)
+            .await
+    }
+    async fn evaluate(
+        &self,
+        state: &mut H::State,
+        transcript: &TranscriptId,
+        policy: &Policy,
+        trigger: Trigger,
+    ) -> Result<Option<JobId>, H::Error> {
+        if self.inner().requested.contains_key(transcript) {
+            return Ok(None);
+        }
+        let memory = self.host.memory(state, transcript).await?;
+        let engine = self.host.engine(state, Self::NODE)?;
+        let tokens = crate::nodes::count(engine.as_ref(), crate::nodes::messages(&memory.turns))
+            .await
+            .map_err(|error| crate::nodes::provider_failed::<H::Error>(&error))?;
+        let evaluation = evaluate(policy, trigger, &memory, tokens);
+        if evaluation.decision != Decision::Compact {
+            return Ok(None);
+        }
+        let job = self.host.request_compaction(state, evaluation).await?;
+        self.inner()
+            .requested
+            .insert(transcript.clone(), job.clone());
+        Ok(Some(job))
     }
 }

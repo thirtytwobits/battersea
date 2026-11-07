@@ -36,10 +36,13 @@
 - `battersea-nodes` is the generic kit: `KIT`, and behind the `conformance` feature, the probe
   nodes and `conformance::run` that prove its handlers on an application's host. `NodeError`
   and `text` move to `battersea-kit` and are re-exported.
-- `battersea-kit-conversation` begins the conversation kit of `contracts/kit-conversation.md`:
-  its records and token types, `Port`, `RunState`, the compaction policy and evaluator, the
-  port on the reference host with a scripted engine, and `conformance::Probe` with the suite's
-  harness. Its nodes follow. `ReferenceHost::with_completion` runs a kit's port at completion.
+- `battersea-kit-conversation` is the conversation kit of `contracts/kit-conversation.md`: its
+  records and token types, `Port`, `RunState`, the fifteen node handlers `register_handlers`
+  installs on any port, the compaction policy, evaluator and `Runner`, the port on the
+  reference host with a scripted engine, and `conformance::Probe` with the twelve cases of its
+  suite. `ReferenceHost::with_completion` runs a kit's port at completion, and a refusal with a
+  kit's own code is a recoverable node failure on the reference host. A conformance `Case` may
+  cancel its activation, and a `Suite` names how its events compare.
 - `DurableConversation` continues Anthropic Messages tool conversations after approval and
   restart. Checkpoints retain signed thinking and native tool use.
 - `DurableConversation` continues Gemini `generateContent` tool conversations after approval and

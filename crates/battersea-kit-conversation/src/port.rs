@@ -7,7 +7,7 @@ use crate::{
     ToolPlan, TranscriptId, Turn, TurnId,
 };
 use async_trait::async_trait;
-use battersea_model::{EngineAdapter, EngineTokenUsage};
+use battersea_model::{Clock, EngineAdapter, EngineTokenUsage};
 use battersea_runtime::ExecutionHost;
 use serde::{de::DeserializeOwned, Serialize};
 use std::sync::Arc;
@@ -16,10 +16,13 @@ use std::sync::Arc;
 /// by the kit's handlers. `contracts/kit-conversation.md` states each operation's contract.
 #[async_trait]
 pub trait Port: ExecutionHost {
-    /// What the application adds to the kit's records.
-    type Extension: Serialize + DeserializeOwned + Clone + Send + Sync + 'static;
+    /// What the application adds to the kit's records. A record the kit creates carries the
+    /// default; the port replaces it when it stages, writes or applies the record.
+    type Extension: Serialize + DeserializeOwned + Clone + Default + Send + Sync + 'static;
     /// The kit's state in the run.
     fn run_state(state: &mut Self::State) -> &mut RunState<Self::Extension>;
+    /// The clock the kit's records and timers read.
+    fn clock(&self) -> Arc<dyn Clock>;
 
     /// The transcript's committed turns, in order.
     async fn turns(

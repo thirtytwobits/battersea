@@ -181,6 +181,7 @@ pub type battersea_kit::conformance::Side::Output = T
 impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_kit::conformance::Side where T: ?core::marker::Sized
 pub struct battersea_kit::conformance::Case<Op>
 pub battersea_kit::conformance::Case::before: alloc::vec::Vec<Op>
+pub battersea_kit::conformance::Case::cancel: bool
 pub battersea_kit::conformance::Case::flow: alloc::string::String
 pub battersea_kit::conformance::Case::name: alloc::string::String
 pub battersea_kit::conformance::Case::node: alloc::string::String
@@ -353,6 +354,7 @@ pub type battersea_kit::conformance::Played::Output = T
 impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_kit::conformance::Played where T: ?core::marker::Sized
 pub struct battersea_kit::conformance::Suite<Op>
 pub battersea_kit::conformance::Suite::cases: alloc::vec::Vec<battersea_kit::conformance::Case<Op>>
+pub battersea_kit::conformance::Suite::comparable_events: fn(&[serde_json::value::Value]) -> alloc::vec::Vec<serde_json::value::Value>
 pub battersea_kit::conformance::Suite::kit: &'static battersea_kit::kit::Kit
 pub battersea_kit::conformance::Suite::manifests: alloc::vec::Vec<(&'static str, &'static str)>
 pub battersea_kit::conformance::Suite::register_token_types: fn(&mut battersea_flow::registry::Registry) -> core::result::Result<(), alloc::string::String>
@@ -399,6 +401,7 @@ pub async fn battersea_kit::conformance::NoPort::prepare(&self, &H, &mut <H as b
 pub fn battersea_kit::conformance::comparable(&serde_json::value::Value) -> serde_json::value::Value
 pub async fn battersea_kit::conformance::play<Op, F: battersea_kit::conformance::Fixture, A: battersea_kit::conformance::PortAccess<<F as battersea_kit::conformance::Fixture>::Host, Op>>(&battersea_kit::conformance::Suite<Op>, &F, &battersea_kit::conformance::Case<Op>, &A) -> core::result::Result<battersea_kit::conformance::Played, alloc::string::String>
 pub async fn battersea_kit::conformance::run<Op, R, C, A>(&battersea_kit::conformance::Suite<Op>, &R, &C, &A) -> core::result::Result<(), battersea_kit::conformance::Failure> where R: battersea_kit::conformance::Fixture, C: battersea_kit::conformance::Fixture, A: battersea_kit::conformance::PortAccess<<R as battersea_kit::conformance::Fixture>::Host, Op> + battersea_kit::conformance::PortAccess<<C as battersea_kit::conformance::Fixture>::Host, Op>
+pub fn battersea_kit::conformance::same_events(&[serde_json::value::Value]) -> alloc::vec::Vec<serde_json::value::Value>
 pub mod battersea_kit::error
 pub enum battersea_kit::error::NodeError
 pub battersea_kit::error::NodeError::Internal(alloc::string::String)
@@ -584,6 +587,7 @@ pub const battersea_kit::kit::SHARED_TOKEN_TYPES: &[&str]
 pub fn battersea_kit::kit::pascal_case(&str) -> alloc::string::String
 pub mod battersea_kit::reference
 pub mod battersea_kit::reference::codes
+pub const battersea_kit::reference::codes::ALL: &[&str]
 pub const battersea_kit::reference::codes::ALREADY_ACCEPTED: &str
 pub const battersea_kit::reference::codes::INVALID_PARAMETER_WRITE: &str
 pub const battersea_kit::reference::codes::NO_LOGIC_EVALUATOR: &str
@@ -596,6 +600,7 @@ pub fn battersea_kit::reference::ReferenceError::interrupted(&'static str, impl 
 pub fn battersea_kit::reference::ReferenceError::invalid_request(&'static str, impl core::convert::Into<alloc::string::String>) -> Self
 pub fn battersea_kit::reference::ReferenceError::message(&self) -> &str
 pub fn battersea_kit::reference::ReferenceError::reason_code(&self) -> core::option::Option<&str>
+pub fn battersea_kit::reference::ReferenceError::recoverable_node_failure(&self) -> core::option::Option<battersea_runtime::failure::RecoverableNodeFailure>
 impl core::clone::Clone for battersea_kit::reference::ReferenceError
 pub fn battersea_kit::reference::ReferenceError::clone(&self) -> Self
 impl core::error::Error for battersea_kit::reference::ReferenceError
@@ -979,6 +984,7 @@ pub fn battersea_kit::reference::ReferenceError::interrupted(&'static str, impl 
 pub fn battersea_kit::reference::ReferenceError::invalid_request(&'static str, impl core::convert::Into<alloc::string::String>) -> Self
 pub fn battersea_kit::reference::ReferenceError::message(&self) -> &str
 pub fn battersea_kit::reference::ReferenceError::reason_code(&self) -> core::option::Option<&str>
+pub fn battersea_kit::reference::ReferenceError::recoverable_node_failure(&self) -> core::option::Option<battersea_runtime::failure::RecoverableNodeFailure>
 impl core::clone::Clone for battersea_kit::reference::ReferenceError
 pub fn battersea_kit::reference::ReferenceError::clone(&self) -> Self
 impl core::error::Error for battersea_kit::reference::ReferenceError

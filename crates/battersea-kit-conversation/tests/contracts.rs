@@ -1,14 +1,17 @@
 //! Distinguishing cases from contracts/kit-conversation.md: names, model-facing text, the
 //! records, the port on the reference host and the compaction evaluator.
 use battersea_flow::registry::Registry;
-use battersea_kit::{conformance::EPOCH_MS, Clock, KitError, ManualClock, ReferenceHost};
+use battersea_kit::{
+    conformance::{play, Outcome, Played, EPOCH_MS},
+    Clock, KitError, ManualClock, ReferenceHost,
+};
 use battersea_kit_conversation::{
     codes,
-    compaction::{evaluate, Decision, Policy, Trigger},
-    conformance::{Probe, ScriptedResponse},
+    compaction::{evaluate, Decision, Policy, Runner, Trigger},
+    conformance::{suite, Access, Probe, ReferenceFixture, ScriptedResponse},
     reference::{self, ScriptedEngine, State},
     CallOutcome, CallRecord, CallStatus, JobState, Memory, Options, Port, Revision, RunState,
-    SpendEstimate, Summary, Turn, KIT, MANIFEST,
+    SpendEstimate, Summary, TranscriptId, Turn, KIT, MANIFEST,
 };
 use battersea_model::{
     EngineAdapter, EngineAdapterRequest, EngineLocalToolCall, EngineLocalToolExecutor,
@@ -16,7 +19,7 @@ use battersea_model::{
     EngineTokenUsage, Message, Role,
 };
 use battersea_runtime::{ActivationHost, ExecutionError, RegistryBuilder, SchedulerState};
-use futures_util::StreamExt;
+use futures_util::{FutureExt, StreamExt};
 use serde_json::{json, Value};
 use std::{collections::HashMap, sync::Arc};
 use tokio_util::sync::CancellationToken;
@@ -813,10 +816,329 @@ async fn the_scripted_engine_counts_words_and_streams_its_script() {
 }
 
 #[tokio::test]
-async fn the_empty_suite_passes_on_the_reference_host() {
-    battersea_kit_conversation::conformance::run(
-        &battersea_kit_conversation::conformance::ReferenceFixture,
+async fn a_scripted_wait_sleeps_on_the_clock() {
+    let clock = Arc::new(ManualClock::new(EPOCH_MS));
+    let engine = ScriptedEngine::new(clock.clone() as Arc<dyn Clock>);
+    engine.extend([
+        ScriptedResponse::Wait(std::time::Duration::from_secs(5)),
+        ScriptedResponse::Reasoning("hm".into()),
+        ScriptedResponse::Text("later".into()),
+    ]);
+    let mut stream = engine.stream_text(request("hi", None)).await.unwrap();
+    assert!(stream.next().now_or_never().is_none());
+    assert_eq!(
+        clock.pending_timers(),
+        vec![std::time::Duration::from_secs(5)]
+    );
+    clock.advance(std::time::Duration::from_secs(5));
+    assert!(matches!(
+        stream.next().await,
+        Some(Ok(EngineTextStreamEvent::MessageStart { turn_index: 0 }))
+    ));
+    assert!(matches!(
+        stream.next().await,
+        Some(Ok(EngineTextStreamEvent::ReasoningDelta { text })) if text == "hm"
+    ));
+    assert!(matches!(
+        stream.next().await,
+        Some(Ok(EngineTextStreamEvent::TextDelta { text })) if text == "later"
+    ));
+}
+
+#[tokio::test]
+async fn the_suite_passes_on_the_reference_host() {
+    battersea_kit_conversation::conformance::run(&ReferenceFixture)
+        .await
+        .unwrap();
+}
+
+/// Plays the named case on the reference host.
+async fn played(name: &str) -> Played {
+    let suite = suite();
+    let case = suite
+        .cases
+        .iter()
+        .find(|case| case.name == name)
+        .unwrap_or_else(|| panic!("case {name}"));
+    play(&suite, &ReferenceFixture, case, &Access)
+        .await
+        .unwrap()
+}
+
+/// The values the run emitted on `node`.`port`, in order.
+fn emitted(played: &Played, node: &str, port: &str) -> Vec<Value> {
+    played
+        .events
+        .iter()
+        .filter(|event| {
+            event["kind"] == "token_emit"
+                && event["node_id"] == node
+                && event["detail"]["sourcePort"] == port
+        })
+        .map(|event| event["detail"]["value"].clone())
+        .collect()
+}
+
+/// The signals `node` emitted, in order.
+fn signals(played: &Played, node: &str) -> Vec<String> {
+    played
+        .events
+        .iter()
+        .filter(|event| event["kind"] == "signal_emit" && event["node_id"] == node)
+        .filter_map(|event| event["detail"]["signalPort"].as_str().map(str::to_owned))
+        .filter(|signal| signal != "post_activate")
+        .collect()
+}
+
+fn failed_with(outcome: &Outcome, expected_code: &str, expected_reason: &str) -> bool {
+    matches!(outcome, Outcome::Failed { code, reason, .. } if code == expected_code && reason.as_deref() == Some(expected_reason))
+}
+
+#[tokio::test]
+async fn the_prompt_transcript_and_memory_cases_emit_what_their_rows_say() {
+    let prompt = played("prompt").await;
+    assert_eq!(prompt.outcome, Outcome::Completed);
+    assert_eq!(
+        prompt.state["deliveries"],
+        json!(["Be brief.", "Hello there"])
+    );
+    let committed = &prompt.state["transcripts"]["conformance"]["turns"];
+    assert_eq!(committed.as_array().unwrap().len(), 1);
+    assert_eq!(committed[0]["content"][0]["text"], "Hello there");
+    assert_eq!(committed[0]["created_at"], EPOCH_MS);
+    assert_eq!(emitted(&prompt, "prompt", "turn")[0].get("id"), None);
+    assert_eq!(signals(&prompt, "tap"), ["received"]);
+
+    let transcript = played("transcript").await;
+    assert_eq!(transcript.outcome, Outcome::Completed);
+    assert_eq!(
+        transcript.state["deliveries"],
+        json!(["user: Where is the cat?\n\nassistant: On the mat."])
+    );
+
+    let memory = played("memory-budget").await;
+    assert_eq!(memory.outcome, Outcome::Completed);
+    assert_eq!(
+        memory.state["deliveries"],
+        json!(["Summary of the conversation so far:\nThe cat was found.\n\nuser: short reply"])
+    );
+    let fitted = &emitted(&memory, "memory", "turns")[0];
+    assert_eq!(fitted.as_array().unwrap().len(), 1);
+    assert_eq!(fitted[0]["id"], "t5");
+}
+
+#[tokio::test]
+async fn the_chat_cases_stream_reserve_and_record_as_their_rows_say() {
+    let stream = played("chat-stream").await;
+    assert_eq!(stream.outcome, Outcome::Completed);
+    assert_eq!(stream.state["deliveries"], json!(["In the garden."]));
+    assert_eq!(
+        emitted(&stream, "chat", "reasoning"),
+        [json!("Thinking about dogs.")]
+    );
+    let call = &stream.state["calls"][0];
+    assert_eq!(call["status"]["outcome"], "completed");
+    assert_eq!(call["status"]["stop_reason"], "complete");
+    assert_eq!(call["status"]["usage"]["input_tokens"], 13);
+    assert_eq!(call["reservation"]["estimate"]["max_output_tokens"], 50);
+    assert_eq!(stream.state["reservations"], json!([]));
+    let committed = &stream.state["transcripts"]["conformance"]["turns"];
+    assert_eq!(committed[2]["role"], "assistant");
+    assert_eq!(committed[2]["content"][0]["text"], "In the garden.");
+    assert_eq!(signals(&stream, "chat"), ["completed"]);
+
+    let tools = played("chat-tools").await;
+    assert_eq!(tools.outcome, Outcome::Completed);
+    let rounds = &emitted(&tools, "chat", "tool_rounds")[0];
+    assert_eq!(rounds[0]["calls"][0]["result"], json!({"text": "kept"}));
+    assert_eq!(rounds[0]["calls"][0]["evidence"]["outcome"], "completed");
+    assert_eq!(tools.state["calls"][0]["status"]["rounds"], 1);
+    assert_eq!(tools.state["deliveries"], json!(["Echoed."]));
+
+    let over = played("chat-over-budget").await;
+    assert!(failed_with(
+        &over.outcome,
+        "invalid_request",
+        codes::OVER_BUDGET
+    ));
+    assert_eq!(over.state["calls"][0]["status"]["outcome"], "over_budget");
+    assert_eq!(over.state["calls"][0]["reservation"], Value::Null);
+    assert_eq!(over.state["reservations"], json!([]));
+    assert_eq!(signals(&over, "chat"), ["over_budget"]);
+    assert_eq!(emitted(&over, "chat", "status").len(), 1);
+    assert!(emitted(&over, "chat", "reply").is_empty());
+
+    let cancelled = played("chat-cancelled").await;
+    assert!(failed_with(
+        &cancelled.outcome,
+        "cancelled",
+        battersea_runtime::error_codes::ACTIVATION_CANCELLED
+    ));
+    assert_eq!(cancelled.state["calls"], json!([]));
+    assert_eq!(cancelled.state["reservations"].as_array().unwrap().len(), 1);
+    assert_eq!(
+        cancelled.state["transcripts"]["conformance"]["turns"],
+        json!([])
+    );
+    assert!(emitted(&cancelled, "chat", "status").is_empty());
+
+    let overflow = played("buffer-overflow").await;
+    assert!(failed_with(
+        &overflow.outcome,
+        "invalid_request",
+        battersea_runtime::error_codes::CAPACITY_EXHAUSTED
+    ));
+}
+
+#[tokio::test]
+async fn the_staging_compaction_and_refinement_cases_change_the_port_as_their_rows_say() {
+    let stage = played("stage").await;
+    assert_eq!(stage.outcome, Outcome::Completed);
+    let texts = stage.state["transcripts"]["conformance"]["turns"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|turn| turn["content"][0]["text"].as_str().unwrap().to_owned())
+        .collect::<Vec<_>>();
+    assert_eq!(
+        texts,
+        [
+            "Where is the cat?",
+            "On the mat.",
+            "And again",
+            "Where is the cat?",
+            "On the mat."
+        ]
+    );
+
+    let compaction = played("compaction-request").await;
+    assert_eq!(compaction.outcome, Outcome::Completed);
+    assert_eq!(signals(&compaction, "over"), ["requested"]);
+    assert_eq!(signals(&compaction, "under"), ["held"]);
+    let jobs = compaction.state["jobs"].as_array().unwrap();
+    assert_eq!(jobs.len(), 1);
+    assert_eq!(jobs[0]["state"], "requested");
+    assert_eq!(jobs[0]["evaluation"]["measured"]["turns"], 3);
+    assert_eq!(jobs[0]["evaluation"]["policy"]["max_turns"], 2);
+
+    let output = played("memory-output").await;
+    assert_eq!(output.outcome, Outcome::Completed);
+    let summary = &output.state["transcripts"]["conformance"]["summary"];
+    assert_eq!(summary["text"], "The cat is on the mat.");
+    assert_eq!(summary["through"], "turn#1");
+    assert_eq!(summary["job"], "job#0");
+    assert_eq!(output.state["jobs"][0]["state"], "completed");
+
+    let refine = played("refine").await;
+    assert_eq!(refine.outcome, Outcome::Completed);
+    assert_eq!(
+        refine.state["deliveries"],
+        json!(["assistant: On the mat."])
+    );
+    let revised = &refine.state["transcripts"]["conformance"]["turns"][1];
+    assert_eq!(revised["content"][0]["text"], "On the mat, asleep.");
+    assert_eq!(revised["revision"], 1);
+    assert_eq!(revised["id"], "turn#1");
+}
+
+#[tokio::test]
+async fn the_runner_requests_one_job_per_transcript_and_evaluates_on_idle() {
+    let clock = Arc::new(ManualClock::new(EPOCH_MS));
+    let host = Arc::new(host(&clock));
+    let runner = Runner::new(host.clone());
+    let transcript = TranscriptId::from("transcript");
+    let mut state = host.state(
+        scheduler("runner"),
+        State::new("transcript", clock.clone() as Arc<dyn Clock>),
+    );
+    host.seed(
+        &mut state,
+        transcript.clone(),
+        vec![
+            Turn::text(Role::User, "one", Value::Null),
+            Turn::text(Role::Assistant, "two", Value::Null),
+        ],
+        None,
     )
     .await
     .unwrap();
+    state.kit.store().policy = Policy {
+        max_turns: Some(1),
+        max_tokens: None,
+        idle: Some(std::time::Duration::from_secs(60)),
+    };
+    assert!(runner.idle_elapsed().now_or_never().is_none());
+    let first = runner.after_run(&mut state, &transcript).await.unwrap();
+    assert!(first.is_some());
+    assert_eq!(runner.requested(&transcript), first);
+    assert_eq!(
+        state.kit.store().jobs[first.as_ref().unwrap()]
+            .evaluation
+            .trigger,
+        Trigger::AfterRun
+    );
+    assert_eq!(
+        runner.after_run(&mut state, &transcript).await.unwrap(),
+        None
+    );
+    runner.job_ended(first.as_ref().unwrap());
+    let second = runner.after_run(&mut state, &transcript).await.unwrap();
+    assert!(second.is_some() && second != first);
+    runner.job_ended(second.as_ref().unwrap());
+
+    // The idle timer is armed by the run and re-armed by the next.
+    state.kit.store().policy = Policy {
+        max_turns: None,
+        max_tokens: None,
+        idle: Some(std::time::Duration::from_secs(60)),
+    };
+    assert_eq!(
+        runner.after_run(&mut state, &transcript).await.unwrap(),
+        None
+    );
+    let mut elapsed = Box::pin(runner.idle_elapsed());
+    assert!(elapsed.as_mut().now_or_never().is_none());
+    assert_eq!(
+        clock.pending_timers(),
+        vec![std::time::Duration::from_secs(60)]
+    );
+    clock.advance(std::time::Duration::from_secs(30));
+    assert_eq!(
+        runner.after_run(&mut state, &transcript).await.unwrap(),
+        None
+    );
+    assert!(elapsed.as_mut().now_or_never().is_none());
+    clock.advance(std::time::Duration::from_secs(30));
+    assert!(elapsed.as_mut().now_or_never().is_none());
+    clock.advance(std::time::Duration::from_secs(30));
+    assert_eq!(elapsed.await, transcript);
+    let idle = runner.idle(&mut state, &transcript).await.unwrap().unwrap();
+    assert_eq!(
+        state.kit.store().jobs[&idle].evaluation.trigger,
+        Trigger::Idle
+    );
+    assert_eq!(runner.idle(&mut state, &transcript).await.unwrap(), None);
+    runner.job_ended(&idle);
+
+    // An idle-only policy compacts on no other trigger, and never an empty memory.
+    let through = state.kit.store().transcripts[&transcript].turns[1]
+        .id
+        .clone()
+        .unwrap();
+    host.write_summary(
+        &mut state,
+        Summary {
+            text: "so far".into(),
+            through,
+            job: Some(idle),
+            extension: Value::Null,
+        },
+    )
+    .await
+    .unwrap();
+    assert_eq!(
+        runner.after_run(&mut state, &transcript).await.unwrap(),
+        None
+    );
+    assert_eq!(runner.idle(&mut state, &transcript).await.unwrap(), None);
 }

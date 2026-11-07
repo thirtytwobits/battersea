@@ -11,7 +11,7 @@ use battersea_flow::{
 use battersea_model::ManualClock;
 use battersea_runtime::{
     error_codes, ActivationHost, ExecutionError, ExecutionEvent, ExecutionHost, HandlerRegistry,
-    RunPhase, SchedulerState,
+    RecoverableNodeFailure, RunPhase, SchedulerState,
 };
 use serde_json::Value;
 use std::{
@@ -29,6 +29,11 @@ pub mod codes {
     pub const ALREADY_ACCEPTED: &str = "already_accepted";
     /// A logic node on a host built without a logic evaluator.
     pub const NO_LOGIC_EVALUATOR: &str = "no_logic_evaluator";
+    pub const ALL: &[&str] = &[
+        INVALID_PARAMETER_WRITE,
+        ALREADY_ACCEPTED,
+        NO_LOGIC_EVALUATOR,
+    ];
 }
 
 /// The reference host's error: an outcome class, the refusal reason and a message.
@@ -54,6 +59,19 @@ impl std::fmt::Display for ReferenceError {
 }
 impl std::error::Error for ReferenceError {}
 impl ExecutionError for ReferenceError {
+    /// A refusal with a kit's own reason code: the kit settles its effects before it refuses,
+    /// so `emit` and `skip` apply. The runtime's codes and the host's own keep their control
+    /// outcomes.
+    fn recoverable_node_failure(&self) -> Option<RecoverableNodeFailure> {
+        let reason = self.reason?;
+        (self.class == "invalid_request"
+            && !error_codes::ALL.contains(&reason)
+            && !codes::ALL.contains(&reason))
+        .then(|| RecoverableNodeFailure {
+            code: reason.into(),
+            message: self.message.clone(),
+        })
+    }
     fn invalid_request(reason: &'static str, message: impl Into<String>) -> Self {
         Self::new("invalid_request", Some(reason), message)
     }
