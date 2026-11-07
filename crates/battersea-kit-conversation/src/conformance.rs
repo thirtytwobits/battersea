@@ -62,17 +62,20 @@ pub struct Snapshot<X> {
     pub reservations: Vec<Reservation>,
     pub deliveries: Vec<String>,
 }
-impl<X: Serialize> Snapshot<X> {
-    /// The snapshot as the suite compares it: extensions removed, and every turn, job and
-    /// reservation id replaced by its order of appearance, since each host names them.
-    pub fn comparable(&self) -> Result<Value, String> {
-        let mut aliases = BTreeMap::new();
-        let mut alias = |kind: &str, id: &str| {
+impl<X> Snapshot<X> {
+    /// The snapshot as the suite compares it: the kit records' extensions removed, and
+    /// every turn, job and reservation id replaced by its order of appearance, since each
+    /// host names them. Content and payloads are left as they are.
+    pub fn comparable(&self) -> Value {
+        let mut turns = BTreeMap::new();
+        let mut jobs = BTreeMap::new();
+        let mut reservations = BTreeMap::new();
+        fn number(aliases: &mut BTreeMap<String, String>, kind: &str, id: &str) {
             let next = aliases.len();
             aliases
                 .entry(id.to_string())
                 .or_insert_with(|| format!("{kind}#{next}"));
-        };
+        }
         for turn in self
             .transcripts
             .values()
@@ -80,45 +83,88 @@ impl<X: Serialize> Snapshot<X> {
             .chain(&self.staged)
         {
             if let Some(id) = &turn.id {
-                alias("turn", id.as_str());
+                number(&mut turns, "turn", id.as_str());
             }
         }
         for job in &self.jobs {
-            alias("job", job.id.as_str());
+            number(&mut jobs, "job", job.id.as_str());
         }
         for reservation in self.reservations.iter().chain(
             self.calls
                 .iter()
                 .filter_map(|call| call.reservation.as_ref()),
         ) {
-            alias("reservation", &reservation.id);
+            number(&mut reservations, "reservation", &reservation.id);
         }
-        let mut value = serde_json::to_value(self).map_err(|error| error.to_string())?;
-        rewrite(&mut value, &aliases);
-        Ok(value)
-    }
-}
-
-/// Replaces aliased ids and removes `extension` keys throughout `value`.
-fn rewrite(value: &mut Value, aliases: &BTreeMap<String, String>) {
-    match value {
-        Value::Object(map) => {
-            map.remove("extension");
-            for value in map.values_mut() {
-                rewrite(value, aliases);
-            }
-        }
-        Value::Array(items) => {
-            for item in items {
-                rewrite(item, aliases);
-            }
-        }
-        Value::String(text) => {
-            if let Some(alias) = aliases.get(text) {
-                *text = alias.clone();
-            }
-        }
-        _ => {}
+        let alias = |aliases: &BTreeMap<String, String>, id: &str| {
+            aliases.get(id).cloned().unwrap_or_else(|| id.to_string())
+        };
+        let turn = |turn: &Turn<X>| {
+            json!({
+                "id": turn.id.as_ref().map(|id| alias(&turns, id.as_str())),
+                "role": turn.role,
+                "content": turn.content,
+                "created_at": turn.created_at,
+                "revision": turn.revision,
+            })
+        };
+        let summary = |summary: &Summary<X>| {
+            json!({
+                "text": summary.text,
+                "through": alias(&turns, summary.through.as_str()),
+                "job": summary.job.as_ref().map(|job| alias(&jobs, job.as_str())),
+            })
+        };
+        let reservation = |reservation: &Reservation| {
+            json!({
+                "id": alias(&reservations, &reservation.id),
+                "node": reservation.node,
+                "estimate": reservation.estimate,
+            })
+        };
+        json!({
+            "transcripts": self
+                .transcripts
+                .iter()
+                .map(|(id, transcript)| {
+                    (
+                        id.to_string(),
+                        json!({
+                            "turns": transcript.turns.iter().map(turn).collect::<Vec<_>>(),
+                            "summary": transcript.summary.as_ref().map(summary),
+                        }),
+                    )
+                })
+                .collect::<serde_json::Map<_, _>>(),
+            "staged": self.staged.iter().map(turn).collect::<Vec<_>>(),
+            "jobs": self
+                .jobs
+                .iter()
+                .map(|job| {
+                    json!({
+                        "id": alias(&jobs, job.id.as_str()),
+                        "transcript": job.transcript,
+                        "evaluation": job.evaluation,
+                        "state": job.state,
+                    })
+                })
+                .collect::<Vec<_>>(),
+            "calls": self
+                .calls
+                .iter()
+                .map(|call| {
+                    json!({
+                        "node": call.node,
+                        "status": call.status,
+                        "reservation": call.reservation.as_ref().map(reservation),
+                        "started_at": call.started_at,
+                        "finished_at": call.finished_at,
+                    })
+                })
+                .collect::<Vec<_>>(),
+            "reservations": self.reservations.iter().map(reservation).collect::<Vec<_>>(),
+            "deliveries": self.deliveries,
+        })
     }
 }
 
@@ -173,10 +219,11 @@ impl<H: Probe> PortAccess<H, Op> for Access {
         }
     }
     async fn observe(&self, host: &H, state: &H::State) -> Result<Value, String> {
-        host.snapshot(state)
+        Ok(host
+            .snapshot(state)
             .await
             .map_err(|error| error.message().to_string())?
-            .comparable()
+            .comparable())
     }
 }
 

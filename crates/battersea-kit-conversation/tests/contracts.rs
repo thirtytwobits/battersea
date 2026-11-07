@@ -129,6 +129,93 @@ fn token_types_embed_the_extension_schema() {
 }
 
 #[test]
+fn an_extension_schema_keeps_its_local_references_when_embedded() {
+    let mut registry = Registry::default();
+    battersea_kit_conversation::register_token_types(
+        &mut registry,
+        &Options {
+            extension_schema: json!({
+                "type": "object",
+                "properties": {"author": {"$ref": "#/$defs/Author"}},
+                "required": ["author"],
+                "$defs": {"Author": {"type": "string", "minLength": 1}}
+            }),
+        },
+    )
+    .unwrap();
+    let turn = |author: &str| {
+        serde_json::to_value(Turn {
+            extension: json!({"author": author}),
+            ..Turn::text(Role::User, "hello", Value::Null)
+        })
+        .unwrap()
+    };
+    registry
+        .validate_token("conversation.turn", &turn("ada"))
+        .unwrap();
+    assert!(registry
+        .validate_token("conversation.turn", &turn(""))
+        .is_err());
+    registry
+        .validate_token("conversation.turns", &json!([turn("ada")]))
+        .unwrap();
+    assert!(registry
+        .validate_token("conversation.turns", &json!([turn("")]))
+        .is_err());
+}
+
+#[test]
+fn a_comparable_snapshot_renames_ids_and_keeps_content() {
+    use battersea_kit_conversation::conformance::{Snapshot, TranscriptSnapshot};
+    let snapshot = |id: &str, extension: Value| {
+        let mut turn = Turn::text(Role::Assistant, "turn-1", extension);
+        turn.id = Some(id.into());
+        turn.content.push(battersea_model::ContentBlock::ToolCall {
+            id: "call".into(),
+            name: "echo".into(),
+            arguments: json!({"extension": "kept"}),
+        });
+        Snapshot {
+            transcripts: [(
+                "t".into(),
+                TranscriptSnapshot {
+                    turns: vec![turn],
+                    summary: Some(Summary {
+                        text: "so far".into(),
+                        through: id.into(),
+                        job: None,
+                        extension: Value::Null,
+                    }),
+                },
+            )]
+            .into_iter()
+            .collect(),
+            staged: vec![],
+            jobs: vec![],
+            calls: vec![],
+            reservations: vec![],
+            deliveries: vec![],
+        }
+        .comparable()
+    };
+    assert_eq!(snapshot("turn-1", json!(1)), snapshot("abc", json!(2)));
+    let value = snapshot("turn-1", Value::Null);
+    assert_eq!(value["transcripts"]["t"]["turns"][0]["id"], "turn#0");
+    assert_eq!(value["transcripts"]["t"]["summary"]["through"], "turn#0");
+    assert_eq!(
+        value["transcripts"]["t"]["turns"][0]["content"][0]["text"],
+        "turn-1"
+    );
+    assert_eq!(
+        value["transcripts"]["t"]["turns"][0]["content"][1]["arguments"]["extension"],
+        "kept"
+    );
+    assert!(value["transcripts"]["t"]["turns"][0]
+        .get("extension")
+        .is_none());
+}
+
+#[test]
 fn run_state_is_versioned_and_resume_refuses_another_version() {
     let state = RunState::<Value>::new("t".into());
     let versioned = state.to_versioned().unwrap();
@@ -229,20 +316,34 @@ async fn the_reference_port_stages_turns_and_commits_them_on_completion() {
     let revised = host.turns(&state, &"transcript".into()).await.unwrap();
     assert_eq!(revised[0].revision, 1);
     assert_eq!(revised[0].text_content(), "hello again");
-    assert!(matches!(
-        host.revise(
-            &mut state,
-            Revision {
-                turn: "missing".into(),
-                content: vec![],
-                extension: Value::Null
-            }
-        )
-        .await
-        .unwrap_err()
-        .reason_code(),
-        Some(codes::UNKNOWN_TURN)
-    ));
+    host.seed(
+        &mut state,
+        "other".into(),
+        vec![Turn::text(Role::User, "elsewhere", Value::Null)],
+        None,
+    )
+    .await
+    .unwrap();
+    let elsewhere = host.turns(&state, &"other".into()).await.unwrap()[0]
+        .id
+        .clone()
+        .unwrap();
+    for turn in ["missing".into(), elsewhere] {
+        assert!(matches!(
+            host.revise(
+                &mut state,
+                Revision {
+                    turn,
+                    content: vec![],
+                    extension: Value::Null
+                }
+            )
+            .await
+            .unwrap_err()
+            .reason_code(),
+            Some(codes::UNKNOWN_TURN)
+        ));
+    }
 }
 
 #[tokio::test]
@@ -491,6 +592,80 @@ fn request(
         local_tool_executor: executor,
         max_tool_rounds: 1,
     }
+}
+
+/// An executor that fails every call, with the evidence it is given.
+struct Failing(Option<battersea_model::ToolCallEvidence>);
+#[async_trait::async_trait]
+impl EngineLocalToolExecutor for Failing {
+    async fn call(
+        &self,
+        _call: EngineLocalToolCall,
+    ) -> Result<EngineLocalToolResult, battersea_model::EngineAdapterRequestError> {
+        let error = battersea_model::EngineAdapterRequestError::new(
+            "test",
+            "the tool timed out",
+            battersea_model::ErrorKind::Timeout,
+        );
+        Err(match &self.0 {
+            Some(evidence) => error.with_tool_call(evidence.clone()),
+            None => error,
+        })
+    }
+}
+
+#[tokio::test]
+async fn a_failed_scripted_tool_call_keeps_the_executors_evidence_or_is_uncertain() {
+    use battersea_model::{ToolCallEvidence, ToolCallOutcome};
+    let clock = Arc::new(ManualClock::new(EPOCH_MS));
+    let engine = ScriptedEngine::new(clock.clone() as Arc<dyn Clock>);
+    let call = EngineLocalToolCall {
+        id: "call-1".into(),
+        name: "slow".into(),
+        arguments: json!({}),
+    };
+    let supplied = ToolCallEvidence {
+        call_id: "call-1".into(),
+        tool_name: "slow".into(),
+        outcome: ToolCallOutcome::NotDispatched,
+        request_id: Some("req-9".into()),
+    };
+    let completed = |executor: Arc<dyn EngineLocalToolExecutor>| {
+        let engine = &engine;
+        let call = call.clone();
+        async move {
+            engine.extend([
+                ScriptedResponse::ToolCalls(vec![call]),
+                ScriptedResponse::Text("after".into()),
+            ]);
+            engine
+                .stream_text(request("hi", Some(executor)))
+                .await
+                .unwrap()
+                .collect::<Vec<_>>()
+                .await
+                .into_iter()
+                .collect::<Result<Vec<_>, _>>()
+                .unwrap()
+                .into_iter()
+                .find_map(|event| match event {
+                    EngineTextStreamEvent::ToolCallCompleted { ok, tool_call, .. } => {
+                        Some((ok, tool_call))
+                    }
+                    _ => None,
+                })
+                .unwrap()
+        }
+    };
+    let (ok, evidence) = completed(Arc::new(Failing(Some(supplied.clone())))).await;
+    assert!(!ok);
+    assert_eq!(evidence, Some(supplied));
+    let (ok, evidence) = completed(Arc::new(Failing(None))).await;
+    assert!(!ok);
+    assert_eq!(
+        evidence.map(|evidence| evidence.outcome),
+        Some(ToolCallOutcome::Uncertain)
+    );
 }
 
 #[tokio::test]

@@ -331,21 +331,24 @@ impl Port for FileHost {
         run.kit.staged.push(turn);
         Ok(id)
     }
-    async fn revise(&self, _run: &mut Run, revision: Revision<Value>) -> Result<(), Error> {
-        for (transcript, mut held) in self.transcripts()? {
-            if let Some(turn) = held
-                .turns
-                .iter_mut()
-                .find(|turn| turn.id.as_ref() == Some(&revision.turn))
-            {
-                turn.content = revision.content;
-                turn.revision += 1;
-                return self.write(&transcript, &held);
-            }
+    async fn revise(&self, run: &mut Run, revision: Revision<Value>) -> Result<(), Error> {
+        let transcript = run.kit.transcript.clone();
+        let mut held = self.read(&transcript)?;
+        if let Some(turn) = held
+            .turns
+            .iter_mut()
+            .find(|turn| turn.id.as_ref() == Some(&revision.turn))
+        {
+            turn.content = revision.content;
+            turn.revision += 1;
+            return self.write(&transcript, &held);
         }
         Err(Error::invalid_request(
             codes::UNKNOWN_TURN,
-            format!("Turn {} is in no transcript file.", revision.turn),
+            format!(
+                "Transcript {transcript} does not hold turn {}.",
+                revision.turn
+            ),
         ))
     }
     async fn memory(&self, _run: &Run, transcript: &TranscriptId) -> Result<Memory<Value>, Error> {

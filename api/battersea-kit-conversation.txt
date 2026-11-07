@@ -508,8 +508,8 @@ pub battersea_kit_conversation::conformance::Snapshot::jobs: alloc::vec::Vec<bat
 pub battersea_kit_conversation::conformance::Snapshot::reservations: alloc::vec::Vec<battersea_kit_conversation::Reservation>
 pub battersea_kit_conversation::conformance::Snapshot::staged: alloc::vec::Vec<battersea_kit_conversation::Turn<X>>
 pub battersea_kit_conversation::conformance::Snapshot::transcripts: alloc::collections::btree::map::BTreeMap<battersea_kit_conversation::TranscriptId, battersea_kit_conversation::conformance::TranscriptSnapshot<X>>
-impl<X: serde_core::ser::Serialize> battersea_kit_conversation::conformance::Snapshot<X>
-pub fn battersea_kit_conversation::conformance::Snapshot<X>::comparable(&self) -> core::result::Result<serde_json::value::Value, alloc::string::String>
+impl<X> battersea_kit_conversation::conformance::Snapshot<X>
+pub fn battersea_kit_conversation::conformance::Snapshot<X>::comparable(&self) -> serde_json::value::Value
 impl<X: core::clone::Clone> core::clone::Clone for battersea_kit_conversation::conformance::Snapshot<X>
 pub fn battersea_kit_conversation::conformance::Snapshot<X>::clone(&self) -> Self
 impl<X: core::cmp::PartialEq> core::cmp::PartialEq for battersea_kit_conversation::conformance::Snapshot<X>

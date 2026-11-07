@@ -319,22 +319,62 @@ pub fn token_schemas(extension: &Value) -> Vec<(&'static str, Value)> {
     ]
 }
 
-/// Replaces every `extension` property's schema with `extension`.
+/// Replaces every `extension` property's schema with `extension`. A local reference in the
+/// extension schema is rebased onto the place it is embedded, so a self-contained schema
+/// stays valid; a schema with an `$id` of its own keeps its references.
 fn embed(node: &mut Value, extension: &Value) {
+    embed_at(node, extension, &mut String::new());
+}
+fn embed_at(node: &mut Value, extension: &Value, pointer: &mut String) {
     match node {
         Value::Object(map) => {
-            for value in map.values_mut() {
-                embed(value, extension);
+            for (key, value) in map.iter_mut() {
+                let length = pointer.len();
+                pointer.push('/');
+                pointer.push_str(&key.replace('~', "~0").replace('/', "~1"));
+                embed_at(value, extension, pointer);
+                pointer.truncate(length);
             }
             if let Some(Value::Object(properties)) = map.get_mut("properties") {
                 if let Some(slot) = properties.get_mut("extension") {
-                    *slot = extension.clone();
+                    let mut embedded = extension.clone();
+                    if embedded.get("$id").is_none() {
+                        rebase(&mut embedded, &format!("{pointer}/properties/extension"));
+                    }
+                    *slot = embedded;
+                }
+            }
+        }
+        Value::Array(items) => {
+            for (index, item) in items.iter_mut().enumerate() {
+                let length = pointer.len();
+                pointer.push('/');
+                pointer.push_str(&index.to_string());
+                embed_at(item, extension, pointer);
+                pointer.truncate(length);
+            }
+        }
+        _ => {}
+    }
+}
+/// Prefixes every local `$ref` under `node` with `pointer`, outside subschemas with an `$id`.
+fn rebase(node: &mut Value, pointer: &str) {
+    match node {
+        Value::Object(map) => {
+            if let Some(Value::String(target)) = map.get_mut("$ref") {
+                if let Some(local) = target.strip_prefix('#') {
+                    *target = format!("#{pointer}{local}");
+                }
+            }
+            for (key, value) in map.iter_mut() {
+                if key != "$ref" && value.get("$id").is_none() {
+                    rebase(value, pointer);
                 }
             }
         }
         Value::Array(items) => {
             for item in items {
-                embed(item, extension);
+                rebase(item, pointer);
             }
         }
         _ => {}

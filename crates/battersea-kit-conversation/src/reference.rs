@@ -161,12 +161,13 @@ impl Port for ReferenceHost<State> {
         state: &mut Self::State,
         revision: Revision<Extension>,
     ) -> Result<(), ReferenceError> {
+        let transcript = state.kit.run.transcript.clone();
         let mut store = state.kit.store();
-        let held = store
-            .transcripts
-            .values_mut()
-            .flat_map(|transcript| transcript.turns.iter_mut())
-            .find(|turn| turn.id.as_ref() == Some(&revision.turn));
+        let held = store.transcripts.get_mut(&transcript).and_then(|held| {
+            held.turns
+                .iter_mut()
+                .find(|turn| turn.id.as_ref() == Some(&revision.turn))
+        });
         match held {
             Some(turn) => {
                 turn.content = revision.content;
@@ -175,7 +176,10 @@ impl Port for ReferenceHost<State> {
             }
             None => Err(refuse(
                 codes::UNKNOWN_TURN,
-                format!("Turn {} is not held.", revision.turn),
+                format!(
+                    "Transcript {transcript} does not hold turn {}.",
+                    revision.turn
+                ),
             )),
         }
     }
@@ -472,14 +476,25 @@ impl EngineAdapter for ScriptedEngine {
                                 ErrorKind::InvalidRequest,
                             )),
                         };
-                        let evidence = ToolCallEvidence {
-                            call_id: call.id.clone(),
-                            tool_name: call.name.clone(),
-                            outcome: match &result {
-                                Ok(_) => ToolCallOutcome::Completed,
-                                Err(_) => ToolCallOutcome::NotDispatched,
+                        // An executor's own evidence stands; a failure without any is
+                        // uncertain, as the model crate's tool loop records it.
+                        let evidence = match &result {
+                            Ok(_) => ToolCallEvidence {
+                                call_id: call.id.clone(),
+                                tool_name: call.name.clone(),
+                                outcome: ToolCallOutcome::Completed,
+                                request_id: None,
                             },
-                            request_id: None,
+                            Err(error) => {
+                                error.tool_call.as_deref().cloned().unwrap_or_else(|| {
+                                    ToolCallEvidence {
+                                        call_id: call.id.clone(),
+                                        tool_name: call.name.clone(),
+                                        outcome: ToolCallOutcome::Uncertain,
+                                        request_id: error.request_id.as_deref().map(String::from),
+                                    }
+                                })
+                            }
                         };
                         events.push(match result {
                             Ok(result) => EngineTextStreamEvent::ToolCallCompleted {
