@@ -195,6 +195,48 @@ fn an_extension_schema_keeps_its_anchors_when_embedded() {
 }
 
 #[test]
+fn a_subschema_with_its_own_id_keeps_its_references_when_embedded() {
+    let branch = json!({
+        "$id": "https://example.test/author",
+        "type": "object",
+        "properties": {"author": {"$ref": "#/$defs/Author"}},
+        "required": ["author"],
+        "$defs": {"Author": {"type": "string", "minLength": 1}}
+    });
+    let schemas = battersea_kit_conversation::token_schemas(&json!({"anyOf": [branch]}));
+    let turn = schemas
+        .iter()
+        .find(|(name, _)| *name == "conversation.turn")
+        .map(|(_, schema)| schema)
+        .unwrap();
+    assert_eq!(
+        turn["properties"]["extension"]["anyOf"][0]["properties"]["author"]["$ref"],
+        "#/$defs/Author"
+    );
+    let mut registry = Registry::default();
+    battersea_kit_conversation::register_token_types(
+        &mut registry,
+        &Options {
+            extension_schema: json!({"anyOf": [branch]}),
+        },
+    )
+    .unwrap();
+    let turn = |author: &str| {
+        serde_json::to_value(Turn {
+            extension: json!({"author": author}),
+            ..Turn::text(Role::User, "hello", Value::Null)
+        })
+        .unwrap()
+    };
+    registry
+        .validate_token("conversation.turn", &turn("ada"))
+        .unwrap();
+    assert!(registry
+        .validate_token("conversation.turn", &turn(""))
+        .is_err());
+}
+
+#[test]
 fn a_comparable_snapshot_renames_ids_and_keeps_content() {
     use battersea_kit_conversation::conformance::{Snapshot, TranscriptSnapshot};
     let snapshot = |id: &str, extension: Value| {

@@ -338,9 +338,7 @@ fn embed_at(node: &mut Value, extension: &Value, pointer: &mut String) {
             if let Some(Value::Object(properties)) = map.get_mut("properties") {
                 if let Some(slot) = properties.get_mut("extension") {
                     let mut embedded = extension.clone();
-                    if embedded.get("$id").is_none() {
-                        rebase(&mut embedded, &format!("{pointer}/properties/extension"));
-                    }
+                    rebase(&mut embedded, &format!("{pointer}/properties/extension"));
                     *slot = embedded;
                 }
             }
@@ -357,12 +355,16 @@ fn embed_at(node: &mut Value, extension: &Value, pointer: &mut String) {
         _ => {}
     }
 }
-/// Prefixes every local pointer `$ref` under `node` with `pointer`, outside subschemas with
-/// an `$id`. A reference to a named anchor stays as it is: without an `$id`, the anchor
-/// belongs to the token schema the extension is embedded in.
+/// Prefixes every local pointer `$ref` under `node` with `pointer`. A subschema with an
+/// `$id` of its own is a resource of its own and keeps its references, wherever it sits. A
+/// reference to a named anchor stays as it is: without an `$id`, the anchor belongs to the
+/// token schema the extension is embedded in.
 fn rebase(node: &mut Value, pointer: &str) {
     match node {
         Value::Object(map) => {
+            if map.contains_key("$id") {
+                return;
+            }
             if let Some(Value::String(target)) = map.get_mut("$ref") {
                 if let Some(local) = target.strip_prefix('#') {
                     if local.is_empty() || local.starts_with('/') {
@@ -370,10 +372,8 @@ fn rebase(node: &mut Value, pointer: &str) {
                     }
                 }
             }
-            for (key, value) in map.iter_mut() {
-                if key != "$ref" && value.get("$id").is_none() {
-                    rebase(value, pointer);
-                }
+            for value in map.values_mut() {
+                rebase(value, pointer);
             }
         }
         Value::Array(items) => {
