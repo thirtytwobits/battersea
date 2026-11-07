@@ -132,6 +132,7 @@ struct Registration {
 impl Drop for Registration {
     fn drop(&mut self) {
         self.inner.timers().pending.remove(&self.id);
+        self.inner.changed.notify_waiters();
     }
 }
 
@@ -178,9 +179,9 @@ impl ManualClock {
         remaining
     }
     /// Waits until a timer that an advance must reach is pending within `window` of the current
-    /// time, and returns its remaining time. The wait ends on a signal from a timer registration
-    /// or a clock advance, not on a timer. Elapsed timers complete without an advance and are not
-    /// reported.
+    /// time, and returns its remaining time. The wait ends on a signal from a timer
+    /// registration, completion or a clock advance, not on a timer. Elapsed timers complete
+    /// without an advance and are not reported.
     pub async fn timer_within(&self, window: Duration) -> Duration {
         loop {
             let changed = self.inner.changed.notified();
@@ -192,6 +193,24 @@ impl ManualClock {
                 .find(|remaining| !remaining.is_zero() && *remaining <= window)
             {
                 return remaining;
+            }
+            changed.await;
+        }
+    }
+    /// Waits until no elapsed timer is pending: every sleep the clock has reached has completed
+    /// or been dropped. A sleep completes when its task next polls it, so a test that advances
+    /// the clock waits here before reading what the advance caused.
+    pub async fn settled(&self) {
+        loop {
+            let changed = self.inner.changed.notified();
+            tokio::pin!(changed);
+            changed.as_mut().enable();
+            if self
+                .pending_timers()
+                .iter()
+                .all(|remaining| !remaining.is_zero())
+            {
+                return;
             }
             changed.await;
         }
@@ -345,6 +364,23 @@ mod tests {
             poll(observer.as_mut()),
             Poll::Ready(Duration::from_millis(10))
         );
+    }
+
+    #[test]
+    fn the_clock_settles_once_each_reached_timer_completes_or_is_dropped() {
+        let clock = ManualClock::new(0);
+        let mut completed = clock.sleep_until(clock.instant() + Duration::from_millis(10));
+        let mut dropped = clock.sleep_until(clock.instant() + Duration::from_millis(10));
+        assert!(poll(completed.as_mut()).is_pending());
+        assert!(poll(dropped.as_mut()).is_pending());
+        assert!(poll(Box::pin(clock.settled()).as_mut()).is_ready());
+        clock.advance(Duration::from_millis(10));
+        let mut settled = Box::pin(clock.settled());
+        assert!(poll(settled.as_mut()).is_pending());
+        assert!(poll(completed.as_mut()).is_ready());
+        assert!(poll(settled.as_mut()).is_pending());
+        drop(dropped);
+        assert!(poll(settled.as_mut()).is_ready());
     }
 
     #[tokio::test]

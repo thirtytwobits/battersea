@@ -2958,6 +2958,7 @@ pub fn battersea_model::ManualClock::advance(&self, core::time::Duration)
 pub async fn battersea_model::ManualClock::advance_to_timer_within(&self, core::time::Duration) -> core::time::Duration
 pub fn battersea_model::ManualClock::new(u64) -> Self
 pub fn battersea_model::ManualClock::pending_timers(&self) -> alloc::vec::Vec<core::time::Duration>
+pub async fn battersea_model::ManualClock::settled(&self)
 pub async fn battersea_model::ManualClock::timer_within(&self, core::time::Duration) -> core::time::Duration
 impl battersea_model::Clock for battersea_model::ManualClock
 pub fn battersea_model::ManualClock::instant(&self) -> tokio::time::instant::Instant
@@ -10492,6 +10493,7 @@ pub fn battersea_model::ManualClock::advance(&self, core::time::Duration)
 pub async fn battersea_model::ManualClock::advance_to_timer_within(&self, core::time::Duration) -> core::time::Duration
 pub fn battersea_model::ManualClock::new(u64) -> Self
 pub fn battersea_model::ManualClock::pending_timers(&self) -> alloc::vec::Vec<core::time::Duration>
+pub async fn battersea_model::ManualClock::settled(&self)
 pub async fn battersea_model::ManualClock::timer_within(&self, core::time::Duration) -> core::time::Duration
 impl battersea_model::Clock for battersea_model::ManualClock
 pub fn battersea_model::ManualClock::instant(&self) -> tokio::time::instant::Instant

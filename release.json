@@ -103,6 +103,13 @@
       "NOTICE",
       "src/backend.schema.yaml"
     ],
+    "battersea-kit": [
+      "Cargo.toml",
+      "src/lib.rs",
+      "README.md",
+      "LICENSE",
+      "NOTICE"
+    ],
     "battersea-nodes": [
       "Cargo.toml",
       "src/lib.rs",

@@ -1,0 +1,48 @@
+node_definitions:
+  - class_name: ConformanceSource
+    handler_id: battersea.conformance.source
+    short_description: Emits activation values as tokens and a done signal.
+    long_description: The conformance suite's source. Each activation value named after an output port is emitted on that port. A true done value fires the done signal after the tokens.
+    kind: source
+    interfaces:
+      - IFlowNodeActivate
+    output_ports:
+      - name: fragment
+        kind: output
+        token_type: prompt.fragment
+        mode: final_value
+        phase: execution
+      - name: other
+        kind: output
+        token_type: prompt.fragment
+        mode: final_value
+        phase: execution
+      - name: fragments
+        kind: output
+        token_type: prompt.fragmentArray
+        mode: final_value
+        phase: execution
+      - name: raw
+        kind: output
+        token_type: chat.raw
+        mode: final_value
+        phase: execution
+    signal_ports:
+      - name: done
+  - class_name: ConformanceSink
+    handler_id: battersea.conformance.sink
+    short_description: Receives tokens and signals.
+    long_description: The conformance suite's sink. The runtime's receive and action events record what arrives.
+    kind: sink
+    input_ports:
+      - name: input
+        kind: input
+        token_type: oneof
+        accepted_token_types:
+          - prompt.fragment
+          - prompt.fragmentArray
+          - chat.raw
+        mode: final_value
+        phase: execution
+    action_ports:
+      - name: go

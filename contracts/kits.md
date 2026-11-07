@@ -1,6 +1,7 @@
 # Kits
 
-Status: proposed; see [#70](https://github.com/thirtytwobits/battersea/issues/70).
+Status: implemented; designed in [#70](https://github.com/thirtytwobits/battersea/issues/70).
+`battersea-nodes` is the generic kit.
 
 A kit is a domain-specific set of nodes that applications share. It is one Cargo crate. Its
 handlers reach the application only through its port, so an application that implements the
@@ -26,15 +27,18 @@ conformance harness. It depends on `battersea-flow`, `battersea-runtime` and `ba
 
 A kit's name matches `[a-z][a-z0-9_]*` and is its namespace: every handler id is `NAME.*`,
 every token type it registers is `NAME.*`, and every class name begins with the name in
-PascalCase. `Kit::check` refuses a manifest that breaks these rules. Class names and handler ids
-are persisted in flows and are never renamed; a rename is a registered document upgrade.
+PascalCase. `Kit::check` refuses a manifest that breaks these rules, reading the manifest as
+written; `Kit::definitions` normalises it with the registry holding the kit's parameter
+datatypes. Class names and handler ids are persisted in flows and are never renamed; a rename
+is a registered document upgrade.
 
 `battersea` is the generic kit's name. Its class names and the token types `prompt.fragment`,
 `prompt.fragmentArray` and `chat.raw` are the shared vocabulary every kit may reference, and the
 only names outside a kit's namespace it may register or reference.
 
-A kit in this repository is the crate `battersea-kit-NAME`. Its editor package, when it has one,
-is `@battersea/kit-NAME` under `typescript/packages/kit-NAME`.
+A kit in this repository is the crate `battersea-kit-NAME`, with its manifest at `src/nodes.yaml`,
+its contract at `contracts/kit-NAME.md` and its example host under `examples/kit-NAME`. Its
+editor package, when it has one, is `@battersea/kit-NAME` under `typescript/packages/kit-NAME`.
 
 ## Port
 
@@ -69,6 +73,8 @@ shared vocabulary, never through each other's ports.
 kit's `X` and whose clock is a `ManualClock`. A kit implements its port for
 `ReferenceHost<reference::State>`. The reference host is the kit's own test host and the oracle
 its conformance suite compares against. It makes no durable commitment and has no checkpoints.
+A kit that registers parameter datatypes builds the reference host `with_registry`, so its
+automation writes convert as an application's registry does.
 
 ## Conformance
 
@@ -79,18 +85,32 @@ application's port implementation behaves as the reference host does.
 Each case is a flow in [text source](text-source.md), activation values, the clock steps taken
 during the run, and the port operations performed before it. `conformance::run(&fixture)` plays
 every case on the reference host and on the application's host, both on a `ManualClock` the
-suite owns, and reports the first divergence in execution events, emitted tokens and the port's
-observable state. The suite reaches the application only through `Port` and `Fixture`:
+suite owns, and reports the first divergence in outcome, execution events and the port's
+observable state. Emitted tokens are compared through the runtime's receive events, which
+carry each value. The suite reaches the application only through `Port` and
+`battersea_kit::conformance::Fixture`:
 
 ```rust
 pub trait Fixture {
-    type Host: Port;
+    type Host: ActivationHost;
     /// A host with no state, running on `clock`.
     fn host(&self, clock: Arc<ManualClock>) -> Self::Host;
+    /// The host's run state around `scheduler`, with no kit state.
+    fn state(&self, host: &Self::Host, scheduler: SchedulerState) -> <Self::Host as ExecutionHost>::State;
     /// The execution events the host recorded for `run_id`.
     fn events(&self, host: &Self::Host, run_id: &str) -> Vec<ExecutionEvent>;
 }
 ```
+
+A clock step is taken once the activation waits on a timer, and the next once the activation
+has completed or dropped every timer the step reached, so a wait racing a longer timeout
+completes. A case whose steps outnumber a host's waits fails, and so does a host that waits
+after the last step; neither waits on the wall clock. The kit reaches its port through
+`PortAccess<H: Port>`, which applies a case's port operations before the activation and
+observes the port's state after it; the kit's `conformance::run` passes it for both hosts, and
+a kit without a port passes `NoPort`. Event comparison ignores the host's own error wording: the
+summary and error message of a failure record and the message of a terminal outcome. Codes are
+compared.
 
 The application adds the kit with the `conformance` feature as a dev-dependency and runs the
 suite in a test. A kit in this repository has an example host under `examples/` that implements
@@ -106,8 +126,9 @@ model-facing text fails the application's test until the text is reviewed.
 
 `Catalog::from_manifests` resolves formatter blocks across all its sources: a block named in a
 later source replaces the earlier block of that name, and definitions are never replaced. An
-application overrides a kit's text by listing a manifest holding only `formatter_blocks` after
-the kit's.
+application overrides a kit's text by listing a manifest holding only `formatter_blocks`, with
+no `node_definitions`, after the kit's. `model_facing_text` resolves each port formatter to the
+template it names, so a changed reference changes the snapshot as a changed block does.
 
 ## Releases and dependencies
 
@@ -122,10 +143,13 @@ the crate's version.
 
 ## The generic kit
 
-`battersea-nodes` is the kit `battersea`, without renaming. It gains `KIT`, the `conformance`
+`battersea-nodes` is the kit `battersea`, without renaming. It has `KIT`, the `conformance`
 feature and tests on the reference host. Its handlers require only `ExecutionHost`, so it has
 no port and its suite proves catalogue composition and handler behaviour on the application's
-host. Other kits do not depend on it; the application composes it beside them.
+host: `conformance::PROBE_MANIFEST` adds a source that emits activation values and a sink,
+whose handlers the application registers beside the generic handlers in its test host. Other
+kits do not depend on it; the application composes it beside them. `battersea_kit` holds the
+`NodeError` and `text` helpers kits share, and `battersea-nodes` re-exports them.
 
 ## Verification
 

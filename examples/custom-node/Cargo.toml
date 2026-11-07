@@ -7,7 +7,8 @@ license.workspace = true
 publish = false
 [dependencies]
 battersea-derive = { path = "../../crates/battersea-derive" }
-battersea-nodes = { path = "../../crates/battersea-nodes" }
+battersea-nodes = { path = "../../crates/battersea-nodes", features = ["conformance"] }
+battersea-kit = { path = "../../crates/battersea-kit", features = ["conformance"] }
 battersea-flow = { path = "../../crates/battersea-flow" }
 battersea-runtime = { path = "../../crates/battersea-runtime" }
 async-trait = "0.1"

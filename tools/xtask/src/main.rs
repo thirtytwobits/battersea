@@ -171,6 +171,19 @@ fn dependency_errors(metadata: &Value, policy: &Value, root: &Path) -> Vec<Strin
     }
     errors
 }
+/// The names of the kits in the workspace: the `NAME` of every `battersea-kit-NAME` crate.
+fn kit_names(metadata: &Value) -> Vec<String> {
+    let mut names = metadata["packages"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter_map(|p| p["name"].as_str())
+        .filter_map(|name| name.strip_prefix("battersea-kit-"))
+        .map(str::to_string)
+        .collect::<Vec<_>>();
+    names.sort();
+    names
+}
 fn boundaries(root: &Path) -> Result<()> {
     if root.join("package.json").exists() {
         return Err("npm belongs in typescript/".into());
@@ -211,6 +224,19 @@ fn boundaries(root: &Path) -> Result<()> {
             errors.push(format!(
                 "{} missing from release inventory",
                 package["name"]
+            ));
+        }
+    }
+    for kit in kit_names(&metadata) {
+        if !root.join(format!("contracts/kit-{kit}.md")).is_file() {
+            errors.push(format!("kit {kit} needs contracts/kit-{kit}.md"));
+        }
+        if !root
+            .join(format!("examples/kit-{kit}/Cargo.toml"))
+            .is_file()
+        {
+            errors.push(format!(
+                "kit {kit} needs an example host under examples/kit-{kit}"
             ));
         }
     }
@@ -381,7 +407,7 @@ fn package(root: &Path) -> Result<()> {
             return Err(format!("{name} package licence differs from release.json").into());
         }
     }
-    for example in [
+    let mut examples = [
         "catalogue",
         "custom-node",
         "backend",
@@ -389,7 +415,14 @@ fn package(root: &Path) -> Result<()> {
         "editor-server",
         "mcp",
         "ops",
-    ] {
+    ]
+    .map(String::from)
+    .to_vec();
+    examples.extend(kit_names(&metadata).iter().map(|kit| format!("kit-{kit}")));
+    for example in &examples {
+        let example = example.as_str();
+        // A kit's example host runs the kit's conformance suite against the packaged crate.
+        let conformance = example == "custom-node" || example.starts_with("kit-");
         let consumer = unpack_root.path().join(example);
         fs::create_dir_all(consumer.join("src"))?;
         let tokio_features = if matches!(example, "mcp" | "ops") {
@@ -405,8 +438,15 @@ fn package(root: &Path) -> Result<()> {
             manifest.push_str("axum = { version = \"0.8\", features = [\"json\"] }\nclap = { version = \"4\", features = [\"derive\"] }\ntempfile = \"3\"\n");
         }
         for name in crates.keys() {
+            let features = if conformance
+                && (name.starts_with("battersea-kit") || name == "battersea-nodes")
+            {
+                ", features = [\"conformance\"]"
+            } else {
+                ""
+            };
             manifest.push_str(&format!(
-                "{name} = {{ path = {:?} }}\n",
+                "{name} = {{ path = {:?}{features} }}\n",
                 unpack_root.path().join(format!("{name}-{version}"))
             ));
         }
@@ -528,7 +568,7 @@ fn package(root: &Path) -> Result<()> {
             &consumer,
             "cargo",
             &[
-                if matches!(example, "editor-server" | "mcp" | "ops") {
+                if matches!(example, "editor-server" | "mcp" | "ops") || conformance {
                     "test"
                 } else {
                     "run"
@@ -538,6 +578,10 @@ fn package(root: &Path) -> Result<()> {
                 unpack_root.path().join("consumer-target").to_str().unwrap(),
                 "--config",
                 "resolver.incompatible-rust-versions=\"fallback\"",
+                // Consumers prove that the archives compile and run; their debug information
+                // is the bulk of the build and exceeds a CI runner's disk.
+                "--config",
+                "profile.dev.debug=false",
             ],
         )?;
     }
@@ -571,10 +615,19 @@ fn release_check(root: &Path) -> Result<()> {
     Ok(())
 }
 fn scan_prompts(root: &Path) -> Result<()> {
+    // A kit's manifest, `src/nodes.yaml`, is its prompt root.
+    let mut roots = vec!["crates/battersea-nodes/src/nodes.yaml".to_string()];
+    for entry in fs::read_dir(root.join("crates"))? {
+        let name = entry?.file_name().to_string_lossy().into_owned();
+        if name.starts_with("battersea-kit-") {
+            roots.push(format!("crates/{name}/src/nodes.yaml"));
+        }
+    }
+    roots.sort();
     let policy = battersea_guard::PromptPolicy::new(
-        &["crates/battersea-nodes/src/nodes.yaml"],
+        &roots.iter().map(String::as_str).collect::<Vec<_>>(),
         &[
-            r"^crates/(battersea-model|battersea-tools|battersea-ops|battersea-providers|battersea-config|battersea-nodes)/src/.*\.(rs|yaml)$",
+            r"^crates/(battersea-model|battersea-tools|battersea-ops|battersea-providers|battersea-config|battersea-nodes|battersea-kit(-[a-z0-9_]+)?)/src/.*\.(rs|yaml)$",
         ],
     )?;
     fn visit(

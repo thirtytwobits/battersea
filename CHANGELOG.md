@@ -8,8 +8,8 @@
   `McpConfig::clock` runs MCP deadlines on a host clock.
 - `ExpiryClock` is `Clock` and adds `sleep_until`. Library code takes its time and timers from the
   host's clock: `battersea_model::clock` provides `sleep`, `timeout`, `timeout_at`,
-  `deadline_after` and `utc_now`. `ManualClock` completes timers when advanced and reports pending
-  timers to tests.
+  `deadline_after` and `utc_now`. `ManualClock` completes timers when advanced, reports pending
+  timers to tests and `settled` waits until the timers an advance reached complete.
 - `ProviderRegistry::create_chat` and `create_media`, chat and media factories, and
   `ValidatedProviderConfiguration::bind` take an `Arc<dyn Clock>`. Adapters run deadlines, retry
   backoff, Retry-After dates, polling and idle watchdogs on it; their HTTP clients apply no timeout
@@ -22,8 +22,20 @@
 - The OTLP `Exporter::new` takes a clock; `Exporter::validate` checks a configuration.
   `PianolaTap::new` takes the clock that timestamps captures.
 
+- `Catalog::from_manifests` resolves formatter blocks across all its sources: a block named in
+  a later source replaces the earlier block of that name, so a manifest holding only
+  `formatter_blocks` overrides the text of the manifests before it. Definitions are never
+  replaced. `parse_definition_manifests` exposes the same composition.
+
 ### Added
 
+- `battersea-kit` supplies `Kit`, whose `check` enforces the kit name rules of
+  `contracts/kits.md` and whose `model_facing_text` an application pins in a snapshot, the
+  in-memory `ReferenceHost` on a `ManualClock`, and, behind the `conformance` feature, the
+  differential harness that plays a kit's cases on the reference host and an application's host.
+- `battersea-nodes` is the generic kit: `KIT`, and behind the `conformance` feature, the probe
+  nodes and `conformance::run` that prove its handlers on an application's host. `NodeError`
+  and `text` move to `battersea-kit` and are re-exported.
 - `DurableConversation` continues Anthropic Messages tool conversations after approval and
   restart. Checkpoints retain signed thinking and native tool use.
 - `DurableConversation` continues Gemini `generateContent` tool conversations after approval and
@@ -37,6 +49,7 @@
   `summary`, `prompt_text` or `negative_prompt` key.
 - `flow.token.emit` and `flow.signal.emit` records list the edges they leave along as
   `targets: [{edgeId, targetNodeId, targetPort}]`, so the editor lights an edge on emit.
+- `flow.logic.evaluate` records list `receivedInputs` in name order.
 
 ### Documentation
 

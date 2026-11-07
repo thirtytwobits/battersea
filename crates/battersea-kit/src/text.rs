@@ -1,3 +1,7 @@
+//! Copyright (c) Scott A Dixon
+//!
+//! Text helpers shared by kits: a bounded character ring, static prompt tokens and
+//! activation text.
 use battersea_flow::{FlowNode, FlowNodeDefinition};
 const MIN_CAPACITY: u32 = 1;
 /// Bounded character ring backing an `InMemoryBuffer` flow node.
