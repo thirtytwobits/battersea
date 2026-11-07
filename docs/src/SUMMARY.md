@@ -25,6 +25,7 @@
   - [Observation and accounting](contracts/observability.md)
   - [Untrusted execution](contracts/isolation.md)
   - [Kits](contracts/kits.md)
+  - [Conversation kit](contracts/kit-conversation.md)
 - [Examples](examples.md)
   - [Editor server](editor-server.md)
 - [Contributing](CONTRIBUTING.md)
