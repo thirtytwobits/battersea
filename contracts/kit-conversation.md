@@ -69,8 +69,8 @@ staging has neither. `revision` counts the revisions applied to a committed turn
 
 Port records that are not tokens: `CompactionJob<X>` (`id`, `transcript`, `evaluation`,
 `state`, `extension`) with states `requested`, `running`, `completed` and `failed`;
-`PolicyEvaluation` (`transcript`, `decision` as `compact` or `hold`, `measured` turns and
-tokens after the summary, the `policy` applied); `CallRecord` (`node`, `status`, the
+`PolicyEvaluation` (`transcript`, `trigger` as `after_run` or `idle`, `decision` as `compact`
+or `hold`, `measured` turns and tokens after the summary, the `policy` applied); `CallRecord` (`node`, `status`, the
 reservation it settled, `started_at`, `finished_at`); and `SpendEstimate`
 (`input_tokens`, `max_output_tokens`).
 
@@ -154,16 +154,19 @@ control outcomes.
 ## Compaction
 
 `compaction::Policy` is `max_turns`, `max_tokens` and `idle`, each optional; a flow overrides
-any of them. `compaction::evaluate(policy, memory, measure)` decides `compact` when the turns
-after the summary exceed `max_turns` or their measured tokens exceed `max_tokens`, and `hold`
-otherwise, recording what it measured.
+any of them. `compaction::evaluate(policy, trigger, memory, measure)` is pure. With the
+`after_run` trigger it decides `compact` when the turns after the summary exceed `max_turns`
+or their measured tokens exceed `max_tokens`. With the `idle` trigger it decides `compact` when
+any turn follows the summary. Otherwise it decides `hold`. The evaluation records the trigger
+and what it measured.
 
 `compaction::Runner<H: Port>` holds the port and its clock. `after_run(state, transcript)`
-evaluates once a run completes and requests a job on `compact`. `idle(state, transcript)`
-arms a timer for `idle` on the clock; a run on the transcript re-arms it, and when it elapses
-the runner evaluates once. The runner requests at most one job per transcript until the port
-transitions it to `completed` or `failed`. It never activates a flow: the application runs the
-compaction flow for a requested job, and that flow's `ConversationMemoryOutput` completes it.
+evaluates with `after_run` once a run completes and requests a job on `compact`. Where the
+policy sets `idle`, it then arms a timer for `idle` on the clock; a run on the transcript
+re-arms it, and when it elapses the runner evaluates once with `idle`. The runner requests at
+most one job per transcript until the port transitions it to `completed` or `failed`. It never
+activates a flow: the application runs the compaction flow for a requested job, and that
+flow's `ConversationMemoryOutput` completes it.
 
 ## Reference host
 
@@ -199,7 +202,7 @@ deliveries.
 | `chat-cancelled` | The activation token stops the stream; the status is `cancelled` |
 | `stage` | Turns are staged in delivery order and committed on completion |
 | `compaction-request` | A transcript over `max_turns` requests one job; under it, `held` fires |
-| `compaction-idle` | The idle timer requests a job after the step and not before |
+| `compaction-idle` | A transcript under both size thresholds requests a job once the idle step elapses and not before |
 | `memory-output` | The summary is written and its job completes |
 | `refine` | The named turn is emitted, the revision parsed and applied, and `revision` increments |
 | `buffer` | A stream within `retain` collects; one beyond it fails the node |
@@ -225,8 +228,8 @@ storage and durable commits. Battersea owns the conversation nodes and compactio
 | Tool rounds | A scripted tool call runs through the plan's executor; the limit yields `conversation.tool_rounds_exhausted` |
 | Staging | A failed activation commits nothing on the reference host; a completed one commits in order |
 | Memory | The summary is not counted against `budget`; turns are fitted newest first |
-| Compaction | `evaluate` decides from the policy alone; the runner requests one job per transcript until it ends |
-| Idle | Advancing the clock past `idle` evaluates once; a run before that re-arms the timer |
+| Compaction | `evaluate` decides from the policy and trigger alone; the runner requests one job per transcript until it ends |
+| Idle | Advancing the clock past `idle` compacts a transcript under both size thresholds; a run before that re-arms the timer; an idle-only policy compacts on no other trigger |
 | Refinement | A revision increments `revision` and leaves the turn's id; an unknown turn is refused |
 | Model-facing text | `model_facing_text` has the three blocks and the two references; changing a block changes it |
 | Conformance | The suite passes on the reference host and the file-backed example; a port that drops a staged turn fails with `stage` named |
