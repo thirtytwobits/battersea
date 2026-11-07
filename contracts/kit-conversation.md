@@ -137,7 +137,9 @@ that the model crate classifies as a request error is `conversation.provider_fai
 tool rounds are `conversation.tool_rounds_exhausted`.
 
 `ConversationMemory` fits turns newest first until adding one would exceed `budget`, measured by
-the port's engine as it measures the chat request. The summary is not counted.
+the port's engine as it measures the chat request. The summary is not counted. An assistant turn
+that calls tools and the tool turns answering it are one unit, kept or dropped together, so the
+history is a request `validate_messages` accepts.
 
 `ConversationBuffer` holds at most `retain` bytes of collected text and refuses a stream that
 exceeds it. `ConversationTranscriptOutput` stages turns in delivery order; a `conversation.turns`
@@ -186,16 +188,32 @@ gives the model are the application's prompts, not the kit's.
 
 ## Conformance
 
-Cases script the engine and seed the transcript through port operations:
-`Seed { transcript, turns, summary }` and `Script { responses }`. The observable state is the
-transcript's turns, the run's staged turns, summaries, jobs, call records, reservations and
-deliveries.
+Cases seed the transcript and script the engine through `conformance::Probe`, a trait behind
+the `conformance` feature that a host implements for the suite beside `Port`:
+
+```rust
+pub trait Probe: Port {
+    /// Creates `transcript` holding `turns` committed and `summary` as its memory.
+    async fn seed(&self, state: &mut Self::State, transcript: TranscriptId, turns: Vec<Turn<Self::Extension>>, summary: Option<Summary<Self::Extension>>) -> Result<(), Self::Error>;
+    /// Installs the responses the engine returns, in order.
+    async fn script(&self, state: &mut Self::State, responses: Vec<ScriptedResponse>) -> Result<(), Self::Error>;
+    /// The observable state: the transcript's turns, the run's staged turns, summaries, jobs,
+    /// call records, reservations and deliveries.
+    async fn snapshot(&self, state: &Self::State) -> Result<Value, Self::Error>;
+}
+```
+
+The kit implements `PortAccess<H: Probe>` once over these three operations: a case's
+`Seed { transcript, turns, summary }` and `Script { responses }` operations run before the
+activation, and `snapshot` is compared after it. The reference host and the example host
+implement `Probe`; an application implements it on its test host. A `ScriptedResponse` is a
+text or a tool-call batch.
 
 | Case | Proves |
 |---|---|
 | `prompt` | The prompt source emits the activation value and a user turn; the static prompt emits its parameter |
 | `transcript` | The transcript source emits seeded turns in order and renders them |
-| `memory-budget` | Memory emits the summary and the newest turns that fit the budget |
+| `memory-budget` | Memory emits the summary and the newest turns that fit the budget; a budget that falls between a tool call and its result drops both |
 | `chat-stream` | Text and reasoning deltas, the reply, the status and a settled reservation |
 | `chat-tools` | One tool round through the plan's executor; `tool_rounds` carries its evidence |
 | `chat-over-budget` | No dispatch, `over_budget` fires, the status says so, nothing is reserved |
@@ -227,9 +245,9 @@ storage and durable commits. Battersea owns the conversation nodes and compactio
 | Cancellation | Cancelling mid-stream records a `cancelled` status, settles the reservation and stages no reply |
 | Tool rounds | A scripted tool call runs through the plan's executor; the limit yields `conversation.tool_rounds_exhausted` |
 | Staging | A failed activation commits nothing on the reference host; a completed one commits in order |
-| Memory | The summary is not counted against `budget`; turns are fitted newest first |
+| Memory | The summary is not counted against `budget`; turns are fitted newest first; a tool call and its results leave together |
 | Compaction | `evaluate` decides from the policy and trigger alone; the runner requests one job per transcript until it ends |
 | Idle | Advancing the clock past `idle` compacts a transcript under both size thresholds; a run before that re-arms the timer; an idle-only policy compacts on no other trigger |
 | Refinement | A revision increments `revision` and leaves the turn's id; an unknown turn is refused |
 | Model-facing text | `model_facing_text` has the three blocks and the two references; changing a block changes it |
-| Conformance | The suite passes on the reference host and the file-backed example; a port that drops a staged turn fails with `stage` named |
+| Conformance | The suite reaches a host through `Port` and `Probe` only; it passes on the reference host and the file-backed example; a port that drops a staged turn fails with `stage` named |
