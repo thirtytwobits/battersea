@@ -33,8 +33,11 @@ formatter_blocks:
       kind: sequence
       separator: "\n\n"
       items:
-        - kind: text
-          text: "Summary of the conversation so far:\n{summary}"
+        - kind: optional
+          binding: summary
+          template:
+            kind: text
+            text: "Summary of the conversation so far:\n{summary}"
         - kind: list
           binding: turns
           separator: "\n\n"
@@ -167,7 +170,7 @@ node_definitions:
           kind: int
         editor:
           kind: unsigned
-          min: 0
+          min: 1
           default_value: 4
     input_ports:
       - name: system
@@ -314,12 +317,30 @@ node_definitions:
   - class_name: ConversationCompactionRequest
     handler_id: conversation.compaction.request
     short_description: Asks for compaction when the policy says so.
-    long_description: Evaluates the transcript's compaction policy and requests a job when the evaluation decides to compact.
+    long_description: Evaluates the transcript's compaction policy, the node's thresholds overriding the port's, and requests a job when the evaluation decides to compact.
     kind: sink
+    parameters:
+      - name: max_turns
+        datatype:
+          kind: int
+        editor:
+          kind: unsigned
+          min: 0
+        short_description: Overrides the policy's turn threshold.
+      - name: max_tokens
+        datatype:
+          kind: int
+        editor:
+          kind: unsigned
+          min: 0
+        short_description: Overrides the policy's token threshold.
     input_ports:
       - name: turns
         kind: input
-        token_type: conversation.turns
+        token_type: oneof
+        accepted_token_types:
+          - conversation.turn
+          - conversation.turns
         mode: final_value
         phase: execution
         short_description: The turns the run adds, measured with the transcript's memory.

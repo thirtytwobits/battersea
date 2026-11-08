@@ -331,6 +331,43 @@ impl<T> serde_core::de::DeserializeOwned for battersea_kit_conversation::compact
 impl<T> typenum::type_operators::Same for battersea_kit_conversation::compaction::PolicyEvaluation
 pub type battersea_kit_conversation::compaction::PolicyEvaluation::Output = T
 impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_kit_conversation::compaction::PolicyEvaluation where T: ?core::marker::Sized
+pub struct battersea_kit_conversation::compaction::Runner<H: battersea_kit_conversation::port::Port>
+impl<H: battersea_kit_conversation::port::Port> battersea_kit_conversation::compaction::Runner<H>
+pub const battersea_kit_conversation::compaction::Runner<H>::NODE: &'static str
+pub async fn battersea_kit_conversation::compaction::Runner<H>::after_run(&self, &mut <H as battersea_runtime::host::ExecutionHost>::State, &battersea_kit_conversation::TranscriptId) -> core::result::Result<core::option::Option<battersea_kit_conversation::JobId>, <H as battersea_runtime::host::ExecutionHost>::Error>
+pub async fn battersea_kit_conversation::compaction::Runner<H>::idle(&self, &mut <H as battersea_runtime::host::ExecutionHost>::State, &battersea_kit_conversation::TranscriptId) -> core::result::Result<core::option::Option<battersea_kit_conversation::JobId>, <H as battersea_runtime::host::ExecutionHost>::Error>
+pub async fn battersea_kit_conversation::compaction::Runner<H>::idle_elapsed(&self) -> battersea_kit_conversation::TranscriptId
+pub fn battersea_kit_conversation::compaction::Runner<H>::job_ended(&self, &battersea_kit_conversation::JobId)
+pub fn battersea_kit_conversation::compaction::Runner<H>::new(alloc::rcs::arc::Arc<H>) -> Self
+pub fn battersea_kit_conversation::compaction::Runner<H>::requested(&self, &battersea_kit_conversation::TranscriptId) -> core::option::Option<battersea_kit_conversation::JobId>
+impl<H> !core::marker::Freeze for battersea_kit_conversation::compaction::Runner<H>
+impl<H> core::marker::Send for battersea_kit_conversation::compaction::Runner<H> where alloc::rcs::arc::Arc<H>: core::marker::Send
+impl<H> core::marker::Sync for battersea_kit_conversation::compaction::Runner<H> where alloc::rcs::arc::Arc<H>: core::marker::Sync
+impl<H> core::marker::Unpin for battersea_kit_conversation::compaction::Runner<H> where alloc::rcs::arc::Arc<H>: core::marker::Unpin
+impl<H> core::marker::UnsafeUnpin for battersea_kit_conversation::compaction::Runner<H> where alloc::rcs::arc::Arc<H>: core::marker::UnsafeUnpin
+impl<H> !core::panic::unwind_safe::RefUnwindSafe for battersea_kit_conversation::compaction::Runner<H>
+impl<H> !core::panic::unwind_safe::UnwindSafe for battersea_kit_conversation::compaction::Runner<H>
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_kit_conversation::compaction::Runner<H> where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_kit_conversation::compaction::Runner<H> where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<T, U> core::convert::Into<U> for battersea_kit_conversation::compaction::Runner<H> where U: core::convert::From<T>
+pub fn battersea_kit_conversation::compaction::Runner<H>::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_kit_conversation::compaction::Runner<H> where U: core::convert::Into<T>
+pub type battersea_kit_conversation::compaction::Runner<H>::Error = never
+pub fn battersea_kit_conversation::compaction::Runner<H>::try_from(U) -> core::result::Result<T, never>
+impl<T, U> core::convert::TryInto<U> for battersea_kit_conversation::compaction::Runner<H> where U: core::convert::TryFrom<T>
+pub type battersea_kit_conversation::compaction::Runner<H>::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_kit_conversation::compaction::Runner<H>::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> core::any::Any for battersea_kit_conversation::compaction::Runner<H> where T: 'static + ?core::marker::Sized
+pub fn battersea_kit_conversation::compaction::Runner<H>::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_kit_conversation::compaction::Runner<H> where T: ?core::marker::Sized
+pub fn battersea_kit_conversation::compaction::Runner<H>::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_kit_conversation::compaction::Runner<H> where T: ?core::marker::Sized
+pub fn battersea_kit_conversation::compaction::Runner<H>::borrow_mut(&mut self) -> &mut T
+impl<T> core::convert::From<T> for battersea_kit_conversation::compaction::Runner<H>
+pub fn battersea_kit_conversation::compaction::Runner<H>::from(T) -> T
+impl<T> typenum::type_operators::Same for battersea_kit_conversation::compaction::Runner<H>
+pub type battersea_kit_conversation::compaction::Runner<H>::Output = T
+impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_kit_conversation::compaction::Runner<H> where T: ?core::marker::Sized
 pub fn battersea_kit_conversation::compaction::evaluate<X>(&battersea_kit_conversation::compaction::Policy, battersea_kit_conversation::compaction::Trigger, &battersea_kit_conversation::Memory<X>, u64) -> battersea_kit_conversation::compaction::PolicyEvaluation
 pub mod battersea_kit_conversation::conformance
 pub use battersea_kit_conversation::conformance::Divergence
@@ -340,12 +377,16 @@ pub use battersea_kit_conversation::conformance::Outcome
 pub use battersea_kit_conversation::conformance::Played
 pub use battersea_kit_conversation::conformance::Side
 pub enum battersea_kit_conversation::conformance::Op
+pub battersea_kit_conversation::conformance::Op::Job
+pub battersea_kit_conversation::conformance::Op::Job::job: battersea_kit_conversation::CompactionJob<()>
 pub battersea_kit_conversation::conformance::Op::Script
 pub battersea_kit_conversation::conformance::Op::Script::responses: alloc::vec::Vec<battersea_kit_conversation::reference::ScriptedResponse>
 pub battersea_kit_conversation::conformance::Op::Seed
 pub battersea_kit_conversation::conformance::Op::Seed::summary: core::option::Option<battersea_kit_conversation::Summary<()>>
 pub battersea_kit_conversation::conformance::Op::Seed::transcript: battersea_kit_conversation::TranscriptId
 pub battersea_kit_conversation::conformance::Op::Seed::turns: alloc::vec::Vec<battersea_kit_conversation::Turn<()>>
+pub battersea_kit_conversation::conformance::Op::Tools
+pub battersea_kit_conversation::conformance::Op::Tools::plan: battersea_kit_conversation::ToolPlan
 impl core::clone::Clone for battersea_kit_conversation::conformance::Op
 pub fn battersea_kit_conversation::conformance::Op::clone(&self) -> Self
 impl core::fmt::Debug for battersea_kit_conversation::conformance::Op
@@ -358,8 +399,8 @@ impl core::marker::Send for battersea_kit_conversation::conformance::Op
 impl core::marker::Sync for battersea_kit_conversation::conformance::Op
 impl core::marker::Unpin for battersea_kit_conversation::conformance::Op
 impl core::marker::UnsafeUnpin for battersea_kit_conversation::conformance::Op
-impl core::panic::unwind_safe::RefUnwindSafe for battersea_kit_conversation::conformance::Op
-impl core::panic::unwind_safe::UnwindSafe for battersea_kit_conversation::conformance::Op
+impl !core::panic::unwind_safe::RefUnwindSafe for battersea_kit_conversation::conformance::Op
+impl !core::panic::unwind_safe::UnwindSafe for battersea_kit_conversation::conformance::Op
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_kit_conversation::conformance::Op where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_kit_conversation::conformance::Op where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<T, U> core::convert::Into<U> for battersea_kit_conversation::conformance::Op where U: core::convert::From<T>
@@ -390,8 +431,10 @@ impl<T> typenum::type_operators::Same for battersea_kit_conversation::conformanc
 pub type battersea_kit_conversation::conformance::Op::Output = T
 impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_kit_conversation::conformance::Op where T: ?core::marker::Sized
 pub enum battersea_kit_conversation::conformance::ScriptedResponse
+pub battersea_kit_conversation::conformance::ScriptedResponse::Reasoning(alloc::string::String)
 pub battersea_kit_conversation::conformance::ScriptedResponse::Text(alloc::string::String)
 pub battersea_kit_conversation::conformance::ScriptedResponse::ToolCalls(alloc::vec::Vec<battersea_model::adapter::EngineLocalToolCall>)
+pub battersea_kit_conversation::conformance::ScriptedResponse::Wait(core::time::Duration)
 impl core::clone::Clone for battersea_kit_conversation::reference::ScriptedResponse
 pub fn battersea_kit_conversation::reference::ScriptedResponse::clone(&self) -> Self
 impl core::cmp::PartialEq for battersea_kit_conversation::reference::ScriptedResponse
@@ -467,6 +510,37 @@ pub fn battersea_kit_conversation::conformance::Access::from(T) -> T
 impl<T> typenum::type_operators::Same for battersea_kit_conversation::conformance::Access
 pub type battersea_kit_conversation::conformance::Access::Output = T
 impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_kit_conversation::conformance::Access where T: ?core::marker::Sized
+pub struct battersea_kit_conversation::conformance::Echo
+impl battersea_model::adapter::EngineLocalToolExecutor for battersea_kit_conversation::conformance::Echo
+pub fn battersea_kit_conversation::conformance::Echo::call<'life0, 'async_trait>(&'life0 self, battersea_model::adapter::EngineLocalToolCall) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<battersea_model::adapter::tool_result::EngineLocalToolResult, battersea_model::adapter::error::EngineAdapterRequestError>> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait
+impl core::marker::Freeze for battersea_kit_conversation::conformance::Echo
+impl core::marker::Send for battersea_kit_conversation::conformance::Echo
+impl core::marker::Sync for battersea_kit_conversation::conformance::Echo
+impl core::marker::Unpin for battersea_kit_conversation::conformance::Echo
+impl core::marker::UnsafeUnpin for battersea_kit_conversation::conformance::Echo
+impl core::panic::unwind_safe::RefUnwindSafe for battersea_kit_conversation::conformance::Echo
+impl core::panic::unwind_safe::UnwindSafe for battersea_kit_conversation::conformance::Echo
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_kit_conversation::conformance::Echo where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_kit_conversation::conformance::Echo where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<T, U> core::convert::Into<U> for battersea_kit_conversation::conformance::Echo where U: core::convert::From<T>
+pub fn battersea_kit_conversation::conformance::Echo::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_kit_conversation::conformance::Echo where U: core::convert::Into<T>
+pub type battersea_kit_conversation::conformance::Echo::Error = never
+pub fn battersea_kit_conversation::conformance::Echo::try_from(U) -> core::result::Result<T, never>
+impl<T, U> core::convert::TryInto<U> for battersea_kit_conversation::conformance::Echo where U: core::convert::TryFrom<T>
+pub type battersea_kit_conversation::conformance::Echo::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_kit_conversation::conformance::Echo::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> core::any::Any for battersea_kit_conversation::conformance::Echo where T: 'static + ?core::marker::Sized
+pub fn battersea_kit_conversation::conformance::Echo::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_kit_conversation::conformance::Echo where T: ?core::marker::Sized
+pub fn battersea_kit_conversation::conformance::Echo::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_kit_conversation::conformance::Echo where T: ?core::marker::Sized
+pub fn battersea_kit_conversation::conformance::Echo::borrow_mut(&mut self) -> &mut T
+impl<T> core::convert::From<T> for battersea_kit_conversation::conformance::Echo
+pub fn battersea_kit_conversation::conformance::Echo::from(T) -> T
+impl<T> typenum::type_operators::Same for battersea_kit_conversation::conformance::Echo
+pub type battersea_kit_conversation::conformance::Echo::Output = T
+impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_kit_conversation::conformance::Echo where T: ?core::marker::Sized
 pub struct battersea_kit_conversation::conformance::ReferenceFixture
 impl battersea_kit::conformance::Fixture for battersea_kit_conversation::conformance::ReferenceFixture
 pub type battersea_kit_conversation::conformance::ReferenceFixture::Host = battersea_kit::reference::ReferenceHost<battersea_kit_conversation::reference::State>
@@ -606,21 +680,999 @@ impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusi
 pub const battersea_kit_conversation::conformance::TRANSCRIPT: &str
 pub trait battersea_kit_conversation::conformance::Probe: battersea_kit_conversation::port::Port
 pub fn battersea_kit_conversation::conformance::Probe::extension(&self) -> Self::Extension
+pub fn battersea_kit_conversation::conformance::Probe::offer_tools<'life0, 'life1, 'async_trait>(&'life0 self, &'life1 mut Self::State, battersea_kit_conversation::ToolPlan) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<(), Self::Error>> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait, 'life1: 'async_trait
 pub fn battersea_kit_conversation::conformance::Probe::script<'life0, 'life1, 'async_trait>(&'life0 self, &'life1 mut Self::State, alloc::vec::Vec<battersea_kit_conversation::reference::ScriptedResponse>) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<(), Self::Error>> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait, 'life1: 'async_trait
 pub fn battersea_kit_conversation::conformance::Probe::seed<'life0, 'life1, 'async_trait>(&'life0 self, &'life1 mut Self::State, battersea_kit_conversation::TranscriptId, alloc::vec::Vec<battersea_kit_conversation::Turn<Self::Extension>>, core::option::Option<battersea_kit_conversation::Summary<Self::Extension>>) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<(), Self::Error>> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait, 'life1: 'async_trait
+pub fn battersea_kit_conversation::conformance::Probe::seed_job<'life0, 'life1, 'async_trait>(&'life0 self, &'life1 mut Self::State, battersea_kit_conversation::CompactionJob<Self::Extension>) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<(), Self::Error>> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait, 'life1: 'async_trait
 pub fn battersea_kit_conversation::conformance::Probe::snapshot<'life0, 'life1, 'async_trait>(&'life0 self, &'life1 Self::State) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<battersea_kit_conversation::conformance::Snapshot<Self::Extension>, Self::Error>> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait, 'life1: 'async_trait
 impl battersea_kit_conversation::conformance::Probe for battersea_kit::reference::ReferenceHost<battersea_kit_conversation::reference::State>
 pub fn battersea_kit::reference::ReferenceHost<battersea_kit_conversation::reference::State>::extension(&self) -> battersea_kit_conversation::reference::Extension
+pub fn battersea_kit::reference::ReferenceHost<battersea_kit_conversation::reference::State>::offer_tools<'life0, 'life1, 'async_trait>(&'life0 self, &'life1 mut Self::State, battersea_kit_conversation::ToolPlan) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<(), battersea_kit::reference::ReferenceError>> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait, 'life1: 'async_trait
 pub fn battersea_kit::reference::ReferenceHost<battersea_kit_conversation::reference::State>::script<'life0, 'life1, 'async_trait>(&'life0 self, &'life1 mut Self::State, alloc::vec::Vec<battersea_kit_conversation::reference::ScriptedResponse>) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<(), battersea_kit::reference::ReferenceError>> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait, 'life1: 'async_trait
 pub fn battersea_kit::reference::ReferenceHost<battersea_kit_conversation::reference::State>::seed<'life0, 'life1, 'async_trait>(&'life0 self, &'life1 mut Self::State, battersea_kit_conversation::TranscriptId, alloc::vec::Vec<battersea_kit_conversation::Turn<battersea_kit_conversation::reference::Extension>>, core::option::Option<battersea_kit_conversation::Summary<battersea_kit_conversation::reference::Extension>>) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<(), battersea_kit::reference::ReferenceError>> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait, 'life1: 'async_trait
+pub fn battersea_kit::reference::ReferenceHost<battersea_kit_conversation::reference::State>::seed_job<'life0, 'life1, 'async_trait>(&'life0 self, &'life1 mut Self::State, battersea_kit_conversation::CompactionJob<battersea_kit_conversation::reference::Extension>) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<(), battersea_kit::reference::ReferenceError>> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait, 'life1: 'async_trait
 pub fn battersea_kit::reference::ReferenceHost<battersea_kit_conversation::reference::State>::snapshot<'life0, 'life1, 'async_trait>(&'life0 self, &'life1 Self::State) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<battersea_kit_conversation::conformance::Snapshot<battersea_kit_conversation::reference::Extension>, battersea_kit::reference::ReferenceError>> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait, 'life1: 'async_trait
 pub fn battersea_kit_conversation::conformance::cases() -> alloc::vec::Vec<battersea_kit::conformance::Case<battersea_kit_conversation::conformance::Op>>
+pub fn battersea_kit_conversation::conformance::comparable_events(&[serde_json::value::Value]) -> alloc::vec::Vec<serde_json::value::Value>
+pub fn battersea_kit_conversation::conformance::reference_host(alloc::rcs::arc::Arc<battersea_model::clock::ManualClock>) -> battersea_kit::reference::ReferenceHost<battersea_kit_conversation::reference::State>
 pub fn battersea_kit_conversation::conformance::register_for_suite(&mut battersea_flow::registry::Registry) -> core::result::Result<(), alloc::string::String>
 pub async fn battersea_kit_conversation::conformance::run<F: battersea_kit::conformance::Fixture>(&F) -> core::result::Result<(), battersea_kit::conformance::Failure> where <F as battersea_kit::conformance::Fixture>::Host: battersea_kit_conversation::conformance::Probe
 pub fn battersea_kit_conversation::conformance::suite() -> battersea_kit::conformance::Suite<battersea_kit_conversation::conformance::Op>
+pub mod battersea_kit_conversation::nodes
+pub mod battersea_kit_conversation::nodes::chat
+pub struct battersea_kit_conversation::nodes::chat::ChatHandler
+impl<H: battersea_kit_conversation::port::Port> battersea_runtime::handler::NodeHandler<H> for battersea_kit_conversation::nodes::chat::ChatHandler
+pub fn battersea_kit_conversation::nodes::chat::ChatHandler::execute_node<'life0, 'life1, 'life2, 'life3, 'life4, 'life5, 'life6, 'async_trait>(&'life0 self, &'life1 H, &'life2 mut <H as battersea_runtime::host::ExecutionHost>::State, &'life3 battersea_flow::types::FlowNode, &'life4 battersea_flow::types::FlowNodeDefinition, core::option::Option<&'life5 std::collections::hash::map::HashMap<alloc::string::String, serde_json::value::Value>>, &'life6 tokio_util::sync::cancellation_token::CancellationToken) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<(), <H as battersea_runtime::host::ExecutionHost>::Error>> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait, 'life1: 'async_trait, 'life2: 'async_trait, 'life3: 'async_trait, 'life4: 'async_trait, 'life5: 'async_trait, 'life6: 'async_trait
+pub fn battersea_kit_conversation::nodes::chat::ChatHandler::handler_id(&self) -> &'static str
+pub fn battersea_kit_conversation::nodes::chat::ChatHandler::receive_provider_event<'life0, 'life1, 'life2, 'life3, 'life4, 'life5, 'life6, 'async_trait>(&'life0 self, &'life1 H, &'life2 mut <H as battersea_runtime::host::ExecutionHost>::State, &'life3 battersea_flow::types::FlowNode, &'life4 battersea_flow::types::FlowNodeDefinition, &'life5 serde_json::value::Value, &'life6 tokio_util::sync::cancellation_token::CancellationToken) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<(), <H as battersea_runtime::host::ExecutionHost>::Error>> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait, 'life1: 'async_trait, 'life2: 'async_trait, 'life3: 'async_trait, 'life4: 'async_trait, 'life5: 'async_trait, 'life6: 'async_trait
+impl core::marker::Freeze for battersea_kit_conversation::nodes::chat::ChatHandler
+impl core::marker::Send for battersea_kit_conversation::nodes::chat::ChatHandler
+impl core::marker::Sync for battersea_kit_conversation::nodes::chat::ChatHandler
+impl core::marker::Unpin for battersea_kit_conversation::nodes::chat::ChatHandler
+impl core::marker::UnsafeUnpin for battersea_kit_conversation::nodes::chat::ChatHandler
+impl core::panic::unwind_safe::RefUnwindSafe for battersea_kit_conversation::nodes::chat::ChatHandler
+impl core::panic::unwind_safe::UnwindSafe for battersea_kit_conversation::nodes::chat::ChatHandler
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_kit_conversation::nodes::chat::ChatHandler where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_kit_conversation::nodes::chat::ChatHandler where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<T, U> core::convert::Into<U> for battersea_kit_conversation::nodes::chat::ChatHandler where U: core::convert::From<T>
+pub fn battersea_kit_conversation::nodes::chat::ChatHandler::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_kit_conversation::nodes::chat::ChatHandler where U: core::convert::Into<T>
+pub type battersea_kit_conversation::nodes::chat::ChatHandler::Error = never
+pub fn battersea_kit_conversation::nodes::chat::ChatHandler::try_from(U) -> core::result::Result<T, never>
+impl<T, U> core::convert::TryInto<U> for battersea_kit_conversation::nodes::chat::ChatHandler where U: core::convert::TryFrom<T>
+pub type battersea_kit_conversation::nodes::chat::ChatHandler::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_kit_conversation::nodes::chat::ChatHandler::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> core::any::Any for battersea_kit_conversation::nodes::chat::ChatHandler where T: 'static + ?core::marker::Sized
+pub fn battersea_kit_conversation::nodes::chat::ChatHandler::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_kit_conversation::nodes::chat::ChatHandler where T: ?core::marker::Sized
+pub fn battersea_kit_conversation::nodes::chat::ChatHandler::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_kit_conversation::nodes::chat::ChatHandler where T: ?core::marker::Sized
+pub fn battersea_kit_conversation::nodes::chat::ChatHandler::borrow_mut(&mut self) -> &mut T
+impl<T> core::convert::From<T> for battersea_kit_conversation::nodes::chat::ChatHandler
+pub fn battersea_kit_conversation::nodes::chat::ChatHandler::from(T) -> T
+impl<T> typenum::type_operators::Same for battersea_kit_conversation::nodes::chat::ChatHandler
+pub type battersea_kit_conversation::nodes::chat::ChatHandler::Output = T
+impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_kit_conversation::nodes::chat::ChatHandler where T: ?core::marker::Sized
+pub mod battersea_kit_conversation::nodes::inline
+pub struct battersea_kit_conversation::nodes::inline::BufferHandler
+impl<H: battersea_kit_conversation::port::Port> battersea_runtime::handler::NodeHandler<H> for battersea_kit_conversation::nodes::inline::BufferHandler
+pub fn battersea_kit_conversation::nodes::inline::BufferHandler::execute_node<'life0, 'life1, 'life2, 'life3, 'life4, 'life5, 'life6, 'async_trait>(&'life0 self, &'life1 H, &'life2 mut <H as battersea_runtime::host::ExecutionHost>::State, &'life3 battersea_flow::types::FlowNode, &'life4 battersea_flow::types::FlowNodeDefinition, core::option::Option<&'life5 std::collections::hash::map::HashMap<alloc::string::String, serde_json::value::Value>>, &'life6 tokio_util::sync::cancellation_token::CancellationToken) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<(), <H as battersea_runtime::host::ExecutionHost>::Error>> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait, 'life1: 'async_trait, 'life2: 'async_trait, 'life3: 'async_trait, 'life4: 'async_trait, 'life5: 'async_trait, 'life6: 'async_trait
+pub fn battersea_kit_conversation::nodes::inline::BufferHandler::handler_id(&self) -> &'static str
+pub fn battersea_kit_conversation::nodes::inline::BufferHandler::receive_input_token<'life0, 'life1, 'life2, 'life3, 'life4, 'life5, 'life6, 'life7, 'async_trait>(&'life0 self, &'life1 H, &'life2 mut <H as battersea_runtime::host::ExecutionHost>::State, &'life3 battersea_flow::types::FlowNode, &'life4 battersea_flow::types::FlowNodeDefinition, &'life5 str, &'life6 battersea_runtime::Token, &'life7 tokio_util::sync::cancellation_token::CancellationToken) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<(), <H as battersea_runtime::host::ExecutionHost>::Error>> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait, 'life1: 'async_trait, 'life2: 'async_trait, 'life3: 'async_trait, 'life4: 'async_trait, 'life5: 'async_trait, 'life6: 'async_trait, 'life7: 'async_trait
+impl core::marker::Freeze for battersea_kit_conversation::nodes::inline::BufferHandler
+impl core::marker::Send for battersea_kit_conversation::nodes::inline::BufferHandler
+impl core::marker::Sync for battersea_kit_conversation::nodes::inline::BufferHandler
+impl core::marker::Unpin for battersea_kit_conversation::nodes::inline::BufferHandler
+impl core::marker::UnsafeUnpin for battersea_kit_conversation::nodes::inline::BufferHandler
+impl core::panic::unwind_safe::RefUnwindSafe for battersea_kit_conversation::nodes::inline::BufferHandler
+impl core::panic::unwind_safe::UnwindSafe for battersea_kit_conversation::nodes::inline::BufferHandler
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_kit_conversation::nodes::inline::BufferHandler where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_kit_conversation::nodes::inline::BufferHandler where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<T, U> core::convert::Into<U> for battersea_kit_conversation::nodes::inline::BufferHandler where U: core::convert::From<T>
+pub fn battersea_kit_conversation::nodes::inline::BufferHandler::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_kit_conversation::nodes::inline::BufferHandler where U: core::convert::Into<T>
+pub type battersea_kit_conversation::nodes::inline::BufferHandler::Error = never
+pub fn battersea_kit_conversation::nodes::inline::BufferHandler::try_from(U) -> core::result::Result<T, never>
+impl<T, U> core::convert::TryInto<U> for battersea_kit_conversation::nodes::inline::BufferHandler where U: core::convert::TryFrom<T>
+pub type battersea_kit_conversation::nodes::inline::BufferHandler::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_kit_conversation::nodes::inline::BufferHandler::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> core::any::Any for battersea_kit_conversation::nodes::inline::BufferHandler where T: 'static + ?core::marker::Sized
+pub fn battersea_kit_conversation::nodes::inline::BufferHandler::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_kit_conversation::nodes::inline::BufferHandler where T: ?core::marker::Sized
+pub fn battersea_kit_conversation::nodes::inline::BufferHandler::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_kit_conversation::nodes::inline::BufferHandler where T: ?core::marker::Sized
+pub fn battersea_kit_conversation::nodes::inline::BufferHandler::borrow_mut(&mut self) -> &mut T
+impl<T> core::convert::From<T> for battersea_kit_conversation::nodes::inline::BufferHandler
+pub fn battersea_kit_conversation::nodes::inline::BufferHandler::from(T) -> T
+impl<T> typenum::type_operators::Same for battersea_kit_conversation::nodes::inline::BufferHandler
+pub type battersea_kit_conversation::nodes::inline::BufferHandler::Output = T
+impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_kit_conversation::nodes::inline::BufferHandler where T: ?core::marker::Sized
+pub struct battersea_kit_conversation::nodes::inline::CompactionParserHandler
+impl<H: battersea_kit_conversation::port::Port> battersea_runtime::handler::NodeHandler<H> for battersea_kit_conversation::nodes::inline::CompactionParserHandler
+pub fn battersea_kit_conversation::nodes::inline::CompactionParserHandler::execute_node<'life0, 'life1, 'life2, 'life3, 'life4, 'life5, 'life6, 'async_trait>(&'life0 self, &'life1 H, &'life2 mut <H as battersea_runtime::host::ExecutionHost>::State, &'life3 battersea_flow::types::FlowNode, &'life4 battersea_flow::types::FlowNodeDefinition, core::option::Option<&'life5 std::collections::hash::map::HashMap<alloc::string::String, serde_json::value::Value>>, &'life6 tokio_util::sync::cancellation_token::CancellationToken) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<(), <H as battersea_runtime::host::ExecutionHost>::Error>> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait, 'life1: 'async_trait, 'life2: 'async_trait, 'life3: 'async_trait, 'life4: 'async_trait, 'life5: 'async_trait, 'life6: 'async_trait
+pub fn battersea_kit_conversation::nodes::inline::CompactionParserHandler::handler_id(&self) -> &'static str
+impl core::marker::Freeze for battersea_kit_conversation::nodes::inline::CompactionParserHandler
+impl core::marker::Send for battersea_kit_conversation::nodes::inline::CompactionParserHandler
+impl core::marker::Sync for battersea_kit_conversation::nodes::inline::CompactionParserHandler
+impl core::marker::Unpin for battersea_kit_conversation::nodes::inline::CompactionParserHandler
+impl core::marker::UnsafeUnpin for battersea_kit_conversation::nodes::inline::CompactionParserHandler
+impl core::panic::unwind_safe::RefUnwindSafe for battersea_kit_conversation::nodes::inline::CompactionParserHandler
+impl core::panic::unwind_safe::UnwindSafe for battersea_kit_conversation::nodes::inline::CompactionParserHandler
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_kit_conversation::nodes::inline::CompactionParserHandler where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_kit_conversation::nodes::inline::CompactionParserHandler where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<T, U> core::convert::Into<U> for battersea_kit_conversation::nodes::inline::CompactionParserHandler where U: core::convert::From<T>
+pub fn battersea_kit_conversation::nodes::inline::CompactionParserHandler::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_kit_conversation::nodes::inline::CompactionParserHandler where U: core::convert::Into<T>
+pub type battersea_kit_conversation::nodes::inline::CompactionParserHandler::Error = never
+pub fn battersea_kit_conversation::nodes::inline::CompactionParserHandler::try_from(U) -> core::result::Result<T, never>
+impl<T, U> core::convert::TryInto<U> for battersea_kit_conversation::nodes::inline::CompactionParserHandler where U: core::convert::TryFrom<T>
+pub type battersea_kit_conversation::nodes::inline::CompactionParserHandler::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_kit_conversation::nodes::inline::CompactionParserHandler::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> core::any::Any for battersea_kit_conversation::nodes::inline::CompactionParserHandler where T: 'static + ?core::marker::Sized
+pub fn battersea_kit_conversation::nodes::inline::CompactionParserHandler::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_kit_conversation::nodes::inline::CompactionParserHandler where T: ?core::marker::Sized
+pub fn battersea_kit_conversation::nodes::inline::CompactionParserHandler::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_kit_conversation::nodes::inline::CompactionParserHandler where T: ?core::marker::Sized
+pub fn battersea_kit_conversation::nodes::inline::CompactionParserHandler::borrow_mut(&mut self) -> &mut T
+impl<T> core::convert::From<T> for battersea_kit_conversation::nodes::inline::CompactionParserHandler
+pub fn battersea_kit_conversation::nodes::inline::CompactionParserHandler::from(T) -> T
+impl<T> typenum::type_operators::Same for battersea_kit_conversation::nodes::inline::CompactionParserHandler
+pub type battersea_kit_conversation::nodes::inline::CompactionParserHandler::Output = T
+impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_kit_conversation::nodes::inline::CompactionParserHandler where T: ?core::marker::Sized
+pub struct battersea_kit_conversation::nodes::inline::RefinementParserHandler
+impl<H: battersea_kit_conversation::port::Port> battersea_runtime::handler::NodeHandler<H> for battersea_kit_conversation::nodes::inline::RefinementParserHandler
+pub fn battersea_kit_conversation::nodes::inline::RefinementParserHandler::execute_node<'life0, 'life1, 'life2, 'life3, 'life4, 'life5, 'life6, 'async_trait>(&'life0 self, &'life1 H, &'life2 mut <H as battersea_runtime::host::ExecutionHost>::State, &'life3 battersea_flow::types::FlowNode, &'life4 battersea_flow::types::FlowNodeDefinition, core::option::Option<&'life5 std::collections::hash::map::HashMap<alloc::string::String, serde_json::value::Value>>, &'life6 tokio_util::sync::cancellation_token::CancellationToken) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<(), <H as battersea_runtime::host::ExecutionHost>::Error>> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait, 'life1: 'async_trait, 'life2: 'async_trait, 'life3: 'async_trait, 'life4: 'async_trait, 'life5: 'async_trait, 'life6: 'async_trait
+pub fn battersea_kit_conversation::nodes::inline::RefinementParserHandler::handler_id(&self) -> &'static str
+impl core::marker::Freeze for battersea_kit_conversation::nodes::inline::RefinementParserHandler
+impl core::marker::Send for battersea_kit_conversation::nodes::inline::RefinementParserHandler
+impl core::marker::Sync for battersea_kit_conversation::nodes::inline::RefinementParserHandler
+impl core::marker::Unpin for battersea_kit_conversation::nodes::inline::RefinementParserHandler
+impl core::marker::UnsafeUnpin for battersea_kit_conversation::nodes::inline::RefinementParserHandler
+impl core::panic::unwind_safe::RefUnwindSafe for battersea_kit_conversation::nodes::inline::RefinementParserHandler
+impl core::panic::unwind_safe::UnwindSafe for battersea_kit_conversation::nodes::inline::RefinementParserHandler
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_kit_conversation::nodes::inline::RefinementParserHandler where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_kit_conversation::nodes::inline::RefinementParserHandler where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<T, U> core::convert::Into<U> for battersea_kit_conversation::nodes::inline::RefinementParserHandler where U: core::convert::From<T>
+pub fn battersea_kit_conversation::nodes::inline::RefinementParserHandler::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_kit_conversation::nodes::inline::RefinementParserHandler where U: core::convert::Into<T>
+pub type battersea_kit_conversation::nodes::inline::RefinementParserHandler::Error = never
+pub fn battersea_kit_conversation::nodes::inline::RefinementParserHandler::try_from(U) -> core::result::Result<T, never>
+impl<T, U> core::convert::TryInto<U> for battersea_kit_conversation::nodes::inline::RefinementParserHandler where U: core::convert::TryFrom<T>
+pub type battersea_kit_conversation::nodes::inline::RefinementParserHandler::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_kit_conversation::nodes::inline::RefinementParserHandler::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> core::any::Any for battersea_kit_conversation::nodes::inline::RefinementParserHandler where T: 'static + ?core::marker::Sized
+pub fn battersea_kit_conversation::nodes::inline::RefinementParserHandler::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_kit_conversation::nodes::inline::RefinementParserHandler where T: ?core::marker::Sized
+pub fn battersea_kit_conversation::nodes::inline::RefinementParserHandler::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_kit_conversation::nodes::inline::RefinementParserHandler where T: ?core::marker::Sized
+pub fn battersea_kit_conversation::nodes::inline::RefinementParserHandler::borrow_mut(&mut self) -> &mut T
+impl<T> core::convert::From<T> for battersea_kit_conversation::nodes::inline::RefinementParserHandler
+pub fn battersea_kit_conversation::nodes::inline::RefinementParserHandler::from(T) -> T
+impl<T> typenum::type_operators::Same for battersea_kit_conversation::nodes::inline::RefinementParserHandler
+pub type battersea_kit_conversation::nodes::inline::RefinementParserHandler::Output = T
+impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_kit_conversation::nodes::inline::RefinementParserHandler where T: ?core::marker::Sized
+pub struct battersea_kit_conversation::nodes::inline::SignalTapHandler
+impl<H: battersea_kit_conversation::port::Port> battersea_runtime::handler::NodeHandler<H> for battersea_kit_conversation::nodes::inline::SignalTapHandler
+pub fn battersea_kit_conversation::nodes::inline::SignalTapHandler::execute_node<'life0, 'life1, 'life2, 'life3, 'life4, 'life5, 'life6, 'async_trait>(&'life0 self, &'life1 H, &'life2 mut <H as battersea_runtime::host::ExecutionHost>::State, &'life3 battersea_flow::types::FlowNode, &'life4 battersea_flow::types::FlowNodeDefinition, core::option::Option<&'life5 std::collections::hash::map::HashMap<alloc::string::String, serde_json::value::Value>>, &'life6 tokio_util::sync::cancellation_token::CancellationToken) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<(), <H as battersea_runtime::host::ExecutionHost>::Error>> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait, 'life1: 'async_trait, 'life2: 'async_trait, 'life3: 'async_trait, 'life4: 'async_trait, 'life5: 'async_trait, 'life6: 'async_trait
+pub fn battersea_kit_conversation::nodes::inline::SignalTapHandler::handler_id(&self) -> &'static str
+impl core::marker::Freeze for battersea_kit_conversation::nodes::inline::SignalTapHandler
+impl core::marker::Send for battersea_kit_conversation::nodes::inline::SignalTapHandler
+impl core::marker::Sync for battersea_kit_conversation::nodes::inline::SignalTapHandler
+impl core::marker::Unpin for battersea_kit_conversation::nodes::inline::SignalTapHandler
+impl core::marker::UnsafeUnpin for battersea_kit_conversation::nodes::inline::SignalTapHandler
+impl core::panic::unwind_safe::RefUnwindSafe for battersea_kit_conversation::nodes::inline::SignalTapHandler
+impl core::panic::unwind_safe::UnwindSafe for battersea_kit_conversation::nodes::inline::SignalTapHandler
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_kit_conversation::nodes::inline::SignalTapHandler where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_kit_conversation::nodes::inline::SignalTapHandler where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<T, U> core::convert::Into<U> for battersea_kit_conversation::nodes::inline::SignalTapHandler where U: core::convert::From<T>
+pub fn battersea_kit_conversation::nodes::inline::SignalTapHandler::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_kit_conversation::nodes::inline::SignalTapHandler where U: core::convert::Into<T>
+pub type battersea_kit_conversation::nodes::inline::SignalTapHandler::Error = never
+pub fn battersea_kit_conversation::nodes::inline::SignalTapHandler::try_from(U) -> core::result::Result<T, never>
+impl<T, U> core::convert::TryInto<U> for battersea_kit_conversation::nodes::inline::SignalTapHandler where U: core::convert::TryFrom<T>
+pub type battersea_kit_conversation::nodes::inline::SignalTapHandler::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_kit_conversation::nodes::inline::SignalTapHandler::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> core::any::Any for battersea_kit_conversation::nodes::inline::SignalTapHandler where T: 'static + ?core::marker::Sized
+pub fn battersea_kit_conversation::nodes::inline::SignalTapHandler::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_kit_conversation::nodes::inline::SignalTapHandler where T: ?core::marker::Sized
+pub fn battersea_kit_conversation::nodes::inline::SignalTapHandler::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_kit_conversation::nodes::inline::SignalTapHandler where T: ?core::marker::Sized
+pub fn battersea_kit_conversation::nodes::inline::SignalTapHandler::borrow_mut(&mut self) -> &mut T
+impl<T> core::convert::From<T> for battersea_kit_conversation::nodes::inline::SignalTapHandler
+pub fn battersea_kit_conversation::nodes::inline::SignalTapHandler::from(T) -> T
+impl<T> typenum::type_operators::Same for battersea_kit_conversation::nodes::inline::SignalTapHandler
+pub type battersea_kit_conversation::nodes::inline::SignalTapHandler::Output = T
+impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_kit_conversation::nodes::inline::SignalTapHandler where T: ?core::marker::Sized
+pub mod battersea_kit_conversation::nodes::sinks
+pub struct battersea_kit_conversation::nodes::sinks::CompactionRequestHandler
+impl<H: battersea_kit_conversation::port::Port> battersea_runtime::handler::NodeHandler<H> for battersea_kit_conversation::nodes::sinks::CompactionRequestHandler
+pub fn battersea_kit_conversation::nodes::sinks::CompactionRequestHandler::execute_sink<'life0, 'life1, 'life2, 'life3, 'life4, 'async_trait>(&'life0 self, &'life1 H, &'life2 mut <H as battersea_runtime::host::ExecutionHost>::State, &'life3 battersea_flow::types::FlowNode, &'life4 str, battersea_runtime::retention::Retained<battersea_runtime::Token>) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<(), <H as battersea_runtime::host::ExecutionHost>::Error>> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait, 'life1: 'async_trait, 'life2: 'async_trait, 'life3: 'async_trait, 'life4: 'async_trait
+pub fn battersea_kit_conversation::nodes::sinks::CompactionRequestHandler::handler_id(&self) -> &'static str
+impl core::marker::Freeze for battersea_kit_conversation::nodes::sinks::CompactionRequestHandler
+impl core::marker::Send for battersea_kit_conversation::nodes::sinks::CompactionRequestHandler
+impl core::marker::Sync for battersea_kit_conversation::nodes::sinks::CompactionRequestHandler
+impl core::marker::Unpin for battersea_kit_conversation::nodes::sinks::CompactionRequestHandler
+impl core::marker::UnsafeUnpin for battersea_kit_conversation::nodes::sinks::CompactionRequestHandler
+impl core::panic::unwind_safe::RefUnwindSafe for battersea_kit_conversation::nodes::sinks::CompactionRequestHandler
+impl core::panic::unwind_safe::UnwindSafe for battersea_kit_conversation::nodes::sinks::CompactionRequestHandler
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_kit_conversation::nodes::sinks::CompactionRequestHandler where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_kit_conversation::nodes::sinks::CompactionRequestHandler where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<T, U> core::convert::Into<U> for battersea_kit_conversation::nodes::sinks::CompactionRequestHandler where U: core::convert::From<T>
+pub fn battersea_kit_conversation::nodes::sinks::CompactionRequestHandler::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_kit_conversation::nodes::sinks::CompactionRequestHandler where U: core::convert::Into<T>
+pub type battersea_kit_conversation::nodes::sinks::CompactionRequestHandler::Error = never
+pub fn battersea_kit_conversation::nodes::sinks::CompactionRequestHandler::try_from(U) -> core::result::Result<T, never>
+impl<T, U> core::convert::TryInto<U> for battersea_kit_conversation::nodes::sinks::CompactionRequestHandler where U: core::convert::TryFrom<T>
+pub type battersea_kit_conversation::nodes::sinks::CompactionRequestHandler::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_kit_conversation::nodes::sinks::CompactionRequestHandler::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> core::any::Any for battersea_kit_conversation::nodes::sinks::CompactionRequestHandler where T: 'static + ?core::marker::Sized
+pub fn battersea_kit_conversation::nodes::sinks::CompactionRequestHandler::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_kit_conversation::nodes::sinks::CompactionRequestHandler where T: ?core::marker::Sized
+pub fn battersea_kit_conversation::nodes::sinks::CompactionRequestHandler::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_kit_conversation::nodes::sinks::CompactionRequestHandler where T: ?core::marker::Sized
+pub fn battersea_kit_conversation::nodes::sinks::CompactionRequestHandler::borrow_mut(&mut self) -> &mut T
+impl<T> core::convert::From<T> for battersea_kit_conversation::nodes::sinks::CompactionRequestHandler
+pub fn battersea_kit_conversation::nodes::sinks::CompactionRequestHandler::from(T) -> T
+impl<T> typenum::type_operators::Same for battersea_kit_conversation::nodes::sinks::CompactionRequestHandler
+pub type battersea_kit_conversation::nodes::sinks::CompactionRequestHandler::Output = T
+impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_kit_conversation::nodes::sinks::CompactionRequestHandler where T: ?core::marker::Sized
+pub struct battersea_kit_conversation::nodes::sinks::MemoryOutputHandler
+impl<H: battersea_kit_conversation::port::Port> battersea_runtime::handler::NodeHandler<H> for battersea_kit_conversation::nodes::sinks::MemoryOutputHandler
+pub fn battersea_kit_conversation::nodes::sinks::MemoryOutputHandler::execute_sink<'life0, 'life1, 'life2, 'life3, 'life4, 'async_trait>(&'life0 self, &'life1 H, &'life2 mut <H as battersea_runtime::host::ExecutionHost>::State, &'life3 battersea_flow::types::FlowNode, &'life4 str, battersea_runtime::retention::Retained<battersea_runtime::Token>) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<(), <H as battersea_runtime::host::ExecutionHost>::Error>> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait, 'life1: 'async_trait, 'life2: 'async_trait, 'life3: 'async_trait, 'life4: 'async_trait
+pub fn battersea_kit_conversation::nodes::sinks::MemoryOutputHandler::handler_id(&self) -> &'static str
+impl core::marker::Freeze for battersea_kit_conversation::nodes::sinks::MemoryOutputHandler
+impl core::marker::Send for battersea_kit_conversation::nodes::sinks::MemoryOutputHandler
+impl core::marker::Sync for battersea_kit_conversation::nodes::sinks::MemoryOutputHandler
+impl core::marker::Unpin for battersea_kit_conversation::nodes::sinks::MemoryOutputHandler
+impl core::marker::UnsafeUnpin for battersea_kit_conversation::nodes::sinks::MemoryOutputHandler
+impl core::panic::unwind_safe::RefUnwindSafe for battersea_kit_conversation::nodes::sinks::MemoryOutputHandler
+impl core::panic::unwind_safe::UnwindSafe for battersea_kit_conversation::nodes::sinks::MemoryOutputHandler
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_kit_conversation::nodes::sinks::MemoryOutputHandler where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_kit_conversation::nodes::sinks::MemoryOutputHandler where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<T, U> core::convert::Into<U> for battersea_kit_conversation::nodes::sinks::MemoryOutputHandler where U: core::convert::From<T>
+pub fn battersea_kit_conversation::nodes::sinks::MemoryOutputHandler::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_kit_conversation::nodes::sinks::MemoryOutputHandler where U: core::convert::Into<T>
+pub type battersea_kit_conversation::nodes::sinks::MemoryOutputHandler::Error = never
+pub fn battersea_kit_conversation::nodes::sinks::MemoryOutputHandler::try_from(U) -> core::result::Result<T, never>
+impl<T, U> core::convert::TryInto<U> for battersea_kit_conversation::nodes::sinks::MemoryOutputHandler where U: core::convert::TryFrom<T>
+pub type battersea_kit_conversation::nodes::sinks::MemoryOutputHandler::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_kit_conversation::nodes::sinks::MemoryOutputHandler::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> core::any::Any for battersea_kit_conversation::nodes::sinks::MemoryOutputHandler where T: 'static + ?core::marker::Sized
+pub fn battersea_kit_conversation::nodes::sinks::MemoryOutputHandler::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_kit_conversation::nodes::sinks::MemoryOutputHandler where T: ?core::marker::Sized
+pub fn battersea_kit_conversation::nodes::sinks::MemoryOutputHandler::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_kit_conversation::nodes::sinks::MemoryOutputHandler where T: ?core::marker::Sized
+pub fn battersea_kit_conversation::nodes::sinks::MemoryOutputHandler::borrow_mut(&mut self) -> &mut T
+impl<T> core::convert::From<T> for battersea_kit_conversation::nodes::sinks::MemoryOutputHandler
+pub fn battersea_kit_conversation::nodes::sinks::MemoryOutputHandler::from(T) -> T
+impl<T> typenum::type_operators::Same for battersea_kit_conversation::nodes::sinks::MemoryOutputHandler
+pub type battersea_kit_conversation::nodes::sinks::MemoryOutputHandler::Output = T
+impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_kit_conversation::nodes::sinks::MemoryOutputHandler where T: ?core::marker::Sized
+pub struct battersea_kit_conversation::nodes::sinks::OutputHandler
+impl<H: battersea_kit_conversation::port::Port> battersea_runtime::handler::NodeHandler<H> for battersea_kit_conversation::nodes::sinks::OutputHandler
+pub fn battersea_kit_conversation::nodes::sinks::OutputHandler::execute_sink<'life0, 'life1, 'life2, 'life3, 'life4, 'async_trait>(&'life0 self, &'life1 H, &'life2 mut <H as battersea_runtime::host::ExecutionHost>::State, &'life3 battersea_flow::types::FlowNode, &'life4 str, battersea_runtime::retention::Retained<battersea_runtime::Token>) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<(), <H as battersea_runtime::host::ExecutionHost>::Error>> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait, 'life1: 'async_trait, 'life2: 'async_trait, 'life3: 'async_trait, 'life4: 'async_trait
+pub fn battersea_kit_conversation::nodes::sinks::OutputHandler::handler_id(&self) -> &'static str
+impl core::marker::Freeze for battersea_kit_conversation::nodes::sinks::OutputHandler
+impl core::marker::Send for battersea_kit_conversation::nodes::sinks::OutputHandler
+impl core::marker::Sync for battersea_kit_conversation::nodes::sinks::OutputHandler
+impl core::marker::Unpin for battersea_kit_conversation::nodes::sinks::OutputHandler
+impl core::marker::UnsafeUnpin for battersea_kit_conversation::nodes::sinks::OutputHandler
+impl core::panic::unwind_safe::RefUnwindSafe for battersea_kit_conversation::nodes::sinks::OutputHandler
+impl core::panic::unwind_safe::UnwindSafe for battersea_kit_conversation::nodes::sinks::OutputHandler
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_kit_conversation::nodes::sinks::OutputHandler where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_kit_conversation::nodes::sinks::OutputHandler where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<T, U> core::convert::Into<U> for battersea_kit_conversation::nodes::sinks::OutputHandler where U: core::convert::From<T>
+pub fn battersea_kit_conversation::nodes::sinks::OutputHandler::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_kit_conversation::nodes::sinks::OutputHandler where U: core::convert::Into<T>
+pub type battersea_kit_conversation::nodes::sinks::OutputHandler::Error = never
+pub fn battersea_kit_conversation::nodes::sinks::OutputHandler::try_from(U) -> core::result::Result<T, never>
+impl<T, U> core::convert::TryInto<U> for battersea_kit_conversation::nodes::sinks::OutputHandler where U: core::convert::TryFrom<T>
+pub type battersea_kit_conversation::nodes::sinks::OutputHandler::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_kit_conversation::nodes::sinks::OutputHandler::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> core::any::Any for battersea_kit_conversation::nodes::sinks::OutputHandler where T: 'static + ?core::marker::Sized
+pub fn battersea_kit_conversation::nodes::sinks::OutputHandler::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_kit_conversation::nodes::sinks::OutputHandler where T: ?core::marker::Sized
+pub fn battersea_kit_conversation::nodes::sinks::OutputHandler::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_kit_conversation::nodes::sinks::OutputHandler where T: ?core::marker::Sized
+pub fn battersea_kit_conversation::nodes::sinks::OutputHandler::borrow_mut(&mut self) -> &mut T
+impl<T> core::convert::From<T> for battersea_kit_conversation::nodes::sinks::OutputHandler
+pub fn battersea_kit_conversation::nodes::sinks::OutputHandler::from(T) -> T
+impl<T> typenum::type_operators::Same for battersea_kit_conversation::nodes::sinks::OutputHandler
+pub type battersea_kit_conversation::nodes::sinks::OutputHandler::Output = T
+impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_kit_conversation::nodes::sinks::OutputHandler where T: ?core::marker::Sized
+pub struct battersea_kit_conversation::nodes::sinks::RefinementOutputHandler
+impl<H: battersea_kit_conversation::port::Port> battersea_runtime::handler::NodeHandler<H> for battersea_kit_conversation::nodes::sinks::RefinementOutputHandler
+pub fn battersea_kit_conversation::nodes::sinks::RefinementOutputHandler::execute_sink<'life0, 'life1, 'life2, 'life3, 'life4, 'async_trait>(&'life0 self, &'life1 H, &'life2 mut <H as battersea_runtime::host::ExecutionHost>::State, &'life3 battersea_flow::types::FlowNode, &'life4 str, battersea_runtime::retention::Retained<battersea_runtime::Token>) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<(), <H as battersea_runtime::host::ExecutionHost>::Error>> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait, 'life1: 'async_trait, 'life2: 'async_trait, 'life3: 'async_trait, 'life4: 'async_trait
+pub fn battersea_kit_conversation::nodes::sinks::RefinementOutputHandler::handler_id(&self) -> &'static str
+impl core::marker::Freeze for battersea_kit_conversation::nodes::sinks::RefinementOutputHandler
+impl core::marker::Send for battersea_kit_conversation::nodes::sinks::RefinementOutputHandler
+impl core::marker::Sync for battersea_kit_conversation::nodes::sinks::RefinementOutputHandler
+impl core::marker::Unpin for battersea_kit_conversation::nodes::sinks::RefinementOutputHandler
+impl core::marker::UnsafeUnpin for battersea_kit_conversation::nodes::sinks::RefinementOutputHandler
+impl core::panic::unwind_safe::RefUnwindSafe for battersea_kit_conversation::nodes::sinks::RefinementOutputHandler
+impl core::panic::unwind_safe::UnwindSafe for battersea_kit_conversation::nodes::sinks::RefinementOutputHandler
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_kit_conversation::nodes::sinks::RefinementOutputHandler where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_kit_conversation::nodes::sinks::RefinementOutputHandler where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<T, U> core::convert::Into<U> for battersea_kit_conversation::nodes::sinks::RefinementOutputHandler where U: core::convert::From<T>
+pub fn battersea_kit_conversation::nodes::sinks::RefinementOutputHandler::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_kit_conversation::nodes::sinks::RefinementOutputHandler where U: core::convert::Into<T>
+pub type battersea_kit_conversation::nodes::sinks::RefinementOutputHandler::Error = never
+pub fn battersea_kit_conversation::nodes::sinks::RefinementOutputHandler::try_from(U) -> core::result::Result<T, never>
+impl<T, U> core::convert::TryInto<U> for battersea_kit_conversation::nodes::sinks::RefinementOutputHandler where U: core::convert::TryFrom<T>
+pub type battersea_kit_conversation::nodes::sinks::RefinementOutputHandler::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_kit_conversation::nodes::sinks::RefinementOutputHandler::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> core::any::Any for battersea_kit_conversation::nodes::sinks::RefinementOutputHandler where T: 'static + ?core::marker::Sized
+pub fn battersea_kit_conversation::nodes::sinks::RefinementOutputHandler::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_kit_conversation::nodes::sinks::RefinementOutputHandler where T: ?core::marker::Sized
+pub fn battersea_kit_conversation::nodes::sinks::RefinementOutputHandler::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_kit_conversation::nodes::sinks::RefinementOutputHandler where T: ?core::marker::Sized
+pub fn battersea_kit_conversation::nodes::sinks::RefinementOutputHandler::borrow_mut(&mut self) -> &mut T
+impl<T> core::convert::From<T> for battersea_kit_conversation::nodes::sinks::RefinementOutputHandler
+pub fn battersea_kit_conversation::nodes::sinks::RefinementOutputHandler::from(T) -> T
+impl<T> typenum::type_operators::Same for battersea_kit_conversation::nodes::sinks::RefinementOutputHandler
+pub type battersea_kit_conversation::nodes::sinks::RefinementOutputHandler::Output = T
+impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_kit_conversation::nodes::sinks::RefinementOutputHandler where T: ?core::marker::Sized
+pub struct battersea_kit_conversation::nodes::sinks::TranscriptOutputHandler
+impl<H: battersea_kit_conversation::port::Port> battersea_runtime::handler::NodeHandler<H> for battersea_kit_conversation::nodes::sinks::TranscriptOutputHandler
+pub fn battersea_kit_conversation::nodes::sinks::TranscriptOutputHandler::execute_sink<'life0, 'life1, 'life2, 'life3, 'life4, 'async_trait>(&'life0 self, &'life1 H, &'life2 mut <H as battersea_runtime::host::ExecutionHost>::State, &'life3 battersea_flow::types::FlowNode, &'life4 str, battersea_runtime::retention::Retained<battersea_runtime::Token>) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<(), <H as battersea_runtime::host::ExecutionHost>::Error>> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait, 'life1: 'async_trait, 'life2: 'async_trait, 'life3: 'async_trait, 'life4: 'async_trait
+pub fn battersea_kit_conversation::nodes::sinks::TranscriptOutputHandler::handler_id(&self) -> &'static str
+impl core::marker::Freeze for battersea_kit_conversation::nodes::sinks::TranscriptOutputHandler
+impl core::marker::Send for battersea_kit_conversation::nodes::sinks::TranscriptOutputHandler
+impl core::marker::Sync for battersea_kit_conversation::nodes::sinks::TranscriptOutputHandler
+impl core::marker::Unpin for battersea_kit_conversation::nodes::sinks::TranscriptOutputHandler
+impl core::marker::UnsafeUnpin for battersea_kit_conversation::nodes::sinks::TranscriptOutputHandler
+impl core::panic::unwind_safe::RefUnwindSafe for battersea_kit_conversation::nodes::sinks::TranscriptOutputHandler
+impl core::panic::unwind_safe::UnwindSafe for battersea_kit_conversation::nodes::sinks::TranscriptOutputHandler
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_kit_conversation::nodes::sinks::TranscriptOutputHandler where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_kit_conversation::nodes::sinks::TranscriptOutputHandler where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<T, U> core::convert::Into<U> for battersea_kit_conversation::nodes::sinks::TranscriptOutputHandler where U: core::convert::From<T>
+pub fn battersea_kit_conversation::nodes::sinks::TranscriptOutputHandler::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_kit_conversation::nodes::sinks::TranscriptOutputHandler where U: core::convert::Into<T>
+pub type battersea_kit_conversation::nodes::sinks::TranscriptOutputHandler::Error = never
+pub fn battersea_kit_conversation::nodes::sinks::TranscriptOutputHandler::try_from(U) -> core::result::Result<T, never>
+impl<T, U> core::convert::TryInto<U> for battersea_kit_conversation::nodes::sinks::TranscriptOutputHandler where U: core::convert::TryFrom<T>
+pub type battersea_kit_conversation::nodes::sinks::TranscriptOutputHandler::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_kit_conversation::nodes::sinks::TranscriptOutputHandler::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> core::any::Any for battersea_kit_conversation::nodes::sinks::TranscriptOutputHandler where T: 'static + ?core::marker::Sized
+pub fn battersea_kit_conversation::nodes::sinks::TranscriptOutputHandler::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_kit_conversation::nodes::sinks::TranscriptOutputHandler where T: ?core::marker::Sized
+pub fn battersea_kit_conversation::nodes::sinks::TranscriptOutputHandler::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_kit_conversation::nodes::sinks::TranscriptOutputHandler where T: ?core::marker::Sized
+pub fn battersea_kit_conversation::nodes::sinks::TranscriptOutputHandler::borrow_mut(&mut self) -> &mut T
+impl<T> core::convert::From<T> for battersea_kit_conversation::nodes::sinks::TranscriptOutputHandler
+pub fn battersea_kit_conversation::nodes::sinks::TranscriptOutputHandler::from(T) -> T
+impl<T> typenum::type_operators::Same for battersea_kit_conversation::nodes::sinks::TranscriptOutputHandler
+pub type battersea_kit_conversation::nodes::sinks::TranscriptOutputHandler::Output = T
+impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_kit_conversation::nodes::sinks::TranscriptOutputHandler where T: ?core::marker::Sized
+pub mod battersea_kit_conversation::nodes::sources
+pub struct battersea_kit_conversation::nodes::sources::MemoryHandler
+impl<H: battersea_kit_conversation::port::Port> battersea_runtime::handler::NodeHandler<H> for battersea_kit_conversation::nodes::sources::MemoryHandler
+pub fn battersea_kit_conversation::nodes::sources::MemoryHandler::handler_id(&self) -> &'static str
+pub fn battersea_kit_conversation::nodes::sources::MemoryHandler::materialize_node<'life0, 'life1, 'life2, 'life3, 'life4, 'life5, 'async_trait>(&'life0 self, &'life1 H, &'life2 mut <H as battersea_runtime::host::ExecutionHost>::State, &'life3 battersea_flow::types::FlowNode, &'life4 battersea_flow::types::FlowNodeDefinition, &'life5 tokio_util::sync::cancellation_token::CancellationToken) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<(), <H as battersea_runtime::host::ExecutionHost>::Error>> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait, 'life1: 'async_trait, 'life2: 'async_trait, 'life3: 'async_trait, 'life4: 'async_trait, 'life5: 'async_trait
+impl core::marker::Freeze for battersea_kit_conversation::nodes::sources::MemoryHandler
+impl core::marker::Send for battersea_kit_conversation::nodes::sources::MemoryHandler
+impl core::marker::Sync for battersea_kit_conversation::nodes::sources::MemoryHandler
+impl core::marker::Unpin for battersea_kit_conversation::nodes::sources::MemoryHandler
+impl core::marker::UnsafeUnpin for battersea_kit_conversation::nodes::sources::MemoryHandler
+impl core::panic::unwind_safe::RefUnwindSafe for battersea_kit_conversation::nodes::sources::MemoryHandler
+impl core::panic::unwind_safe::UnwindSafe for battersea_kit_conversation::nodes::sources::MemoryHandler
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_kit_conversation::nodes::sources::MemoryHandler where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_kit_conversation::nodes::sources::MemoryHandler where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<T, U> core::convert::Into<U> for battersea_kit_conversation::nodes::sources::MemoryHandler where U: core::convert::From<T>
+pub fn battersea_kit_conversation::nodes::sources::MemoryHandler::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_kit_conversation::nodes::sources::MemoryHandler where U: core::convert::Into<T>
+pub type battersea_kit_conversation::nodes::sources::MemoryHandler::Error = never
+pub fn battersea_kit_conversation::nodes::sources::MemoryHandler::try_from(U) -> core::result::Result<T, never>
+impl<T, U> core::convert::TryInto<U> for battersea_kit_conversation::nodes::sources::MemoryHandler where U: core::convert::TryFrom<T>
+pub type battersea_kit_conversation::nodes::sources::MemoryHandler::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_kit_conversation::nodes::sources::MemoryHandler::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> core::any::Any for battersea_kit_conversation::nodes::sources::MemoryHandler where T: 'static + ?core::marker::Sized
+pub fn battersea_kit_conversation::nodes::sources::MemoryHandler::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_kit_conversation::nodes::sources::MemoryHandler where T: ?core::marker::Sized
+pub fn battersea_kit_conversation::nodes::sources::MemoryHandler::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_kit_conversation::nodes::sources::MemoryHandler where T: ?core::marker::Sized
+pub fn battersea_kit_conversation::nodes::sources::MemoryHandler::borrow_mut(&mut self) -> &mut T
+impl<T> core::convert::From<T> for battersea_kit_conversation::nodes::sources::MemoryHandler
+pub fn battersea_kit_conversation::nodes::sources::MemoryHandler::from(T) -> T
+impl<T> typenum::type_operators::Same for battersea_kit_conversation::nodes::sources::MemoryHandler
+pub type battersea_kit_conversation::nodes::sources::MemoryHandler::Output = T
+impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_kit_conversation::nodes::sources::MemoryHandler where T: ?core::marker::Sized
+pub struct battersea_kit_conversation::nodes::sources::PromptHandler
+impl<H: battersea_kit_conversation::port::Port> battersea_runtime::handler::NodeHandler<H> for battersea_kit_conversation::nodes::sources::PromptHandler
+pub fn battersea_kit_conversation::nodes::sources::PromptHandler::execute_node<'life0, 'life1, 'life2, 'life3, 'life4, 'life5, 'life6, 'async_trait>(&'life0 self, &'life1 H, &'life2 mut <H as battersea_runtime::host::ExecutionHost>::State, &'life3 battersea_flow::types::FlowNode, &'life4 battersea_flow::types::FlowNodeDefinition, core::option::Option<&'life5 std::collections::hash::map::HashMap<alloc::string::String, serde_json::value::Value>>, &'life6 tokio_util::sync::cancellation_token::CancellationToken) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<(), <H as battersea_runtime::host::ExecutionHost>::Error>> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait, 'life1: 'async_trait, 'life2: 'async_trait, 'life3: 'async_trait, 'life4: 'async_trait, 'life5: 'async_trait, 'life6: 'async_trait
+pub fn battersea_kit_conversation::nodes::sources::PromptHandler::handler_id(&self) -> &'static str
+impl core::marker::Freeze for battersea_kit_conversation::nodes::sources::PromptHandler
+impl core::marker::Send for battersea_kit_conversation::nodes::sources::PromptHandler
+impl core::marker::Sync for battersea_kit_conversation::nodes::sources::PromptHandler
+impl core::marker::Unpin for battersea_kit_conversation::nodes::sources::PromptHandler
+impl core::marker::UnsafeUnpin for battersea_kit_conversation::nodes::sources::PromptHandler
+impl core::panic::unwind_safe::RefUnwindSafe for battersea_kit_conversation::nodes::sources::PromptHandler
+impl core::panic::unwind_safe::UnwindSafe for battersea_kit_conversation::nodes::sources::PromptHandler
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_kit_conversation::nodes::sources::PromptHandler where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_kit_conversation::nodes::sources::PromptHandler where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<T, U> core::convert::Into<U> for battersea_kit_conversation::nodes::sources::PromptHandler where U: core::convert::From<T>
+pub fn battersea_kit_conversation::nodes::sources::PromptHandler::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_kit_conversation::nodes::sources::PromptHandler where U: core::convert::Into<T>
+pub type battersea_kit_conversation::nodes::sources::PromptHandler::Error = never
+pub fn battersea_kit_conversation::nodes::sources::PromptHandler::try_from(U) -> core::result::Result<T, never>
+impl<T, U> core::convert::TryInto<U> for battersea_kit_conversation::nodes::sources::PromptHandler where U: core::convert::TryFrom<T>
+pub type battersea_kit_conversation::nodes::sources::PromptHandler::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_kit_conversation::nodes::sources::PromptHandler::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> core::any::Any for battersea_kit_conversation::nodes::sources::PromptHandler where T: 'static + ?core::marker::Sized
+pub fn battersea_kit_conversation::nodes::sources::PromptHandler::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_kit_conversation::nodes::sources::PromptHandler where T: ?core::marker::Sized
+pub fn battersea_kit_conversation::nodes::sources::PromptHandler::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_kit_conversation::nodes::sources::PromptHandler where T: ?core::marker::Sized
+pub fn battersea_kit_conversation::nodes::sources::PromptHandler::borrow_mut(&mut self) -> &mut T
+impl<T> core::convert::From<T> for battersea_kit_conversation::nodes::sources::PromptHandler
+pub fn battersea_kit_conversation::nodes::sources::PromptHandler::from(T) -> T
+impl<T> typenum::type_operators::Same for battersea_kit_conversation::nodes::sources::PromptHandler
+pub type battersea_kit_conversation::nodes::sources::PromptHandler::Output = T
+impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_kit_conversation::nodes::sources::PromptHandler where T: ?core::marker::Sized
+pub struct battersea_kit_conversation::nodes::sources::RefinementSourceHandler
+impl<H: battersea_kit_conversation::port::Port> battersea_runtime::handler::NodeHandler<H> for battersea_kit_conversation::nodes::sources::RefinementSourceHandler
+pub fn battersea_kit_conversation::nodes::sources::RefinementSourceHandler::execute_node<'life0, 'life1, 'life2, 'life3, 'life4, 'life5, 'life6, 'async_trait>(&'life0 self, &'life1 H, &'life2 mut <H as battersea_runtime::host::ExecutionHost>::State, &'life3 battersea_flow::types::FlowNode, &'life4 battersea_flow::types::FlowNodeDefinition, core::option::Option<&'life5 std::collections::hash::map::HashMap<alloc::string::String, serde_json::value::Value>>, &'life6 tokio_util::sync::cancellation_token::CancellationToken) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<(), <H as battersea_runtime::host::ExecutionHost>::Error>> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait, 'life1: 'async_trait, 'life2: 'async_trait, 'life3: 'async_trait, 'life4: 'async_trait, 'life5: 'async_trait, 'life6: 'async_trait
+pub fn battersea_kit_conversation::nodes::sources::RefinementSourceHandler::handler_id(&self) -> &'static str
+impl core::marker::Freeze for battersea_kit_conversation::nodes::sources::RefinementSourceHandler
+impl core::marker::Send for battersea_kit_conversation::nodes::sources::RefinementSourceHandler
+impl core::marker::Sync for battersea_kit_conversation::nodes::sources::RefinementSourceHandler
+impl core::marker::Unpin for battersea_kit_conversation::nodes::sources::RefinementSourceHandler
+impl core::marker::UnsafeUnpin for battersea_kit_conversation::nodes::sources::RefinementSourceHandler
+impl core::panic::unwind_safe::RefUnwindSafe for battersea_kit_conversation::nodes::sources::RefinementSourceHandler
+impl core::panic::unwind_safe::UnwindSafe for battersea_kit_conversation::nodes::sources::RefinementSourceHandler
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_kit_conversation::nodes::sources::RefinementSourceHandler where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_kit_conversation::nodes::sources::RefinementSourceHandler where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<T, U> core::convert::Into<U> for battersea_kit_conversation::nodes::sources::RefinementSourceHandler where U: core::convert::From<T>
+pub fn battersea_kit_conversation::nodes::sources::RefinementSourceHandler::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_kit_conversation::nodes::sources::RefinementSourceHandler where U: core::convert::Into<T>
+pub type battersea_kit_conversation::nodes::sources::RefinementSourceHandler::Error = never
+pub fn battersea_kit_conversation::nodes::sources::RefinementSourceHandler::try_from(U) -> core::result::Result<T, never>
+impl<T, U> core::convert::TryInto<U> for battersea_kit_conversation::nodes::sources::RefinementSourceHandler where U: core::convert::TryFrom<T>
+pub type battersea_kit_conversation::nodes::sources::RefinementSourceHandler::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_kit_conversation::nodes::sources::RefinementSourceHandler::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> core::any::Any for battersea_kit_conversation::nodes::sources::RefinementSourceHandler where T: 'static + ?core::marker::Sized
+pub fn battersea_kit_conversation::nodes::sources::RefinementSourceHandler::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_kit_conversation::nodes::sources::RefinementSourceHandler where T: ?core::marker::Sized
+pub fn battersea_kit_conversation::nodes::sources::RefinementSourceHandler::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_kit_conversation::nodes::sources::RefinementSourceHandler where T: ?core::marker::Sized
+pub fn battersea_kit_conversation::nodes::sources::RefinementSourceHandler::borrow_mut(&mut self) -> &mut T
+impl<T> core::convert::From<T> for battersea_kit_conversation::nodes::sources::RefinementSourceHandler
+pub fn battersea_kit_conversation::nodes::sources::RefinementSourceHandler::from(T) -> T
+impl<T> typenum::type_operators::Same for battersea_kit_conversation::nodes::sources::RefinementSourceHandler
+pub type battersea_kit_conversation::nodes::sources::RefinementSourceHandler::Output = T
+impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_kit_conversation::nodes::sources::RefinementSourceHandler where T: ?core::marker::Sized
+pub struct battersea_kit_conversation::nodes::sources::StaticPromptHandler
+impl<H: battersea_kit_conversation::port::Port> battersea_runtime::handler::NodeHandler<H> for battersea_kit_conversation::nodes::sources::StaticPromptHandler
+pub fn battersea_kit_conversation::nodes::sources::StaticPromptHandler::handler_id(&self) -> &'static str
+pub fn battersea_kit_conversation::nodes::sources::StaticPromptHandler::materialize_node<'life0, 'life1, 'life2, 'life3, 'life4, 'life5, 'async_trait>(&'life0 self, &'life1 H, &'life2 mut <H as battersea_runtime::host::ExecutionHost>::State, &'life3 battersea_flow::types::FlowNode, &'life4 battersea_flow::types::FlowNodeDefinition, &'life5 tokio_util::sync::cancellation_token::CancellationToken) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<(), <H as battersea_runtime::host::ExecutionHost>::Error>> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait, 'life1: 'async_trait, 'life2: 'async_trait, 'life3: 'async_trait, 'life4: 'async_trait, 'life5: 'async_trait
+impl core::marker::Freeze for battersea_kit_conversation::nodes::sources::StaticPromptHandler
+impl core::marker::Send for battersea_kit_conversation::nodes::sources::StaticPromptHandler
+impl core::marker::Sync for battersea_kit_conversation::nodes::sources::StaticPromptHandler
+impl core::marker::Unpin for battersea_kit_conversation::nodes::sources::StaticPromptHandler
+impl core::marker::UnsafeUnpin for battersea_kit_conversation::nodes::sources::StaticPromptHandler
+impl core::panic::unwind_safe::RefUnwindSafe for battersea_kit_conversation::nodes::sources::StaticPromptHandler
+impl core::panic::unwind_safe::UnwindSafe for battersea_kit_conversation::nodes::sources::StaticPromptHandler
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_kit_conversation::nodes::sources::StaticPromptHandler where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_kit_conversation::nodes::sources::StaticPromptHandler where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<T, U> core::convert::Into<U> for battersea_kit_conversation::nodes::sources::StaticPromptHandler where U: core::convert::From<T>
+pub fn battersea_kit_conversation::nodes::sources::StaticPromptHandler::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_kit_conversation::nodes::sources::StaticPromptHandler where U: core::convert::Into<T>
+pub type battersea_kit_conversation::nodes::sources::StaticPromptHandler::Error = never
+pub fn battersea_kit_conversation::nodes::sources::StaticPromptHandler::try_from(U) -> core::result::Result<T, never>
+impl<T, U> core::convert::TryInto<U> for battersea_kit_conversation::nodes::sources::StaticPromptHandler where U: core::convert::TryFrom<T>
+pub type battersea_kit_conversation::nodes::sources::StaticPromptHandler::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_kit_conversation::nodes::sources::StaticPromptHandler::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> core::any::Any for battersea_kit_conversation::nodes::sources::StaticPromptHandler where T: 'static + ?core::marker::Sized
+pub fn battersea_kit_conversation::nodes::sources::StaticPromptHandler::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_kit_conversation::nodes::sources::StaticPromptHandler where T: ?core::marker::Sized
+pub fn battersea_kit_conversation::nodes::sources::StaticPromptHandler::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_kit_conversation::nodes::sources::StaticPromptHandler where T: ?core::marker::Sized
+pub fn battersea_kit_conversation::nodes::sources::StaticPromptHandler::borrow_mut(&mut self) -> &mut T
+impl<T> core::convert::From<T> for battersea_kit_conversation::nodes::sources::StaticPromptHandler
+pub fn battersea_kit_conversation::nodes::sources::StaticPromptHandler::from(T) -> T
+impl<T> typenum::type_operators::Same for battersea_kit_conversation::nodes::sources::StaticPromptHandler
+pub type battersea_kit_conversation::nodes::sources::StaticPromptHandler::Output = T
+impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_kit_conversation::nodes::sources::StaticPromptHandler where T: ?core::marker::Sized
+pub struct battersea_kit_conversation::nodes::sources::TranscriptHandler
+impl<H: battersea_kit_conversation::port::Port> battersea_runtime::handler::NodeHandler<H> for battersea_kit_conversation::nodes::sources::TranscriptHandler
+pub fn battersea_kit_conversation::nodes::sources::TranscriptHandler::handler_id(&self) -> &'static str
+pub fn battersea_kit_conversation::nodes::sources::TranscriptHandler::materialize_node<'life0, 'life1, 'life2, 'life3, 'life4, 'life5, 'async_trait>(&'life0 self, &'life1 H, &'life2 mut <H as battersea_runtime::host::ExecutionHost>::State, &'life3 battersea_flow::types::FlowNode, &'life4 battersea_flow::types::FlowNodeDefinition, &'life5 tokio_util::sync::cancellation_token::CancellationToken) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<(), <H as battersea_runtime::host::ExecutionHost>::Error>> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait, 'life1: 'async_trait, 'life2: 'async_trait, 'life3: 'async_trait, 'life4: 'async_trait, 'life5: 'async_trait
+impl core::marker::Freeze for battersea_kit_conversation::nodes::sources::TranscriptHandler
+impl core::marker::Send for battersea_kit_conversation::nodes::sources::TranscriptHandler
+impl core::marker::Sync for battersea_kit_conversation::nodes::sources::TranscriptHandler
+impl core::marker::Unpin for battersea_kit_conversation::nodes::sources::TranscriptHandler
+impl core::marker::UnsafeUnpin for battersea_kit_conversation::nodes::sources::TranscriptHandler
+impl core::panic::unwind_safe::RefUnwindSafe for battersea_kit_conversation::nodes::sources::TranscriptHandler
+impl core::panic::unwind_safe::UnwindSafe for battersea_kit_conversation::nodes::sources::TranscriptHandler
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_kit_conversation::nodes::sources::TranscriptHandler where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_kit_conversation::nodes::sources::TranscriptHandler where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<T, U> core::convert::Into<U> for battersea_kit_conversation::nodes::sources::TranscriptHandler where U: core::convert::From<T>
+pub fn battersea_kit_conversation::nodes::sources::TranscriptHandler::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_kit_conversation::nodes::sources::TranscriptHandler where U: core::convert::Into<T>
+pub type battersea_kit_conversation::nodes::sources::TranscriptHandler::Error = never
+pub fn battersea_kit_conversation::nodes::sources::TranscriptHandler::try_from(U) -> core::result::Result<T, never>
+impl<T, U> core::convert::TryInto<U> for battersea_kit_conversation::nodes::sources::TranscriptHandler where U: core::convert::TryFrom<T>
+pub type battersea_kit_conversation::nodes::sources::TranscriptHandler::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_kit_conversation::nodes::sources::TranscriptHandler::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> core::any::Any for battersea_kit_conversation::nodes::sources::TranscriptHandler where T: 'static + ?core::marker::Sized
+pub fn battersea_kit_conversation::nodes::sources::TranscriptHandler::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_kit_conversation::nodes::sources::TranscriptHandler where T: ?core::marker::Sized
+pub fn battersea_kit_conversation::nodes::sources::TranscriptHandler::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_kit_conversation::nodes::sources::TranscriptHandler where T: ?core::marker::Sized
+pub fn battersea_kit_conversation::nodes::sources::TranscriptHandler::borrow_mut(&mut self) -> &mut T
+impl<T> core::convert::From<T> for battersea_kit_conversation::nodes::sources::TranscriptHandler
+pub fn battersea_kit_conversation::nodes::sources::TranscriptHandler::from(T) -> T
+impl<T> typenum::type_operators::Same for battersea_kit_conversation::nodes::sources::TranscriptHandler
+pub type battersea_kit_conversation::nodes::sources::TranscriptHandler::Output = T
+impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_kit_conversation::nodes::sources::TranscriptHandler where T: ?core::marker::Sized
+pub async fn battersea_kit_conversation::nodes::sources::fit<X: core::clone::Clone>(&dyn battersea_model::adapter::EngineAdapter, &[battersea_kit_conversation::Turn<X>], u64) -> core::result::Result<(alloc::vec::Vec<battersea_kit_conversation::Turn<X>>, u64), battersea_model::adapter::error::EngineAdapterRequestError>
+pub struct battersea_kit_conversation::nodes::BufferHandler
+impl<H: battersea_kit_conversation::port::Port> battersea_runtime::handler::NodeHandler<H> for battersea_kit_conversation::nodes::inline::BufferHandler
+pub fn battersea_kit_conversation::nodes::inline::BufferHandler::execute_node<'life0, 'life1, 'life2, 'life3, 'life4, 'life5, 'life6, 'async_trait>(&'life0 self, &'life1 H, &'life2 mut <H as battersea_runtime::host::ExecutionHost>::State, &'life3 battersea_flow::types::FlowNode, &'life4 battersea_flow::types::FlowNodeDefinition, core::option::Option<&'life5 std::collections::hash::map::HashMap<alloc::string::String, serde_json::value::Value>>, &'life6 tokio_util::sync::cancellation_token::CancellationToken) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<(), <H as battersea_runtime::host::ExecutionHost>::Error>> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait, 'life1: 'async_trait, 'life2: 'async_trait, 'life3: 'async_trait, 'life4: 'async_trait, 'life5: 'async_trait, 'life6: 'async_trait
+pub fn battersea_kit_conversation::nodes::inline::BufferHandler::handler_id(&self) -> &'static str
+pub fn battersea_kit_conversation::nodes::inline::BufferHandler::receive_input_token<'life0, 'life1, 'life2, 'life3, 'life4, 'life5, 'life6, 'life7, 'async_trait>(&'life0 self, &'life1 H, &'life2 mut <H as battersea_runtime::host::ExecutionHost>::State, &'life3 battersea_flow::types::FlowNode, &'life4 battersea_flow::types::FlowNodeDefinition, &'life5 str, &'life6 battersea_runtime::Token, &'life7 tokio_util::sync::cancellation_token::CancellationToken) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<(), <H as battersea_runtime::host::ExecutionHost>::Error>> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait, 'life1: 'async_trait, 'life2: 'async_trait, 'life3: 'async_trait, 'life4: 'async_trait, 'life5: 'async_trait, 'life6: 'async_trait, 'life7: 'async_trait
+impl core::marker::Freeze for battersea_kit_conversation::nodes::inline::BufferHandler
+impl core::marker::Send for battersea_kit_conversation::nodes::inline::BufferHandler
+impl core::marker::Sync for battersea_kit_conversation::nodes::inline::BufferHandler
+impl core::marker::Unpin for battersea_kit_conversation::nodes::inline::BufferHandler
+impl core::marker::UnsafeUnpin for battersea_kit_conversation::nodes::inline::BufferHandler
+impl core::panic::unwind_safe::RefUnwindSafe for battersea_kit_conversation::nodes::inline::BufferHandler
+impl core::panic::unwind_safe::UnwindSafe for battersea_kit_conversation::nodes::inline::BufferHandler
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_kit_conversation::nodes::inline::BufferHandler where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_kit_conversation::nodes::inline::BufferHandler where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<T, U> core::convert::Into<U> for battersea_kit_conversation::nodes::inline::BufferHandler where U: core::convert::From<T>
+pub fn battersea_kit_conversation::nodes::inline::BufferHandler::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_kit_conversation::nodes::inline::BufferHandler where U: core::convert::Into<T>
+pub type battersea_kit_conversation::nodes::inline::BufferHandler::Error = never
+pub fn battersea_kit_conversation::nodes::inline::BufferHandler::try_from(U) -> core::result::Result<T, never>
+impl<T, U> core::convert::TryInto<U> for battersea_kit_conversation::nodes::inline::BufferHandler where U: core::convert::TryFrom<T>
+pub type battersea_kit_conversation::nodes::inline::BufferHandler::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_kit_conversation::nodes::inline::BufferHandler::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> core::any::Any for battersea_kit_conversation::nodes::inline::BufferHandler where T: 'static + ?core::marker::Sized
+pub fn battersea_kit_conversation::nodes::inline::BufferHandler::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_kit_conversation::nodes::inline::BufferHandler where T: ?core::marker::Sized
+pub fn battersea_kit_conversation::nodes::inline::BufferHandler::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_kit_conversation::nodes::inline::BufferHandler where T: ?core::marker::Sized
+pub fn battersea_kit_conversation::nodes::inline::BufferHandler::borrow_mut(&mut self) -> &mut T
+impl<T> core::convert::From<T> for battersea_kit_conversation::nodes::inline::BufferHandler
+pub fn battersea_kit_conversation::nodes::inline::BufferHandler::from(T) -> T
+impl<T> typenum::type_operators::Same for battersea_kit_conversation::nodes::inline::BufferHandler
+pub type battersea_kit_conversation::nodes::inline::BufferHandler::Output = T
+impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_kit_conversation::nodes::inline::BufferHandler where T: ?core::marker::Sized
+pub struct battersea_kit_conversation::nodes::ChatHandler
+impl<H: battersea_kit_conversation::port::Port> battersea_runtime::handler::NodeHandler<H> for battersea_kit_conversation::nodes::chat::ChatHandler
+pub fn battersea_kit_conversation::nodes::chat::ChatHandler::execute_node<'life0, 'life1, 'life2, 'life3, 'life4, 'life5, 'life6, 'async_trait>(&'life0 self, &'life1 H, &'life2 mut <H as battersea_runtime::host::ExecutionHost>::State, &'life3 battersea_flow::types::FlowNode, &'life4 battersea_flow::types::FlowNodeDefinition, core::option::Option<&'life5 std::collections::hash::map::HashMap<alloc::string::String, serde_json::value::Value>>, &'life6 tokio_util::sync::cancellation_token::CancellationToken) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<(), <H as battersea_runtime::host::ExecutionHost>::Error>> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait, 'life1: 'async_trait, 'life2: 'async_trait, 'life3: 'async_trait, 'life4: 'async_trait, 'life5: 'async_trait, 'life6: 'async_trait
+pub fn battersea_kit_conversation::nodes::chat::ChatHandler::handler_id(&self) -> &'static str
+pub fn battersea_kit_conversation::nodes::chat::ChatHandler::receive_provider_event<'life0, 'life1, 'life2, 'life3, 'life4, 'life5, 'life6, 'async_trait>(&'life0 self, &'life1 H, &'life2 mut <H as battersea_runtime::host::ExecutionHost>::State, &'life3 battersea_flow::types::FlowNode, &'life4 battersea_flow::types::FlowNodeDefinition, &'life5 serde_json::value::Value, &'life6 tokio_util::sync::cancellation_token::CancellationToken) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<(), <H as battersea_runtime::host::ExecutionHost>::Error>> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait, 'life1: 'async_trait, 'life2: 'async_trait, 'life3: 'async_trait, 'life4: 'async_trait, 'life5: 'async_trait, 'life6: 'async_trait
+impl core::marker::Freeze for battersea_kit_conversation::nodes::chat::ChatHandler
+impl core::marker::Send for battersea_kit_conversation::nodes::chat::ChatHandler
+impl core::marker::Sync for battersea_kit_conversation::nodes::chat::ChatHandler
+impl core::marker::Unpin for battersea_kit_conversation::nodes::chat::ChatHandler
+impl core::marker::UnsafeUnpin for battersea_kit_conversation::nodes::chat::ChatHandler
+impl core::panic::unwind_safe::RefUnwindSafe for battersea_kit_conversation::nodes::chat::ChatHandler
+impl core::panic::unwind_safe::UnwindSafe for battersea_kit_conversation::nodes::chat::ChatHandler
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_kit_conversation::nodes::chat::ChatHandler where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_kit_conversation::nodes::chat::ChatHandler where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<T, U> core::convert::Into<U> for battersea_kit_conversation::nodes::chat::ChatHandler where U: core::convert::From<T>
+pub fn battersea_kit_conversation::nodes::chat::ChatHandler::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_kit_conversation::nodes::chat::ChatHandler where U: core::convert::Into<T>
+pub type battersea_kit_conversation::nodes::chat::ChatHandler::Error = never
+pub fn battersea_kit_conversation::nodes::chat::ChatHandler::try_from(U) -> core::result::Result<T, never>
+impl<T, U> core::convert::TryInto<U> for battersea_kit_conversation::nodes::chat::ChatHandler where U: core::convert::TryFrom<T>
+pub type battersea_kit_conversation::nodes::chat::ChatHandler::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_kit_conversation::nodes::chat::ChatHandler::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> core::any::Any for battersea_kit_conversation::nodes::chat::ChatHandler where T: 'static + ?core::marker::Sized
+pub fn battersea_kit_conversation::nodes::chat::ChatHandler::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_kit_conversation::nodes::chat::ChatHandler where T: ?core::marker::Sized
+pub fn battersea_kit_conversation::nodes::chat::ChatHandler::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_kit_conversation::nodes::chat::ChatHandler where T: ?core::marker::Sized
+pub fn battersea_kit_conversation::nodes::chat::ChatHandler::borrow_mut(&mut self) -> &mut T
+impl<T> core::convert::From<T> for battersea_kit_conversation::nodes::chat::ChatHandler
+pub fn battersea_kit_conversation::nodes::chat::ChatHandler::from(T) -> T
+impl<T> typenum::type_operators::Same for battersea_kit_conversation::nodes::chat::ChatHandler
+pub type battersea_kit_conversation::nodes::chat::ChatHandler::Output = T
+impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_kit_conversation::nodes::chat::ChatHandler where T: ?core::marker::Sized
+pub struct battersea_kit_conversation::nodes::CompactionParserHandler
+impl<H: battersea_kit_conversation::port::Port> battersea_runtime::handler::NodeHandler<H> for battersea_kit_conversation::nodes::inline::CompactionParserHandler
+pub fn battersea_kit_conversation::nodes::inline::CompactionParserHandler::execute_node<'life0, 'life1, 'life2, 'life3, 'life4, 'life5, 'life6, 'async_trait>(&'life0 self, &'life1 H, &'life2 mut <H as battersea_runtime::host::ExecutionHost>::State, &'life3 battersea_flow::types::FlowNode, &'life4 battersea_flow::types::FlowNodeDefinition, core::option::Option<&'life5 std::collections::hash::map::HashMap<alloc::string::String, serde_json::value::Value>>, &'life6 tokio_util::sync::cancellation_token::CancellationToken) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<(), <H as battersea_runtime::host::ExecutionHost>::Error>> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait, 'life1: 'async_trait, 'life2: 'async_trait, 'life3: 'async_trait, 'life4: 'async_trait, 'life5: 'async_trait, 'life6: 'async_trait
+pub fn battersea_kit_conversation::nodes::inline::CompactionParserHandler::handler_id(&self) -> &'static str
+impl core::marker::Freeze for battersea_kit_conversation::nodes::inline::CompactionParserHandler
+impl core::marker::Send for battersea_kit_conversation::nodes::inline::CompactionParserHandler
+impl core::marker::Sync for battersea_kit_conversation::nodes::inline::CompactionParserHandler
+impl core::marker::Unpin for battersea_kit_conversation::nodes::inline::CompactionParserHandler
+impl core::marker::UnsafeUnpin for battersea_kit_conversation::nodes::inline::CompactionParserHandler
+impl core::panic::unwind_safe::RefUnwindSafe for battersea_kit_conversation::nodes::inline::CompactionParserHandler
+impl core::panic::unwind_safe::UnwindSafe for battersea_kit_conversation::nodes::inline::CompactionParserHandler
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_kit_conversation::nodes::inline::CompactionParserHandler where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_kit_conversation::nodes::inline::CompactionParserHandler where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<T, U> core::convert::Into<U> for battersea_kit_conversation::nodes::inline::CompactionParserHandler where U: core::convert::From<T>
+pub fn battersea_kit_conversation::nodes::inline::CompactionParserHandler::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_kit_conversation::nodes::inline::CompactionParserHandler where U: core::convert::Into<T>
+pub type battersea_kit_conversation::nodes::inline::CompactionParserHandler::Error = never
+pub fn battersea_kit_conversation::nodes::inline::CompactionParserHandler::try_from(U) -> core::result::Result<T, never>
+impl<T, U> core::convert::TryInto<U> for battersea_kit_conversation::nodes::inline::CompactionParserHandler where U: core::convert::TryFrom<T>
+pub type battersea_kit_conversation::nodes::inline::CompactionParserHandler::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_kit_conversation::nodes::inline::CompactionParserHandler::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> core::any::Any for battersea_kit_conversation::nodes::inline::CompactionParserHandler where T: 'static + ?core::marker::Sized
+pub fn battersea_kit_conversation::nodes::inline::CompactionParserHandler::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_kit_conversation::nodes::inline::CompactionParserHandler where T: ?core::marker::Sized
+pub fn battersea_kit_conversation::nodes::inline::CompactionParserHandler::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_kit_conversation::nodes::inline::CompactionParserHandler where T: ?core::marker::Sized
+pub fn battersea_kit_conversation::nodes::inline::CompactionParserHandler::borrow_mut(&mut self) -> &mut T
+impl<T> core::convert::From<T> for battersea_kit_conversation::nodes::inline::CompactionParserHandler
+pub fn battersea_kit_conversation::nodes::inline::CompactionParserHandler::from(T) -> T
+impl<T> typenum::type_operators::Same for battersea_kit_conversation::nodes::inline::CompactionParserHandler
+pub type battersea_kit_conversation::nodes::inline::CompactionParserHandler::Output = T
+impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_kit_conversation::nodes::inline::CompactionParserHandler where T: ?core::marker::Sized
+pub struct battersea_kit_conversation::nodes::CompactionRequestHandler
+impl<H: battersea_kit_conversation::port::Port> battersea_runtime::handler::NodeHandler<H> for battersea_kit_conversation::nodes::sinks::CompactionRequestHandler
+pub fn battersea_kit_conversation::nodes::sinks::CompactionRequestHandler::execute_sink<'life0, 'life1, 'life2, 'life3, 'life4, 'async_trait>(&'life0 self, &'life1 H, &'life2 mut <H as battersea_runtime::host::ExecutionHost>::State, &'life3 battersea_flow::types::FlowNode, &'life4 str, battersea_runtime::retention::Retained<battersea_runtime::Token>) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<(), <H as battersea_runtime::host::ExecutionHost>::Error>> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait, 'life1: 'async_trait, 'life2: 'async_trait, 'life3: 'async_trait, 'life4: 'async_trait
+pub fn battersea_kit_conversation::nodes::sinks::CompactionRequestHandler::handler_id(&self) -> &'static str
+impl core::marker::Freeze for battersea_kit_conversation::nodes::sinks::CompactionRequestHandler
+impl core::marker::Send for battersea_kit_conversation::nodes::sinks::CompactionRequestHandler
+impl core::marker::Sync for battersea_kit_conversation::nodes::sinks::CompactionRequestHandler
+impl core::marker::Unpin for battersea_kit_conversation::nodes::sinks::CompactionRequestHandler
+impl core::marker::UnsafeUnpin for battersea_kit_conversation::nodes::sinks::CompactionRequestHandler
+impl core::panic::unwind_safe::RefUnwindSafe for battersea_kit_conversation::nodes::sinks::CompactionRequestHandler
+impl core::panic::unwind_safe::UnwindSafe for battersea_kit_conversation::nodes::sinks::CompactionRequestHandler
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_kit_conversation::nodes::sinks::CompactionRequestHandler where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_kit_conversation::nodes::sinks::CompactionRequestHandler where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<T, U> core::convert::Into<U> for battersea_kit_conversation::nodes::sinks::CompactionRequestHandler where U: core::convert::From<T>
+pub fn battersea_kit_conversation::nodes::sinks::CompactionRequestHandler::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_kit_conversation::nodes::sinks::CompactionRequestHandler where U: core::convert::Into<T>
+pub type battersea_kit_conversation::nodes::sinks::CompactionRequestHandler::Error = never
+pub fn battersea_kit_conversation::nodes::sinks::CompactionRequestHandler::try_from(U) -> core::result::Result<T, never>
+impl<T, U> core::convert::TryInto<U> for battersea_kit_conversation::nodes::sinks::CompactionRequestHandler where U: core::convert::TryFrom<T>
+pub type battersea_kit_conversation::nodes::sinks::CompactionRequestHandler::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_kit_conversation::nodes::sinks::CompactionRequestHandler::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> core::any::Any for battersea_kit_conversation::nodes::sinks::CompactionRequestHandler where T: 'static + ?core::marker::Sized
+pub fn battersea_kit_conversation::nodes::sinks::CompactionRequestHandler::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_kit_conversation::nodes::sinks::CompactionRequestHandler where T: ?core::marker::Sized
+pub fn battersea_kit_conversation::nodes::sinks::CompactionRequestHandler::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_kit_conversation::nodes::sinks::CompactionRequestHandler where T: ?core::marker::Sized
+pub fn battersea_kit_conversation::nodes::sinks::CompactionRequestHandler::borrow_mut(&mut self) -> &mut T
+impl<T> core::convert::From<T> for battersea_kit_conversation::nodes::sinks::CompactionRequestHandler
+pub fn battersea_kit_conversation::nodes::sinks::CompactionRequestHandler::from(T) -> T
+impl<T> typenum::type_operators::Same for battersea_kit_conversation::nodes::sinks::CompactionRequestHandler
+pub type battersea_kit_conversation::nodes::sinks::CompactionRequestHandler::Output = T
+impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_kit_conversation::nodes::sinks::CompactionRequestHandler where T: ?core::marker::Sized
+pub struct battersea_kit_conversation::nodes::MemoryHandler
+impl<H: battersea_kit_conversation::port::Port> battersea_runtime::handler::NodeHandler<H> for battersea_kit_conversation::nodes::sources::MemoryHandler
+pub fn battersea_kit_conversation::nodes::sources::MemoryHandler::handler_id(&self) -> &'static str
+pub fn battersea_kit_conversation::nodes::sources::MemoryHandler::materialize_node<'life0, 'life1, 'life2, 'life3, 'life4, 'life5, 'async_trait>(&'life0 self, &'life1 H, &'life2 mut <H as battersea_runtime::host::ExecutionHost>::State, &'life3 battersea_flow::types::FlowNode, &'life4 battersea_flow::types::FlowNodeDefinition, &'life5 tokio_util::sync::cancellation_token::CancellationToken) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<(), <H as battersea_runtime::host::ExecutionHost>::Error>> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait, 'life1: 'async_trait, 'life2: 'async_trait, 'life3: 'async_trait, 'life4: 'async_trait, 'life5: 'async_trait
+impl core::marker::Freeze for battersea_kit_conversation::nodes::sources::MemoryHandler
+impl core::marker::Send for battersea_kit_conversation::nodes::sources::MemoryHandler
+impl core::marker::Sync for battersea_kit_conversation::nodes::sources::MemoryHandler
+impl core::marker::Unpin for battersea_kit_conversation::nodes::sources::MemoryHandler
+impl core::marker::UnsafeUnpin for battersea_kit_conversation::nodes::sources::MemoryHandler
+impl core::panic::unwind_safe::RefUnwindSafe for battersea_kit_conversation::nodes::sources::MemoryHandler
+impl core::panic::unwind_safe::UnwindSafe for battersea_kit_conversation::nodes::sources::MemoryHandler
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_kit_conversation::nodes::sources::MemoryHandler where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_kit_conversation::nodes::sources::MemoryHandler where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<T, U> core::convert::Into<U> for battersea_kit_conversation::nodes::sources::MemoryHandler where U: core::convert::From<T>
+pub fn battersea_kit_conversation::nodes::sources::MemoryHandler::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_kit_conversation::nodes::sources::MemoryHandler where U: core::convert::Into<T>
+pub type battersea_kit_conversation::nodes::sources::MemoryHandler::Error = never
+pub fn battersea_kit_conversation::nodes::sources::MemoryHandler::try_from(U) -> core::result::Result<T, never>
+impl<T, U> core::convert::TryInto<U> for battersea_kit_conversation::nodes::sources::MemoryHandler where U: core::convert::TryFrom<T>
+pub type battersea_kit_conversation::nodes::sources::MemoryHandler::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_kit_conversation::nodes::sources::MemoryHandler::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> core::any::Any for battersea_kit_conversation::nodes::sources::MemoryHandler where T: 'static + ?core::marker::Sized
+pub fn battersea_kit_conversation::nodes::sources::MemoryHandler::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_kit_conversation::nodes::sources::MemoryHandler where T: ?core::marker::Sized
+pub fn battersea_kit_conversation::nodes::sources::MemoryHandler::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_kit_conversation::nodes::sources::MemoryHandler where T: ?core::marker::Sized
+pub fn battersea_kit_conversation::nodes::sources::MemoryHandler::borrow_mut(&mut self) -> &mut T
+impl<T> core::convert::From<T> for battersea_kit_conversation::nodes::sources::MemoryHandler
+pub fn battersea_kit_conversation::nodes::sources::MemoryHandler::from(T) -> T
+impl<T> typenum::type_operators::Same for battersea_kit_conversation::nodes::sources::MemoryHandler
+pub type battersea_kit_conversation::nodes::sources::MemoryHandler::Output = T
+impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_kit_conversation::nodes::sources::MemoryHandler where T: ?core::marker::Sized
+pub struct battersea_kit_conversation::nodes::MemoryOutputHandler
+impl<H: battersea_kit_conversation::port::Port> battersea_runtime::handler::NodeHandler<H> for battersea_kit_conversation::nodes::sinks::MemoryOutputHandler
+pub fn battersea_kit_conversation::nodes::sinks::MemoryOutputHandler::execute_sink<'life0, 'life1, 'life2, 'life3, 'life4, 'async_trait>(&'life0 self, &'life1 H, &'life2 mut <H as battersea_runtime::host::ExecutionHost>::State, &'life3 battersea_flow::types::FlowNode, &'life4 str, battersea_runtime::retention::Retained<battersea_runtime::Token>) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<(), <H as battersea_runtime::host::ExecutionHost>::Error>> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait, 'life1: 'async_trait, 'life2: 'async_trait, 'life3: 'async_trait, 'life4: 'async_trait
+pub fn battersea_kit_conversation::nodes::sinks::MemoryOutputHandler::handler_id(&self) -> &'static str
+impl core::marker::Freeze for battersea_kit_conversation::nodes::sinks::MemoryOutputHandler
+impl core::marker::Send for battersea_kit_conversation::nodes::sinks::MemoryOutputHandler
+impl core::marker::Sync for battersea_kit_conversation::nodes::sinks::MemoryOutputHandler
+impl core::marker::Unpin for battersea_kit_conversation::nodes::sinks::MemoryOutputHandler
+impl core::marker::UnsafeUnpin for battersea_kit_conversation::nodes::sinks::MemoryOutputHandler
+impl core::panic::unwind_safe::RefUnwindSafe for battersea_kit_conversation::nodes::sinks::MemoryOutputHandler
+impl core::panic::unwind_safe::UnwindSafe for battersea_kit_conversation::nodes::sinks::MemoryOutputHandler
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_kit_conversation::nodes::sinks::MemoryOutputHandler where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_kit_conversation::nodes::sinks::MemoryOutputHandler where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<T, U> core::convert::Into<U> for battersea_kit_conversation::nodes::sinks::MemoryOutputHandler where U: core::convert::From<T>
+pub fn battersea_kit_conversation::nodes::sinks::MemoryOutputHandler::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_kit_conversation::nodes::sinks::MemoryOutputHandler where U: core::convert::Into<T>
+pub type battersea_kit_conversation::nodes::sinks::MemoryOutputHandler::Error = never
+pub fn battersea_kit_conversation::nodes::sinks::MemoryOutputHandler::try_from(U) -> core::result::Result<T, never>
+impl<T, U> core::convert::TryInto<U> for battersea_kit_conversation::nodes::sinks::MemoryOutputHandler where U: core::convert::TryFrom<T>
+pub type battersea_kit_conversation::nodes::sinks::MemoryOutputHandler::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_kit_conversation::nodes::sinks::MemoryOutputHandler::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> core::any::Any for battersea_kit_conversation::nodes::sinks::MemoryOutputHandler where T: 'static + ?core::marker::Sized
+pub fn battersea_kit_conversation::nodes::sinks::MemoryOutputHandler::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_kit_conversation::nodes::sinks::MemoryOutputHandler where T: ?core::marker::Sized
+pub fn battersea_kit_conversation::nodes::sinks::MemoryOutputHandler::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_kit_conversation::nodes::sinks::MemoryOutputHandler where T: ?core::marker::Sized
+pub fn battersea_kit_conversation::nodes::sinks::MemoryOutputHandler::borrow_mut(&mut self) -> &mut T
+impl<T> core::convert::From<T> for battersea_kit_conversation::nodes::sinks::MemoryOutputHandler
+pub fn battersea_kit_conversation::nodes::sinks::MemoryOutputHandler::from(T) -> T
+impl<T> typenum::type_operators::Same for battersea_kit_conversation::nodes::sinks::MemoryOutputHandler
+pub type battersea_kit_conversation::nodes::sinks::MemoryOutputHandler::Output = T
+impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_kit_conversation::nodes::sinks::MemoryOutputHandler where T: ?core::marker::Sized
+pub struct battersea_kit_conversation::nodes::OutputHandler
+impl<H: battersea_kit_conversation::port::Port> battersea_runtime::handler::NodeHandler<H> for battersea_kit_conversation::nodes::sinks::OutputHandler
+pub fn battersea_kit_conversation::nodes::sinks::OutputHandler::execute_sink<'life0, 'life1, 'life2, 'life3, 'life4, 'async_trait>(&'life0 self, &'life1 H, &'life2 mut <H as battersea_runtime::host::ExecutionHost>::State, &'life3 battersea_flow::types::FlowNode, &'life4 str, battersea_runtime::retention::Retained<battersea_runtime::Token>) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<(), <H as battersea_runtime::host::ExecutionHost>::Error>> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait, 'life1: 'async_trait, 'life2: 'async_trait, 'life3: 'async_trait, 'life4: 'async_trait
+pub fn battersea_kit_conversation::nodes::sinks::OutputHandler::handler_id(&self) -> &'static str
+impl core::marker::Freeze for battersea_kit_conversation::nodes::sinks::OutputHandler
+impl core::marker::Send for battersea_kit_conversation::nodes::sinks::OutputHandler
+impl core::marker::Sync for battersea_kit_conversation::nodes::sinks::OutputHandler
+impl core::marker::Unpin for battersea_kit_conversation::nodes::sinks::OutputHandler
+impl core::marker::UnsafeUnpin for battersea_kit_conversation::nodes::sinks::OutputHandler
+impl core::panic::unwind_safe::RefUnwindSafe for battersea_kit_conversation::nodes::sinks::OutputHandler
+impl core::panic::unwind_safe::UnwindSafe for battersea_kit_conversation::nodes::sinks::OutputHandler
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_kit_conversation::nodes::sinks::OutputHandler where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_kit_conversation::nodes::sinks::OutputHandler where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<T, U> core::convert::Into<U> for battersea_kit_conversation::nodes::sinks::OutputHandler where U: core::convert::From<T>
+pub fn battersea_kit_conversation::nodes::sinks::OutputHandler::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_kit_conversation::nodes::sinks::OutputHandler where U: core::convert::Into<T>
+pub type battersea_kit_conversation::nodes::sinks::OutputHandler::Error = never
+pub fn battersea_kit_conversation::nodes::sinks::OutputHandler::try_from(U) -> core::result::Result<T, never>
+impl<T, U> core::convert::TryInto<U> for battersea_kit_conversation::nodes::sinks::OutputHandler where U: core::convert::TryFrom<T>
+pub type battersea_kit_conversation::nodes::sinks::OutputHandler::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_kit_conversation::nodes::sinks::OutputHandler::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> core::any::Any for battersea_kit_conversation::nodes::sinks::OutputHandler where T: 'static + ?core::marker::Sized
+pub fn battersea_kit_conversation::nodes::sinks::OutputHandler::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_kit_conversation::nodes::sinks::OutputHandler where T: ?core::marker::Sized
+pub fn battersea_kit_conversation::nodes::sinks::OutputHandler::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_kit_conversation::nodes::sinks::OutputHandler where T: ?core::marker::Sized
+pub fn battersea_kit_conversation::nodes::sinks::OutputHandler::borrow_mut(&mut self) -> &mut T
+impl<T> core::convert::From<T> for battersea_kit_conversation::nodes::sinks::OutputHandler
+pub fn battersea_kit_conversation::nodes::sinks::OutputHandler::from(T) -> T
+impl<T> typenum::type_operators::Same for battersea_kit_conversation::nodes::sinks::OutputHandler
+pub type battersea_kit_conversation::nodes::sinks::OutputHandler::Output = T
+impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_kit_conversation::nodes::sinks::OutputHandler where T: ?core::marker::Sized
+pub struct battersea_kit_conversation::nodes::PromptHandler
+impl<H: battersea_kit_conversation::port::Port> battersea_runtime::handler::NodeHandler<H> for battersea_kit_conversation::nodes::sources::PromptHandler
+pub fn battersea_kit_conversation::nodes::sources::PromptHandler::execute_node<'life0, 'life1, 'life2, 'life3, 'life4, 'life5, 'life6, 'async_trait>(&'life0 self, &'life1 H, &'life2 mut <H as battersea_runtime::host::ExecutionHost>::State, &'life3 battersea_flow::types::FlowNode, &'life4 battersea_flow::types::FlowNodeDefinition, core::option::Option<&'life5 std::collections::hash::map::HashMap<alloc::string::String, serde_json::value::Value>>, &'life6 tokio_util::sync::cancellation_token::CancellationToken) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<(), <H as battersea_runtime::host::ExecutionHost>::Error>> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait, 'life1: 'async_trait, 'life2: 'async_trait, 'life3: 'async_trait, 'life4: 'async_trait, 'life5: 'async_trait, 'life6: 'async_trait
+pub fn battersea_kit_conversation::nodes::sources::PromptHandler::handler_id(&self) -> &'static str
+impl core::marker::Freeze for battersea_kit_conversation::nodes::sources::PromptHandler
+impl core::marker::Send for battersea_kit_conversation::nodes::sources::PromptHandler
+impl core::marker::Sync for battersea_kit_conversation::nodes::sources::PromptHandler
+impl core::marker::Unpin for battersea_kit_conversation::nodes::sources::PromptHandler
+impl core::marker::UnsafeUnpin for battersea_kit_conversation::nodes::sources::PromptHandler
+impl core::panic::unwind_safe::RefUnwindSafe for battersea_kit_conversation::nodes::sources::PromptHandler
+impl core::panic::unwind_safe::UnwindSafe for battersea_kit_conversation::nodes::sources::PromptHandler
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_kit_conversation::nodes::sources::PromptHandler where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_kit_conversation::nodes::sources::PromptHandler where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<T, U> core::convert::Into<U> for battersea_kit_conversation::nodes::sources::PromptHandler where U: core::convert::From<T>
+pub fn battersea_kit_conversation::nodes::sources::PromptHandler::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_kit_conversation::nodes::sources::PromptHandler where U: core::convert::Into<T>
+pub type battersea_kit_conversation::nodes::sources::PromptHandler::Error = never
+pub fn battersea_kit_conversation::nodes::sources::PromptHandler::try_from(U) -> core::result::Result<T, never>
+impl<T, U> core::convert::TryInto<U> for battersea_kit_conversation::nodes::sources::PromptHandler where U: core::convert::TryFrom<T>
+pub type battersea_kit_conversation::nodes::sources::PromptHandler::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_kit_conversation::nodes::sources::PromptHandler::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> core::any::Any for battersea_kit_conversation::nodes::sources::PromptHandler where T: 'static + ?core::marker::Sized
+pub fn battersea_kit_conversation::nodes::sources::PromptHandler::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_kit_conversation::nodes::sources::PromptHandler where T: ?core::marker::Sized
+pub fn battersea_kit_conversation::nodes::sources::PromptHandler::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_kit_conversation::nodes::sources::PromptHandler where T: ?core::marker::Sized
+pub fn battersea_kit_conversation::nodes::sources::PromptHandler::borrow_mut(&mut self) -> &mut T
+impl<T> core::convert::From<T> for battersea_kit_conversation::nodes::sources::PromptHandler
+pub fn battersea_kit_conversation::nodes::sources::PromptHandler::from(T) -> T
+impl<T> typenum::type_operators::Same for battersea_kit_conversation::nodes::sources::PromptHandler
+pub type battersea_kit_conversation::nodes::sources::PromptHandler::Output = T
+impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_kit_conversation::nodes::sources::PromptHandler where T: ?core::marker::Sized
+pub struct battersea_kit_conversation::nodes::RefinementOutputHandler
+impl<H: battersea_kit_conversation::port::Port> battersea_runtime::handler::NodeHandler<H> for battersea_kit_conversation::nodes::sinks::RefinementOutputHandler
+pub fn battersea_kit_conversation::nodes::sinks::RefinementOutputHandler::execute_sink<'life0, 'life1, 'life2, 'life3, 'life4, 'async_trait>(&'life0 self, &'life1 H, &'life2 mut <H as battersea_runtime::host::ExecutionHost>::State, &'life3 battersea_flow::types::FlowNode, &'life4 str, battersea_runtime::retention::Retained<battersea_runtime::Token>) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<(), <H as battersea_runtime::host::ExecutionHost>::Error>> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait, 'life1: 'async_trait, 'life2: 'async_trait, 'life3: 'async_trait, 'life4: 'async_trait
+pub fn battersea_kit_conversation::nodes::sinks::RefinementOutputHandler::handler_id(&self) -> &'static str
+impl core::marker::Freeze for battersea_kit_conversation::nodes::sinks::RefinementOutputHandler
+impl core::marker::Send for battersea_kit_conversation::nodes::sinks::RefinementOutputHandler
+impl core::marker::Sync for battersea_kit_conversation::nodes::sinks::RefinementOutputHandler
+impl core::marker::Unpin for battersea_kit_conversation::nodes::sinks::RefinementOutputHandler
+impl core::marker::UnsafeUnpin for battersea_kit_conversation::nodes::sinks::RefinementOutputHandler
+impl core::panic::unwind_safe::RefUnwindSafe for battersea_kit_conversation::nodes::sinks::RefinementOutputHandler
+impl core::panic::unwind_safe::UnwindSafe for battersea_kit_conversation::nodes::sinks::RefinementOutputHandler
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_kit_conversation::nodes::sinks::RefinementOutputHandler where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_kit_conversation::nodes::sinks::RefinementOutputHandler where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<T, U> core::convert::Into<U> for battersea_kit_conversation::nodes::sinks::RefinementOutputHandler where U: core::convert::From<T>
+pub fn battersea_kit_conversation::nodes::sinks::RefinementOutputHandler::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_kit_conversation::nodes::sinks::RefinementOutputHandler where U: core::convert::Into<T>
+pub type battersea_kit_conversation::nodes::sinks::RefinementOutputHandler::Error = never
+pub fn battersea_kit_conversation::nodes::sinks::RefinementOutputHandler::try_from(U) -> core::result::Result<T, never>
+impl<T, U> core::convert::TryInto<U> for battersea_kit_conversation::nodes::sinks::RefinementOutputHandler where U: core::convert::TryFrom<T>
+pub type battersea_kit_conversation::nodes::sinks::RefinementOutputHandler::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_kit_conversation::nodes::sinks::RefinementOutputHandler::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> core::any::Any for battersea_kit_conversation::nodes::sinks::RefinementOutputHandler where T: 'static + ?core::marker::Sized
+pub fn battersea_kit_conversation::nodes::sinks::RefinementOutputHandler::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_kit_conversation::nodes::sinks::RefinementOutputHandler where T: ?core::marker::Sized
+pub fn battersea_kit_conversation::nodes::sinks::RefinementOutputHandler::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_kit_conversation::nodes::sinks::RefinementOutputHandler where T: ?core::marker::Sized
+pub fn battersea_kit_conversation::nodes::sinks::RefinementOutputHandler::borrow_mut(&mut self) -> &mut T
+impl<T> core::convert::From<T> for battersea_kit_conversation::nodes::sinks::RefinementOutputHandler
+pub fn battersea_kit_conversation::nodes::sinks::RefinementOutputHandler::from(T) -> T
+impl<T> typenum::type_operators::Same for battersea_kit_conversation::nodes::sinks::RefinementOutputHandler
+pub type battersea_kit_conversation::nodes::sinks::RefinementOutputHandler::Output = T
+impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_kit_conversation::nodes::sinks::RefinementOutputHandler where T: ?core::marker::Sized
+pub struct battersea_kit_conversation::nodes::RefinementParserHandler
+impl<H: battersea_kit_conversation::port::Port> battersea_runtime::handler::NodeHandler<H> for battersea_kit_conversation::nodes::inline::RefinementParserHandler
+pub fn battersea_kit_conversation::nodes::inline::RefinementParserHandler::execute_node<'life0, 'life1, 'life2, 'life3, 'life4, 'life5, 'life6, 'async_trait>(&'life0 self, &'life1 H, &'life2 mut <H as battersea_runtime::host::ExecutionHost>::State, &'life3 battersea_flow::types::FlowNode, &'life4 battersea_flow::types::FlowNodeDefinition, core::option::Option<&'life5 std::collections::hash::map::HashMap<alloc::string::String, serde_json::value::Value>>, &'life6 tokio_util::sync::cancellation_token::CancellationToken) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<(), <H as battersea_runtime::host::ExecutionHost>::Error>> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait, 'life1: 'async_trait, 'life2: 'async_trait, 'life3: 'async_trait, 'life4: 'async_trait, 'life5: 'async_trait, 'life6: 'async_trait
+pub fn battersea_kit_conversation::nodes::inline::RefinementParserHandler::handler_id(&self) -> &'static str
+impl core::marker::Freeze for battersea_kit_conversation::nodes::inline::RefinementParserHandler
+impl core::marker::Send for battersea_kit_conversation::nodes::inline::RefinementParserHandler
+impl core::marker::Sync for battersea_kit_conversation::nodes::inline::RefinementParserHandler
+impl core::marker::Unpin for battersea_kit_conversation::nodes::inline::RefinementParserHandler
+impl core::marker::UnsafeUnpin for battersea_kit_conversation::nodes::inline::RefinementParserHandler
+impl core::panic::unwind_safe::RefUnwindSafe for battersea_kit_conversation::nodes::inline::RefinementParserHandler
+impl core::panic::unwind_safe::UnwindSafe for battersea_kit_conversation::nodes::inline::RefinementParserHandler
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_kit_conversation::nodes::inline::RefinementParserHandler where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_kit_conversation::nodes::inline::RefinementParserHandler where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<T, U> core::convert::Into<U> for battersea_kit_conversation::nodes::inline::RefinementParserHandler where U: core::convert::From<T>
+pub fn battersea_kit_conversation::nodes::inline::RefinementParserHandler::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_kit_conversation::nodes::inline::RefinementParserHandler where U: core::convert::Into<T>
+pub type battersea_kit_conversation::nodes::inline::RefinementParserHandler::Error = never
+pub fn battersea_kit_conversation::nodes::inline::RefinementParserHandler::try_from(U) -> core::result::Result<T, never>
+impl<T, U> core::convert::TryInto<U> for battersea_kit_conversation::nodes::inline::RefinementParserHandler where U: core::convert::TryFrom<T>
+pub type battersea_kit_conversation::nodes::inline::RefinementParserHandler::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_kit_conversation::nodes::inline::RefinementParserHandler::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> core::any::Any for battersea_kit_conversation::nodes::inline::RefinementParserHandler where T: 'static + ?core::marker::Sized
+pub fn battersea_kit_conversation::nodes::inline::RefinementParserHandler::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_kit_conversation::nodes::inline::RefinementParserHandler where T: ?core::marker::Sized
+pub fn battersea_kit_conversation::nodes::inline::RefinementParserHandler::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_kit_conversation::nodes::inline::RefinementParserHandler where T: ?core::marker::Sized
+pub fn battersea_kit_conversation::nodes::inline::RefinementParserHandler::borrow_mut(&mut self) -> &mut T
+impl<T> core::convert::From<T> for battersea_kit_conversation::nodes::inline::RefinementParserHandler
+pub fn battersea_kit_conversation::nodes::inline::RefinementParserHandler::from(T) -> T
+impl<T> typenum::type_operators::Same for battersea_kit_conversation::nodes::inline::RefinementParserHandler
+pub type battersea_kit_conversation::nodes::inline::RefinementParserHandler::Output = T
+impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_kit_conversation::nodes::inline::RefinementParserHandler where T: ?core::marker::Sized
+pub struct battersea_kit_conversation::nodes::RefinementSourceHandler
+impl<H: battersea_kit_conversation::port::Port> battersea_runtime::handler::NodeHandler<H> for battersea_kit_conversation::nodes::sources::RefinementSourceHandler
+pub fn battersea_kit_conversation::nodes::sources::RefinementSourceHandler::execute_node<'life0, 'life1, 'life2, 'life3, 'life4, 'life5, 'life6, 'async_trait>(&'life0 self, &'life1 H, &'life2 mut <H as battersea_runtime::host::ExecutionHost>::State, &'life3 battersea_flow::types::FlowNode, &'life4 battersea_flow::types::FlowNodeDefinition, core::option::Option<&'life5 std::collections::hash::map::HashMap<alloc::string::String, serde_json::value::Value>>, &'life6 tokio_util::sync::cancellation_token::CancellationToken) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<(), <H as battersea_runtime::host::ExecutionHost>::Error>> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait, 'life1: 'async_trait, 'life2: 'async_trait, 'life3: 'async_trait, 'life4: 'async_trait, 'life5: 'async_trait, 'life6: 'async_trait
+pub fn battersea_kit_conversation::nodes::sources::RefinementSourceHandler::handler_id(&self) -> &'static str
+impl core::marker::Freeze for battersea_kit_conversation::nodes::sources::RefinementSourceHandler
+impl core::marker::Send for battersea_kit_conversation::nodes::sources::RefinementSourceHandler
+impl core::marker::Sync for battersea_kit_conversation::nodes::sources::RefinementSourceHandler
+impl core::marker::Unpin for battersea_kit_conversation::nodes::sources::RefinementSourceHandler
+impl core::marker::UnsafeUnpin for battersea_kit_conversation::nodes::sources::RefinementSourceHandler
+impl core::panic::unwind_safe::RefUnwindSafe for battersea_kit_conversation::nodes::sources::RefinementSourceHandler
+impl core::panic::unwind_safe::UnwindSafe for battersea_kit_conversation::nodes::sources::RefinementSourceHandler
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_kit_conversation::nodes::sources::RefinementSourceHandler where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_kit_conversation::nodes::sources::RefinementSourceHandler where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<T, U> core::convert::Into<U> for battersea_kit_conversation::nodes::sources::RefinementSourceHandler where U: core::convert::From<T>
+pub fn battersea_kit_conversation::nodes::sources::RefinementSourceHandler::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_kit_conversation::nodes::sources::RefinementSourceHandler where U: core::convert::Into<T>
+pub type battersea_kit_conversation::nodes::sources::RefinementSourceHandler::Error = never
+pub fn battersea_kit_conversation::nodes::sources::RefinementSourceHandler::try_from(U) -> core::result::Result<T, never>
+impl<T, U> core::convert::TryInto<U> for battersea_kit_conversation::nodes::sources::RefinementSourceHandler where U: core::convert::TryFrom<T>
+pub type battersea_kit_conversation::nodes::sources::RefinementSourceHandler::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_kit_conversation::nodes::sources::RefinementSourceHandler::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> core::any::Any for battersea_kit_conversation::nodes::sources::RefinementSourceHandler where T: 'static + ?core::marker::Sized
+pub fn battersea_kit_conversation::nodes::sources::RefinementSourceHandler::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_kit_conversation::nodes::sources::RefinementSourceHandler where T: ?core::marker::Sized
+pub fn battersea_kit_conversation::nodes::sources::RefinementSourceHandler::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_kit_conversation::nodes::sources::RefinementSourceHandler where T: ?core::marker::Sized
+pub fn battersea_kit_conversation::nodes::sources::RefinementSourceHandler::borrow_mut(&mut self) -> &mut T
+impl<T> core::convert::From<T> for battersea_kit_conversation::nodes::sources::RefinementSourceHandler
+pub fn battersea_kit_conversation::nodes::sources::RefinementSourceHandler::from(T) -> T
+impl<T> typenum::type_operators::Same for battersea_kit_conversation::nodes::sources::RefinementSourceHandler
+pub type battersea_kit_conversation::nodes::sources::RefinementSourceHandler::Output = T
+impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_kit_conversation::nodes::sources::RefinementSourceHandler where T: ?core::marker::Sized
+pub struct battersea_kit_conversation::nodes::SignalTapHandler
+impl<H: battersea_kit_conversation::port::Port> battersea_runtime::handler::NodeHandler<H> for battersea_kit_conversation::nodes::inline::SignalTapHandler
+pub fn battersea_kit_conversation::nodes::inline::SignalTapHandler::execute_node<'life0, 'life1, 'life2, 'life3, 'life4, 'life5, 'life6, 'async_trait>(&'life0 self, &'life1 H, &'life2 mut <H as battersea_runtime::host::ExecutionHost>::State, &'life3 battersea_flow::types::FlowNode, &'life4 battersea_flow::types::FlowNodeDefinition, core::option::Option<&'life5 std::collections::hash::map::HashMap<alloc::string::String, serde_json::value::Value>>, &'life6 tokio_util::sync::cancellation_token::CancellationToken) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<(), <H as battersea_runtime::host::ExecutionHost>::Error>> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait, 'life1: 'async_trait, 'life2: 'async_trait, 'life3: 'async_trait, 'life4: 'async_trait, 'life5: 'async_trait, 'life6: 'async_trait
+pub fn battersea_kit_conversation::nodes::inline::SignalTapHandler::handler_id(&self) -> &'static str
+impl core::marker::Freeze for battersea_kit_conversation::nodes::inline::SignalTapHandler
+impl core::marker::Send for battersea_kit_conversation::nodes::inline::SignalTapHandler
+impl core::marker::Sync for battersea_kit_conversation::nodes::inline::SignalTapHandler
+impl core::marker::Unpin for battersea_kit_conversation::nodes::inline::SignalTapHandler
+impl core::marker::UnsafeUnpin for battersea_kit_conversation::nodes::inline::SignalTapHandler
+impl core::panic::unwind_safe::RefUnwindSafe for battersea_kit_conversation::nodes::inline::SignalTapHandler
+impl core::panic::unwind_safe::UnwindSafe for battersea_kit_conversation::nodes::inline::SignalTapHandler
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_kit_conversation::nodes::inline::SignalTapHandler where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_kit_conversation::nodes::inline::SignalTapHandler where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<T, U> core::convert::Into<U> for battersea_kit_conversation::nodes::inline::SignalTapHandler where U: core::convert::From<T>
+pub fn battersea_kit_conversation::nodes::inline::SignalTapHandler::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_kit_conversation::nodes::inline::SignalTapHandler where U: core::convert::Into<T>
+pub type battersea_kit_conversation::nodes::inline::SignalTapHandler::Error = never
+pub fn battersea_kit_conversation::nodes::inline::SignalTapHandler::try_from(U) -> core::result::Result<T, never>
+impl<T, U> core::convert::TryInto<U> for battersea_kit_conversation::nodes::inline::SignalTapHandler where U: core::convert::TryFrom<T>
+pub type battersea_kit_conversation::nodes::inline::SignalTapHandler::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_kit_conversation::nodes::inline::SignalTapHandler::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> core::any::Any for battersea_kit_conversation::nodes::inline::SignalTapHandler where T: 'static + ?core::marker::Sized
+pub fn battersea_kit_conversation::nodes::inline::SignalTapHandler::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_kit_conversation::nodes::inline::SignalTapHandler where T: ?core::marker::Sized
+pub fn battersea_kit_conversation::nodes::inline::SignalTapHandler::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_kit_conversation::nodes::inline::SignalTapHandler where T: ?core::marker::Sized
+pub fn battersea_kit_conversation::nodes::inline::SignalTapHandler::borrow_mut(&mut self) -> &mut T
+impl<T> core::convert::From<T> for battersea_kit_conversation::nodes::inline::SignalTapHandler
+pub fn battersea_kit_conversation::nodes::inline::SignalTapHandler::from(T) -> T
+impl<T> typenum::type_operators::Same for battersea_kit_conversation::nodes::inline::SignalTapHandler
+pub type battersea_kit_conversation::nodes::inline::SignalTapHandler::Output = T
+impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_kit_conversation::nodes::inline::SignalTapHandler where T: ?core::marker::Sized
+pub struct battersea_kit_conversation::nodes::StaticPromptHandler
+impl<H: battersea_kit_conversation::port::Port> battersea_runtime::handler::NodeHandler<H> for battersea_kit_conversation::nodes::sources::StaticPromptHandler
+pub fn battersea_kit_conversation::nodes::sources::StaticPromptHandler::handler_id(&self) -> &'static str
+pub fn battersea_kit_conversation::nodes::sources::StaticPromptHandler::materialize_node<'life0, 'life1, 'life2, 'life3, 'life4, 'life5, 'async_trait>(&'life0 self, &'life1 H, &'life2 mut <H as battersea_runtime::host::ExecutionHost>::State, &'life3 battersea_flow::types::FlowNode, &'life4 battersea_flow::types::FlowNodeDefinition, &'life5 tokio_util::sync::cancellation_token::CancellationToken) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<(), <H as battersea_runtime::host::ExecutionHost>::Error>> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait, 'life1: 'async_trait, 'life2: 'async_trait, 'life3: 'async_trait, 'life4: 'async_trait, 'life5: 'async_trait
+impl core::marker::Freeze for battersea_kit_conversation::nodes::sources::StaticPromptHandler
+impl core::marker::Send for battersea_kit_conversation::nodes::sources::StaticPromptHandler
+impl core::marker::Sync for battersea_kit_conversation::nodes::sources::StaticPromptHandler
+impl core::marker::Unpin for battersea_kit_conversation::nodes::sources::StaticPromptHandler
+impl core::marker::UnsafeUnpin for battersea_kit_conversation::nodes::sources::StaticPromptHandler
+impl core::panic::unwind_safe::RefUnwindSafe for battersea_kit_conversation::nodes::sources::StaticPromptHandler
+impl core::panic::unwind_safe::UnwindSafe for battersea_kit_conversation::nodes::sources::StaticPromptHandler
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_kit_conversation::nodes::sources::StaticPromptHandler where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_kit_conversation::nodes::sources::StaticPromptHandler where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<T, U> core::convert::Into<U> for battersea_kit_conversation::nodes::sources::StaticPromptHandler where U: core::convert::From<T>
+pub fn battersea_kit_conversation::nodes::sources::StaticPromptHandler::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_kit_conversation::nodes::sources::StaticPromptHandler where U: core::convert::Into<T>
+pub type battersea_kit_conversation::nodes::sources::StaticPromptHandler::Error = never
+pub fn battersea_kit_conversation::nodes::sources::StaticPromptHandler::try_from(U) -> core::result::Result<T, never>
+impl<T, U> core::convert::TryInto<U> for battersea_kit_conversation::nodes::sources::StaticPromptHandler where U: core::convert::TryFrom<T>
+pub type battersea_kit_conversation::nodes::sources::StaticPromptHandler::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_kit_conversation::nodes::sources::StaticPromptHandler::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> core::any::Any for battersea_kit_conversation::nodes::sources::StaticPromptHandler where T: 'static + ?core::marker::Sized
+pub fn battersea_kit_conversation::nodes::sources::StaticPromptHandler::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_kit_conversation::nodes::sources::StaticPromptHandler where T: ?core::marker::Sized
+pub fn battersea_kit_conversation::nodes::sources::StaticPromptHandler::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_kit_conversation::nodes::sources::StaticPromptHandler where T: ?core::marker::Sized
+pub fn battersea_kit_conversation::nodes::sources::StaticPromptHandler::borrow_mut(&mut self) -> &mut T
+impl<T> core::convert::From<T> for battersea_kit_conversation::nodes::sources::StaticPromptHandler
+pub fn battersea_kit_conversation::nodes::sources::StaticPromptHandler::from(T) -> T
+impl<T> typenum::type_operators::Same for battersea_kit_conversation::nodes::sources::StaticPromptHandler
+pub type battersea_kit_conversation::nodes::sources::StaticPromptHandler::Output = T
+impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_kit_conversation::nodes::sources::StaticPromptHandler where T: ?core::marker::Sized
+pub struct battersea_kit_conversation::nodes::TranscriptHandler
+impl<H: battersea_kit_conversation::port::Port> battersea_runtime::handler::NodeHandler<H> for battersea_kit_conversation::nodes::sources::TranscriptHandler
+pub fn battersea_kit_conversation::nodes::sources::TranscriptHandler::handler_id(&self) -> &'static str
+pub fn battersea_kit_conversation::nodes::sources::TranscriptHandler::materialize_node<'life0, 'life1, 'life2, 'life3, 'life4, 'life5, 'async_trait>(&'life0 self, &'life1 H, &'life2 mut <H as battersea_runtime::host::ExecutionHost>::State, &'life3 battersea_flow::types::FlowNode, &'life4 battersea_flow::types::FlowNodeDefinition, &'life5 tokio_util::sync::cancellation_token::CancellationToken) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<(), <H as battersea_runtime::host::ExecutionHost>::Error>> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait, 'life1: 'async_trait, 'life2: 'async_trait, 'life3: 'async_trait, 'life4: 'async_trait, 'life5: 'async_trait
+impl core::marker::Freeze for battersea_kit_conversation::nodes::sources::TranscriptHandler
+impl core::marker::Send for battersea_kit_conversation::nodes::sources::TranscriptHandler
+impl core::marker::Sync for battersea_kit_conversation::nodes::sources::TranscriptHandler
+impl core::marker::Unpin for battersea_kit_conversation::nodes::sources::TranscriptHandler
+impl core::marker::UnsafeUnpin for battersea_kit_conversation::nodes::sources::TranscriptHandler
+impl core::panic::unwind_safe::RefUnwindSafe for battersea_kit_conversation::nodes::sources::TranscriptHandler
+impl core::panic::unwind_safe::UnwindSafe for battersea_kit_conversation::nodes::sources::TranscriptHandler
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_kit_conversation::nodes::sources::TranscriptHandler where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_kit_conversation::nodes::sources::TranscriptHandler where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<T, U> core::convert::Into<U> for battersea_kit_conversation::nodes::sources::TranscriptHandler where U: core::convert::From<T>
+pub fn battersea_kit_conversation::nodes::sources::TranscriptHandler::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_kit_conversation::nodes::sources::TranscriptHandler where U: core::convert::Into<T>
+pub type battersea_kit_conversation::nodes::sources::TranscriptHandler::Error = never
+pub fn battersea_kit_conversation::nodes::sources::TranscriptHandler::try_from(U) -> core::result::Result<T, never>
+impl<T, U> core::convert::TryInto<U> for battersea_kit_conversation::nodes::sources::TranscriptHandler where U: core::convert::TryFrom<T>
+pub type battersea_kit_conversation::nodes::sources::TranscriptHandler::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_kit_conversation::nodes::sources::TranscriptHandler::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> core::any::Any for battersea_kit_conversation::nodes::sources::TranscriptHandler where T: 'static + ?core::marker::Sized
+pub fn battersea_kit_conversation::nodes::sources::TranscriptHandler::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_kit_conversation::nodes::sources::TranscriptHandler where T: ?core::marker::Sized
+pub fn battersea_kit_conversation::nodes::sources::TranscriptHandler::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_kit_conversation::nodes::sources::TranscriptHandler where T: ?core::marker::Sized
+pub fn battersea_kit_conversation::nodes::sources::TranscriptHandler::borrow_mut(&mut self) -> &mut T
+impl<T> core::convert::From<T> for battersea_kit_conversation::nodes::sources::TranscriptHandler
+pub fn battersea_kit_conversation::nodes::sources::TranscriptHandler::from(T) -> T
+impl<T> typenum::type_operators::Same for battersea_kit_conversation::nodes::sources::TranscriptHandler
+pub type battersea_kit_conversation::nodes::sources::TranscriptHandler::Output = T
+impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_kit_conversation::nodes::sources::TranscriptHandler where T: ?core::marker::Sized
+pub struct battersea_kit_conversation::nodes::TranscriptOutputHandler
+impl<H: battersea_kit_conversation::port::Port> battersea_runtime::handler::NodeHandler<H> for battersea_kit_conversation::nodes::sinks::TranscriptOutputHandler
+pub fn battersea_kit_conversation::nodes::sinks::TranscriptOutputHandler::execute_sink<'life0, 'life1, 'life2, 'life3, 'life4, 'async_trait>(&'life0 self, &'life1 H, &'life2 mut <H as battersea_runtime::host::ExecutionHost>::State, &'life3 battersea_flow::types::FlowNode, &'life4 str, battersea_runtime::retention::Retained<battersea_runtime::Token>) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<(), <H as battersea_runtime::host::ExecutionHost>::Error>> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait, 'life1: 'async_trait, 'life2: 'async_trait, 'life3: 'async_trait, 'life4: 'async_trait
+pub fn battersea_kit_conversation::nodes::sinks::TranscriptOutputHandler::handler_id(&self) -> &'static str
+impl core::marker::Freeze for battersea_kit_conversation::nodes::sinks::TranscriptOutputHandler
+impl core::marker::Send for battersea_kit_conversation::nodes::sinks::TranscriptOutputHandler
+impl core::marker::Sync for battersea_kit_conversation::nodes::sinks::TranscriptOutputHandler
+impl core::marker::Unpin for battersea_kit_conversation::nodes::sinks::TranscriptOutputHandler
+impl core::marker::UnsafeUnpin for battersea_kit_conversation::nodes::sinks::TranscriptOutputHandler
+impl core::panic::unwind_safe::RefUnwindSafe for battersea_kit_conversation::nodes::sinks::TranscriptOutputHandler
+impl core::panic::unwind_safe::UnwindSafe for battersea_kit_conversation::nodes::sinks::TranscriptOutputHandler
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_kit_conversation::nodes::sinks::TranscriptOutputHandler where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_kit_conversation::nodes::sinks::TranscriptOutputHandler where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<T, U> core::convert::Into<U> for battersea_kit_conversation::nodes::sinks::TranscriptOutputHandler where U: core::convert::From<T>
+pub fn battersea_kit_conversation::nodes::sinks::TranscriptOutputHandler::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_kit_conversation::nodes::sinks::TranscriptOutputHandler where U: core::convert::Into<T>
+pub type battersea_kit_conversation::nodes::sinks::TranscriptOutputHandler::Error = never
+pub fn battersea_kit_conversation::nodes::sinks::TranscriptOutputHandler::try_from(U) -> core::result::Result<T, never>
+impl<T, U> core::convert::TryInto<U> for battersea_kit_conversation::nodes::sinks::TranscriptOutputHandler where U: core::convert::TryFrom<T>
+pub type battersea_kit_conversation::nodes::sinks::TranscriptOutputHandler::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_kit_conversation::nodes::sinks::TranscriptOutputHandler::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> core::any::Any for battersea_kit_conversation::nodes::sinks::TranscriptOutputHandler where T: 'static + ?core::marker::Sized
+pub fn battersea_kit_conversation::nodes::sinks::TranscriptOutputHandler::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_kit_conversation::nodes::sinks::TranscriptOutputHandler where T: ?core::marker::Sized
+pub fn battersea_kit_conversation::nodes::sinks::TranscriptOutputHandler::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_kit_conversation::nodes::sinks::TranscriptOutputHandler where T: ?core::marker::Sized
+pub fn battersea_kit_conversation::nodes::sinks::TranscriptOutputHandler::borrow_mut(&mut self) -> &mut T
+impl<T> core::convert::From<T> for battersea_kit_conversation::nodes::sinks::TranscriptOutputHandler
+pub fn battersea_kit_conversation::nodes::sinks::TranscriptOutputHandler::from(T) -> T
+impl<T> typenum::type_operators::Same for battersea_kit_conversation::nodes::sinks::TranscriptOutputHandler
+pub type battersea_kit_conversation::nodes::sinks::TranscriptOutputHandler::Output = T
+impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_kit_conversation::nodes::sinks::TranscriptOutputHandler where T: ?core::marker::Sized
+pub fn battersea_kit_conversation::nodes::register_handlers<H: battersea_kit_conversation::port::Port>(&mut battersea_runtime::registry::RegistryBuilder<H>) -> core::result::Result<(), alloc::string::String>
 pub mod battersea_kit_conversation::port
 pub trait battersea_kit_conversation::port::Port: battersea_runtime::host::ExecutionHost
-pub type battersea_kit_conversation::port::Port::Extension: serde_core::ser::Serialize + serde_core::de::DeserializeOwned + core::clone::Clone + core::marker::Send + core::marker::Sync + 'static
+pub type battersea_kit_conversation::port::Port::Extension: serde_core::ser::Serialize + serde_core::de::DeserializeOwned + core::clone::Clone + core::default::Default + core::marker::Send + core::marker::Sync + 'static
+pub fn battersea_kit_conversation::port::Port::clock(&self) -> alloc::rcs::arc::Arc<dyn battersea_model::clock::Clock>
 pub fn battersea_kit_conversation::port::Port::deliver<'life0, 'life1, 'async_trait>(&'life0 self, &'life1 mut Self::State, alloc::string::String) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<(), Self::Error>> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait, 'life1: 'async_trait
 pub fn battersea_kit_conversation::port::Port::engine(&self, &Self::State, &str) -> core::result::Result<alloc::rcs::arc::Arc<dyn battersea_model::adapter::EngineAdapter>, Self::Error>
 pub fn battersea_kit_conversation::port::Port::memory<'life0, 'life1, 'life2, 'async_trait>(&'life0 self, &'life1 Self::State, &'life2 battersea_kit_conversation::TranscriptId) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<battersea_kit_conversation::Memory<Self::Extension>, Self::Error>> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait, 'life1: 'async_trait, 'life2: 'async_trait
@@ -638,6 +1690,7 @@ pub fn battersea_kit_conversation::port::Port::turns<'life0, 'life1, 'life2, 'as
 pub fn battersea_kit_conversation::port::Port::write_summary<'life0, 'life1, 'async_trait>(&'life0 self, &'life1 mut Self::State, battersea_kit_conversation::Summary<Self::Extension>) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<(), Self::Error>> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait, 'life1: 'async_trait
 impl battersea_kit_conversation::port::Port for battersea_kit::reference::ReferenceHost<battersea_kit_conversation::reference::State>
 pub type battersea_kit::reference::ReferenceHost<battersea_kit_conversation::reference::State>::Extension = serde_json::value::Value
+pub fn battersea_kit::reference::ReferenceHost<battersea_kit_conversation::reference::State>::clock(&self) -> alloc::rcs::arc::Arc<dyn battersea_model::clock::Clock>
 pub fn battersea_kit::reference::ReferenceHost<battersea_kit_conversation::reference::State>::deliver<'life0, 'life1, 'async_trait>(&'life0 self, &'life1 mut Self::State, alloc::string::String) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<(), battersea_kit::reference::ReferenceError>> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait, 'life1: 'async_trait
 pub fn battersea_kit::reference::ReferenceHost<battersea_kit_conversation::reference::State>::engine(&self, &Self::State, &str) -> core::result::Result<alloc::rcs::arc::Arc<dyn battersea_model::adapter::EngineAdapter>, battersea_kit::reference::ReferenceError>
 pub fn battersea_kit::reference::ReferenceHost<battersea_kit_conversation::reference::State>::memory<'life0, 'life1, 'life2, 'async_trait>(&'life0 self, &'life1 Self::State, &'life2 battersea_kit_conversation::TranscriptId) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<battersea_kit_conversation::Memory<battersea_kit_conversation::reference::Extension>, battersea_kit::reference::ReferenceError>> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait, 'life1: 'async_trait, 'life2: 'async_trait
@@ -655,8 +1708,10 @@ pub fn battersea_kit::reference::ReferenceHost<battersea_kit_conversation::refer
 pub fn battersea_kit::reference::ReferenceHost<battersea_kit_conversation::reference::State>::write_summary<'life0, 'life1, 'async_trait>(&'life0 self, &'life1 mut Self::State, battersea_kit_conversation::Summary<battersea_kit_conversation::reference::Extension>) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<(), battersea_kit::reference::ReferenceError>> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait, 'life1: 'async_trait
 pub mod battersea_kit_conversation::reference
 pub enum battersea_kit_conversation::reference::ScriptedResponse
+pub battersea_kit_conversation::reference::ScriptedResponse::Reasoning(alloc::string::String)
 pub battersea_kit_conversation::reference::ScriptedResponse::Text(alloc::string::String)
 pub battersea_kit_conversation::reference::ScriptedResponse::ToolCalls(alloc::vec::Vec<battersea_model::adapter::EngineLocalToolCall>)
+pub battersea_kit_conversation::reference::ScriptedResponse::Wait(core::time::Duration)
 impl core::clone::Clone for battersea_kit_conversation::reference::ScriptedResponse
 pub fn battersea_kit_conversation::reference::ScriptedResponse::clone(&self) -> Self
 impl core::cmp::PartialEq for battersea_kit_conversation::reference::ScriptedResponse
@@ -1420,6 +2475,7 @@ impl<T> typenum::type_operators::Same for battersea_kit_conversation::Revision<X
 pub type battersea_kit_conversation::Revision<X>::Output = T
 impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_kit_conversation::Revision<X> where T: ?core::marker::Sized
 pub struct battersea_kit_conversation::types::RunState<X>
+pub battersea_kit_conversation::types::RunState::buffers: alloc::collections::btree::map::BTreeMap<alloc::string::String, alloc::string::String>
 pub battersea_kit_conversation::types::RunState::calls: alloc::vec::Vec<battersea_kit_conversation::CallRecord>
 pub battersea_kit_conversation::types::RunState::deliveries: alloc::vec::Vec<alloc::string::String>
 pub battersea_kit_conversation::types::RunState::reservations: alloc::vec::Vec<battersea_kit_conversation::Reservation>
@@ -1849,9 +2905,11 @@ pub battersea_kit_conversation::types::Turn::id: core::option::Option<battersea_
 pub battersea_kit_conversation::types::Turn::revision: u32
 pub battersea_kit_conversation::types::Turn::role: battersea_model::messages::Role
 impl<X> battersea_kit_conversation::Turn<X>
+pub fn battersea_kit_conversation::Turn<X>::answers(&self, &[&str]) -> bool
 pub fn battersea_kit_conversation::Turn<X>::calls_tools(&self) -> bool
 pub fn battersea_kit_conversation::Turn<X>::text(battersea_model::messages::Role, impl core::convert::Into<alloc::string::String>, X) -> Self
 pub fn battersea_kit_conversation::Turn<X>::text_content(&self) -> alloc::string::String
+pub fn battersea_kit_conversation::Turn<X>::tool_call_ids(&self) -> alloc::vec::Vec<&str>
 impl<'de, X> serde_core::de::Deserialize<'de> for battersea_kit_conversation::Turn<X> where X: serde_core::de::Deserialize<'de>
 pub fn battersea_kit_conversation::Turn<X>::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
 impl<X: core::clone::Clone> core::clone::Clone for battersea_kit_conversation::Turn<X>
@@ -2906,6 +3964,7 @@ impl<T> typenum::type_operators::Same for battersea_kit_conversation::Revision<X
 pub type battersea_kit_conversation::Revision<X>::Output = T
 impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_kit_conversation::Revision<X> where T: ?core::marker::Sized
 pub struct battersea_kit_conversation::RunState<X>
+pub battersea_kit_conversation::RunState::buffers: alloc::collections::btree::map::BTreeMap<alloc::string::String, alloc::string::String>
 pub battersea_kit_conversation::RunState::calls: alloc::vec::Vec<battersea_kit_conversation::CallRecord>
 pub battersea_kit_conversation::RunState::deliveries: alloc::vec::Vec<alloc::string::String>
 pub battersea_kit_conversation::RunState::reservations: alloc::vec::Vec<battersea_kit_conversation::Reservation>
@@ -2966,6 +4025,43 @@ impl<T> serde_core::de::DeserializeOwned for battersea_kit_conversation::RunStat
 impl<T> typenum::type_operators::Same for battersea_kit_conversation::RunState<X>
 pub type battersea_kit_conversation::RunState<X>::Output = T
 impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_kit_conversation::RunState<X> where T: ?core::marker::Sized
+pub struct battersea_kit_conversation::Runner<H: battersea_kit_conversation::port::Port>
+impl<H: battersea_kit_conversation::port::Port> battersea_kit_conversation::compaction::Runner<H>
+pub const battersea_kit_conversation::compaction::Runner<H>::NODE: &'static str
+pub async fn battersea_kit_conversation::compaction::Runner<H>::after_run(&self, &mut <H as battersea_runtime::host::ExecutionHost>::State, &battersea_kit_conversation::TranscriptId) -> core::result::Result<core::option::Option<battersea_kit_conversation::JobId>, <H as battersea_runtime::host::ExecutionHost>::Error>
+pub async fn battersea_kit_conversation::compaction::Runner<H>::idle(&self, &mut <H as battersea_runtime::host::ExecutionHost>::State, &battersea_kit_conversation::TranscriptId) -> core::result::Result<core::option::Option<battersea_kit_conversation::JobId>, <H as battersea_runtime::host::ExecutionHost>::Error>
+pub async fn battersea_kit_conversation::compaction::Runner<H>::idle_elapsed(&self) -> battersea_kit_conversation::TranscriptId
+pub fn battersea_kit_conversation::compaction::Runner<H>::job_ended(&self, &battersea_kit_conversation::JobId)
+pub fn battersea_kit_conversation::compaction::Runner<H>::new(alloc::rcs::arc::Arc<H>) -> Self
+pub fn battersea_kit_conversation::compaction::Runner<H>::requested(&self, &battersea_kit_conversation::TranscriptId) -> core::option::Option<battersea_kit_conversation::JobId>
+impl<H> !core::marker::Freeze for battersea_kit_conversation::compaction::Runner<H>
+impl<H> core::marker::Send for battersea_kit_conversation::compaction::Runner<H> where alloc::rcs::arc::Arc<H>: core::marker::Send
+impl<H> core::marker::Sync for battersea_kit_conversation::compaction::Runner<H> where alloc::rcs::arc::Arc<H>: core::marker::Sync
+impl<H> core::marker::Unpin for battersea_kit_conversation::compaction::Runner<H> where alloc::rcs::arc::Arc<H>: core::marker::Unpin
+impl<H> core::marker::UnsafeUnpin for battersea_kit_conversation::compaction::Runner<H> where alloc::rcs::arc::Arc<H>: core::marker::UnsafeUnpin
+impl<H> !core::panic::unwind_safe::RefUnwindSafe for battersea_kit_conversation::compaction::Runner<H>
+impl<H> !core::panic::unwind_safe::UnwindSafe for battersea_kit_conversation::compaction::Runner<H>
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_kit_conversation::compaction::Runner<H> where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_kit_conversation::compaction::Runner<H> where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<T, U> core::convert::Into<U> for battersea_kit_conversation::compaction::Runner<H> where U: core::convert::From<T>
+pub fn battersea_kit_conversation::compaction::Runner<H>::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_kit_conversation::compaction::Runner<H> where U: core::convert::Into<T>
+pub type battersea_kit_conversation::compaction::Runner<H>::Error = never
+pub fn battersea_kit_conversation::compaction::Runner<H>::try_from(U) -> core::result::Result<T, never>
+impl<T, U> core::convert::TryInto<U> for battersea_kit_conversation::compaction::Runner<H> where U: core::convert::TryFrom<T>
+pub type battersea_kit_conversation::compaction::Runner<H>::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_kit_conversation::compaction::Runner<H>::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> core::any::Any for battersea_kit_conversation::compaction::Runner<H> where T: 'static + ?core::marker::Sized
+pub fn battersea_kit_conversation::compaction::Runner<H>::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_kit_conversation::compaction::Runner<H> where T: ?core::marker::Sized
+pub fn battersea_kit_conversation::compaction::Runner<H>::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_kit_conversation::compaction::Runner<H> where T: ?core::marker::Sized
+pub fn battersea_kit_conversation::compaction::Runner<H>::borrow_mut(&mut self) -> &mut T
+impl<T> core::convert::From<T> for battersea_kit_conversation::compaction::Runner<H>
+pub fn battersea_kit_conversation::compaction::Runner<H>::from(T) -> T
+impl<T> typenum::type_operators::Same for battersea_kit_conversation::compaction::Runner<H>
+pub type battersea_kit_conversation::compaction::Runner<H>::Output = T
+impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_kit_conversation::compaction::Runner<H> where T: ?core::marker::Sized
 pub struct battersea_kit_conversation::SpendEstimate
 pub battersea_kit_conversation::SpendEstimate::input_tokens: u64
 pub battersea_kit_conversation::SpendEstimate::max_output_tokens: core::option::Option<u64>
@@ -3335,9 +4431,11 @@ pub battersea_kit_conversation::Turn::id: core::option::Option<battersea_kit_con
 pub battersea_kit_conversation::Turn::revision: u32
 pub battersea_kit_conversation::Turn::role: battersea_model::messages::Role
 impl<X> battersea_kit_conversation::Turn<X>
+pub fn battersea_kit_conversation::Turn<X>::answers(&self, &[&str]) -> bool
 pub fn battersea_kit_conversation::Turn<X>::calls_tools(&self) -> bool
 pub fn battersea_kit_conversation::Turn<X>::text(battersea_model::messages::Role, impl core::convert::Into<alloc::string::String>, X) -> Self
 pub fn battersea_kit_conversation::Turn<X>::text_content(&self) -> alloc::string::String
+pub fn battersea_kit_conversation::Turn<X>::tool_call_ids(&self) -> alloc::vec::Vec<&str>
 impl<'de, X> serde_core::de::Deserialize<'de> for battersea_kit_conversation::Turn<X> where X: serde_core::de::Deserialize<'de>
 pub fn battersea_kit_conversation::Turn<X>::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
 impl<X: core::clone::Clone> core::clone::Clone for battersea_kit_conversation::Turn<X>
@@ -3473,7 +4571,8 @@ pub const battersea_kit_conversation::MANIFEST: &str
 pub const battersea_kit_conversation::NAME: &str
 pub const battersea_kit_conversation::TOKEN_TYPES: &[&str]
 pub trait battersea_kit_conversation::Port: battersea_runtime::host::ExecutionHost
-pub type battersea_kit_conversation::Port::Extension: serde_core::ser::Serialize + serde_core::de::DeserializeOwned + core::clone::Clone + core::marker::Send + core::marker::Sync + 'static
+pub type battersea_kit_conversation::Port::Extension: serde_core::ser::Serialize + serde_core::de::DeserializeOwned + core::clone::Clone + core::default::Default + core::marker::Send + core::marker::Sync + 'static
+pub fn battersea_kit_conversation::Port::clock(&self) -> alloc::rcs::arc::Arc<dyn battersea_model::clock::Clock>
 pub fn battersea_kit_conversation::Port::deliver<'life0, 'life1, 'async_trait>(&'life0 self, &'life1 mut Self::State, alloc::string::String) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<(), Self::Error>> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait, 'life1: 'async_trait
 pub fn battersea_kit_conversation::Port::engine(&self, &Self::State, &str) -> core::result::Result<alloc::rcs::arc::Arc<dyn battersea_model::adapter::EngineAdapter>, Self::Error>
 pub fn battersea_kit_conversation::Port::memory<'life0, 'life1, 'life2, 'async_trait>(&'life0 self, &'life1 Self::State, &'life2 battersea_kit_conversation::TranscriptId) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<battersea_kit_conversation::Memory<Self::Extension>, Self::Error>> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait, 'life1: 'async_trait, 'life2: 'async_trait
@@ -3491,6 +4590,7 @@ pub fn battersea_kit_conversation::Port::turns<'life0, 'life1, 'life2, 'async_tr
 pub fn battersea_kit_conversation::Port::write_summary<'life0, 'life1, 'async_trait>(&'life0 self, &'life1 mut Self::State, battersea_kit_conversation::Summary<Self::Extension>) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<(), Self::Error>> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait, 'life1: 'async_trait
 impl battersea_kit_conversation::port::Port for battersea_kit::reference::ReferenceHost<battersea_kit_conversation::reference::State>
 pub type battersea_kit::reference::ReferenceHost<battersea_kit_conversation::reference::State>::Extension = serde_json::value::Value
+pub fn battersea_kit::reference::ReferenceHost<battersea_kit_conversation::reference::State>::clock(&self) -> alloc::rcs::arc::Arc<dyn battersea_model::clock::Clock>
 pub fn battersea_kit::reference::ReferenceHost<battersea_kit_conversation::reference::State>::deliver<'life0, 'life1, 'async_trait>(&'life0 self, &'life1 mut Self::State, alloc::string::String) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<(), battersea_kit::reference::ReferenceError>> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait, 'life1: 'async_trait
 pub fn battersea_kit::reference::ReferenceHost<battersea_kit_conversation::reference::State>::engine(&self, &Self::State, &str) -> core::result::Result<alloc::rcs::arc::Arc<dyn battersea_model::adapter::EngineAdapter>, battersea_kit::reference::ReferenceError>
 pub fn battersea_kit::reference::ReferenceHost<battersea_kit_conversation::reference::State>::memory<'life0, 'life1, 'life2, 'async_trait>(&'life0 self, &'life1 Self::State, &'life2 battersea_kit_conversation::TranscriptId) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<battersea_kit_conversation::Memory<battersea_kit_conversation::reference::Extension>, battersea_kit::reference::ReferenceError>> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait, 'life1: 'async_trait, 'life2: 'async_trait
@@ -3506,5 +4606,6 @@ pub fn battersea_kit::reference::ReferenceHost<battersea_kit_conversation::refer
 pub fn battersea_kit::reference::ReferenceHost<battersea_kit_conversation::reference::State>::transition<'life0, 'life1, 'life2, 'async_trait>(&'life0 self, &'life1 mut Self::State, &'life2 battersea_kit_conversation::JobId, battersea_kit_conversation::JobState) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<(), battersea_kit::reference::ReferenceError>> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait, 'life1: 'async_trait, 'life2: 'async_trait
 pub fn battersea_kit::reference::ReferenceHost<battersea_kit_conversation::reference::State>::turns<'life0, 'life1, 'life2, 'async_trait>(&'life0 self, &'life1 Self::State, &'life2 battersea_kit_conversation::TranscriptId) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<alloc::vec::Vec<battersea_kit_conversation::Turn<battersea_kit_conversation::reference::Extension>>, battersea_kit::reference::ReferenceError>> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait, 'life1: 'async_trait, 'life2: 'async_trait
 pub fn battersea_kit::reference::ReferenceHost<battersea_kit_conversation::reference::State>::write_summary<'life0, 'life1, 'async_trait>(&'life0 self, &'life1 mut Self::State, battersea_kit_conversation::Summary<battersea_kit_conversation::reference::Extension>) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<(), battersea_kit::reference::ReferenceError>> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait, 'life1: 'async_trait
+pub fn battersea_kit_conversation::register_handlers<H: battersea_kit_conversation::port::Port>(&mut battersea_runtime::registry::RegistryBuilder<H>) -> core::result::Result<(), alloc::string::String>
 pub fn battersea_kit_conversation::register_token_types(&mut battersea_flow::registry::Registry, &battersea_kit_conversation::Options) -> core::result::Result<(), alloc::string::String>
 pub fn battersea_kit_conversation::token_schemas(&serde_json::value::Value) -> alloc::vec::Vec<(&'static str, serde_json::value::Value)>

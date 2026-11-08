@@ -38,8 +38,10 @@ pub struct Case<Op = ()> {
     pub node: String,
     pub values: HashMap<String, Value>,
     /// Each step advances the clock once the activation waits on a timer. A wait after the
-    /// last step fails the case.
+    /// last step fails the case unless `cancel` is set.
     pub steps: Vec<Duration>,
+    /// Cancels the activation at the wait after the last step.
+    pub cancel: bool,
     pub before: Vec<Op>,
 }
 
@@ -52,7 +54,16 @@ pub struct Suite<Op = ()> {
     /// Registers the kit's token types, and its parameter datatypes, on the catalogue's
     /// registry.
     pub register_token_types: fn(&mut Registry) -> Result<(), String>,
+    /// The run's events as the suite compares them: a kit whose records carry what each host
+    /// names differently, such as record ids and extensions, replaces those here. A kit
+    /// without such records passes [`same_events`].
+    pub comparable_events: fn(&[Value]) -> Vec<Value>,
     pub cases: Vec<Case<Op>>,
+}
+
+/// Events compared as they are.
+pub fn same_events(events: &[Value]) -> Vec<Value> {
+    events.to_vec()
 }
 
 /// How the suite reaches a host.
@@ -291,8 +302,9 @@ pub async fn play<Op, F: Fixture, A: PortAccess<F::Host, Op>>(
         access.prepare(&host, &mut state, operation).await?;
     }
     let taken = AtomicUsize::new(0);
+    let token = CancellationToken::new();
     // Advances the clock at each wait the case steps, lets the activation complete the timers
-    // the advance reached, then reports the next wait.
+    // the advance reached, then reports the next wait, or cancels the activation there.
     let stepper = async {
         for step in &case.steps {
             clock.timer_within(Duration::MAX).await;
@@ -300,15 +312,17 @@ pub async fn play<Op, F: Fixture, A: PortAccess<F::Host, Op>>(
             taken.fetch_add(1, Ordering::SeqCst);
             clock.settled().await;
         }
-        clock.timer_within(Duration::MAX).await
+        let remaining = clock.timer_within(Duration::MAX).await;
+        if case.cancel {
+            token.cancel();
+            std::future::pending::<Duration>().await
+        } else {
+            remaining
+        }
     };
     let outcome = {
-        let activation = pin!(host.run_activation(
-            &mut state,
-            &case.node,
-            case.values.clone(),
-            CancellationToken::new(),
-        ));
+        let activation =
+            pin!(host.run_activation(&mut state, &case.node, case.values.clone(), token.clone(),));
         match select(activation, pin!(stepper)).await {
             Either::Left((result, _)) => Outcome::from_result(result),
             // Dropping the activation here abandons the wait.
@@ -380,10 +394,12 @@ where
                 candidate: actual.outcome,
             }));
         }
-        let length = expected.events.len().max(actual.events.len());
+        let expected_events = (suite.comparable_events)(&expected.events);
+        let actual_events = (suite.comparable_events)(&actual.events);
+        let length = expected_events.len().max(actual_events.len());
         for index in 0..length {
-            let reference = expected.events.get(index);
-            let candidate = actual.events.get(index);
+            let reference = expected_events.get(index);
+            let candidate = actual_events.get(index);
             if reference.map(comparable) != candidate.map(comparable) {
                 return Err(failure(Divergence::Event {
                     index,

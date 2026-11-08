@@ -115,6 +115,7 @@ fn case(name: &str, body: &str, values: Value) -> Case {
         node: "source".into(),
         values: serde_json::from_value(values).expect("activation values"),
         steps: vec![],
+        cancel: false,
         before: vec![],
     }
 }
@@ -186,6 +187,7 @@ pub fn suite() -> Suite {
             ("battersea.conformance", PROBE_MANIFEST),
         ],
         register_token_types: crate::register_token_types,
+        comparable_events: conformance::same_events,
         cases: cases(),
     }
 }

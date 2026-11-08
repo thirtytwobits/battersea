@@ -10,8 +10,8 @@ use battersea_kit_conversation::{
     compaction::{Policy, PolicyEvaluation},
     conformance::{Probe, ScriptedResponse, Snapshot, TranscriptSnapshot, TRANSCRIPT},
     reference::ScriptedEngine,
-    CallRecord, CompactionJob, JobId, JobState, Memory, Port, Reservation, Revision, RunState,
-    SpendEstimate, Summary, ToolPlan, TranscriptId, Turn, TurnId,
+    register_handlers, CallRecord, CompactionJob, JobId, JobState, Memory, Port, Reservation,
+    Revision, RunState, SpendEstimate, Summary, ToolPlan, TranscriptId, Turn, TurnId,
 };
 use battersea_model::{EngineAdapter, EngineTokenUsage};
 use battersea_runtime::*;
@@ -58,6 +58,16 @@ impl std::fmt::Display for Error {
 }
 impl std::error::Error for Error {}
 impl ExecutionError for Error {
+    /// A refusal with one of the kit's codes has settled effects, so `emit` and `skip` apply.
+    fn recoverable_node_failure(&self) -> Option<RecoverableNodeFailure> {
+        let reason = self.reason?;
+        (self.code == "invalid_request" && reason.starts_with("conversation.")).then(|| {
+            RecoverableNodeFailure {
+                code: reason.into(),
+                message: self.message.clone(),
+            }
+        })
+    }
     fn invalid_request(reason: &'static str, message: impl Into<String>) -> Self {
         Self::new("invalid_request", Some(reason), message)
     }
@@ -117,6 +127,9 @@ struct FileHost {
     jobs: Mutex<BTreeMap<JobId, CompactionJob<Value>>>,
     ledger: Mutex<Vec<(Reservation, EngineTokenUsage)>>,
     policy: Policy,
+    tools: Mutex<ToolPlan>,
+    /// Drops every staged turn but the first: the deliberately wrong port of the tests.
+    drops_staged_turns: bool,
     next: AtomicU64,
 }
 static HOSTS: AtomicU64 = AtomicU64::new(0);
@@ -129,16 +142,20 @@ impl FileHost {
             HOSTS.fetch_add(1, Ordering::SeqCst)
         ));
         std::fs::create_dir_all(&dir).expect("a temporary directory");
+        let mut handlers = RegistryBuilder::default();
+        register_handlers(&mut handlers).expect("the kit's handlers");
         Self {
             dir,
             engine: Arc::new(ScriptedEngine::new(clock.clone())),
             clock,
-            handlers: RegistryBuilder::default().build(),
+            handlers: handlers.build(),
             phases: Mutex::default(),
             events: Mutex::default(),
             jobs: Mutex::default(),
             ledger: Mutex::default(),
             policy: Policy::default(),
+            tools: Mutex::default(),
+            drops_staged_turns: false,
             next: AtomicU64::new(0),
         }
     }
@@ -326,6 +343,9 @@ impl Port for FileHost {
     fn run_state(run: &mut Run) -> &mut RunState<Value> {
         &mut run.kit
     }
+    fn clock(&self) -> Arc<dyn Clock> {
+        self.clock.clone()
+    }
     async fn turns(
         &self,
         _run: &Run,
@@ -337,6 +357,9 @@ impl Port for FileHost {
         let id = TurnId::from(self.next("turn"));
         turn.id = Some(id.clone());
         turn.created_at = self.clock.unix_ms();
+        if self.drops_staged_turns && !run.kit.staged.is_empty() {
+            return Ok(id);
+        }
         run.kit.staged.push(turn);
         Ok(id)
     }
@@ -387,7 +410,7 @@ impl Port for FileHost {
         Ok(self.engine.clone())
     }
     fn tool_plan(&self, _run: &Run, _node: &str) -> Result<ToolPlan, Error> {
-        Ok(ToolPlan::default())
+        Ok(self.tools.lock().unwrap().clone())
     }
     async fn reserve(
         &self,
@@ -493,8 +516,17 @@ impl Probe for FileHost {
             .collect();
         self.write(&transcript, &Transcript { turns, summary })
     }
+    async fn seed_job(&self, _run: &mut Run, job: CompactionJob<Value>) -> Result<(), Error> {
+        self.reserve(job.id.as_str());
+        self.jobs.lock().unwrap().insert(job.id.clone(), job);
+        Ok(())
+    }
     async fn script(&self, _run: &mut Run, responses: Vec<ScriptedResponse>) -> Result<(), Error> {
         self.engine.extend(responses);
+        Ok(())
+    }
+    async fn offer_tools(&self, _run: &mut Run, plan: ToolPlan) -> Result<(), Error> {
+        *self.tools.lock().unwrap() = plan;
         Ok(())
     }
     async fn snapshot(&self, run: &Run) -> Result<Snapshot<Value>, Error> {
@@ -616,6 +648,35 @@ mod tests {
         battersea_kit_conversation::conformance::run(&FileFixture)
             .await
             .unwrap();
+    }
+
+    /// The fixture of a host whose port drops staged turns.
+    struct DroppingFixture;
+    impl Fixture for DroppingFixture {
+        type Host = FileHost;
+        fn host(&self, clock: Arc<ManualClock>) -> FileHost {
+            let mut host = FileHost::new(clock);
+            host.drops_staged_turns = true;
+            host
+        }
+        fn state(&self, host: &FileHost, scheduler: SchedulerState) -> Run {
+            FileFixture.state(host, scheduler)
+        }
+        fn events(&self, host: &FileHost, run_id: &str) -> Vec<ExecutionEvent> {
+            FileFixture.events(host, run_id)
+        }
+    }
+
+    #[tokio::test]
+    async fn a_port_that_drops_a_staged_turn_fails_the_suite_with_the_stage_case_named() {
+        let failure = battersea_kit_conversation::conformance::run(&DroppingFixture)
+            .await
+            .unwrap_err();
+        assert_eq!(failure.case, "stage");
+        assert!(matches!(
+            *failure.divergence,
+            battersea_kit_conversation::conformance::Divergence::State { .. }
+        ));
     }
 
     #[tokio::test]

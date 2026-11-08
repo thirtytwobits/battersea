@@ -2,10 +2,16 @@
 //!
 //! Compaction: the policy that bounds a transcript and the evaluation that decides whether
 //! to compact it.
-use crate::{Memory, TranscriptId};
+use crate::{JobId, Memory, Port, TranscriptId};
+use battersea_model::Clock;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use std::time::Duration;
+use std::{
+    collections::BTreeMap,
+    sync::{Arc, Mutex, MutexGuard, PoisonError},
+    time::Duration,
+};
+use tokio::{sync::Notify, time::Instant};
 
 /// The thresholds that bound a transcript. Each is optional; a flow overrides any of them.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
@@ -94,5 +100,214 @@ pub fn evaluate<X>(
         },
         measured: Measured { turns, tokens },
         policy: policy.clone(),
+    }
+}
+
+/// Drives compaction outside flows: evaluates after a run, arms a transcript's idle timer on
+/// the port's clock and evaluates once it elapses. It requests at most one job per transcript
+/// until the application reports that job ended; it never activates a flow.
+pub struct Runner<H: Port> {
+    host: Arc<H>,
+    clock: Arc<dyn Clock>,
+    inner: Mutex<Inner>,
+    changed: Notify,
+}
+#[derive(Default)]
+struct Inner {
+    /// Each transcript with an evaluation in flight (`None`) or a job open (`Some`).
+    requested: BTreeMap<TranscriptId, Option<JobId>>,
+    /// When each armed transcript's idle timer elapses.
+    deadlines: BTreeMap<TranscriptId, Instant>,
+}
+impl<H: Port> Runner<H> {
+    /// The node name the runner measures and requests under.
+    pub const NODE: &'static str = "conversation.compaction.runner";
+
+    /// A runner over `host`, on the host's clock.
+    pub fn new(host: Arc<H>) -> Self {
+        let clock = host.clock();
+        Self {
+            host,
+            clock,
+            inner: Mutex::default(),
+            changed: Notify::new(),
+        }
+    }
+    fn inner(&self) -> MutexGuard<'_, Inner> {
+        self.inner.lock().unwrap_or_else(PoisonError::into_inner)
+    }
+    /// The job the runner has open for `transcript`.
+    pub fn requested(&self, transcript: &TranscriptId) -> Option<JobId> {
+        self.inner().requested.get(transcript).cloned().flatten()
+    }
+    /// Forgets `job`, so the runner may request another for its transcript. The application
+    /// calls this when its port transitions the job to `completed` or `failed`.
+    pub fn job_ended(&self, job: &JobId) {
+        self.inner()
+            .requested
+            .retain(|_, held| held.as_ref() != Some(job));
+    }
+    /// Evaluates `transcript` with the `after_run` trigger, requests a job on `compact` unless
+    /// one is open, and arms the idle timer where the policy sets `idle`, disarming it
+    /// otherwise.
+    pub async fn after_run(
+        &self,
+        state: &mut H::State,
+        transcript: &TranscriptId,
+    ) -> Result<Option<JobId>, H::Error> {
+        let policy = self.host.policy(state, transcript)?;
+        {
+            let mut inner = self.inner();
+            match policy.idle {
+                Some(idle) => {
+                    let deadline = self.clock.instant() + idle;
+                    inner.deadlines.insert(transcript.clone(), deadline);
+                }
+                None => {
+                    inner.deadlines.remove(transcript);
+                }
+            }
+        }
+        self.changed.notify_waiters();
+        self.evaluate(state, transcript, &policy, Trigger::AfterRun)
+            .await
+    }
+    /// Completes when a transcript's idle timer elapses, naming the transcript; pending while
+    /// none is armed.
+    pub async fn idle_elapsed(&self) -> TranscriptId {
+        loop {
+            let notified = self.changed.notified();
+            let next = self
+                .inner()
+                .deadlines
+                .iter()
+                .min_by_key(|(_, deadline)| **deadline)
+                .map(|(transcript, deadline)| (transcript.clone(), *deadline));
+            let Some((transcript, deadline)) = next else {
+                notified.await;
+                continue;
+            };
+            tokio::select! {
+                () = self.clock.sleep_until(deadline) => {
+                    let mut inner = self.inner();
+                    if inner.deadlines.get(&transcript) == Some(&deadline) {
+                        inner.deadlines.remove(&transcript);
+                        return transcript;
+                    }
+                }
+                () = notified => {}
+            }
+        }
+    }
+    /// Evaluates `transcript` with the `idle` trigger and requests a job on `compact` unless one
+    /// is open. It holds under a policy without `idle`.
+    pub async fn idle(
+        &self,
+        state: &mut H::State,
+        transcript: &TranscriptId,
+    ) -> Result<Option<JobId>, H::Error> {
+        let policy = self.host.policy(state, transcript)?;
+        if policy.idle.is_none() {
+            return Ok(None);
+        }
+        self.evaluate(state, transcript, &policy, Trigger::Idle)
+            .await
+    }
+    async fn evaluate(
+        &self,
+        state: &mut H::State,
+        transcript: &TranscriptId,
+        policy: &Policy,
+        trigger: Trigger,
+    ) -> Result<Option<JobId>, H::Error> {
+        // The transcript is held from here until the evaluation ends, so two evaluations of
+        // one transcript cannot both request a job. The guard releases it unless a job
+        // replaces it, whether the evaluation returns or is dropped.
+        let Some(_in_flight) = InFlight::hold(&self.inner, transcript) else {
+            return Ok(None);
+        };
+        let requested = self.request(state, transcript, policy, trigger).await?;
+        if let Some(job) = &requested {
+            self.inner()
+                .requested
+                .insert(transcript.clone(), Some(job.clone()));
+        }
+        Ok(requested)
+    }
+    async fn request(
+        &self,
+        state: &mut H::State,
+        transcript: &TranscriptId,
+        policy: &Policy,
+        trigger: Trigger,
+    ) -> Result<Option<JobId>, H::Error> {
+        let memory = self.host.memory(state, transcript).await?;
+        let engine = self.host.engine(state, Self::NODE)?;
+        let tokens = crate::nodes::count(engine.as_ref(), crate::nodes::messages(&memory.turns))
+            .await
+            .map_err(|error| crate::nodes::provider_failed::<H::Error>(&error))?;
+        let evaluation = evaluate(policy, trigger, &memory, tokens);
+        if evaluation.decision != Decision::Compact {
+            return Ok(None);
+        }
+        Ok(Some(self.host.request_compaction(state, evaluation).await?))
+    }
+}
+
+/// Holds a transcript in a runner's map while its evaluation runs, and releases it on drop
+/// unless a job has replaced the in-flight entry.
+struct InFlight<'a> {
+    inner: &'a Mutex<Inner>,
+    transcript: &'a TranscriptId,
+}
+impl<'a> InFlight<'a> {
+    /// Holds `transcript` in `inner`; `None` when it is already held.
+    fn hold(inner: &'a Mutex<Inner>, transcript: &'a TranscriptId) -> Option<Self> {
+        let mut held = inner.lock().unwrap_or_else(PoisonError::into_inner);
+        if held.requested.contains_key(transcript) {
+            return None;
+        }
+        held.requested.insert(transcript.clone(), None);
+        Some(Self { inner, transcript })
+    }
+}
+impl Drop for InFlight<'_> {
+    fn drop(&mut self) {
+        let mut inner = self.inner.lock().unwrap_or_else(PoisonError::into_inner);
+        if inner
+            .requested
+            .get(self.transcript)
+            .is_some_and(Option::is_none)
+        {
+            inner.requested.remove(self.transcript);
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn a_dropped_hold_releases_the_transcript_unless_a_job_replaced_it() {
+        let inner = Mutex::new(Inner::default());
+        let transcript = TranscriptId::from("t");
+        let hold = InFlight::hold(&inner, &transcript).expect("not held");
+        assert!(InFlight::hold(&inner, &transcript).is_none());
+        drop(hold);
+        assert!(!inner.lock().unwrap().requested.contains_key(&transcript));
+
+        let hold = InFlight::hold(&inner, &transcript).expect("released");
+        let job = JobId::from("job-1");
+        inner
+            .lock()
+            .unwrap()
+            .requested
+            .insert(transcript.clone(), Some(job.clone()));
+        drop(hold);
+        assert_eq!(
+            inner.lock().unwrap().requested.get(&transcript),
+            Some(&Some(job))
+        );
     }
 }

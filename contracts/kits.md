@@ -74,7 +74,9 @@ kit's `X` and whose clock is a `ManualClock`. A kit implements its port for
 `ReferenceHost<reference::State>`. The reference host is the kit's own test host and the oracle
 its conformance suite compares against. It makes no durable commitment and has no checkpoints.
 A kit that registers parameter datatypes builds the reference host `with_registry`, so its
-automation writes convert as an application's registry does.
+automation writes convert as an application's registry does. A refusal with a kit's own reason
+code is a recoverable node failure on the reference host, so `emit` and `skip` apply to it; the
+runtime's codes and the host's own keep their control outcomes.
 
 ## Conformance
 
@@ -86,9 +88,10 @@ Each case is a flow in [text source](text-source.md), activation values, the clo
 during the run, and the port operations performed before it. `conformance::run(&fixture)` plays
 every case on the reference host and on the application's host, both on a `ManualClock` the
 suite owns, and reports the first divergence in outcome, execution events and the port's
-observable state. Emitted tokens are compared through the runtime's receive events, which
-carry each value. The suite reaches the application only through `Port` and
-`battersea_kit::conformance::Fixture`:
+observable state. Emitted tokens are compared through the runtime's emit and receive events,
+which carry each value; a kit whose records carry what each host names differently, such as
+record ids and extensions, replaces those through the suite's `comparable_events`. The suite
+reaches the application only through `Port` and `battersea_kit::conformance::Fixture`:
 
 ```rust
 pub trait Fixture {
@@ -105,7 +108,8 @@ pub trait Fixture {
 A clock step is taken once the activation waits on a timer, and the next once the activation
 has completed or dropped every timer the step reached, so a wait racing a longer timeout
 completes. A case whose steps outnumber a host's waits fails, and so does a host that waits
-after the last step; neither waits on the wall clock. The kit reaches its port through
+after the last step, unless the case cancels the activation at that wait; no case waits on the
+wall clock. The kit reaches its port through
 `PortAccess<H: Port>`, which applies a case's port operations before the activation and
 observes the port's state after it; the kit's `conformance::run` passes it for both hosts, and
 a kit without a port passes `NoPort`. Event comparison ignores the host's own error wording: the

@@ -9,7 +9,7 @@ use battersea_model::{
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
-use std::sync::Arc;
+use std::{collections::BTreeMap, sync::Arc};
 
 macro_rules! id {
     ($(#[$doc:meta])* $name:ident) => {
@@ -98,6 +98,23 @@ impl<X> Turn<X> {
         self.content
             .iter()
             .any(|block| matches!(block, ContentBlock::ToolCall { .. }))
+    }
+    /// The ids of the tool calls the turn makes.
+    pub fn tool_call_ids(&self) -> Vec<&str> {
+        self.content
+            .iter()
+            .filter_map(|block| match block {
+                ContentBlock::ToolCall { id, .. } => Some(id.as_str()),
+                _ => None,
+            })
+            .collect()
+    }
+    /// Whether the turn carries a result for one of `calls`.
+    pub fn answers(&self, calls: &[&str]) -> bool {
+        self.content.iter().any(|block| match block {
+            ContentBlock::ToolResult { id, .. } => calls.contains(&id.as_str()),
+            _ => false,
+        })
     }
 }
 
@@ -227,6 +244,7 @@ pub struct CallRecord {
 pub struct ToolPlan {
     pub definitions: Vec<EngineLocalToolDefinition>,
     pub executor: Option<Arc<dyn EngineLocalToolExecutor>>,
+    /// Caps a chat node's `max_tool_rounds` parameter; zero leaves the parameter in force.
     pub max_rounds: usize,
 }
 impl std::fmt::Debug for ToolPlan {
@@ -257,6 +275,9 @@ pub struct RunState<X> {
     /// Reservations not yet settled.
     pub reservations: Vec<Reservation>,
     pub deliveries: Vec<String>,
+    /// The text each `ConversationBuffer` node holds while its stream is open, by node id.
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub buffers: BTreeMap<String, String>,
 }
 impl<X> RunState<X> {
     /// The version of the state's serialised form.
@@ -269,6 +290,7 @@ impl<X> RunState<X> {
             calls: vec![],
             reservations: vec![],
             deliveries: vec![],
+            buffers: BTreeMap::new(),
         }
     }
 }

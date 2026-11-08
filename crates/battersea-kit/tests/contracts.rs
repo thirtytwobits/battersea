@@ -451,6 +451,7 @@ fn case(name: &str, text: &str) -> Case {
         node: "source".into(),
         values: HashMap::from([("text".to_string(), json!(text))]),
         steps: vec![],
+        cancel: false,
         before: vec![],
     }
 }
@@ -460,6 +461,7 @@ fn suite_of(cases: Vec<Case>) -> Suite {
         kit: &KIT,
         manifests: vec![("example", MANIFEST)],
         register_token_types,
+        comparable_events: battersea_kit::conformance::same_events,
         cases,
     }
 }
