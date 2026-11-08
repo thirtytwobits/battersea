@@ -148,18 +148,27 @@ impl<H: Port> Runner<H> {
             .retain(|_, held| held.as_ref() != Some(job));
     }
     /// Evaluates `transcript` with the `after_run` trigger, requests a job on `compact` unless
-    /// one is open, and arms the idle timer where the policy sets `idle`.
+    /// one is open, and arms the idle timer where the policy sets `idle`, disarming it
+    /// otherwise.
     pub async fn after_run(
         &self,
         state: &mut H::State,
         transcript: &TranscriptId,
     ) -> Result<Option<JobId>, H::Error> {
         let policy = self.host.policy(state, transcript)?;
-        if let Some(idle) = policy.idle {
-            let deadline = self.clock.instant() + idle;
-            self.inner().deadlines.insert(transcript.clone(), deadline);
-            self.changed.notify_waiters();
+        {
+            let mut inner = self.inner();
+            match policy.idle {
+                Some(idle) => {
+                    let deadline = self.clock.instant() + idle;
+                    inner.deadlines.insert(transcript.clone(), deadline);
+                }
+                None => {
+                    inner.deadlines.remove(transcript);
+                }
+            }
         }
+        self.changed.notify_waiters();
         self.evaluate(state, transcript, &policy, Trigger::AfterRun)
             .await
     }
@@ -191,13 +200,16 @@ impl<H: Port> Runner<H> {
         }
     }
     /// Evaluates `transcript` with the `idle` trigger and requests a job on `compact` unless one
-    /// is open.
+    /// is open. It holds under a policy without `idle`.
     pub async fn idle(
         &self,
         state: &mut H::State,
         transcript: &TranscriptId,
     ) -> Result<Option<JobId>, H::Error> {
         let policy = self.host.policy(state, transcript)?;
+        if policy.idle.is_none() {
+            return Ok(None);
+        }
         self.evaluate(state, transcript, &policy, Trigger::Idle)
             .await
     }

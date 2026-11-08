@@ -16,7 +16,8 @@ use async_trait::async_trait;
 use battersea_flow::{FlowNode, FlowNodeDefinition};
 use battersea_model::{
     engine::EngineChatParameters, EngineAdapterRequestError, EngineTextStream,
-    EngineTextStreamEvent, EngineTokenUsage, ErrorKind, Message, Role, StopReason, ToolCode,
+    EngineTextStreamEvent, EngineTokenUsage, ErrorKind, Message, Role, StopReason,
+    ToolCallEvidence, ToolCode,
 };
 use battersea_runtime::{ExecutionError, NodeHandler, ProviderEvent, Token};
 use futures_util::{stream, Stream, StreamExt};
@@ -85,8 +86,38 @@ impl Progress {
             *held = next.or(*held);
         }
     }
+    /// Attaches `evidence` to the call it names, in the round in progress or a closed one;
+    /// a call the stream never started is added to the round in progress.
+    fn attest(&mut self, evidence: &ToolCallEvidence) {
+        let call = self
+            .open
+            .iter_mut()
+            .chain(
+                self.rounds
+                    .iter_mut()
+                    .flat_map(|round| round.calls.iter_mut()),
+            )
+            .find(|call| call.id == evidence.call_id);
+        match call {
+            Some(call) => call.evidence = Some(evidence.clone()),
+            None => self.open.push(ToolCall {
+                id: evidence.call_id.clone(),
+                name: evidence.tool_name.clone(),
+                arguments: Value::Null,
+                ok: false,
+                result: Value::Null,
+                evidence: Some(evidence.clone()),
+            }),
+        }
+    }
     fn completion(&mut self, failure: Option<EngineAdapterRequestError>) -> ProviderEvent {
         self.done = true;
+        if let Some(evidence) = failure
+            .as_ref()
+            .and_then(|error| error.tool_call.as_deref())
+        {
+            self.attest(evidence);
+        }
         self.flush_round();
         let completion = Completion {
             text: std::mem::take(&mut self.text),
@@ -465,7 +496,7 @@ impl<H: Port> NodeHandler<H> for ChatHandler {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use battersea_model::EngineAdapterRequestError;
+    use battersea_model::{EngineAdapterRequestError, ToolCallOutcome};
     use serde_json::json;
 
     /// The completion the stream of `events` ends with.
@@ -539,8 +570,14 @@ mod tests {
 
     #[tokio::test]
     async fn tool_rounds_close_at_the_next_message_and_at_a_failed_end() {
-        let error = EngineAdapterRequestError::new("test", "rounds", ErrorKind::Request)
+        let mut error = EngineAdapterRequestError::new("test", "rounds", ErrorKind::Request)
             .with_tool_code(ToolCode::ToolRoundsExceeded);
+        error.tool_call = Some(Box::new(ToolCallEvidence {
+            call_id: "call-2".into(),
+            tool_name: "echo".into(),
+            outcome: ToolCallOutcome::Uncertain,
+            request_id: None,
+        }));
         let (_, completion) = completion_of(vec![
             Ok(EngineTextStreamEvent::MessageStart { turn_index: 0 }),
             Ok(started("call-1")),
@@ -565,6 +602,13 @@ mod tests {
         assert!(completion.rounds[0].calls[0].ok);
         assert_eq!(completion.rounds[1].round, 1);
         assert_eq!(completion.rounds[1].calls[0].id, "call-2");
+        assert_eq!(
+            completion.rounds[1].calls[0]
+                .evidence
+                .as_ref()
+                .map(|evidence| evidence.outcome),
+            Some(ToolCallOutcome::Uncertain)
+        );
         assert_eq!(
             completion.failure.and_then(|error| error.tool_code),
             Some(ToolCode::ToolRoundsExceeded)

@@ -142,7 +142,8 @@ outputs close. The activation token cancels the stream; cancellation retains its
 outcome, records no call and leaves the reservation open for the application to settle. A
 provider error ends the call with the failed status published and the reservation settled with
 the usage reported: `conversation.tool_rounds_exhausted` where the model crate names exhausted
-tool rounds, `conversation.provider_failed` otherwise.
+tool rounds, `conversation.provider_failed` otherwise. The error's tool-call evidence, where it
+carries any, is attached to the call it names in `tool_rounds`.
 
 `ConversationMemory` fits turns newest first until adding one would exceed `budget`, measured by
 the port's engine as it measures the chat request. The summary is not counted. An assistant turn
@@ -180,8 +181,9 @@ measured.
 `compaction::Runner<H: Port>` holds the port and its clock. `after_run(state, transcript)`
 evaluates with `after_run` once a run completes and requests a job on `compact`. Where the
 policy sets `idle`, it then arms a timer for `idle` on the clock; a run on the transcript
-re-arms it. `idle_elapsed()` completes when a timer elapses, naming the transcript, and
-`idle(state, transcript)` then evaluates once with `idle`. The runner requests at most one job
+re-arms it, and a run under a policy without `idle` disarms it. `idle_elapsed()` completes when a timer elapses, naming the transcript, and
+`idle(state, transcript)` then evaluates once with `idle`, holding under a policy without
+`idle`. The runner requests at most one job
 per transcript until the application reports the job ended with `job_ended`, which it does when
 its port transitions the job to `completed` or `failed`. A transcript is held while its
 evaluation runs and released when the evaluation holds, fails or is dropped before it ends. The runner never activates a flow: the

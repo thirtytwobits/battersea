@@ -1120,6 +1120,28 @@ async fn the_runner_requests_one_job_per_transcript_and_evaluates_on_idle() {
     assert_eq!(runner.idle(&mut state, &transcript).await.unwrap(), None);
     runner.job_ended(&idle);
 
+    // A policy that drops idle disarms the timer, and idle holds under it.
+    assert_eq!(
+        runner.after_run(&mut state, &transcript).await.unwrap(),
+        None
+    );
+    let mut elapsed = Box::pin(runner.idle_elapsed());
+    assert!(elapsed.as_mut().now_or_never().is_none());
+    state.kit.store().policy = Policy::default();
+    assert_eq!(
+        runner.after_run(&mut state, &transcript).await.unwrap(),
+        None
+    );
+    clock.advance(std::time::Duration::from_secs(90));
+    assert!(elapsed.as_mut().now_or_never().is_none());
+    assert_eq!(runner.idle(&mut state, &transcript).await.unwrap(), None);
+    drop(elapsed);
+    state.kit.store().policy = Policy {
+        max_turns: None,
+        max_tokens: None,
+        idle: Some(std::time::Duration::from_secs(60)),
+    };
+
     // An idle-only policy compacts on no other trigger, and never an empty memory.
     let through = state.kit.store().transcripts[&transcript].turns[1]
         .id
