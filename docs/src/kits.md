@@ -29,6 +29,10 @@ A kit may depend on `battersea-flow`, `battersea-runtime`, `battersea-kit` and
 
 ## Use a kit
 
+The [conversation kit](contracts/kit-conversation.md) is the chat loop over your transcript,
+model, tools and spend, with compaction and refinement; `examples/kit-conversation` implements
+its port over files.
+
 1. Implement the kit's `Port` on your `ExecutionHost`, projecting the kit's `RunState` out of
    your run state and including it in your versioned host state.
 2. Register the kit's token types with your extension schema, list its `MANIFEST` in

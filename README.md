@@ -45,8 +45,8 @@ Completions have separate adapters. See [provider contract](contracts/providers.
 `battersea-nodes` supplies explicit node manifests and generic handlers; it is the generic kit.
 `battersea-kit` supplies the kit descriptor, the in-memory reference host and the conformance
 harness that [kits](contracts/kits.md) are built on. `battersea-kit-conversation` is the
-conversation kit: the nodes of a chat loop over an application's transcript, model, tools and
-spend, reached through its `Port`. `battersea-guard` scans source against the application's
+[conversation kit](contracts/kit-conversation.md): the nodes of a chat loop over an
+application's transcript, model, tools and spend, reached through its `Port`. `battersea-guard` scans source against the application's
 declared prompt roots. Applications retain their prompts, product tools, storage and asset
 ownership.
 
