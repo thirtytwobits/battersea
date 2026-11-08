@@ -183,7 +183,8 @@ policy sets `idle`, it then arms a timer for `idle` on the clock; a run on the t
 re-arms it. `idle_elapsed()` completes when a timer elapses, naming the transcript, and
 `idle(state, transcript)` then evaluates once with `idle`. The runner requests at most one job
 per transcript until the application reports the job ended with `job_ended`, which it does when
-its port transitions the job to `completed` or `failed`. The runner never activates a flow: the
+its port transitions the job to `completed` or `failed`. A transcript is held while its
+evaluation runs and released when the evaluation holds, fails or is dropped before it ends. The runner never activates a flow: the
 application runs the compaction flow for a requested job, and that flow's
 `ConversationMemoryOutput` completes it.
 

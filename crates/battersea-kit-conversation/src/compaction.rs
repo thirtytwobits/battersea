@@ -209,27 +209,18 @@ impl<H: Port> Runner<H> {
         trigger: Trigger,
     ) -> Result<Option<JobId>, H::Error> {
         // The transcript is held from here until the evaluation ends, so two evaluations of
-        // one transcript cannot both request a job.
-        {
-            let mut inner = self.inner();
-            if inner.requested.contains_key(transcript) {
-                return Ok(None);
-            }
-            inner.requested.insert(transcript.clone(), None);
+        // one transcript cannot both request a job. The guard releases it unless a job
+        // replaces it, whether the evaluation returns or is dropped.
+        let Some(_in_flight) = InFlight::hold(&self.inner, transcript) else {
+            return Ok(None);
+        };
+        let requested = self.request(state, transcript, policy, trigger).await?;
+        if let Some(job) = &requested {
+            self.inner()
+                .requested
+                .insert(transcript.clone(), Some(job.clone()));
         }
-        let requested = self.request(state, transcript, policy, trigger).await;
-        let mut inner = self.inner();
-        match &requested {
-            Ok(Some(job)) => {
-                inner
-                    .requested
-                    .insert(transcript.clone(), Some(job.clone()));
-            }
-            Ok(None) | Err(_) => {
-                inner.requested.remove(transcript);
-            }
-        }
-        requested
+        Ok(requested)
     }
     async fn request(
         &self,
@@ -248,5 +239,63 @@ impl<H: Port> Runner<H> {
             return Ok(None);
         }
         Ok(Some(self.host.request_compaction(state, evaluation).await?))
+    }
+}
+
+/// Holds a transcript in a runner's map while its evaluation runs, and releases it on drop
+/// unless a job has replaced the in-flight entry.
+struct InFlight<'a> {
+    inner: &'a Mutex<Inner>,
+    transcript: &'a TranscriptId,
+}
+impl<'a> InFlight<'a> {
+    /// Holds `transcript` in `inner`; `None` when it is already held.
+    fn hold(inner: &'a Mutex<Inner>, transcript: &'a TranscriptId) -> Option<Self> {
+        let mut held = inner.lock().unwrap_or_else(PoisonError::into_inner);
+        if held.requested.contains_key(transcript) {
+            return None;
+        }
+        held.requested.insert(transcript.clone(), None);
+        Some(Self { inner, transcript })
+    }
+}
+impl Drop for InFlight<'_> {
+    fn drop(&mut self) {
+        let mut inner = self.inner.lock().unwrap_or_else(PoisonError::into_inner);
+        if inner
+            .requested
+            .get(self.transcript)
+            .is_some_and(Option::is_none)
+        {
+            inner.requested.remove(self.transcript);
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn a_dropped_hold_releases_the_transcript_unless_a_job_replaced_it() {
+        let inner = Mutex::new(Inner::default());
+        let transcript = TranscriptId::from("t");
+        let hold = InFlight::hold(&inner, &transcript).expect("not held");
+        assert!(InFlight::hold(&inner, &transcript).is_none());
+        drop(hold);
+        assert!(!inner.lock().unwrap().requested.contains_key(&transcript));
+
+        let hold = InFlight::hold(&inner, &transcript).expect("released");
+        let job = JobId::from("job-1");
+        inner
+            .lock()
+            .unwrap()
+            .requested
+            .insert(transcript.clone(), Some(job.clone()));
+        drop(hold);
+        assert_eq!(
+            inner.lock().unwrap().requested.get(&transcript),
+            Some(&Some(job))
+        );
     }
 }
