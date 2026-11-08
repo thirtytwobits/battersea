@@ -432,7 +432,7 @@ fn package(root: &Path) -> Result<()> {
         };
         let mut manifest = format!("[package]\nname = \"package-{example}\"\nversion = \"0.0.0\"\nedition = \"2021\"\n[dependencies]\nserde_json = \"1\"\nfutures-util = \"0.3\"\nasync-trait = \"0.1\"\ntokio = {{ version = \"1\", features = {tokio_features} }}\ntokio-util = \"0.7\"\n");
         if example == "editor-server" {
-            manifest.push_str("sha2 = \"0.10\"\naxum = { version = \"0.8\", features = [\"json\"] }\nclap = { version = \"4\", features = [\"derive\", \"env\"] }\nserde = { version = \"1\", features = [\"derive\"] }\nuuid = { version = \"1\", features = [\"v4\"] }\ntempfile = \"3\"\n");
+            manifest.push_str("base16ct = { version = \"1\", features = [\"alloc\"] }\nsha2 = \"0.11\"\naxum = { version = \"0.8\", features = [\"json\"] }\nclap = { version = \"4\", features = [\"derive\", \"env\"] }\nserde = { version = \"1\", features = [\"derive\"] }\nuuid = { version = \"1\", features = [\"v4\"] }\ntempfile = \"3\"\n");
         }
         if example == "mcp" {
             manifest.push_str("axum = { version = \"0.8\", features = [\"json\"] }\nclap = { version = \"4\", features = [\"derive\"] }\ntempfile = \"3\"\n");

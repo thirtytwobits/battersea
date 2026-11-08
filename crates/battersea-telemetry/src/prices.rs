@@ -106,7 +106,10 @@ impl PriceCatalogue {
             }
         }
         let result = Self {
-            version: format!("sha256:{:x}", Sha256::digest(input)),
+            version: format!(
+                "sha256:{}",
+                base16ct::lower::encode_string(&Sha256::digest(input))
+            ),
             source: "LiteLLM model_prices_and_context_window.json".into(),
             effective_date,
             prices,

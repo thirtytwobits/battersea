@@ -4,7 +4,7 @@ use async_trait::async_trait;
 use base64::Engine as _;
 use battersea_model::{adapter::error::DispatchState, ErrorKind};
 use chrono::{DateTime, Utc};
-use hmac::{Hmac, Mac};
+use hmac::{Hmac, KeyInit, Mac};
 use serde_json::json;
 use sha2::Sha256;
 
