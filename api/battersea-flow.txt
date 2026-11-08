@@ -163,8 +163,6 @@ impl core::panic::unwind_safe::RefUnwindSafe for battersea_flow::dsl::ParseError
 impl core::panic::unwind_safe::UnwindSafe for battersea_flow::dsl::ParseError
 impl<Q, K> equivalent::Equivalent<K> for battersea_flow::dsl::ParseError where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
 pub fn battersea_flow::dsl::ParseError::equivalent(&self, &K) -> bool
-impl<Q, K> hashbrown::Equivalent<K> for battersea_flow::dsl::ParseError where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
-pub fn battersea_flow::dsl::ParseError::equivalent(&self, &K) -> bool
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_flow::dsl::ParseError where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_flow::dsl::ParseError where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<T, U> core::convert::Into<U> for battersea_flow::dsl::ParseError where U: core::convert::From<T>
@@ -229,8 +227,6 @@ impl core::panic::unwind_safe::RefUnwindSafe for battersea_flow::execution::Flow
 impl core::panic::unwind_safe::UnwindSafe for battersea_flow::execution::FlowPortMode
 impl<Q, K> equivalent::Equivalent<K> for battersea_flow::execution::FlowPortMode where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
 pub fn battersea_flow::execution::FlowPortMode::equivalent(&self, &K) -> bool
-impl<Q, K> hashbrown::Equivalent<K> for battersea_flow::execution::FlowPortMode where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
-pub fn battersea_flow::execution::FlowPortMode::equivalent(&self, &K) -> bool
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_flow::execution::FlowPortMode where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_flow::execution::FlowPortMode where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<T, U> core::convert::Into<U> for battersea_flow::execution::FlowPortMode where U: core::convert::From<T>
@@ -291,8 +287,6 @@ impl core::panic::unwind_safe::RefUnwindSafe for battersea_flow::execution::Flow
 impl core::panic::unwind_safe::UnwindSafe for battersea_flow::execution::FlowPortPhase
 impl<Q, K> equivalent::Equivalent<K> for battersea_flow::execution::FlowPortPhase where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
 pub fn battersea_flow::execution::FlowPortPhase::equivalent(&self, &K) -> bool
-impl<Q, K> hashbrown::Equivalent<K> for battersea_flow::execution::FlowPortPhase where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
-pub fn battersea_flow::execution::FlowPortPhase::equivalent(&self, &K) -> bool
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_flow::execution::FlowPortPhase where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_flow::execution::FlowPortPhase where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<T, U> core::convert::Into<U> for battersea_flow::execution::FlowPortPhase where U: core::convert::From<T>
@@ -352,8 +346,6 @@ impl core::marker::UnsafeUnpin for battersea_flow::execution::FlowQueuePolicy
 impl core::panic::unwind_safe::RefUnwindSafe for battersea_flow::execution::FlowQueuePolicy
 impl core::panic::unwind_safe::UnwindSafe for battersea_flow::execution::FlowQueuePolicy
 impl<Q, K> equivalent::Equivalent<K> for battersea_flow::execution::FlowQueuePolicy where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
-pub fn battersea_flow::execution::FlowQueuePolicy::equivalent(&self, &K) -> bool
-impl<Q, K> hashbrown::Equivalent<K> for battersea_flow::execution::FlowQueuePolicy where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
 pub fn battersea_flow::execution::FlowQueuePolicy::equivalent(&self, &K) -> bool
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_flow::execution::FlowQueuePolicy where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_flow::execution::FlowQueuePolicy where ST: ?core::marker::Sized, DT: ?core::marker::Sized
@@ -420,8 +412,6 @@ impl core::panic::unwind_safe::RefUnwindSafe for battersea_flow::execution::Flow
 impl core::panic::unwind_safe::UnwindSafe for battersea_flow::execution::FlowExecutionLimits
 impl<Q, K> equivalent::Equivalent<K> for battersea_flow::execution::FlowExecutionLimits where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
 pub fn battersea_flow::execution::FlowExecutionLimits::equivalent(&self, &K) -> bool
-impl<Q, K> hashbrown::Equivalent<K> for battersea_flow::execution::FlowExecutionLimits where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
-pub fn battersea_flow::execution::FlowExecutionLimits::equivalent(&self, &K) -> bool
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_flow::execution::FlowExecutionLimits where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_flow::execution::FlowExecutionLimits where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<T, U> core::convert::Into<U> for battersea_flow::execution::FlowExecutionLimits where U: core::convert::From<T>
@@ -478,8 +468,6 @@ impl core::marker::UnsafeUnpin for battersea_flow::execution::FlowExecutionPolic
 impl core::panic::unwind_safe::RefUnwindSafe for battersea_flow::execution::FlowExecutionPolicy
 impl core::panic::unwind_safe::UnwindSafe for battersea_flow::execution::FlowExecutionPolicy
 impl<Q, K> equivalent::Equivalent<K> for battersea_flow::execution::FlowExecutionPolicy where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
-pub fn battersea_flow::execution::FlowExecutionPolicy::equivalent(&self, &K) -> bool
-impl<Q, K> hashbrown::Equivalent<K> for battersea_flow::execution::FlowExecutionPolicy where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
 pub fn battersea_flow::execution::FlowExecutionPolicy::equivalent(&self, &K) -> bool
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_flow::execution::FlowExecutionPolicy where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_flow::execution::FlowExecutionPolicy where ST: ?core::marker::Sized, DT: ?core::marker::Sized
@@ -543,8 +531,6 @@ impl core::marker::UnsafeUnpin for battersea_flow::execution::FlowQueueLimits
 impl core::panic::unwind_safe::RefUnwindSafe for battersea_flow::execution::FlowQueueLimits
 impl core::panic::unwind_safe::UnwindSafe for battersea_flow::execution::FlowQueueLimits
 impl<Q, K> equivalent::Equivalent<K> for battersea_flow::execution::FlowQueueLimits where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
-pub fn battersea_flow::execution::FlowQueueLimits::equivalent(&self, &K) -> bool
-impl<Q, K> hashbrown::Equivalent<K> for battersea_flow::execution::FlowQueueLimits where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
 pub fn battersea_flow::execution::FlowQueueLimits::equivalent(&self, &K) -> bool
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_flow::execution::FlowQueueLimits where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_flow::execution::FlowQueueLimits where ST: ?core::marker::Sized, DT: ?core::marker::Sized
@@ -614,8 +600,6 @@ impl core::panic::unwind_safe::RefUnwindSafe for battersea_flow::failure::FlowFa
 impl core::panic::unwind_safe::UnwindSafe for battersea_flow::failure::FlowFailurePolicy
 impl<Q, K> equivalent::Equivalent<K> for battersea_flow::failure::FlowFailurePolicy where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
 pub fn battersea_flow::failure::FlowFailurePolicy::equivalent(&self, &K) -> bool
-impl<Q, K> hashbrown::Equivalent<K> for battersea_flow::failure::FlowFailurePolicy where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
-pub fn battersea_flow::failure::FlowFailurePolicy::equivalent(&self, &K) -> bool
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_flow::failure::FlowFailurePolicy where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_flow::failure::FlowFailurePolicy where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<T, U> core::convert::Into<U> for battersea_flow::failure::FlowFailurePolicy where U: core::convert::From<T>
@@ -677,8 +661,6 @@ impl core::panic::unwind_safe::RefUnwindSafe for battersea_flow::failure::FlowFa
 impl core::panic::unwind_safe::UnwindSafe for battersea_flow::failure::FlowFailurePort
 impl<Q, K> equivalent::Equivalent<K> for battersea_flow::failure::FlowFailurePort where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
 pub fn battersea_flow::failure::FlowFailurePort::equivalent(&self, &K) -> bool
-impl<Q, K> hashbrown::Equivalent<K> for battersea_flow::failure::FlowFailurePort where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
-pub fn battersea_flow::failure::FlowFailurePort::equivalent(&self, &K) -> bool
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_flow::failure::FlowFailurePort where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_flow::failure::FlowFailurePort where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<T, U> core::convert::Into<U> for battersea_flow::failure::FlowFailurePort where U: core::convert::From<T>
@@ -739,8 +721,6 @@ impl core::marker::UnsafeUnpin for battersea_flow::failure::FlowNodeFailure
 impl core::panic::unwind_safe::RefUnwindSafe for battersea_flow::failure::FlowNodeFailure
 impl core::panic::unwind_safe::UnwindSafe for battersea_flow::failure::FlowNodeFailure
 impl<Q, K> equivalent::Equivalent<K> for battersea_flow::failure::FlowNodeFailure where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
-pub fn battersea_flow::failure::FlowNodeFailure::equivalent(&self, &K) -> bool
-impl<Q, K> hashbrown::Equivalent<K> for battersea_flow::failure::FlowNodeFailure where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
 pub fn battersea_flow::failure::FlowNodeFailure::equivalent(&self, &K) -> bool
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_flow::failure::FlowNodeFailure where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_flow::failure::FlowNodeFailure where ST: ?core::marker::Sized, DT: ?core::marker::Sized
@@ -838,8 +818,6 @@ impl core::panic::unwind_safe::RefUnwindSafe for battersea_flow::output_encoding
 impl core::panic::unwind_safe::UnwindSafe for battersea_flow::output_encoding::OutputEncoding
 impl<Q, K> equivalent::Equivalent<K> for battersea_flow::output_encoding::OutputEncoding where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
 pub fn battersea_flow::output_encoding::OutputEncoding::equivalent(&self, &K) -> bool
-impl<Q, K> hashbrown::Equivalent<K> for battersea_flow::output_encoding::OutputEncoding where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
-pub fn battersea_flow::output_encoding::OutputEncoding::equivalent(&self, &K) -> bool
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_flow::output_encoding::OutputEncoding where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_flow::output_encoding::OutputEncoding where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<T, U> core::convert::Into<U> for battersea_flow::output_encoding::OutputEncoding where U: core::convert::From<T>
@@ -892,8 +870,6 @@ impl core::marker::UnsafeUnpin for battersea_flow::output_encoding::WhitespaceMo
 impl core::panic::unwind_safe::RefUnwindSafe for battersea_flow::output_encoding::WhitespaceMode
 impl core::panic::unwind_safe::UnwindSafe for battersea_flow::output_encoding::WhitespaceMode
 impl<Q, K> equivalent::Equivalent<K> for battersea_flow::output_encoding::WhitespaceMode where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
-pub fn battersea_flow::output_encoding::WhitespaceMode::equivalent(&self, &K) -> bool
-impl<Q, K> hashbrown::Equivalent<K> for battersea_flow::output_encoding::WhitespaceMode where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
 pub fn battersea_flow::output_encoding::WhitespaceMode::equivalent(&self, &K) -> bool
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_flow::output_encoding::WhitespaceMode where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_flow::output_encoding::WhitespaceMode where ST: ?core::marker::Sized, DT: ?core::marker::Sized
@@ -959,8 +935,6 @@ impl core::panic::unwind_safe::RefUnwindSafe for battersea_flow::ports::Resolved
 impl core::panic::unwind_safe::UnwindSafe for battersea_flow::ports::ResolvedFlowPortSide
 impl<Q, K> equivalent::Equivalent<K> for battersea_flow::ports::ResolvedFlowPortSide where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
 pub fn battersea_flow::ports::ResolvedFlowPortSide::equivalent(&self, &K) -> bool
-impl<Q, K> hashbrown::Equivalent<K> for battersea_flow::ports::ResolvedFlowPortSide where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
-pub fn battersea_flow::ports::ResolvedFlowPortSide::equivalent(&self, &K) -> bool
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_flow::ports::ResolvedFlowPortSide where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_flow::ports::ResolvedFlowPortSide where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<T, U> core::convert::Into<U> for battersea_flow::ports::ResolvedFlowPortSide where U: core::convert::From<T>
@@ -1015,8 +989,6 @@ impl core::marker::UnsafeUnpin for battersea_flow::ports::ResolvedFlowPort
 impl core::panic::unwind_safe::RefUnwindSafe for battersea_flow::ports::ResolvedFlowPort
 impl core::panic::unwind_safe::UnwindSafe for battersea_flow::ports::ResolvedFlowPort
 impl<Q, K> equivalent::Equivalent<K> for battersea_flow::ports::ResolvedFlowPort where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
-pub fn battersea_flow::ports::ResolvedFlowPort::equivalent(&self, &K) -> bool
-impl<Q, K> hashbrown::Equivalent<K> for battersea_flow::ports::ResolvedFlowPort where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
 pub fn battersea_flow::ports::ResolvedFlowPort::equivalent(&self, &K) -> bool
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_flow::ports::ResolvedFlowPort where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_flow::ports::ResolvedFlowPort where ST: ?core::marker::Sized, DT: ?core::marker::Sized
@@ -1088,8 +1060,6 @@ impl core::panic::unwind_safe::RefUnwindSafe for battersea_flow::prompt_markdown
 impl core::panic::unwind_safe::UnwindSafe for battersea_flow::prompt_markdown::PromptFragmentEncoding
 impl<Q, K> equivalent::Equivalent<K> for battersea_flow::prompt_markdown::PromptFragmentEncoding where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
 pub fn battersea_flow::prompt_markdown::PromptFragmentEncoding::equivalent(&self, &K) -> bool
-impl<Q, K> hashbrown::Equivalent<K> for battersea_flow::prompt_markdown::PromptFragmentEncoding where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
-pub fn battersea_flow::prompt_markdown::PromptFragmentEncoding::equivalent(&self, &K) -> bool
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_flow::prompt_markdown::PromptFragmentEncoding where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_flow::prompt_markdown::PromptFragmentEncoding where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<T, U> core::convert::Into<U> for battersea_flow::prompt_markdown::PromptFragmentEncoding where U: core::convert::From<T>
@@ -1138,8 +1108,6 @@ impl core::marker::UnsafeUnpin for battersea_flow::prompt_markdown::PromptFragme
 impl core::panic::unwind_safe::RefUnwindSafe for battersea_flow::prompt_markdown::PromptFragmentItem
 impl core::panic::unwind_safe::UnwindSafe for battersea_flow::prompt_markdown::PromptFragmentItem
 impl<Q, K> equivalent::Equivalent<K> for battersea_flow::prompt_markdown::PromptFragmentItem where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
-pub fn battersea_flow::prompt_markdown::PromptFragmentItem::equivalent(&self, &K) -> bool
-impl<Q, K> hashbrown::Equivalent<K> for battersea_flow::prompt_markdown::PromptFragmentItem where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
 pub fn battersea_flow::prompt_markdown::PromptFragmentItem::equivalent(&self, &K) -> bool
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_flow::prompt_markdown::PromptFragmentItem where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_flow::prompt_markdown::PromptFragmentItem where ST: ?core::marker::Sized, DT: ?core::marker::Sized
@@ -1287,8 +1255,6 @@ impl core::panic::unwind_safe::RefUnwindSafe for battersea_flow::FlowEdgeKind
 impl core::panic::unwind_safe::UnwindSafe for battersea_flow::FlowEdgeKind
 impl<Q, K> equivalent::Equivalent<K> for battersea_flow::FlowEdgeKind where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
 pub fn battersea_flow::FlowEdgeKind::equivalent(&self, &K) -> bool
-impl<Q, K> hashbrown::Equivalent<K> for battersea_flow::FlowEdgeKind where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
-pub fn battersea_flow::FlowEdgeKind::equivalent(&self, &K) -> bool
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_flow::FlowEdgeKind where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_flow::FlowEdgeKind where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<T, U> core::convert::Into<U> for battersea_flow::FlowEdgeKind where U: core::convert::From<T>
@@ -1351,8 +1317,6 @@ impl core::marker::UnsafeUnpin for battersea_flow::failure::FlowFailurePolicy
 impl core::panic::unwind_safe::RefUnwindSafe for battersea_flow::failure::FlowFailurePolicy
 impl core::panic::unwind_safe::UnwindSafe for battersea_flow::failure::FlowFailurePolicy
 impl<Q, K> equivalent::Equivalent<K> for battersea_flow::failure::FlowFailurePolicy where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
-pub fn battersea_flow::failure::FlowFailurePolicy::equivalent(&self, &K) -> bool
-impl<Q, K> hashbrown::Equivalent<K> for battersea_flow::failure::FlowFailurePolicy where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
 pub fn battersea_flow::failure::FlowFailurePolicy::equivalent(&self, &K) -> bool
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_flow::failure::FlowFailurePolicy where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_flow::failure::FlowFailurePolicy where ST: ?core::marker::Sized, DT: ?core::marker::Sized
@@ -1417,8 +1381,6 @@ impl core::marker::UnsafeUnpin for battersea_flow::FlowNodeClass
 impl core::panic::unwind_safe::RefUnwindSafe for battersea_flow::FlowNodeClass
 impl core::panic::unwind_safe::UnwindSafe for battersea_flow::FlowNodeClass
 impl<Q, K> equivalent::Equivalent<K> for battersea_flow::FlowNodeClass where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
-pub fn battersea_flow::FlowNodeClass::equivalent(&self, &K) -> bool
-impl<Q, K> hashbrown::Equivalent<K> for battersea_flow::FlowNodeClass where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
 pub fn battersea_flow::FlowNodeClass::equivalent(&self, &K) -> bool
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_flow::FlowNodeClass where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_flow::FlowNodeClass where ST: ?core::marker::Sized, DT: ?core::marker::Sized
@@ -1487,8 +1449,6 @@ impl core::panic::unwind_safe::RefUnwindSafe for battersea_flow::FlowParameterEd
 impl core::panic::unwind_safe::UnwindSafe for battersea_flow::FlowParameterEditorKind
 impl<Q, K> equivalent::Equivalent<K> for battersea_flow::FlowParameterEditorKind where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
 pub fn battersea_flow::FlowParameterEditorKind::equivalent(&self, &K) -> bool
-impl<Q, K> hashbrown::Equivalent<K> for battersea_flow::FlowParameterEditorKind where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
-pub fn battersea_flow::FlowParameterEditorKind::equivalent(&self, &K) -> bool
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_flow::FlowParameterEditorKind where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_flow::FlowParameterEditorKind where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<T, U> core::convert::Into<U> for battersea_flow::FlowParameterEditorKind where U: core::convert::From<T>
@@ -1548,8 +1508,6 @@ impl core::panic::unwind_safe::RefUnwindSafe for battersea_flow::FlowPortDisplay
 impl core::panic::unwind_safe::UnwindSafe for battersea_flow::FlowPortDisplayClass
 impl<Q, K> equivalent::Equivalent<K> for battersea_flow::FlowPortDisplayClass where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
 pub fn battersea_flow::FlowPortDisplayClass::equivalent(&self, &K) -> bool
-impl<Q, K> hashbrown::Equivalent<K> for battersea_flow::FlowPortDisplayClass where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
-pub fn battersea_flow::FlowPortDisplayClass::equivalent(&self, &K) -> bool
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_flow::FlowPortDisplayClass where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_flow::FlowPortDisplayClass where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<T, U> core::convert::Into<U> for battersea_flow::FlowPortDisplayClass where U: core::convert::From<T>
@@ -1608,8 +1566,6 @@ impl core::panic::unwind_safe::RefUnwindSafe for battersea_flow::FlowPortFormatt
 impl core::panic::unwind_safe::UnwindSafe for battersea_flow::FlowPortFormatterKind
 impl<Q, K> equivalent::Equivalent<K> for battersea_flow::FlowPortFormatterKind where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
 pub fn battersea_flow::FlowPortFormatterKind::equivalent(&self, &K) -> bool
-impl<Q, K> hashbrown::Equivalent<K> for battersea_flow::FlowPortFormatterKind where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
-pub fn battersea_flow::FlowPortFormatterKind::equivalent(&self, &K) -> bool
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_flow::FlowPortFormatterKind where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_flow::FlowPortFormatterKind where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<T, U> core::convert::Into<U> for battersea_flow::FlowPortFormatterKind where U: core::convert::From<T>
@@ -1667,8 +1623,6 @@ impl core::marker::UnsafeUnpin for battersea_flow::FlowPortKind
 impl core::panic::unwind_safe::RefUnwindSafe for battersea_flow::FlowPortKind
 impl core::panic::unwind_safe::UnwindSafe for battersea_flow::FlowPortKind
 impl<Q, K> equivalent::Equivalent<K> for battersea_flow::FlowPortKind where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
-pub fn battersea_flow::FlowPortKind::equivalent(&self, &K) -> bool
-impl<Q, K> hashbrown::Equivalent<K> for battersea_flow::FlowPortKind where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
 pub fn battersea_flow::FlowPortKind::equivalent(&self, &K) -> bool
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_flow::FlowPortKind where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_flow::FlowPortKind where ST: ?core::marker::Sized, DT: ?core::marker::Sized
@@ -1730,8 +1684,6 @@ impl core::panic::unwind_safe::RefUnwindSafe for battersea_flow::execution::Flow
 impl core::panic::unwind_safe::UnwindSafe for battersea_flow::execution::FlowPortMode
 impl<Q, K> equivalent::Equivalent<K> for battersea_flow::execution::FlowPortMode where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
 pub fn battersea_flow::execution::FlowPortMode::equivalent(&self, &K) -> bool
-impl<Q, K> hashbrown::Equivalent<K> for battersea_flow::execution::FlowPortMode where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
-pub fn battersea_flow::execution::FlowPortMode::equivalent(&self, &K) -> bool
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_flow::execution::FlowPortMode where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_flow::execution::FlowPortMode where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<T, U> core::convert::Into<U> for battersea_flow::execution::FlowPortMode where U: core::convert::From<T>
@@ -1791,8 +1743,6 @@ impl core::marker::UnsafeUnpin for battersea_flow::execution::FlowPortPhase
 impl core::panic::unwind_safe::RefUnwindSafe for battersea_flow::execution::FlowPortPhase
 impl core::panic::unwind_safe::UnwindSafe for battersea_flow::execution::FlowPortPhase
 impl<Q, K> equivalent::Equivalent<K> for battersea_flow::execution::FlowPortPhase where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
-pub fn battersea_flow::execution::FlowPortPhase::equivalent(&self, &K) -> bool
-impl<Q, K> hashbrown::Equivalent<K> for battersea_flow::execution::FlowPortPhase where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
 pub fn battersea_flow::execution::FlowPortPhase::equivalent(&self, &K) -> bool
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_flow::execution::FlowPortPhase where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_flow::execution::FlowPortPhase where ST: ?core::marker::Sized, DT: ?core::marker::Sized
@@ -1855,8 +1805,6 @@ impl core::panic::unwind_safe::RefUnwindSafe for battersea_flow::FlowPromptTempl
 impl core::panic::unwind_safe::UnwindSafe for battersea_flow::FlowPromptTemplateNode
 impl<Q, K> equivalent::Equivalent<K> for battersea_flow::FlowPromptTemplateNode where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
 pub fn battersea_flow::FlowPromptTemplateNode::equivalent(&self, &K) -> bool
-impl<Q, K> hashbrown::Equivalent<K> for battersea_flow::FlowPromptTemplateNode where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
-pub fn battersea_flow::FlowPromptTemplateNode::equivalent(&self, &K) -> bool
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_flow::FlowPromptTemplateNode where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_flow::FlowPromptTemplateNode where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<T, U> core::convert::Into<U> for battersea_flow::FlowPromptTemplateNode where U: core::convert::From<T>
@@ -1914,8 +1862,6 @@ impl core::marker::UnsafeUnpin for battersea_flow::execution::FlowQueuePolicy
 impl core::panic::unwind_safe::RefUnwindSafe for battersea_flow::execution::FlowQueuePolicy
 impl core::panic::unwind_safe::UnwindSafe for battersea_flow::execution::FlowQueuePolicy
 impl<Q, K> equivalent::Equivalent<K> for battersea_flow::execution::FlowQueuePolicy where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
-pub fn battersea_flow::execution::FlowQueuePolicy::equivalent(&self, &K) -> bool
-impl<Q, K> hashbrown::Equivalent<K> for battersea_flow::execution::FlowQueuePolicy where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
 pub fn battersea_flow::execution::FlowQueuePolicy::equivalent(&self, &K) -> bool
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_flow::execution::FlowQueuePolicy where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_flow::execution::FlowQueuePolicy where ST: ?core::marker::Sized, DT: ?core::marker::Sized
@@ -1977,8 +1923,6 @@ impl core::marker::UnsafeUnpin for battersea_flow::FlowActionPortDefinition
 impl core::panic::unwind_safe::RefUnwindSafe for battersea_flow::FlowActionPortDefinition
 impl core::panic::unwind_safe::UnwindSafe for battersea_flow::FlowActionPortDefinition
 impl<Q, K> equivalent::Equivalent<K> for battersea_flow::FlowActionPortDefinition where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
-pub fn battersea_flow::FlowActionPortDefinition::equivalent(&self, &K) -> bool
-impl<Q, K> hashbrown::Equivalent<K> for battersea_flow::FlowActionPortDefinition where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
 pub fn battersea_flow::FlowActionPortDefinition::equivalent(&self, &K) -> bool
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_flow::FlowActionPortDefinition where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_flow::FlowActionPortDefinition where ST: ?core::marker::Sized, DT: ?core::marker::Sized
@@ -2042,8 +1986,6 @@ impl core::panic::unwind_safe::RefUnwindSafe for battersea_flow::FlowAutomationP
 impl core::panic::unwind_safe::UnwindSafe for battersea_flow::FlowAutomationPortDefinition
 impl<Q, K> equivalent::Equivalent<K> for battersea_flow::FlowAutomationPortDefinition where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
 pub fn battersea_flow::FlowAutomationPortDefinition::equivalent(&self, &K) -> bool
-impl<Q, K> hashbrown::Equivalent<K> for battersea_flow::FlowAutomationPortDefinition where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
-pub fn battersea_flow::FlowAutomationPortDefinition::equivalent(&self, &K) -> bool
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_flow::FlowAutomationPortDefinition where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_flow::FlowAutomationPortDefinition where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<T, U> core::convert::Into<U> for battersea_flow::FlowAutomationPortDefinition where U: core::convert::From<T>
@@ -2103,8 +2045,6 @@ impl core::panic::unwind_safe::RefUnwindSafe for battersea_flow::FlowControllerA
 impl core::panic::unwind_safe::UnwindSafe for battersea_flow::FlowControllerActionDefinition
 impl<Q, K> equivalent::Equivalent<K> for battersea_flow::FlowControllerActionDefinition where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
 pub fn battersea_flow::FlowControllerActionDefinition::equivalent(&self, &K) -> bool
-impl<Q, K> hashbrown::Equivalent<K> for battersea_flow::FlowControllerActionDefinition where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
-pub fn battersea_flow::FlowControllerActionDefinition::equivalent(&self, &K) -> bool
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_flow::FlowControllerActionDefinition where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_flow::FlowControllerActionDefinition where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<T, U> core::convert::Into<U> for battersea_flow::FlowControllerActionDefinition where U: core::convert::From<T>
@@ -2163,8 +2103,6 @@ impl core::marker::UnsafeUnpin for battersea_flow::FlowControllerOutputDefinitio
 impl core::panic::unwind_safe::RefUnwindSafe for battersea_flow::FlowControllerOutputDefinition
 impl core::panic::unwind_safe::UnwindSafe for battersea_flow::FlowControllerOutputDefinition
 impl<Q, K> equivalent::Equivalent<K> for battersea_flow::FlowControllerOutputDefinition where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
-pub fn battersea_flow::FlowControllerOutputDefinition::equivalent(&self, &K) -> bool
-impl<Q, K> hashbrown::Equivalent<K> for battersea_flow::FlowControllerOutputDefinition where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
 pub fn battersea_flow::FlowControllerOutputDefinition::equivalent(&self, &K) -> bool
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_flow::FlowControllerOutputDefinition where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_flow::FlowControllerOutputDefinition where ST: ?core::marker::Sized, DT: ?core::marker::Sized
@@ -2354,8 +2292,6 @@ impl core::panic::unwind_safe::RefUnwindSafe for battersea_flow::FlowDynamicSign
 impl core::panic::unwind_safe::UnwindSafe for battersea_flow::FlowDynamicSignalPortGroup
 impl<Q, K> equivalent::Equivalent<K> for battersea_flow::FlowDynamicSignalPortGroup where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
 pub fn battersea_flow::FlowDynamicSignalPortGroup::equivalent(&self, &K) -> bool
-impl<Q, K> hashbrown::Equivalent<K> for battersea_flow::FlowDynamicSignalPortGroup where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
-pub fn battersea_flow::FlowDynamicSignalPortGroup::equivalent(&self, &K) -> bool
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_flow::FlowDynamicSignalPortGroup where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_flow::FlowDynamicSignalPortGroup where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<T, U> core::convert::Into<U> for battersea_flow::FlowDynamicSignalPortGroup where U: core::convert::From<T>
@@ -2418,8 +2354,6 @@ impl core::marker::UnsafeUnpin for battersea_flow::FlowEdge
 impl core::panic::unwind_safe::RefUnwindSafe for battersea_flow::FlowEdge
 impl core::panic::unwind_safe::UnwindSafe for battersea_flow::FlowEdge
 impl<Q, K> equivalent::Equivalent<K> for battersea_flow::FlowEdge where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
-pub fn battersea_flow::FlowEdge::equivalent(&self, &K) -> bool
-impl<Q, K> hashbrown::Equivalent<K> for battersea_flow::FlowEdge where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
 pub fn battersea_flow::FlowEdge::equivalent(&self, &K) -> bool
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_flow::FlowEdge where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_flow::FlowEdge where ST: ?core::marker::Sized, DT: ?core::marker::Sized
@@ -2484,8 +2418,6 @@ impl core::panic::unwind_safe::RefUnwindSafe for battersea_flow::execution::Flow
 impl core::panic::unwind_safe::UnwindSafe for battersea_flow::execution::FlowExecutionLimits
 impl<Q, K> equivalent::Equivalent<K> for battersea_flow::execution::FlowExecutionLimits where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
 pub fn battersea_flow::execution::FlowExecutionLimits::equivalent(&self, &K) -> bool
-impl<Q, K> hashbrown::Equivalent<K> for battersea_flow::execution::FlowExecutionLimits where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
-pub fn battersea_flow::execution::FlowExecutionLimits::equivalent(&self, &K) -> bool
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_flow::execution::FlowExecutionLimits where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_flow::execution::FlowExecutionLimits where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<T, U> core::convert::Into<U> for battersea_flow::execution::FlowExecutionLimits where U: core::convert::From<T>
@@ -2542,8 +2474,6 @@ impl core::marker::UnsafeUnpin for battersea_flow::execution::FlowExecutionPolic
 impl core::panic::unwind_safe::RefUnwindSafe for battersea_flow::execution::FlowExecutionPolicy
 impl core::panic::unwind_safe::UnwindSafe for battersea_flow::execution::FlowExecutionPolicy
 impl<Q, K> equivalent::Equivalent<K> for battersea_flow::execution::FlowExecutionPolicy where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
-pub fn battersea_flow::execution::FlowExecutionPolicy::equivalent(&self, &K) -> bool
-impl<Q, K> hashbrown::Equivalent<K> for battersea_flow::execution::FlowExecutionPolicy where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
 pub fn battersea_flow::execution::FlowExecutionPolicy::equivalent(&self, &K) -> bool
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_flow::execution::FlowExecutionPolicy where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_flow::execution::FlowExecutionPolicy where ST: ?core::marker::Sized, DT: ?core::marker::Sized
@@ -2603,8 +2533,6 @@ impl core::marker::UnsafeUnpin for battersea_flow::failure::FlowFailurePort
 impl core::panic::unwind_safe::RefUnwindSafe for battersea_flow::failure::FlowFailurePort
 impl core::panic::unwind_safe::UnwindSafe for battersea_flow::failure::FlowFailurePort
 impl<Q, K> equivalent::Equivalent<K> for battersea_flow::failure::FlowFailurePort where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
-pub fn battersea_flow::failure::FlowFailurePort::equivalent(&self, &K) -> bool
-impl<Q, K> hashbrown::Equivalent<K> for battersea_flow::failure::FlowFailurePort where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
 pub fn battersea_flow::failure::FlowFailurePort::equivalent(&self, &K) -> bool
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_flow::failure::FlowFailurePort where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_flow::failure::FlowFailurePort where ST: ?core::marker::Sized, DT: ?core::marker::Sized
@@ -2799,8 +2727,6 @@ impl core::panic::unwind_safe::RefUnwindSafe for battersea_flow::failure::FlowNo
 impl core::panic::unwind_safe::UnwindSafe for battersea_flow::failure::FlowNodeFailure
 impl<Q, K> equivalent::Equivalent<K> for battersea_flow::failure::FlowNodeFailure where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
 pub fn battersea_flow::failure::FlowNodeFailure::equivalent(&self, &K) -> bool
-impl<Q, K> hashbrown::Equivalent<K> for battersea_flow::failure::FlowNodeFailure where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
-pub fn battersea_flow::failure::FlowNodeFailure::equivalent(&self, &K) -> bool
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_flow::failure::FlowNodeFailure where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_flow::failure::FlowNodeFailure where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<T, U> core::convert::Into<U> for battersea_flow::failure::FlowNodeFailure where U: core::convert::From<T>
@@ -2863,8 +2789,6 @@ impl core::panic::unwind_safe::RefUnwindSafe for battersea_flow::FlowNodePortNam
 impl core::panic::unwind_safe::UnwindSafe for battersea_flow::FlowNodePortNames
 impl<Q, K> equivalent::Equivalent<K> for battersea_flow::FlowNodePortNames where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
 pub fn battersea_flow::FlowNodePortNames::equivalent(&self, &K) -> bool
-impl<Q, K> hashbrown::Equivalent<K> for battersea_flow::FlowNodePortNames where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
-pub fn battersea_flow::FlowNodePortNames::equivalent(&self, &K) -> bool
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_flow::FlowNodePortNames where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_flow::FlowNodePortNames where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<T, U> core::convert::Into<U> for battersea_flow::FlowNodePortNames where U: core::convert::From<T>
@@ -2926,8 +2850,6 @@ impl core::marker::UnsafeUnpin for battersea_flow::FlowNodePortOrder
 impl core::panic::unwind_safe::RefUnwindSafe for battersea_flow::FlowNodePortOrder
 impl core::panic::unwind_safe::UnwindSafe for battersea_flow::FlowNodePortOrder
 impl<Q, K> equivalent::Equivalent<K> for battersea_flow::FlowNodePortOrder where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
-pub fn battersea_flow::FlowNodePortOrder::equivalent(&self, &K) -> bool
-impl<Q, K> hashbrown::Equivalent<K> for battersea_flow::FlowNodePortOrder where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
 pub fn battersea_flow::FlowNodePortOrder::equivalent(&self, &K) -> bool
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_flow::FlowNodePortOrder where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_flow::FlowNodePortOrder where ST: ?core::marker::Sized, DT: ?core::marker::Sized
@@ -3046,8 +2968,6 @@ impl core::marker::UnsafeUnpin for battersea_flow::FlowParameterDataType
 impl core::panic::unwind_safe::RefUnwindSafe for battersea_flow::FlowParameterDataType
 impl core::panic::unwind_safe::UnwindSafe for battersea_flow::FlowParameterDataType
 impl<Q, K> equivalent::Equivalent<K> for battersea_flow::FlowParameterDataType where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
-pub fn battersea_flow::FlowParameterDataType::equivalent(&self, &K) -> bool
-impl<Q, K> hashbrown::Equivalent<K> for battersea_flow::FlowParameterDataType where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
 pub fn battersea_flow::FlowParameterDataType::equivalent(&self, &K) -> bool
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_flow::FlowParameterDataType where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_flow::FlowParameterDataType where ST: ?core::marker::Sized, DT: ?core::marker::Sized
@@ -3286,8 +3206,6 @@ impl core::panic::unwind_safe::RefUnwindSafe for battersea_flow::FlowPortFormatt
 impl core::panic::unwind_safe::UnwindSafe for battersea_flow::FlowPortFormatter
 impl<Q, K> equivalent::Equivalent<K> for battersea_flow::FlowPortFormatter where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
 pub fn battersea_flow::FlowPortFormatter::equivalent(&self, &K) -> bool
-impl<Q, K> hashbrown::Equivalent<K> for battersea_flow::FlowPortFormatter where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
-pub fn battersea_flow::FlowPortFormatter::equivalent(&self, &K) -> bool
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_flow::FlowPortFormatter where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_flow::FlowPortFormatter where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<T, U> core::convert::Into<U> for battersea_flow::FlowPortFormatter where U: core::convert::From<T>
@@ -3347,8 +3265,6 @@ impl core::panic::unwind_safe::RefUnwindSafe for battersea_flow::FlowPromptListT
 impl core::panic::unwind_safe::UnwindSafe for battersea_flow::FlowPromptListTemplateNode
 impl<Q, K> equivalent::Equivalent<K> for battersea_flow::FlowPromptListTemplateNode where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
 pub fn battersea_flow::FlowPromptListTemplateNode::equivalent(&self, &K) -> bool
-impl<Q, K> hashbrown::Equivalent<K> for battersea_flow::FlowPromptListTemplateNode where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
-pub fn battersea_flow::FlowPromptListTemplateNode::equivalent(&self, &K) -> bool
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_flow::FlowPromptListTemplateNode where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_flow::FlowPromptListTemplateNode where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<T, U> core::convert::Into<U> for battersea_flow::FlowPromptListTemplateNode where U: core::convert::From<T>
@@ -3405,8 +3321,6 @@ impl core::marker::UnsafeUnpin for battersea_flow::FlowPromptOptionalTemplateNod
 impl core::panic::unwind_safe::RefUnwindSafe for battersea_flow::FlowPromptOptionalTemplateNode
 impl core::panic::unwind_safe::UnwindSafe for battersea_flow::FlowPromptOptionalTemplateNode
 impl<Q, K> equivalent::Equivalent<K> for battersea_flow::FlowPromptOptionalTemplateNode where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
-pub fn battersea_flow::FlowPromptOptionalTemplateNode::equivalent(&self, &K) -> bool
-impl<Q, K> hashbrown::Equivalent<K> for battersea_flow::FlowPromptOptionalTemplateNode where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
 pub fn battersea_flow::FlowPromptOptionalTemplateNode::equivalent(&self, &K) -> bool
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_flow::FlowPromptOptionalTemplateNode where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_flow::FlowPromptOptionalTemplateNode where ST: ?core::marker::Sized, DT: ?core::marker::Sized
@@ -3465,8 +3379,6 @@ impl core::panic::unwind_safe::RefUnwindSafe for battersea_flow::FlowPromptSeque
 impl core::panic::unwind_safe::UnwindSafe for battersea_flow::FlowPromptSequenceTemplateNode
 impl<Q, K> equivalent::Equivalent<K> for battersea_flow::FlowPromptSequenceTemplateNode where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
 pub fn battersea_flow::FlowPromptSequenceTemplateNode::equivalent(&self, &K) -> bool
-impl<Q, K> hashbrown::Equivalent<K> for battersea_flow::FlowPromptSequenceTemplateNode where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
-pub fn battersea_flow::FlowPromptSequenceTemplateNode::equivalent(&self, &K) -> bool
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_flow::FlowPromptSequenceTemplateNode where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_flow::FlowPromptSequenceTemplateNode where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<T, U> core::convert::Into<U> for battersea_flow::FlowPromptSequenceTemplateNode where U: core::convert::From<T>
@@ -3524,8 +3436,6 @@ impl core::panic::unwind_safe::RefUnwindSafe for battersea_flow::FlowPromptTempl
 impl core::panic::unwind_safe::UnwindSafe for battersea_flow::FlowPromptTemplateDefinition
 impl<Q, K> equivalent::Equivalent<K> for battersea_flow::FlowPromptTemplateDefinition where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
 pub fn battersea_flow::FlowPromptTemplateDefinition::equivalent(&self, &K) -> bool
-impl<Q, K> hashbrown::Equivalent<K> for battersea_flow::FlowPromptTemplateDefinition where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
-pub fn battersea_flow::FlowPromptTemplateDefinition::equivalent(&self, &K) -> bool
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_flow::FlowPromptTemplateDefinition where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_flow::FlowPromptTemplateDefinition where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<T, U> core::convert::Into<U> for battersea_flow::FlowPromptTemplateDefinition where U: core::convert::From<T>
@@ -3581,8 +3491,6 @@ impl core::marker::UnsafeUnpin for battersea_flow::FlowPromptTextTemplateNode
 impl core::panic::unwind_safe::RefUnwindSafe for battersea_flow::FlowPromptTextTemplateNode
 impl core::panic::unwind_safe::UnwindSafe for battersea_flow::FlowPromptTextTemplateNode
 impl<Q, K> equivalent::Equivalent<K> for battersea_flow::FlowPromptTextTemplateNode where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
-pub fn battersea_flow::FlowPromptTextTemplateNode::equivalent(&self, &K) -> bool
-impl<Q, K> hashbrown::Equivalent<K> for battersea_flow::FlowPromptTextTemplateNode where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
 pub fn battersea_flow::FlowPromptTextTemplateNode::equivalent(&self, &K) -> bool
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_flow::FlowPromptTextTemplateNode where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_flow::FlowPromptTextTemplateNode where ST: ?core::marker::Sized, DT: ?core::marker::Sized
@@ -3647,8 +3555,6 @@ impl core::panic::unwind_safe::RefUnwindSafe for battersea_flow::execution::Flow
 impl core::panic::unwind_safe::UnwindSafe for battersea_flow::execution::FlowQueueLimits
 impl<Q, K> equivalent::Equivalent<K> for battersea_flow::execution::FlowQueueLimits where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
 pub fn battersea_flow::execution::FlowQueueLimits::equivalent(&self, &K) -> bool
-impl<Q, K> hashbrown::Equivalent<K> for battersea_flow::execution::FlowQueueLimits where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
-pub fn battersea_flow::execution::FlowQueueLimits::equivalent(&self, &K) -> bool
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_flow::execution::FlowQueueLimits where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_flow::execution::FlowQueueLimits where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<T, U> core::convert::Into<U> for battersea_flow::execution::FlowQueueLimits where U: core::convert::From<T>
@@ -3707,8 +3613,6 @@ impl core::marker::UnsafeUnpin for battersea_flow::FlowSignalPortDefinition
 impl core::panic::unwind_safe::RefUnwindSafe for battersea_flow::FlowSignalPortDefinition
 impl core::panic::unwind_safe::UnwindSafe for battersea_flow::FlowSignalPortDefinition
 impl<Q, K> equivalent::Equivalent<K> for battersea_flow::FlowSignalPortDefinition where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
-pub fn battersea_flow::FlowSignalPortDefinition::equivalent(&self, &K) -> bool
-impl<Q, K> hashbrown::Equivalent<K> for battersea_flow::FlowSignalPortDefinition where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
 pub fn battersea_flow::FlowSignalPortDefinition::equivalent(&self, &K) -> bool
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_flow::FlowSignalPortDefinition where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_flow::FlowSignalPortDefinition where ST: ?core::marker::Sized, DT: ?core::marker::Sized
@@ -3773,8 +3677,6 @@ impl core::panic::unwind_safe::RefUnwindSafe for battersea_flow::FlowValidationI
 impl core::panic::unwind_safe::UnwindSafe for battersea_flow::FlowValidationIssue
 impl<Q, K> equivalent::Equivalent<K> for battersea_flow::FlowValidationIssue where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
 pub fn battersea_flow::FlowValidationIssue::equivalent(&self, &K) -> bool
-impl<Q, K> hashbrown::Equivalent<K> for battersea_flow::FlowValidationIssue where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
-pub fn battersea_flow::FlowValidationIssue::equivalent(&self, &K) -> bool
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_flow::FlowValidationIssue where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_flow::FlowValidationIssue where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<T, U> core::convert::Into<U> for battersea_flow::FlowValidationIssue where U: core::convert::From<T>
@@ -3831,8 +3733,6 @@ impl core::marker::UnsafeUnpin for battersea_flow::FlowValidationResult
 impl core::panic::unwind_safe::RefUnwindSafe for battersea_flow::FlowValidationResult
 impl core::panic::unwind_safe::UnwindSafe for battersea_flow::FlowValidationResult
 impl<Q, K> equivalent::Equivalent<K> for battersea_flow::FlowValidationResult where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
-pub fn battersea_flow::FlowValidationResult::equivalent(&self, &K) -> bool
-impl<Q, K> hashbrown::Equivalent<K> for battersea_flow::FlowValidationResult where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
 pub fn battersea_flow::FlowValidationResult::equivalent(&self, &K) -> bool
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_flow::FlowValidationResult where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_flow::FlowValidationResult where ST: ?core::marker::Sized, DT: ?core::marker::Sized
