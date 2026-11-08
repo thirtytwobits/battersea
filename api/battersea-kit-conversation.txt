@@ -2905,9 +2905,11 @@ pub battersea_kit_conversation::types::Turn::id: core::option::Option<battersea_
 pub battersea_kit_conversation::types::Turn::revision: u32
 pub battersea_kit_conversation::types::Turn::role: battersea_model::messages::Role
 impl<X> battersea_kit_conversation::Turn<X>
+pub fn battersea_kit_conversation::Turn<X>::answers(&self, &[&str]) -> bool
 pub fn battersea_kit_conversation::Turn<X>::calls_tools(&self) -> bool
 pub fn battersea_kit_conversation::Turn<X>::text(battersea_model::messages::Role, impl core::convert::Into<alloc::string::String>, X) -> Self
 pub fn battersea_kit_conversation::Turn<X>::text_content(&self) -> alloc::string::String
+pub fn battersea_kit_conversation::Turn<X>::tool_call_ids(&self) -> alloc::vec::Vec<&str>
 impl<'de, X> serde_core::de::Deserialize<'de> for battersea_kit_conversation::Turn<X> where X: serde_core::de::Deserialize<'de>
 pub fn battersea_kit_conversation::Turn<X>::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
 impl<X: core::clone::Clone> core::clone::Clone for battersea_kit_conversation::Turn<X>
@@ -4429,9 +4431,11 @@ pub battersea_kit_conversation::Turn::id: core::option::Option<battersea_kit_con
 pub battersea_kit_conversation::Turn::revision: u32
 pub battersea_kit_conversation::Turn::role: battersea_model::messages::Role
 impl<X> battersea_kit_conversation::Turn<X>
+pub fn battersea_kit_conversation::Turn<X>::answers(&self, &[&str]) -> bool
 pub fn battersea_kit_conversation::Turn<X>::calls_tools(&self) -> bool
 pub fn battersea_kit_conversation::Turn<X>::text(battersea_model::messages::Role, impl core::convert::Into<alloc::string::String>, X) -> Self
 pub fn battersea_kit_conversation::Turn<X>::text_content(&self) -> alloc::string::String
+pub fn battersea_kit_conversation::Turn<X>::tool_call_ids(&self) -> alloc::vec::Vec<&str>
 impl<'de, X> serde_core::de::Deserialize<'de> for battersea_kit_conversation::Turn<X> where X: serde_core::de::Deserialize<'de>
 pub fn battersea_kit_conversation::Turn<X>::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
 impl<X: core::clone::Clone> core::clone::Clone for battersea_kit_conversation::Turn<X>

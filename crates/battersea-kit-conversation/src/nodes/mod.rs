@@ -144,12 +144,15 @@ pub(crate) fn request(
 }
 
 /// The input tokens `engine` counts for `messages`, as it counts a chat request without tools.
-/// The request keeps the default round limit, which the adapters validate although no tool is
-/// offered.
+/// An empty list measures zero without a request, since the adapters refuse one. The request
+/// keeps the default round limit, which the adapters validate although no tool is offered.
 pub(crate) async fn count(
     engine: &dyn EngineAdapter,
     messages: Vec<Message>,
 ) -> Result<u64, EngineAdapterRequestError> {
+    if messages.is_empty() {
+        return Ok(0);
+    }
     let chat = EngineChatParameters::default_for_provider(crate::NAME);
     let rounds = chat.max_tool_rounds();
     engine
@@ -272,5 +275,10 @@ mod tests {
     async fn a_counting_request_passes_the_adapters_validation() {
         let messages = vec![Message::text(Role::User, "hello".into())];
         assert_eq!(count(&Validating, messages).await.unwrap(), 1);
+    }
+
+    #[tokio::test]
+    async fn an_empty_list_measures_zero_without_a_request() {
+        assert_eq!(count(&Validating, vec![]).await.unwrap(), 0);
     }
 }

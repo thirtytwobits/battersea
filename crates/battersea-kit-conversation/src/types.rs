@@ -99,6 +99,23 @@ impl<X> Turn<X> {
             .iter()
             .any(|block| matches!(block, ContentBlock::ToolCall { .. }))
     }
+    /// The ids of the tool calls the turn makes.
+    pub fn tool_call_ids(&self) -> Vec<&str> {
+        self.content
+            .iter()
+            .filter_map(|block| match block {
+                ContentBlock::ToolCall { id, .. } => Some(id.as_str()),
+                _ => None,
+            })
+            .collect()
+    }
+    /// Whether the turn carries a result for one of `calls`.
+    pub fn answers(&self, calls: &[&str]) -> bool {
+        self.content.iter().any(|block| match block {
+            ContentBlock::ToolResult { id, .. } => calls.contains(&id.as_str()),
+            _ => false,
+        })
+    }
 }
 
 /// A transcript's memory of the turns it covers: `conversation.summary`.

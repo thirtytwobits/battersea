@@ -116,16 +116,19 @@ impl<H: Port> NodeHandler<H> for TranscriptHandler {
     }
 }
 
-/// The units of `turns`: an assistant turn that calls tools and the tool turns answering it
-/// are one unit; every other turn is one.
+/// The units of `turns`: an assistant turn that calls tools and the turns answering its calls,
+/// in the tool or the user role, are one unit; every other turn is one.
 fn units<X>(turns: &[Turn<X>]) -> Vec<Range<usize>> {
     let mut units = vec![];
     let mut start = 0;
     while start < turns.len() {
         let mut end = start + 1;
-        if turns[start].role == Role::Assistant && turns[start].calls_tools() {
-            while end < turns.len() && turns[end].role == Role::Tool {
-                end += 1;
+        if turns[start].role == Role::Assistant {
+            let calls = turns[start].tool_call_ids();
+            if !calls.is_empty() {
+                while end < turns.len() && turns[end].answers(&calls) {
+                    end += 1;
+                }
             }
         }
         units.push(start..end);
@@ -239,5 +242,59 @@ impl<H: Port> NodeHandler<H> for RefinementSourceHandler {
         let text = render::<H::Error>(definition, "text", None, bindings)?;
         host.emit_flow_token(runtime, &node.id, "text", fragment(text), cancel)
             .await
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use battersea_model::ContentBlock;
+    use serde_json::json;
+
+    fn turn(role: Role, content: Vec<ContentBlock>) -> Turn<()> {
+        Turn {
+            id: None,
+            role,
+            content,
+            created_at: None,
+            revision: 0,
+            extension: (),
+        }
+    }
+
+    #[test]
+    fn a_tool_result_in_the_user_role_stays_with_its_call() {
+        let turns = vec![
+            turn(Role::User, vec![ContentBlock::Text { text: "go".into() }]),
+            turn(
+                Role::Assistant,
+                vec![ContentBlock::ToolCall {
+                    id: "c1".into(),
+                    name: "echo".into(),
+                    arguments: json!({}),
+                }],
+            ),
+            turn(
+                Role::User,
+                vec![ContentBlock::ToolResult {
+                    id: "c1".into(),
+                    content: json!("done"),
+                }],
+            ),
+            turn(
+                Role::Tool,
+                vec![ContentBlock::ToolResult {
+                    id: "other".into(),
+                    content: json!("stray"),
+                }],
+            ),
+            turn(
+                Role::User,
+                vec![ContentBlock::Text {
+                    text: "next".into(),
+                }],
+            ),
+        ];
+        assert_eq!(units(&turns), vec![0..1, 1..3, 3..4, 4..5]);
     }
 }

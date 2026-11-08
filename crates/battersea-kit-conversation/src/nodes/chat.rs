@@ -267,6 +267,19 @@ async fn record_call<H: Port>(
     .await
 }
 
+/// Sets `chat`'s round limit to `parameter`, capped by `cap` where the plan sets one, and
+/// returns the limit the adapters accept: `parameter` normalised to their range of 1 to 32.
+fn tool_rounds(chat: &mut EngineChatParameters, parameter: u64, cap: usize) -> usize {
+    let mut rounds = u32::try_from(parameter).unwrap_or(u32::MAX);
+    if cap > 0 {
+        rounds = rounds.min(u32::try_from(cap).unwrap_or(u32::MAX));
+    }
+    chat.max_tool_rounds = rounds;
+    let rounds = chat.max_tool_rounds();
+    chat.max_tool_rounds = rounds as u32;
+    rounds
+}
+
 #[async_trait]
 impl<H: Port> NodeHandler<H> for ChatHandler {
     fn handler_id(&self) -> &'static str {
@@ -304,14 +317,14 @@ impl<H: Port> NodeHandler<H> for ChatHandler {
 
         let budget = unsigned(node, definition, "budget").unwrap_or(8000);
         let max_output_tokens = unsigned(node, definition, "max_output_tokens").unwrap_or(1024);
-        let mut rounds = unsigned(node, definition, "max_tool_rounds").unwrap_or(4) as usize;
         let plan = host.tool_plan(runtime, &node.id)?;
-        if plan.max_rounds > 0 {
-            rounds = rounds.min(plan.max_rounds);
-        }
         let mut chat = EngineChatParameters::default_for_provider(crate::NAME);
         chat.max_output_tokens = Some(u32::try_from(max_output_tokens).unwrap_or(u32::MAX));
-        chat.max_tool_rounds = u32::try_from(rounds).unwrap_or(u32::MAX);
+        let rounds = tool_rounds(
+            &mut chat,
+            unsigned(node, definition, "max_tool_rounds").unwrap_or(4),
+            plan.max_rounds,
+        );
         let request = request(messages, chat, &plan, rounds);
         let engine = host.engine(runtime, &node.id)?;
         let started_at = now(host)?;
@@ -487,6 +500,16 @@ mod tests {
             arguments: json!({}),
             started_at: String::new(),
         }
+    }
+
+    #[test]
+    fn the_round_limit_is_capped_by_the_plan_and_normalised_to_the_adapters_range() {
+        let mut chat = EngineChatParameters::default_for_provider(crate::NAME);
+        assert_eq!(tool_rounds(&mut chat, 4, 0), 4);
+        assert_eq!(tool_rounds(&mut chat, 4, 2), 2);
+        assert_eq!(tool_rounds(&mut chat, 0, 0), 1);
+        assert_eq!(tool_rounds(&mut chat, 100, 0), 32);
+        assert_eq!(chat.max_tool_rounds, 32);
     }
 
     #[tokio::test]

@@ -170,7 +170,7 @@ node_definitions:
           kind: int
         editor:
           kind: unsigned
-          min: 0
+          min: 1
           default_value: 4
     input_ports:
       - name: system

@@ -127,8 +127,11 @@ cancelled activation leaves them uncommitted.
 ## Nodes
 
 `ConversationChat` builds one `EngineTextStreamRequest` from `system`, the `history` turns and
-`prompt`, with the run's tool plan and the node's `parameters` for `EngineChatParameters`. It
-counts the request's input tokens with `count_text_stream_input_tokens`; a count above `budget`
+`prompt`, with the run's tool plan and the node's `parameters` for `EngineChatParameters`. The
+round limit is `max_tool_rounds` capped by the plan and clamped to the range the adapters
+accept, as `EngineChatParameters::max_tool_rounds` clamps it. It counts the request's input
+tokens with `count_text_stream_input_tokens`; an empty request measures zero without a count.
+A count above `budget`
 refuses dispatch with the recoverable failure `conversation.over_budget`, fires `over_budget`,
 records the call and publishes a `status` with that outcome. It then reserves spend; a refused
 reservation is `conversation.spend_refused`. It streams through `start_provider`: each
@@ -143,8 +146,8 @@ tool rounds, `conversation.provider_failed` otherwise.
 
 `ConversationMemory` fits turns newest first until adding one would exceed `budget`, measured by
 the port's engine as it measures the chat request. The summary is not counted. An assistant turn
-that calls tools and the tool turns answering it are one unit, kept or dropped together, so the
-history is a request `validate_messages` accepts.
+that calls tools and the turns answering its calls, in the tool or the user role, are one unit,
+kept or dropped together, so the history is a request `validate_messages` accepts.
 
 `ConversationBuffer` holds at most `retain` bytes of collected text and refuses a stream that
 exceeds it with the runtime's `capacity_exhausted`. `ConversationTranscriptOutput` stages turns in
