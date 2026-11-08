@@ -220,8 +220,6 @@ impl core::panic::unwind_safe::RefUnwindSafe for battersea_pianola::Severity
 impl core::panic::unwind_safe::UnwindSafe for battersea_pianola::Severity
 impl<Q, K> equivalent::Equivalent<K> for battersea_pianola::Severity where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
 pub fn battersea_pianola::Severity::equivalent(&self, &K) -> bool
-impl<Q, K> hashbrown::Equivalent<K> for battersea_pianola::Severity where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
-pub fn battersea_pianola::Severity::equivalent(&self, &K) -> bool
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_pianola::Severity where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_pianola::Severity where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<T, U> core::convert::Into<U> for battersea_pianola::Severity where U: core::convert::From<T>
@@ -334,8 +332,6 @@ impl core::panic::unwind_safe::RefUnwindSafe for battersea_pianola::ToolCallStat
 impl core::panic::unwind_safe::UnwindSafe for battersea_pianola::ToolCallStatusMatch
 impl<Q, K> equivalent::Equivalent<K> for battersea_pianola::ToolCallStatusMatch where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
 pub fn battersea_pianola::ToolCallStatusMatch::equivalent(&self, &K) -> bool
-impl<Q, K> hashbrown::Equivalent<K> for battersea_pianola::ToolCallStatusMatch where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
-pub fn battersea_pianola::ToolCallStatusMatch::equivalent(&self, &K) -> bool
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_pianola::ToolCallStatusMatch where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_pianola::ToolCallStatusMatch where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<T, U> core::convert::Into<U> for battersea_pianola::ToolCallStatusMatch where U: core::convert::From<T>
@@ -392,8 +388,6 @@ impl core::marker::UnsafeUnpin for battersea_pianola::AgentGradeGrader
 impl core::panic::unwind_safe::RefUnwindSafe for battersea_pianola::AgentGradeGrader
 impl core::panic::unwind_safe::UnwindSafe for battersea_pianola::AgentGradeGrader
 impl<Q, K> equivalent::Equivalent<K> for battersea_pianola::AgentGradeGrader where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
-pub fn battersea_pianola::AgentGradeGrader::equivalent(&self, &K) -> bool
-impl<Q, K> hashbrown::Equivalent<K> for battersea_pianola::AgentGradeGrader where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
 pub fn battersea_pianola::AgentGradeGrader::equivalent(&self, &K) -> bool
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_pianola::AgentGradeGrader where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_pianola::AgentGradeGrader where ST: ?core::marker::Sized, DT: ?core::marker::Sized

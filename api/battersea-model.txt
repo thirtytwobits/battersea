@@ -28,6 +28,8 @@ impl core::marker::Unpin for battersea_model::DispatchState
 impl core::marker::UnsafeUnpin for battersea_model::DispatchState
 impl core::panic::unwind_safe::RefUnwindSafe for battersea_model::DispatchState
 impl core::panic::unwind_safe::UnwindSafe for battersea_model::DispatchState
+impl<Q, K> equivalent::Equivalent<K> for battersea_model::DispatchState where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn battersea_model::DispatchState::equivalent(&self, &K) -> bool
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_model::DispatchState where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_model::DispatchState where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<T, U> core::convert::Into<U> for battersea_model::DispatchState where U: core::convert::From<T>
@@ -103,6 +105,8 @@ impl core::marker::Unpin for battersea_model::ErrorKind
 impl core::marker::UnsafeUnpin for battersea_model::ErrorKind
 impl core::panic::unwind_safe::RefUnwindSafe for battersea_model::ErrorKind
 impl core::panic::unwind_safe::UnwindSafe for battersea_model::ErrorKind
+impl<Q, K> equivalent::Equivalent<K> for battersea_model::ErrorKind where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn battersea_model::ErrorKind::equivalent(&self, &K) -> bool
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_model::ErrorKind where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_model::ErrorKind where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<T, U> core::convert::Into<U> for battersea_model::ErrorKind where U: core::convert::From<T>
@@ -159,6 +163,8 @@ impl core::marker::Unpin for battersea_model::ToolCallOutcome
 impl core::marker::UnsafeUnpin for battersea_model::ToolCallOutcome
 impl core::panic::unwind_safe::RefUnwindSafe for battersea_model::ToolCallOutcome
 impl core::panic::unwind_safe::UnwindSafe for battersea_model::ToolCallOutcome
+impl<Q, K> equivalent::Equivalent<K> for battersea_model::ToolCallOutcome where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn battersea_model::ToolCallOutcome::equivalent(&self, &K) -> bool
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_model::ToolCallOutcome where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_model::ToolCallOutcome where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<T, U> core::convert::Into<U> for battersea_model::ToolCallOutcome where U: core::convert::From<T>
@@ -249,6 +255,8 @@ impl core::marker::Unpin for battersea_model::ToolCode
 impl core::marker::UnsafeUnpin for battersea_model::ToolCode
 impl core::panic::unwind_safe::RefUnwindSafe for battersea_model::ToolCode
 impl core::panic::unwind_safe::UnwindSafe for battersea_model::ToolCode
+impl<Q, K> equivalent::Equivalent<K> for battersea_model::ToolCode where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn battersea_model::ToolCode::equivalent(&self, &K) -> bool
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_model::ToolCode where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_model::ToolCode where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<T, U> core::convert::Into<U> for battersea_model::ToolCode where U: core::convert::From<T>
@@ -380,6 +388,8 @@ impl core::marker::Unpin for battersea_model::ToolCallEvidence
 impl core::marker::UnsafeUnpin for battersea_model::ToolCallEvidence
 impl core::panic::unwind_safe::RefUnwindSafe for battersea_model::ToolCallEvidence
 impl core::panic::unwind_safe::UnwindSafe for battersea_model::ToolCallEvidence
+impl<Q, K> equivalent::Equivalent<K> for battersea_model::ToolCallEvidence where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn battersea_model::ToolCallEvidence::equivalent(&self, &K) -> bool
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_model::ToolCallEvidence where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_model::ToolCallEvidence where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<T, U> core::convert::Into<U> for battersea_model::ToolCallEvidence where U: core::convert::From<T>
@@ -483,6 +493,8 @@ impl core::marker::Unpin for battersea_model::output::StopReason
 impl core::marker::UnsafeUnpin for battersea_model::output::StopReason
 impl core::panic::unwind_safe::RefUnwindSafe for battersea_model::output::StopReason
 impl core::panic::unwind_safe::UnwindSafe for battersea_model::output::StopReason
+impl<Q, K> equivalent::Equivalent<K> for battersea_model::output::StopReason where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn battersea_model::output::StopReason::equivalent(&self, &K) -> bool
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_model::output::StopReason where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_model::output::StopReason where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<T, U> core::convert::Into<U> for battersea_model::output::StopReason where U: core::convert::From<T>
@@ -637,6 +649,8 @@ impl core::marker::Unpin for battersea_model::ConversationPhase
 impl core::marker::UnsafeUnpin for battersea_model::ConversationPhase
 impl core::panic::unwind_safe::RefUnwindSafe for battersea_model::ConversationPhase
 impl core::panic::unwind_safe::UnwindSafe for battersea_model::ConversationPhase
+impl<Q, K> equivalent::Equivalent<K> for battersea_model::ConversationPhase where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn battersea_model::ConversationPhase::equivalent(&self, &K) -> bool
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_model::ConversationPhase where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_model::ConversationPhase where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<T, U> core::convert::Into<U> for battersea_model::ConversationPhase where U: core::convert::From<T>
@@ -794,6 +808,8 @@ impl core::marker::Unpin for battersea_model::ConversationStoreError
 impl core::marker::UnsafeUnpin for battersea_model::ConversationStoreError
 impl core::panic::unwind_safe::RefUnwindSafe for battersea_model::ConversationStoreError
 impl core::panic::unwind_safe::UnwindSafe for battersea_model::ConversationStoreError
+impl<Q, K> equivalent::Equivalent<K> for battersea_model::ConversationStoreError where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn battersea_model::ConversationStoreError::equivalent(&self, &K) -> bool
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_model::ConversationStoreError where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_model::ConversationStoreError where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<T, U> core::convert::Into<U> for battersea_model::ConversationStoreError where U: core::convert::From<T>
@@ -853,6 +869,8 @@ impl core::marker::Unpin for battersea_model::EngineLocalToolResult
 impl core::marker::UnsafeUnpin for battersea_model::EngineLocalToolResult
 impl core::panic::unwind_safe::RefUnwindSafe for battersea_model::EngineLocalToolResult
 impl core::panic::unwind_safe::UnwindSafe for battersea_model::EngineLocalToolResult
+impl<Q, K> equivalent::Equivalent<K> for battersea_model::EngineLocalToolResult where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn battersea_model::EngineLocalToolResult::equivalent(&self, &K) -> bool
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_model::EngineLocalToolResult where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_model::EngineLocalToolResult where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<T, U> core::convert::Into<U> for battersea_model::EngineLocalToolResult where U: core::convert::From<T>
@@ -907,6 +925,8 @@ impl core::marker::Unpin for battersea_model::EngineOperation
 impl core::marker::UnsafeUnpin for battersea_model::EngineOperation
 impl core::panic::unwind_safe::RefUnwindSafe for battersea_model::EngineOperation
 impl core::panic::unwind_safe::UnwindSafe for battersea_model::EngineOperation
+impl<Q, K> equivalent::Equivalent<K> for battersea_model::EngineOperation where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn battersea_model::EngineOperation::equivalent(&self, &K) -> bool
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_model::EngineOperation where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_model::EngineOperation where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<T, U> core::convert::Into<U> for battersea_model::EngineOperation where U: core::convert::From<T>
@@ -988,6 +1008,8 @@ impl core::marker::Unpin for battersea_model::EngineTextStreamEvent
 impl core::marker::UnsafeUnpin for battersea_model::EngineTextStreamEvent
 impl core::panic::unwind_safe::RefUnwindSafe for battersea_model::EngineTextStreamEvent
 impl core::panic::unwind_safe::UnwindSafe for battersea_model::EngineTextStreamEvent
+impl<Q, K> equivalent::Equivalent<K> for battersea_model::EngineTextStreamEvent where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn battersea_model::EngineTextStreamEvent::equivalent(&self, &K) -> bool
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_model::EngineTextStreamEvent where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_model::EngineTextStreamEvent where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<T, U> core::convert::Into<U> for battersea_model::EngineTextStreamEvent where U: core::convert::From<T>
@@ -1047,6 +1069,8 @@ impl core::marker::Unpin for battersea_model::engine::EngineToolExecutionMode
 impl core::marker::UnsafeUnpin for battersea_model::engine::EngineToolExecutionMode
 impl core::panic::unwind_safe::RefUnwindSafe for battersea_model::engine::EngineToolExecutionMode
 impl core::panic::unwind_safe::UnwindSafe for battersea_model::engine::EngineToolExecutionMode
+impl<Q, K> equivalent::Equivalent<K> for battersea_model::engine::EngineToolExecutionMode where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn battersea_model::engine::EngineToolExecutionMode::equivalent(&self, &K) -> bool
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_model::engine::EngineToolExecutionMode where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_model::engine::EngineToolExecutionMode where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<T, U> core::convert::Into<U> for battersea_model::engine::EngineToolExecutionMode where U: core::convert::From<T>
@@ -1104,6 +1128,8 @@ impl core::marker::Unpin for battersea_model::output::StopReason
 impl core::marker::UnsafeUnpin for battersea_model::output::StopReason
 impl core::panic::unwind_safe::RefUnwindSafe for battersea_model::output::StopReason
 impl core::panic::unwind_safe::UnwindSafe for battersea_model::output::StopReason
+impl<Q, K> equivalent::Equivalent<K> for battersea_model::output::StopReason where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn battersea_model::output::StopReason::equivalent(&self, &K) -> bool
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_model::output::StopReason where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_model::output::StopReason where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<T, U> core::convert::Into<U> for battersea_model::output::StopReason where U: core::convert::From<T>
@@ -1170,6 +1196,8 @@ impl core::marker::Unpin for battersea_model::ToolContentBlock
 impl core::marker::UnsafeUnpin for battersea_model::ToolContentBlock
 impl core::panic::unwind_safe::RefUnwindSafe for battersea_model::ToolContentBlock
 impl core::panic::unwind_safe::UnwindSafe for battersea_model::ToolContentBlock
+impl<Q, K> equivalent::Equivalent<K> for battersea_model::ToolContentBlock where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn battersea_model::ToolContentBlock::equivalent(&self, &K) -> bool
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_model::ToolContentBlock where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_model::ToolContentBlock where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<T, U> core::convert::Into<U> for battersea_model::ToolContentBlock where U: core::convert::From<T>
@@ -1222,6 +1250,8 @@ impl core::marker::Unpin for battersea_model::ToolResourceContents
 impl core::marker::UnsafeUnpin for battersea_model::ToolResourceContents
 impl core::panic::unwind_safe::RefUnwindSafe for battersea_model::ToolResourceContents
 impl core::panic::unwind_safe::UnwindSafe for battersea_model::ToolResourceContents
+impl<Q, K> equivalent::Equivalent<K> for battersea_model::ToolResourceContents where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn battersea_model::ToolResourceContents::equivalent(&self, &K) -> bool
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_model::ToolResourceContents where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_model::ToolResourceContents where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<T, U> core::convert::Into<U> for battersea_model::ToolResourceContents where U: core::convert::From<T>
@@ -1275,6 +1305,8 @@ impl core::marker::Unpin for battersea_model::ConversationBinding
 impl core::marker::UnsafeUnpin for battersea_model::ConversationBinding
 impl core::panic::unwind_safe::RefUnwindSafe for battersea_model::ConversationBinding
 impl core::panic::unwind_safe::UnwindSafe for battersea_model::ConversationBinding
+impl<Q, K> equivalent::Equivalent<K> for battersea_model::ConversationBinding where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn battersea_model::ConversationBinding::equivalent(&self, &K) -> bool
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_model::ConversationBinding where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_model::ConversationBinding where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<T, U> core::convert::Into<U> for battersea_model::ConversationBinding where U: core::convert::From<T>
@@ -1448,6 +1480,8 @@ impl core::marker::Unpin for battersea_model::ConversationScope
 impl core::marker::UnsafeUnpin for battersea_model::ConversationScope
 impl core::panic::unwind_safe::RefUnwindSafe for battersea_model::ConversationScope
 impl core::panic::unwind_safe::UnwindSafe for battersea_model::ConversationScope
+impl<Q, K> equivalent::Equivalent<K> for battersea_model::ConversationScope where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn battersea_model::ConversationScope::equivalent(&self, &K) -> bool
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_model::ConversationScope where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_model::ConversationScope where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<T, U> core::convert::Into<U> for battersea_model::ConversationScope where U: core::convert::From<T>
@@ -2088,6 +2122,8 @@ impl core::marker::Unpin for battersea_model::EngineAdapterRetryLog
 impl core::marker::UnsafeUnpin for battersea_model::EngineAdapterRetryLog
 impl core::panic::unwind_safe::RefUnwindSafe for battersea_model::EngineAdapterRetryLog
 impl core::panic::unwind_safe::UnwindSafe for battersea_model::EngineAdapterRetryLog
+impl<Q, K> equivalent::Equivalent<K> for battersea_model::EngineAdapterRetryLog where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn battersea_model::EngineAdapterRetryLog::equivalent(&self, &K) -> bool
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_model::EngineAdapterRetryLog where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_model::EngineAdapterRetryLog where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<T, U> core::convert::Into<U> for battersea_model::EngineAdapterRetryLog where U: core::convert::From<T>
@@ -2198,6 +2234,8 @@ impl core::marker::Unpin for battersea_model::EngineAuthConfig
 impl core::marker::UnsafeUnpin for battersea_model::EngineAuthConfig
 impl core::panic::unwind_safe::RefUnwindSafe for battersea_model::EngineAuthConfig
 impl core::panic::unwind_safe::UnwindSafe for battersea_model::EngineAuthConfig
+impl<Q, K> equivalent::Equivalent<K> for battersea_model::EngineAuthConfig where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn battersea_model::EngineAuthConfig::equivalent(&self, &K) -> bool
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_model::EngineAuthConfig where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_model::EngineAuthConfig where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<T, U> core::convert::Into<U> for battersea_model::EngineAuthConfig where U: core::convert::From<T>
@@ -2546,6 +2584,8 @@ impl core::marker::Unpin for battersea_model::EngineTokenUsage
 impl core::marker::UnsafeUnpin for battersea_model::EngineTokenUsage
 impl core::panic::unwind_safe::RefUnwindSafe for battersea_model::EngineTokenUsage
 impl core::panic::unwind_safe::UnwindSafe for battersea_model::EngineTokenUsage
+impl<Q, K> equivalent::Equivalent<K> for battersea_model::EngineTokenUsage where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn battersea_model::EngineTokenUsage::equivalent(&self, &K) -> bool
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_model::EngineTokenUsage where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_model::EngineTokenUsage where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<T, U> core::convert::Into<U> for battersea_model::EngineTokenUsage where U: core::convert::From<T>
@@ -2601,6 +2641,8 @@ impl core::marker::Unpin for battersea_model::MockFailureSpec
 impl core::marker::UnsafeUnpin for battersea_model::MockFailureSpec
 impl core::panic::unwind_safe::RefUnwindSafe for battersea_model::MockFailureSpec
 impl core::panic::unwind_safe::UnwindSafe for battersea_model::MockFailureSpec
+impl<Q, K> equivalent::Equivalent<K> for battersea_model::MockFailureSpec where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn battersea_model::MockFailureSpec::equivalent(&self, &K) -> bool
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_model::MockFailureSpec where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_model::MockFailureSpec where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<T, U> core::convert::Into<U> for battersea_model::MockFailureSpec where U: core::convert::From<T>
@@ -2840,6 +2882,8 @@ impl core::marker::Unpin for battersea_model::ToolContentResult
 impl core::marker::UnsafeUnpin for battersea_model::ToolContentResult
 impl core::panic::unwind_safe::RefUnwindSafe for battersea_model::ToolContentResult
 impl core::panic::unwind_safe::UnwindSafe for battersea_model::ToolContentResult
+impl<Q, K> equivalent::Equivalent<K> for battersea_model::ToolContentResult where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn battersea_model::ToolContentResult::equivalent(&self, &K) -> bool
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_model::ToolContentResult where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_model::ToolContentResult where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<T, U> core::convert::Into<U> for battersea_model::ToolContentResult where U: core::convert::From<T>
@@ -2921,6 +2965,8 @@ impl core::marker::Unpin for battersea_model::Elapsed
 impl core::marker::UnsafeUnpin for battersea_model::Elapsed
 impl core::panic::unwind_safe::RefUnwindSafe for battersea_model::Elapsed
 impl core::panic::unwind_safe::UnwindSafe for battersea_model::Elapsed
+impl<Q, K> equivalent::Equivalent<K> for battersea_model::Elapsed where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn battersea_model::Elapsed::equivalent(&self, &K) -> bool
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_model::Elapsed where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_model::Elapsed where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<T, U> core::convert::Into<U> for battersea_model::Elapsed where U: core::convert::From<T>
@@ -3104,6 +3150,8 @@ impl core::marker::Unpin for battersea_model::Modality
 impl core::marker::UnsafeUnpin for battersea_model::Modality
 impl core::panic::unwind_safe::RefUnwindSafe for battersea_model::Modality
 impl core::panic::unwind_safe::UnwindSafe for battersea_model::Modality
+impl<Q, K> equivalent::Equivalent<K> for battersea_model::Modality where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn battersea_model::Modality::equivalent(&self, &K) -> bool
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_model::Modality where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_model::Modality where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<T, U> core::convert::Into<U> for battersea_model::Modality where U: core::convert::From<T>
@@ -3169,6 +3217,8 @@ impl core::marker::Unpin for battersea_model::ResponseFormat
 impl core::marker::UnsafeUnpin for battersea_model::ResponseFormat
 impl core::panic::unwind_safe::RefUnwindSafe for battersea_model::ResponseFormat
 impl core::panic::unwind_safe::UnwindSafe for battersea_model::ResponseFormat
+impl<Q, K> equivalent::Equivalent<K> for battersea_model::ResponseFormat where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn battersea_model::ResponseFormat::equivalent(&self, &K) -> bool
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_model::ResponseFormat where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_model::ResponseFormat where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<T, U> core::convert::Into<U> for battersea_model::ResponseFormat where U: core::convert::From<T>
@@ -3227,6 +3277,8 @@ impl core::marker::Unpin for battersea_model::StructuredOutputMode
 impl core::marker::UnsafeUnpin for battersea_model::StructuredOutputMode
 impl core::panic::unwind_safe::RefUnwindSafe for battersea_model::StructuredOutputMode
 impl core::panic::unwind_safe::UnwindSafe for battersea_model::StructuredOutputMode
+impl<Q, K> equivalent::Equivalent<K> for battersea_model::StructuredOutputMode where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn battersea_model::StructuredOutputMode::equivalent(&self, &K) -> bool
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_model::StructuredOutputMode where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_model::StructuredOutputMode where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<T, U> core::convert::Into<U> for battersea_model::StructuredOutputMode where U: core::convert::From<T>
@@ -3292,6 +3344,8 @@ impl core::marker::Unpin for battersea_model::ContentCapabilities
 impl core::marker::UnsafeUnpin for battersea_model::ContentCapabilities
 impl core::panic::unwind_safe::RefUnwindSafe for battersea_model::ContentCapabilities
 impl core::panic::unwind_safe::UnwindSafe for battersea_model::ContentCapabilities
+impl<Q, K> equivalent::Equivalent<K> for battersea_model::ContentCapabilities where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn battersea_model::ContentCapabilities::equivalent(&self, &K) -> bool
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_model::ContentCapabilities where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_model::ContentCapabilities where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<T, U> core::convert::Into<U> for battersea_model::ContentCapabilities where U: core::convert::From<T>
@@ -3357,6 +3411,8 @@ impl core::marker::Unpin for battersea_model::engine::EngineChatToolChoiceMode
 impl core::marker::UnsafeUnpin for battersea_model::engine::EngineChatToolChoiceMode
 impl core::panic::unwind_safe::RefUnwindSafe for battersea_model::engine::EngineChatToolChoiceMode
 impl core::panic::unwind_safe::UnwindSafe for battersea_model::engine::EngineChatToolChoiceMode
+impl<Q, K> equivalent::Equivalent<K> for battersea_model::engine::EngineChatToolChoiceMode where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn battersea_model::engine::EngineChatToolChoiceMode::equivalent(&self, &K) -> bool
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_model::engine::EngineChatToolChoiceMode where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_model::engine::EngineChatToolChoiceMode where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<T, U> core::convert::Into<U> for battersea_model::engine::EngineChatToolChoiceMode where U: core::convert::From<T>
@@ -3417,6 +3473,8 @@ impl core::marker::Unpin for battersea_model::engine::EngineContextOverflow
 impl core::marker::UnsafeUnpin for battersea_model::engine::EngineContextOverflow
 impl core::panic::unwind_safe::RefUnwindSafe for battersea_model::engine::EngineContextOverflow
 impl core::panic::unwind_safe::UnwindSafe for battersea_model::engine::EngineContextOverflow
+impl<Q, K> equivalent::Equivalent<K> for battersea_model::engine::EngineContextOverflow where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn battersea_model::engine::EngineContextOverflow::equivalent(&self, &K) -> bool
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_model::engine::EngineContextOverflow where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_model::engine::EngineContextOverflow where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<T, U> core::convert::Into<U> for battersea_model::engine::EngineContextOverflow where U: core::convert::From<T>
@@ -3477,6 +3535,8 @@ impl core::marker::Unpin for battersea_model::engine::EnginePromptCacheRetention
 impl core::marker::UnsafeUnpin for battersea_model::engine::EnginePromptCacheRetention
 impl core::panic::unwind_safe::RefUnwindSafe for battersea_model::engine::EnginePromptCacheRetention
 impl core::panic::unwind_safe::UnwindSafe for battersea_model::engine::EnginePromptCacheRetention
+impl<Q, K> equivalent::Equivalent<K> for battersea_model::engine::EnginePromptCacheRetention where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn battersea_model::engine::EnginePromptCacheRetention::equivalent(&self, &K) -> bool
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_model::engine::EnginePromptCacheRetention where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_model::engine::EnginePromptCacheRetention where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<T, U> core::convert::Into<U> for battersea_model::engine::EnginePromptCacheRetention where U: core::convert::From<T>
@@ -3544,6 +3604,8 @@ impl core::marker::Unpin for battersea_model::engine::EngineReasoningEffort
 impl core::marker::UnsafeUnpin for battersea_model::engine::EngineReasoningEffort
 impl core::panic::unwind_safe::RefUnwindSafe for battersea_model::engine::EngineReasoningEffort
 impl core::panic::unwind_safe::UnwindSafe for battersea_model::engine::EngineReasoningEffort
+impl<Q, K> equivalent::Equivalent<K> for battersea_model::engine::EngineReasoningEffort where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn battersea_model::engine::EngineReasoningEffort::equivalent(&self, &K) -> bool
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_model::engine::EngineReasoningEffort where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_model::engine::EngineReasoningEffort where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<T, U> core::convert::Into<U> for battersea_model::engine::EngineReasoningEffort where U: core::convert::From<T>
@@ -3606,6 +3668,8 @@ impl core::marker::Unpin for battersea_model::engine::EngineReasoningSummary
 impl core::marker::UnsafeUnpin for battersea_model::engine::EngineReasoningSummary
 impl core::panic::unwind_safe::RefUnwindSafe for battersea_model::engine::EngineReasoningSummary
 impl core::panic::unwind_safe::UnwindSafe for battersea_model::engine::EngineReasoningSummary
+impl<Q, K> equivalent::Equivalent<K> for battersea_model::engine::EngineReasoningSummary where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn battersea_model::engine::EngineReasoningSummary::equivalent(&self, &K) -> bool
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_model::engine::EngineReasoningSummary where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_model::engine::EngineReasoningSummary where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<T, U> core::convert::Into<U> for battersea_model::engine::EngineReasoningSummary where U: core::convert::From<T>
@@ -3667,6 +3731,8 @@ impl core::marker::Unpin for battersea_model::engine::EngineResponseVerbosity
 impl core::marker::UnsafeUnpin for battersea_model::engine::EngineResponseVerbosity
 impl core::panic::unwind_safe::RefUnwindSafe for battersea_model::engine::EngineResponseVerbosity
 impl core::panic::unwind_safe::UnwindSafe for battersea_model::engine::EngineResponseVerbosity
+impl<Q, K> equivalent::Equivalent<K> for battersea_model::engine::EngineResponseVerbosity where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn battersea_model::engine::EngineResponseVerbosity::equivalent(&self, &K) -> bool
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_model::engine::EngineResponseVerbosity where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_model::engine::EngineResponseVerbosity where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<T, U> core::convert::Into<U> for battersea_model::engine::EngineResponseVerbosity where U: core::convert::From<T>
@@ -3727,6 +3793,8 @@ impl core::marker::Unpin for battersea_model::engine::EngineTemperatureDispatch
 impl core::marker::UnsafeUnpin for battersea_model::engine::EngineTemperatureDispatch
 impl core::panic::unwind_safe::RefUnwindSafe for battersea_model::engine::EngineTemperatureDispatch
 impl core::panic::unwind_safe::UnwindSafe for battersea_model::engine::EngineTemperatureDispatch
+impl<Q, K> equivalent::Equivalent<K> for battersea_model::engine::EngineTemperatureDispatch where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn battersea_model::engine::EngineTemperatureDispatch::equivalent(&self, &K) -> bool
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_model::engine::EngineTemperatureDispatch where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_model::engine::EngineTemperatureDispatch where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<T, U> core::convert::Into<U> for battersea_model::engine::EngineTemperatureDispatch where U: core::convert::From<T>
@@ -3787,6 +3855,8 @@ impl core::marker::Unpin for battersea_model::engine::EngineThinkingVisibility
 impl core::marker::UnsafeUnpin for battersea_model::engine::EngineThinkingVisibility
 impl core::panic::unwind_safe::RefUnwindSafe for battersea_model::engine::EngineThinkingVisibility
 impl core::panic::unwind_safe::UnwindSafe for battersea_model::engine::EngineThinkingVisibility
+impl<Q, K> equivalent::Equivalent<K> for battersea_model::engine::EngineThinkingVisibility where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn battersea_model::engine::EngineThinkingVisibility::equivalent(&self, &K) -> bool
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_model::engine::EngineThinkingVisibility where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_model::engine::EngineThinkingVisibility where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<T, U> core::convert::Into<U> for battersea_model::engine::EngineThinkingVisibility where U: core::convert::From<T>
@@ -3848,6 +3918,8 @@ impl core::marker::Unpin for battersea_model::engine::EngineToolExecutionMode
 impl core::marker::UnsafeUnpin for battersea_model::engine::EngineToolExecutionMode
 impl core::panic::unwind_safe::RefUnwindSafe for battersea_model::engine::EngineToolExecutionMode
 impl core::panic::unwind_safe::UnwindSafe for battersea_model::engine::EngineToolExecutionMode
+impl<Q, K> equivalent::Equivalent<K> for battersea_model::engine::EngineToolExecutionMode where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn battersea_model::engine::EngineToolExecutionMode::equivalent(&self, &K) -> bool
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_model::engine::EngineToolExecutionMode where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_model::engine::EngineToolExecutionMode where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<T, U> core::convert::Into<U> for battersea_model::engine::EngineToolExecutionMode where U: core::convert::From<T>
@@ -3910,6 +3982,8 @@ impl core::marker::Unpin for battersea_model::engine::EngineAnthropicThinkingCap
 impl core::marker::UnsafeUnpin for battersea_model::engine::EngineAnthropicThinkingCapabilities
 impl core::panic::unwind_safe::RefUnwindSafe for battersea_model::engine::EngineAnthropicThinkingCapabilities
 impl core::panic::unwind_safe::UnwindSafe for battersea_model::engine::EngineAnthropicThinkingCapabilities
+impl<Q, K> equivalent::Equivalent<K> for battersea_model::engine::EngineAnthropicThinkingCapabilities where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn battersea_model::engine::EngineAnthropicThinkingCapabilities::equivalent(&self, &K) -> bool
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_model::engine::EngineAnthropicThinkingCapabilities where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_model::engine::EngineAnthropicThinkingCapabilities where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<T, U> core::convert::Into<U> for battersea_model::engine::EngineAnthropicThinkingCapabilities where U: core::convert::From<T>
@@ -4186,6 +4260,8 @@ impl core::marker::Unpin for battersea_model::engine::EngineChatToolChoice
 impl core::marker::UnsafeUnpin for battersea_model::engine::EngineChatToolChoice
 impl core::panic::unwind_safe::RefUnwindSafe for battersea_model::engine::EngineChatToolChoice
 impl core::panic::unwind_safe::UnwindSafe for battersea_model::engine::EngineChatToolChoice
+impl<Q, K> equivalent::Equivalent<K> for battersea_model::engine::EngineChatToolChoice where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn battersea_model::engine::EngineChatToolChoice::equivalent(&self, &K) -> bool
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_model::engine::EngineChatToolChoice where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_model::engine::EngineChatToolChoice where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<T, U> core::convert::Into<U> for battersea_model::engine::EngineChatToolChoice where U: core::convert::From<T>
@@ -4300,6 +4376,8 @@ impl core::marker::Unpin for battersea_model::DispatchState
 impl core::marker::UnsafeUnpin for battersea_model::DispatchState
 impl core::panic::unwind_safe::RefUnwindSafe for battersea_model::DispatchState
 impl core::panic::unwind_safe::UnwindSafe for battersea_model::DispatchState
+impl<Q, K> equivalent::Equivalent<K> for battersea_model::DispatchState where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn battersea_model::DispatchState::equivalent(&self, &K) -> bool
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_model::DispatchState where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_model::DispatchState where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<T, U> core::convert::Into<U> for battersea_model::DispatchState where U: core::convert::From<T>
@@ -4375,6 +4453,8 @@ impl core::marker::Unpin for battersea_model::ErrorKind
 impl core::marker::UnsafeUnpin for battersea_model::ErrorKind
 impl core::panic::unwind_safe::RefUnwindSafe for battersea_model::ErrorKind
 impl core::panic::unwind_safe::UnwindSafe for battersea_model::ErrorKind
+impl<Q, K> equivalent::Equivalent<K> for battersea_model::ErrorKind where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn battersea_model::ErrorKind::equivalent(&self, &K) -> bool
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_model::ErrorKind where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_model::ErrorKind where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<T, U> core::convert::Into<U> for battersea_model::ErrorKind where U: core::convert::From<T>
@@ -4431,6 +4511,8 @@ impl core::marker::Unpin for battersea_model::ToolCallOutcome
 impl core::marker::UnsafeUnpin for battersea_model::ToolCallOutcome
 impl core::panic::unwind_safe::RefUnwindSafe for battersea_model::ToolCallOutcome
 impl core::panic::unwind_safe::UnwindSafe for battersea_model::ToolCallOutcome
+impl<Q, K> equivalent::Equivalent<K> for battersea_model::ToolCallOutcome where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn battersea_model::ToolCallOutcome::equivalent(&self, &K) -> bool
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_model::ToolCallOutcome where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_model::ToolCallOutcome where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<T, U> core::convert::Into<U> for battersea_model::ToolCallOutcome where U: core::convert::From<T>
@@ -4521,6 +4603,8 @@ impl core::marker::Unpin for battersea_model::ToolCode
 impl core::marker::UnsafeUnpin for battersea_model::ToolCode
 impl core::panic::unwind_safe::RefUnwindSafe for battersea_model::ToolCode
 impl core::panic::unwind_safe::UnwindSafe for battersea_model::ToolCode
+impl<Q, K> equivalent::Equivalent<K> for battersea_model::ToolCode where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn battersea_model::ToolCode::equivalent(&self, &K) -> bool
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_model::ToolCode where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_model::ToolCode where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<T, U> core::convert::Into<U> for battersea_model::ToolCode where U: core::convert::From<T>
@@ -4652,6 +4736,8 @@ impl core::marker::Unpin for battersea_model::ToolCallEvidence
 impl core::marker::UnsafeUnpin for battersea_model::ToolCallEvidence
 impl core::panic::unwind_safe::RefUnwindSafe for battersea_model::ToolCallEvidence
 impl core::panic::unwind_safe::UnwindSafe for battersea_model::ToolCallEvidence
+impl<Q, K> equivalent::Equivalent<K> for battersea_model::ToolCallEvidence where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn battersea_model::ToolCallEvidence::equivalent(&self, &K) -> bool
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_model::ToolCallEvidence where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_model::ToolCallEvidence where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<T, U> core::convert::Into<U> for battersea_model::ToolCallEvidence where U: core::convert::From<T>
@@ -4759,6 +4845,8 @@ impl core::marker::Unpin for battersea_model::media::ControllerActivityEvent
 impl core::marker::UnsafeUnpin for battersea_model::media::ControllerActivityEvent
 impl core::panic::unwind_safe::RefUnwindSafe for battersea_model::media::ControllerActivityEvent
 impl core::panic::unwind_safe::UnwindSafe for battersea_model::media::ControllerActivityEvent
+impl<Q, K> equivalent::Equivalent<K> for battersea_model::media::ControllerActivityEvent where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn battersea_model::media::ControllerActivityEvent::equivalent(&self, &K) -> bool
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_model::media::ControllerActivityEvent where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_model::media::ControllerActivityEvent where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<T, U> core::convert::Into<U> for battersea_model::media::ControllerActivityEvent where U: core::convert::From<T>
@@ -4820,6 +4908,8 @@ impl core::marker::Unpin for battersea_model::media::ControllerActivityState
 impl core::marker::UnsafeUnpin for battersea_model::media::ControllerActivityState
 impl core::panic::unwind_safe::RefUnwindSafe for battersea_model::media::ControllerActivityState
 impl core::panic::unwind_safe::UnwindSafe for battersea_model::media::ControllerActivityState
+impl<Q, K> equivalent::Equivalent<K> for battersea_model::media::ControllerActivityState where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn battersea_model::media::ControllerActivityState::equivalent(&self, &K) -> bool
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_model::media::ControllerActivityState where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_model::media::ControllerActivityState where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<T, U> core::convert::Into<U> for battersea_model::media::ControllerActivityState where U: core::convert::From<T>
@@ -4881,6 +4971,8 @@ impl core::marker::Unpin for battersea_model::media::MediaCapability
 impl core::marker::UnsafeUnpin for battersea_model::media::MediaCapability
 impl core::panic::unwind_safe::RefUnwindSafe for battersea_model::media::MediaCapability
 impl core::panic::unwind_safe::UnwindSafe for battersea_model::media::MediaCapability
+impl<Q, K> equivalent::Equivalent<K> for battersea_model::media::MediaCapability where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn battersea_model::media::MediaCapability::equivalent(&self, &K) -> bool
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_model::media::MediaCapability where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_model::media::MediaCapability where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<T, U> core::convert::Into<U> for battersea_model::media::MediaCapability where U: core::convert::From<T>
@@ -4940,6 +5032,8 @@ impl core::marker::Unpin for battersea_model::media::MediaJobStatus
 impl core::marker::UnsafeUnpin for battersea_model::media::MediaJobStatus
 impl core::panic::unwind_safe::RefUnwindSafe for battersea_model::media::MediaJobStatus
 impl core::panic::unwind_safe::UnwindSafe for battersea_model::media::MediaJobStatus
+impl<Q, K> equivalent::Equivalent<K> for battersea_model::media::MediaJobStatus where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn battersea_model::media::MediaJobStatus::equivalent(&self, &K) -> bool
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_model::media::MediaJobStatus where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_model::media::MediaJobStatus where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<T, U> core::convert::Into<U> for battersea_model::media::MediaJobStatus where U: core::convert::From<T>
@@ -5000,6 +5094,8 @@ impl core::marker::Unpin for battersea_model::media::MediaKind
 impl core::marker::UnsafeUnpin for battersea_model::media::MediaKind
 impl core::panic::unwind_safe::RefUnwindSafe for battersea_model::media::MediaKind
 impl core::panic::unwind_safe::UnwindSafe for battersea_model::media::MediaKind
+impl<Q, K> equivalent::Equivalent<K> for battersea_model::media::MediaKind where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn battersea_model::media::MediaKind::equivalent(&self, &K) -> bool
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_model::media::MediaKind where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_model::media::MediaKind where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<T, U> core::convert::Into<U> for battersea_model::media::MediaKind where U: core::convert::From<T>
@@ -5058,6 +5154,8 @@ impl core::marker::Unpin for battersea_model::media::MediaProvenanceTimingConfid
 impl core::marker::UnsafeUnpin for battersea_model::media::MediaProvenanceTimingConfidence
 impl core::panic::unwind_safe::RefUnwindSafe for battersea_model::media::MediaProvenanceTimingConfidence
 impl core::panic::unwind_safe::UnwindSafe for battersea_model::media::MediaProvenanceTimingConfidence
+impl<Q, K> equivalent::Equivalent<K> for battersea_model::media::MediaProvenanceTimingConfidence where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn battersea_model::media::MediaProvenanceTimingConfidence::equivalent(&self, &K) -> bool
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_model::media::MediaProvenanceTimingConfidence where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_model::media::MediaProvenanceTimingConfidence where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<T, U> core::convert::Into<U> for battersea_model::media::MediaProvenanceTimingConfidence where U: core::convert::From<T>
@@ -5116,6 +5214,8 @@ impl core::marker::Unpin for battersea_model::media::MediaProvenanceTimingSource
 impl core::marker::UnsafeUnpin for battersea_model::media::MediaProvenanceTimingSource
 impl core::panic::unwind_safe::RefUnwindSafe for battersea_model::media::MediaProvenanceTimingSource
 impl core::panic::unwind_safe::UnwindSafe for battersea_model::media::MediaProvenanceTimingSource
+impl<Q, K> equivalent::Equivalent<K> for battersea_model::media::MediaProvenanceTimingSource where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn battersea_model::media::MediaProvenanceTimingSource::equivalent(&self, &K) -> bool
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_model::media::MediaProvenanceTimingSource where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_model::media::MediaProvenanceTimingSource where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<T, U> core::convert::Into<U> for battersea_model::media::MediaProvenanceTimingSource where U: core::convert::From<T>
@@ -5175,6 +5275,8 @@ impl core::marker::Unpin for battersea_model::media::MediaReferenceRole
 impl core::marker::UnsafeUnpin for battersea_model::media::MediaReferenceRole
 impl core::panic::unwind_safe::RefUnwindSafe for battersea_model::media::MediaReferenceRole
 impl core::panic::unwind_safe::UnwindSafe for battersea_model::media::MediaReferenceRole
+impl<Q, K> equivalent::Equivalent<K> for battersea_model::media::MediaReferenceRole where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn battersea_model::media::MediaReferenceRole::equivalent(&self, &K) -> bool
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_model::media::MediaReferenceRole where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_model::media::MediaReferenceRole where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<T, U> core::convert::Into<U> for battersea_model::media::MediaReferenceRole where U: core::convert::From<T>
@@ -5233,6 +5335,8 @@ impl core::marker::Unpin for battersea_model::media::MediaRenderType
 impl core::marker::UnsafeUnpin for battersea_model::media::MediaRenderType
 impl core::panic::unwind_safe::RefUnwindSafe for battersea_model::media::MediaRenderType
 impl core::panic::unwind_safe::UnwindSafe for battersea_model::media::MediaRenderType
+impl<Q, K> equivalent::Equivalent<K> for battersea_model::media::MediaRenderType where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn battersea_model::media::MediaRenderType::equivalent(&self, &K) -> bool
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_model::media::MediaRenderType where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_model::media::MediaRenderType where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<T, U> core::convert::Into<U> for battersea_model::media::MediaRenderType where U: core::convert::From<T>
@@ -5323,6 +5427,8 @@ impl core::marker::Unpin for battersea_model::media::MediaApiOption
 impl core::marker::UnsafeUnpin for battersea_model::media::MediaApiOption
 impl core::panic::unwind_safe::RefUnwindSafe for battersea_model::media::MediaApiOption
 impl core::panic::unwind_safe::UnwindSafe for battersea_model::media::MediaApiOption
+impl<Q, K> equivalent::Equivalent<K> for battersea_model::media::MediaApiOption where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn battersea_model::media::MediaApiOption::equivalent(&self, &K) -> bool
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_model::media::MediaApiOption where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_model::media::MediaApiOption where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<T, U> core::convert::Into<U> for battersea_model::media::MediaApiOption where U: core::convert::From<T>
@@ -5624,6 +5730,8 @@ impl core::marker::Unpin for battersea_model::media::MediaGenerationHints
 impl core::marker::UnsafeUnpin for battersea_model::media::MediaGenerationHints
 impl core::panic::unwind_safe::RefUnwindSafe for battersea_model::media::MediaGenerationHints
 impl core::panic::unwind_safe::UnwindSafe for battersea_model::media::MediaGenerationHints
+impl<Q, K> equivalent::Equivalent<K> for battersea_model::media::MediaGenerationHints where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn battersea_model::media::MediaGenerationHints::equivalent(&self, &K) -> bool
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_model::media::MediaGenerationHints where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_model::media::MediaGenerationHints where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<T, U> core::convert::Into<U> for battersea_model::media::MediaGenerationHints where U: core::convert::From<T>
@@ -5679,6 +5787,8 @@ impl core::marker::Unpin for battersea_model::media::MediaJobSnapshot
 impl core::marker::UnsafeUnpin for battersea_model::media::MediaJobSnapshot
 impl core::panic::unwind_safe::RefUnwindSafe for battersea_model::media::MediaJobSnapshot
 impl core::panic::unwind_safe::UnwindSafe for battersea_model::media::MediaJobSnapshot
+impl<Q, K> equivalent::Equivalent<K> for battersea_model::media::MediaJobSnapshot where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn battersea_model::media::MediaJobSnapshot::equivalent(&self, &K) -> bool
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_model::media::MediaJobSnapshot where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_model::media::MediaJobSnapshot where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<T, U> core::convert::Into<U> for battersea_model::media::MediaJobSnapshot where U: core::convert::From<T>
@@ -5791,6 +5901,8 @@ impl core::marker::Unpin for battersea_model::media::MediaProvenanceTiming
 impl core::marker::UnsafeUnpin for battersea_model::media::MediaProvenanceTiming
 impl core::panic::unwind_safe::RefUnwindSafe for battersea_model::media::MediaProvenanceTiming
 impl core::panic::unwind_safe::UnwindSafe for battersea_model::media::MediaProvenanceTiming
+impl<Q, K> equivalent::Equivalent<K> for battersea_model::media::MediaProvenanceTiming where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn battersea_model::media::MediaProvenanceTiming::equivalent(&self, &K) -> bool
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_model::media::MediaProvenanceTiming where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_model::media::MediaProvenanceTiming where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<T, U> core::convert::Into<U> for battersea_model::media::MediaProvenanceTiming where U: core::convert::From<T>
@@ -5852,6 +5964,8 @@ impl core::marker::Unpin for battersea_model::media::MediaProvenanceTimingPhase
 impl core::marker::UnsafeUnpin for battersea_model::media::MediaProvenanceTimingPhase
 impl core::panic::unwind_safe::RefUnwindSafe for battersea_model::media::MediaProvenanceTimingPhase
 impl core::panic::unwind_safe::UnwindSafe for battersea_model::media::MediaProvenanceTimingPhase
+impl<Q, K> equivalent::Equivalent<K> for battersea_model::media::MediaProvenanceTimingPhase where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn battersea_model::media::MediaProvenanceTimingPhase::equivalent(&self, &K) -> bool
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_model::media::MediaProvenanceTimingPhase where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_model::media::MediaProvenanceTimingPhase where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<T, U> core::convert::Into<U> for battersea_model::media::MediaProvenanceTimingPhase where U: core::convert::From<T>
@@ -6214,6 +6328,8 @@ impl core::marker::Unpin for battersea_model::ContentBlock
 impl core::marker::UnsafeUnpin for battersea_model::ContentBlock
 impl core::panic::unwind_safe::RefUnwindSafe for battersea_model::ContentBlock
 impl core::panic::unwind_safe::UnwindSafe for battersea_model::ContentBlock
+impl<Q, K> equivalent::Equivalent<K> for battersea_model::ContentBlock where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn battersea_model::ContentBlock::equivalent(&self, &K) -> bool
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_model::ContentBlock where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_model::ContentBlock where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<T, U> core::convert::Into<U> for battersea_model::ContentBlock where U: core::convert::From<T>
@@ -6274,6 +6390,8 @@ impl core::marker::Unpin for battersea_model::Role
 impl core::marker::UnsafeUnpin for battersea_model::Role
 impl core::panic::unwind_safe::RefUnwindSafe for battersea_model::Role
 impl core::panic::unwind_safe::UnwindSafe for battersea_model::Role
+impl<Q, K> equivalent::Equivalent<K> for battersea_model::Role where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn battersea_model::Role::equivalent(&self, &K) -> bool
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_model::Role where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_model::Role where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<T, U> core::convert::Into<U> for battersea_model::Role where U: core::convert::From<T>
@@ -6336,6 +6454,8 @@ impl core::marker::Unpin for battersea_model::Message
 impl core::marker::UnsafeUnpin for battersea_model::Message
 impl core::panic::unwind_safe::RefUnwindSafe for battersea_model::Message
 impl core::panic::unwind_safe::UnwindSafe for battersea_model::Message
+impl<Q, K> equivalent::Equivalent<K> for battersea_model::Message where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn battersea_model::Message::equivalent(&self, &K) -> bool
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_model::Message where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_model::Message where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<T, U> core::convert::Into<U> for battersea_model::Message where U: core::convert::From<T>
@@ -6392,6 +6512,8 @@ impl core::marker::Unpin for battersea_model::output::StopReason
 impl core::marker::UnsafeUnpin for battersea_model::output::StopReason
 impl core::panic::unwind_safe::RefUnwindSafe for battersea_model::output::StopReason
 impl core::panic::unwind_safe::UnwindSafe for battersea_model::output::StopReason
+impl<Q, K> equivalent::Equivalent<K> for battersea_model::output::StopReason where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn battersea_model::output::StopReason::equivalent(&self, &K) -> bool
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_model::output::StopReason where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_model::output::StopReason where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<T, U> core::convert::Into<U> for battersea_model::output::StopReason where U: core::convert::From<T>
@@ -6458,6 +6580,8 @@ impl core::marker::Unpin for battersea_model::Authentication
 impl core::marker::UnsafeUnpin for battersea_model::Authentication
 impl core::panic::unwind_safe::RefUnwindSafe for battersea_model::Authentication
 impl core::panic::unwind_safe::UnwindSafe for battersea_model::Authentication
+impl<Q, K> equivalent::Equivalent<K> for battersea_model::Authentication where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn battersea_model::Authentication::equivalent(&self, &K) -> bool
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_model::Authentication where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_model::Authentication where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<T, U> core::convert::Into<U> for battersea_model::Authentication where U: core::convert::From<T>
@@ -6510,6 +6634,8 @@ impl core::marker::Unpin for battersea_model::CredentialReference
 impl core::marker::UnsafeUnpin for battersea_model::CredentialReference
 impl core::panic::unwind_safe::RefUnwindSafe for battersea_model::CredentialReference
 impl core::panic::unwind_safe::UnwindSafe for battersea_model::CredentialReference
+impl<Q, K> equivalent::Equivalent<K> for battersea_model::CredentialReference where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn battersea_model::CredentialReference::equivalent(&self, &K) -> bool
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_model::CredentialReference where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_model::CredentialReference where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<T, U> core::convert::Into<U> for battersea_model::CredentialReference where U: core::convert::From<T>
@@ -6574,6 +6700,8 @@ impl core::marker::Unpin for battersea_model::ProviderCode
 impl core::marker::UnsafeUnpin for battersea_model::ProviderCode
 impl core::panic::unwind_safe::RefUnwindSafe for battersea_model::ProviderCode
 impl core::panic::unwind_safe::UnwindSafe for battersea_model::ProviderCode
+impl<Q, K> equivalent::Equivalent<K> for battersea_model::ProviderCode where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn battersea_model::ProviderCode::equivalent(&self, &K) -> bool
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_model::ProviderCode where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_model::ProviderCode where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<T, U> core::convert::Into<U> for battersea_model::ProviderCode where U: core::convert::From<T>
@@ -6630,6 +6758,8 @@ impl core::marker::Unpin for battersea_model::TokenCounting
 impl core::marker::UnsafeUnpin for battersea_model::TokenCounting
 impl core::panic::unwind_safe::RefUnwindSafe for battersea_model::TokenCounting
 impl core::panic::unwind_safe::UnwindSafe for battersea_model::TokenCounting
+impl<Q, K> equivalent::Equivalent<K> for battersea_model::TokenCounting where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn battersea_model::TokenCounting::equivalent(&self, &K) -> bool
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_model::TokenCounting where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_model::TokenCounting where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<T, U> core::convert::Into<U> for battersea_model::TokenCounting where U: core::convert::From<T>
@@ -6810,6 +6940,8 @@ impl core::marker::Unpin for battersea_model::ProviderBinding
 impl core::marker::UnsafeUnpin for battersea_model::ProviderBinding
 impl core::panic::unwind_safe::RefUnwindSafe for battersea_model::ProviderBinding
 impl core::panic::unwind_safe::UnwindSafe for battersea_model::ProviderBinding
+impl<Q, K> equivalent::Equivalent<K> for battersea_model::ProviderBinding where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn battersea_model::ProviderBinding::equivalent(&self, &K) -> bool
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_model::ProviderBinding where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_model::ProviderBinding where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<T, U> core::convert::Into<U> for battersea_model::ProviderBinding where U: core::convert::From<T>
@@ -6870,6 +7002,8 @@ impl core::marker::Unpin for battersea_model::ProviderConfigurationError
 impl core::marker::UnsafeUnpin for battersea_model::ProviderConfigurationError
 impl core::panic::unwind_safe::RefUnwindSafe for battersea_model::ProviderConfigurationError
 impl core::panic::unwind_safe::UnwindSafe for battersea_model::ProviderConfigurationError
+impl<Q, K> equivalent::Equivalent<K> for battersea_model::ProviderConfigurationError where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn battersea_model::ProviderConfigurationError::equivalent(&self, &K) -> bool
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_model::ProviderConfigurationError where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_model::ProviderConfigurationError where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<T, U> core::convert::Into<U> for battersea_model::ProviderConfigurationError where U: core::convert::From<T>
@@ -6930,6 +7064,8 @@ impl core::marker::Unpin for battersea_model::ProviderConnection
 impl core::marker::UnsafeUnpin for battersea_model::ProviderConnection
 impl core::panic::unwind_safe::RefUnwindSafe for battersea_model::ProviderConnection
 impl core::panic::unwind_safe::UnwindSafe for battersea_model::ProviderConnection
+impl<Q, K> equivalent::Equivalent<K> for battersea_model::ProviderConnection where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn battersea_model::ProviderConnection::equivalent(&self, &K) -> bool
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_model::ProviderConnection where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_model::ProviderConnection where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<T, U> core::convert::Into<U> for battersea_model::ProviderConnection where U: core::convert::From<T>
@@ -6988,6 +7124,8 @@ impl core::marker::Unpin for battersea_model::ProviderContentOrigin
 impl core::marker::UnsafeUnpin for battersea_model::ProviderContentOrigin
 impl core::panic::unwind_safe::RefUnwindSafe for battersea_model::ProviderContentOrigin
 impl core::panic::unwind_safe::UnwindSafe for battersea_model::ProviderContentOrigin
+impl<Q, K> equivalent::Equivalent<K> for battersea_model::ProviderContentOrigin where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn battersea_model::ProviderContentOrigin::equivalent(&self, &K) -> bool
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_model::ProviderContentOrigin where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_model::ProviderContentOrigin where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<T, U> core::convert::Into<U> for battersea_model::ProviderContentOrigin where U: core::convert::From<T>
@@ -7093,6 +7231,8 @@ impl core::panic::unwind_safe::RefUnwindSafe for battersea_model::SecretString
 impl core::panic::unwind_safe::UnwindSafe for battersea_model::SecretString
 impl<P, T> core::ops::deref::Receiver for battersea_model::SecretString where P: core::ops::deref::Deref<Target = T> + ?core::marker::Sized, T: ?core::marker::Sized
 pub type battersea_model::SecretString::Target = T
+impl<Q, K> equivalent::Equivalent<K> for battersea_model::SecretString where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn battersea_model::SecretString::equivalent(&self, &K) -> bool
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_model::SecretString where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_model::SecretString where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<T, U> core::convert::Into<U> for battersea_model::SecretString where U: core::convert::From<T>
@@ -7241,6 +7381,8 @@ impl core::marker::Unpin for battersea_model::MediaProviderCapabilities
 impl core::marker::UnsafeUnpin for battersea_model::MediaProviderCapabilities
 impl core::panic::unwind_safe::RefUnwindSafe for battersea_model::MediaProviderCapabilities
 impl core::panic::unwind_safe::UnwindSafe for battersea_model::MediaProviderCapabilities
+impl<Q, K> equivalent::Equivalent<K> for battersea_model::MediaProviderCapabilities where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn battersea_model::MediaProviderCapabilities::equivalent(&self, &K) -> bool
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_model::MediaProviderCapabilities where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_model::MediaProviderCapabilities where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<T, U> core::convert::Into<U> for battersea_model::MediaProviderCapabilities where U: core::convert::From<T>
@@ -7382,6 +7524,8 @@ impl core::marker::Unpin for battersea_model::Authentication
 impl core::marker::UnsafeUnpin for battersea_model::Authentication
 impl core::panic::unwind_safe::RefUnwindSafe for battersea_model::Authentication
 impl core::panic::unwind_safe::UnwindSafe for battersea_model::Authentication
+impl<Q, K> equivalent::Equivalent<K> for battersea_model::Authentication where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn battersea_model::Authentication::equivalent(&self, &K) -> bool
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_model::Authentication where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_model::Authentication where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<T, U> core::convert::Into<U> for battersea_model::Authentication where U: core::convert::From<T>
@@ -7473,6 +7617,8 @@ impl core::marker::Unpin for battersea_model::ContentBlock
 impl core::marker::UnsafeUnpin for battersea_model::ContentBlock
 impl core::panic::unwind_safe::RefUnwindSafe for battersea_model::ContentBlock
 impl core::panic::unwind_safe::UnwindSafe for battersea_model::ContentBlock
+impl<Q, K> equivalent::Equivalent<K> for battersea_model::ContentBlock where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn battersea_model::ContentBlock::equivalent(&self, &K) -> bool
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_model::ContentBlock where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_model::ContentBlock where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<T, U> core::convert::Into<U> for battersea_model::ContentBlock where U: core::convert::From<T>
@@ -7583,6 +7729,8 @@ impl core::marker::Unpin for battersea_model::ConversationPhase
 impl core::marker::UnsafeUnpin for battersea_model::ConversationPhase
 impl core::panic::unwind_safe::RefUnwindSafe for battersea_model::ConversationPhase
 impl core::panic::unwind_safe::UnwindSafe for battersea_model::ConversationPhase
+impl<Q, K> equivalent::Equivalent<K> for battersea_model::ConversationPhase where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn battersea_model::ConversationPhase::equivalent(&self, &K) -> bool
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_model::ConversationPhase where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_model::ConversationPhase where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<T, U> core::convert::Into<U> for battersea_model::ConversationPhase where U: core::convert::From<T>
@@ -7740,6 +7888,8 @@ impl core::marker::Unpin for battersea_model::ConversationStoreError
 impl core::marker::UnsafeUnpin for battersea_model::ConversationStoreError
 impl core::panic::unwind_safe::RefUnwindSafe for battersea_model::ConversationStoreError
 impl core::panic::unwind_safe::UnwindSafe for battersea_model::ConversationStoreError
+impl<Q, K> equivalent::Equivalent<K> for battersea_model::ConversationStoreError where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn battersea_model::ConversationStoreError::equivalent(&self, &K) -> bool
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_model::ConversationStoreError where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_model::ConversationStoreError where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<T, U> core::convert::Into<U> for battersea_model::ConversationStoreError where U: core::convert::From<T>
@@ -7793,6 +7943,8 @@ impl core::marker::Unpin for battersea_model::CredentialReference
 impl core::marker::UnsafeUnpin for battersea_model::CredentialReference
 impl core::panic::unwind_safe::RefUnwindSafe for battersea_model::CredentialReference
 impl core::panic::unwind_safe::UnwindSafe for battersea_model::CredentialReference
+impl<Q, K> equivalent::Equivalent<K> for battersea_model::CredentialReference where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn battersea_model::CredentialReference::equivalent(&self, &K) -> bool
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_model::CredentialReference where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_model::CredentialReference where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<T, U> core::convert::Into<U> for battersea_model::CredentialReference where U: core::convert::From<T>
@@ -7850,6 +8002,8 @@ impl core::marker::Unpin for battersea_model::DispatchState
 impl core::marker::UnsafeUnpin for battersea_model::DispatchState
 impl core::panic::unwind_safe::RefUnwindSafe for battersea_model::DispatchState
 impl core::panic::unwind_safe::UnwindSafe for battersea_model::DispatchState
+impl<Q, K> equivalent::Equivalent<K> for battersea_model::DispatchState where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn battersea_model::DispatchState::equivalent(&self, &K) -> bool
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_model::DispatchState where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_model::DispatchState where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<T, U> core::convert::Into<U> for battersea_model::DispatchState where U: core::convert::From<T>
@@ -7910,6 +8064,8 @@ impl core::marker::Unpin for battersea_model::EngineLocalToolResult
 impl core::marker::UnsafeUnpin for battersea_model::EngineLocalToolResult
 impl core::panic::unwind_safe::RefUnwindSafe for battersea_model::EngineLocalToolResult
 impl core::panic::unwind_safe::UnwindSafe for battersea_model::EngineLocalToolResult
+impl<Q, K> equivalent::Equivalent<K> for battersea_model::EngineLocalToolResult where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn battersea_model::EngineLocalToolResult::equivalent(&self, &K) -> bool
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_model::EngineLocalToolResult where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_model::EngineLocalToolResult where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<T, U> core::convert::Into<U> for battersea_model::EngineLocalToolResult where U: core::convert::From<T>
@@ -7964,6 +8120,8 @@ impl core::marker::Unpin for battersea_model::EngineOperation
 impl core::marker::UnsafeUnpin for battersea_model::EngineOperation
 impl core::panic::unwind_safe::RefUnwindSafe for battersea_model::EngineOperation
 impl core::panic::unwind_safe::UnwindSafe for battersea_model::EngineOperation
+impl<Q, K> equivalent::Equivalent<K> for battersea_model::EngineOperation where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn battersea_model::EngineOperation::equivalent(&self, &K) -> bool
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_model::EngineOperation where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_model::EngineOperation where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<T, U> core::convert::Into<U> for battersea_model::EngineOperation where U: core::convert::From<T>
@@ -8045,6 +8203,8 @@ impl core::marker::Unpin for battersea_model::EngineTextStreamEvent
 impl core::marker::UnsafeUnpin for battersea_model::EngineTextStreamEvent
 impl core::panic::unwind_safe::RefUnwindSafe for battersea_model::EngineTextStreamEvent
 impl core::panic::unwind_safe::UnwindSafe for battersea_model::EngineTextStreamEvent
+impl<Q, K> equivalent::Equivalent<K> for battersea_model::EngineTextStreamEvent where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn battersea_model::EngineTextStreamEvent::equivalent(&self, &K) -> bool
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_model::EngineTextStreamEvent where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_model::EngineTextStreamEvent where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<T, U> core::convert::Into<U> for battersea_model::EngineTextStreamEvent where U: core::convert::From<T>
@@ -8104,6 +8264,8 @@ impl core::marker::Unpin for battersea_model::engine::EngineToolExecutionMode
 impl core::marker::UnsafeUnpin for battersea_model::engine::EngineToolExecutionMode
 impl core::panic::unwind_safe::RefUnwindSafe for battersea_model::engine::EngineToolExecutionMode
 impl core::panic::unwind_safe::UnwindSafe for battersea_model::engine::EngineToolExecutionMode
+impl<Q, K> equivalent::Equivalent<K> for battersea_model::engine::EngineToolExecutionMode where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn battersea_model::engine::EngineToolExecutionMode::equivalent(&self, &K) -> bool
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_model::engine::EngineToolExecutionMode where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_model::engine::EngineToolExecutionMode where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<T, U> core::convert::Into<U> for battersea_model::engine::EngineToolExecutionMode where U: core::convert::From<T>
@@ -8179,6 +8341,8 @@ impl core::marker::Unpin for battersea_model::ErrorKind
 impl core::marker::UnsafeUnpin for battersea_model::ErrorKind
 impl core::panic::unwind_safe::RefUnwindSafe for battersea_model::ErrorKind
 impl core::panic::unwind_safe::UnwindSafe for battersea_model::ErrorKind
+impl<Q, K> equivalent::Equivalent<K> for battersea_model::ErrorKind where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn battersea_model::ErrorKind::equivalent(&self, &K) -> bool
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_model::ErrorKind where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_model::ErrorKind where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<T, U> core::convert::Into<U> for battersea_model::ErrorKind where U: core::convert::From<T>
@@ -8242,6 +8406,8 @@ impl core::marker::Unpin for battersea_model::Modality
 impl core::marker::UnsafeUnpin for battersea_model::Modality
 impl core::panic::unwind_safe::RefUnwindSafe for battersea_model::Modality
 impl core::panic::unwind_safe::UnwindSafe for battersea_model::Modality
+impl<Q, K> equivalent::Equivalent<K> for battersea_model::Modality where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn battersea_model::Modality::equivalent(&self, &K) -> bool
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_model::Modality where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_model::Modality where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<T, U> core::convert::Into<U> for battersea_model::Modality where U: core::convert::From<T>
@@ -8308,6 +8474,8 @@ impl core::marker::Unpin for battersea_model::ProviderCode
 impl core::marker::UnsafeUnpin for battersea_model::ProviderCode
 impl core::panic::unwind_safe::RefUnwindSafe for battersea_model::ProviderCode
 impl core::panic::unwind_safe::UnwindSafe for battersea_model::ProviderCode
+impl<Q, K> equivalent::Equivalent<K> for battersea_model::ProviderCode where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn battersea_model::ProviderCode::equivalent(&self, &K) -> bool
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_model::ProviderCode where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_model::ProviderCode where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<T, U> core::convert::Into<U> for battersea_model::ProviderCode where U: core::convert::From<T>
@@ -8373,6 +8541,8 @@ impl core::marker::Unpin for battersea_model::ResponseFormat
 impl core::marker::UnsafeUnpin for battersea_model::ResponseFormat
 impl core::panic::unwind_safe::RefUnwindSafe for battersea_model::ResponseFormat
 impl core::panic::unwind_safe::UnwindSafe for battersea_model::ResponseFormat
+impl<Q, K> equivalent::Equivalent<K> for battersea_model::ResponseFormat where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn battersea_model::ResponseFormat::equivalent(&self, &K) -> bool
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_model::ResponseFormat where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_model::ResponseFormat where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<T, U> core::convert::Into<U> for battersea_model::ResponseFormat where U: core::convert::From<T>
@@ -8433,6 +8603,8 @@ impl core::marker::Unpin for battersea_model::Role
 impl core::marker::UnsafeUnpin for battersea_model::Role
 impl core::panic::unwind_safe::RefUnwindSafe for battersea_model::Role
 impl core::panic::unwind_safe::UnwindSafe for battersea_model::Role
+impl<Q, K> equivalent::Equivalent<K> for battersea_model::Role where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn battersea_model::Role::equivalent(&self, &K) -> bool
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_model::Role where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_model::Role where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<T, U> core::convert::Into<U> for battersea_model::Role where U: core::convert::From<T>
@@ -8490,6 +8662,8 @@ impl core::marker::Unpin for battersea_model::output::StopReason
 impl core::marker::UnsafeUnpin for battersea_model::output::StopReason
 impl core::panic::unwind_safe::RefUnwindSafe for battersea_model::output::StopReason
 impl core::panic::unwind_safe::UnwindSafe for battersea_model::output::StopReason
+impl<Q, K> equivalent::Equivalent<K> for battersea_model::output::StopReason where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn battersea_model::output::StopReason::equivalent(&self, &K) -> bool
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_model::output::StopReason where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_model::output::StopReason where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<T, U> core::convert::Into<U> for battersea_model::output::StopReason where U: core::convert::From<T>
@@ -8548,6 +8722,8 @@ impl core::marker::Unpin for battersea_model::StructuredOutputMode
 impl core::marker::UnsafeUnpin for battersea_model::StructuredOutputMode
 impl core::panic::unwind_safe::RefUnwindSafe for battersea_model::StructuredOutputMode
 impl core::panic::unwind_safe::UnwindSafe for battersea_model::StructuredOutputMode
+impl<Q, K> equivalent::Equivalent<K> for battersea_model::StructuredOutputMode where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn battersea_model::StructuredOutputMode::equivalent(&self, &K) -> bool
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_model::StructuredOutputMode where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_model::StructuredOutputMode where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<T, U> core::convert::Into<U> for battersea_model::StructuredOutputMode where U: core::convert::From<T>
@@ -8604,6 +8780,8 @@ impl core::marker::Unpin for battersea_model::TokenCounting
 impl core::marker::UnsafeUnpin for battersea_model::TokenCounting
 impl core::panic::unwind_safe::RefUnwindSafe for battersea_model::TokenCounting
 impl core::panic::unwind_safe::UnwindSafe for battersea_model::TokenCounting
+impl<Q, K> equivalent::Equivalent<K> for battersea_model::TokenCounting where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn battersea_model::TokenCounting::equivalent(&self, &K) -> bool
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_model::TokenCounting where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_model::TokenCounting where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<T, U> core::convert::Into<U> for battersea_model::TokenCounting where U: core::convert::From<T>
@@ -8660,6 +8838,8 @@ impl core::marker::Unpin for battersea_model::ToolCallOutcome
 impl core::marker::UnsafeUnpin for battersea_model::ToolCallOutcome
 impl core::panic::unwind_safe::RefUnwindSafe for battersea_model::ToolCallOutcome
 impl core::panic::unwind_safe::UnwindSafe for battersea_model::ToolCallOutcome
+impl<Q, K> equivalent::Equivalent<K> for battersea_model::ToolCallOutcome where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn battersea_model::ToolCallOutcome::equivalent(&self, &K) -> bool
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_model::ToolCallOutcome where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_model::ToolCallOutcome where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<T, U> core::convert::Into<U> for battersea_model::ToolCallOutcome where U: core::convert::From<T>
@@ -8750,6 +8930,8 @@ impl core::marker::Unpin for battersea_model::ToolCode
 impl core::marker::UnsafeUnpin for battersea_model::ToolCode
 impl core::panic::unwind_safe::RefUnwindSafe for battersea_model::ToolCode
 impl core::panic::unwind_safe::UnwindSafe for battersea_model::ToolCode
+impl<Q, K> equivalent::Equivalent<K> for battersea_model::ToolCode where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn battersea_model::ToolCode::equivalent(&self, &K) -> bool
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_model::ToolCode where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_model::ToolCode where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<T, U> core::convert::Into<U> for battersea_model::ToolCode where U: core::convert::From<T>
@@ -8820,6 +9002,8 @@ impl core::marker::Unpin for battersea_model::ToolContentBlock
 impl core::marker::UnsafeUnpin for battersea_model::ToolContentBlock
 impl core::panic::unwind_safe::RefUnwindSafe for battersea_model::ToolContentBlock
 impl core::panic::unwind_safe::UnwindSafe for battersea_model::ToolContentBlock
+impl<Q, K> equivalent::Equivalent<K> for battersea_model::ToolContentBlock where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn battersea_model::ToolContentBlock::equivalent(&self, &K) -> bool
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_model::ToolContentBlock where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_model::ToolContentBlock where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<T, U> core::convert::Into<U> for battersea_model::ToolContentBlock where U: core::convert::From<T>
@@ -8872,6 +9056,8 @@ impl core::marker::Unpin for battersea_model::ToolResourceContents
 impl core::marker::UnsafeUnpin for battersea_model::ToolResourceContents
 impl core::panic::unwind_safe::RefUnwindSafe for battersea_model::ToolResourceContents
 impl core::panic::unwind_safe::UnwindSafe for battersea_model::ToolResourceContents
+impl<Q, K> equivalent::Equivalent<K> for battersea_model::ToolResourceContents where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn battersea_model::ToolResourceContents::equivalent(&self, &K) -> bool
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_model::ToolResourceContents where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_model::ToolResourceContents where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<T, U> core::convert::Into<U> for battersea_model::ToolResourceContents where U: core::convert::From<T>
@@ -8978,6 +9164,8 @@ impl core::marker::Unpin for battersea_model::ContentCapabilities
 impl core::marker::UnsafeUnpin for battersea_model::ContentCapabilities
 impl core::panic::unwind_safe::RefUnwindSafe for battersea_model::ContentCapabilities
 impl core::panic::unwind_safe::UnwindSafe for battersea_model::ContentCapabilities
+impl<Q, K> equivalent::Equivalent<K> for battersea_model::ContentCapabilities where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn battersea_model::ContentCapabilities::equivalent(&self, &K) -> bool
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_model::ContentCapabilities where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_model::ContentCapabilities where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<T, U> core::convert::Into<U> for battersea_model::ContentCapabilities where U: core::convert::From<T>
@@ -9031,6 +9219,8 @@ impl core::marker::Unpin for battersea_model::ConversationBinding
 impl core::marker::UnsafeUnpin for battersea_model::ConversationBinding
 impl core::panic::unwind_safe::RefUnwindSafe for battersea_model::ConversationBinding
 impl core::panic::unwind_safe::UnwindSafe for battersea_model::ConversationBinding
+impl<Q, K> equivalent::Equivalent<K> for battersea_model::ConversationBinding where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn battersea_model::ConversationBinding::equivalent(&self, &K) -> bool
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_model::ConversationBinding where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_model::ConversationBinding where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<T, U> core::convert::Into<U> for battersea_model::ConversationBinding where U: core::convert::From<T>
@@ -9204,6 +9394,8 @@ impl core::marker::Unpin for battersea_model::ConversationScope
 impl core::marker::UnsafeUnpin for battersea_model::ConversationScope
 impl core::panic::unwind_safe::RefUnwindSafe for battersea_model::ConversationScope
 impl core::panic::unwind_safe::UnwindSafe for battersea_model::ConversationScope
+impl<Q, K> equivalent::Equivalent<K> for battersea_model::ConversationScope where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn battersea_model::ConversationScope::equivalent(&self, &K) -> bool
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_model::ConversationScope where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_model::ConversationScope where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<T, U> core::convert::Into<U> for battersea_model::ConversationScope where U: core::convert::From<T>
@@ -9399,6 +9591,8 @@ impl core::marker::Unpin for battersea_model::Elapsed
 impl core::marker::UnsafeUnpin for battersea_model::Elapsed
 impl core::panic::unwind_safe::RefUnwindSafe for battersea_model::Elapsed
 impl core::panic::unwind_safe::UnwindSafe for battersea_model::Elapsed
+impl<Q, K> equivalent::Equivalent<K> for battersea_model::Elapsed where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn battersea_model::Elapsed::equivalent(&self, &K) -> bool
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_model::Elapsed where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_model::Elapsed where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<T, U> core::convert::Into<U> for battersea_model::Elapsed where U: core::convert::From<T>
@@ -9965,6 +10159,8 @@ impl core::marker::Unpin for battersea_model::EngineAdapterRetryLog
 impl core::marker::UnsafeUnpin for battersea_model::EngineAdapterRetryLog
 impl core::panic::unwind_safe::RefUnwindSafe for battersea_model::EngineAdapterRetryLog
 impl core::panic::unwind_safe::UnwindSafe for battersea_model::EngineAdapterRetryLog
+impl<Q, K> equivalent::Equivalent<K> for battersea_model::EngineAdapterRetryLog where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn battersea_model::EngineAdapterRetryLog::equivalent(&self, &K) -> bool
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_model::EngineAdapterRetryLog where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_model::EngineAdapterRetryLog where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<T, U> core::convert::Into<U> for battersea_model::EngineAdapterRetryLog where U: core::convert::From<T>
@@ -10075,6 +10271,8 @@ impl core::marker::Unpin for battersea_model::EngineAuthConfig
 impl core::marker::UnsafeUnpin for battersea_model::EngineAuthConfig
 impl core::panic::unwind_safe::RefUnwindSafe for battersea_model::EngineAuthConfig
 impl core::panic::unwind_safe::UnwindSafe for battersea_model::EngineAuthConfig
+impl<Q, K> equivalent::Equivalent<K> for battersea_model::EngineAuthConfig where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn battersea_model::EngineAuthConfig::equivalent(&self, &K) -> bool
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_model::EngineAuthConfig where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_model::EngineAuthConfig where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<T, U> core::convert::Into<U> for battersea_model::EngineAuthConfig where U: core::convert::From<T>
@@ -10423,6 +10621,8 @@ impl core::marker::Unpin for battersea_model::EngineTokenUsage
 impl core::marker::UnsafeUnpin for battersea_model::EngineTokenUsage
 impl core::panic::unwind_safe::RefUnwindSafe for battersea_model::EngineTokenUsage
 impl core::panic::unwind_safe::UnwindSafe for battersea_model::EngineTokenUsage
+impl<Q, K> equivalent::Equivalent<K> for battersea_model::EngineTokenUsage where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn battersea_model::EngineTokenUsage::equivalent(&self, &K) -> bool
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_model::EngineTokenUsage where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_model::EngineTokenUsage where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<T, U> core::convert::Into<U> for battersea_model::EngineTokenUsage where U: core::convert::From<T>
@@ -10607,6 +10807,8 @@ impl core::marker::Unpin for battersea_model::MediaProviderCapabilities
 impl core::marker::UnsafeUnpin for battersea_model::MediaProviderCapabilities
 impl core::panic::unwind_safe::RefUnwindSafe for battersea_model::MediaProviderCapabilities
 impl core::panic::unwind_safe::UnwindSafe for battersea_model::MediaProviderCapabilities
+impl<Q, K> equivalent::Equivalent<K> for battersea_model::MediaProviderCapabilities where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn battersea_model::MediaProviderCapabilities::equivalent(&self, &K) -> bool
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_model::MediaProviderCapabilities where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_model::MediaProviderCapabilities where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<T, U> core::convert::Into<U> for battersea_model::MediaProviderCapabilities where U: core::convert::From<T>
@@ -10666,6 +10868,8 @@ impl core::marker::Unpin for battersea_model::Message
 impl core::marker::UnsafeUnpin for battersea_model::Message
 impl core::panic::unwind_safe::RefUnwindSafe for battersea_model::Message
 impl core::panic::unwind_safe::UnwindSafe for battersea_model::Message
+impl<Q, K> equivalent::Equivalent<K> for battersea_model::Message where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn battersea_model::Message::equivalent(&self, &K) -> bool
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_model::Message where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_model::Message where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<T, U> core::convert::Into<U> for battersea_model::Message where U: core::convert::From<T>
@@ -10719,6 +10923,8 @@ impl core::marker::Unpin for battersea_model::MockFailureSpec
 impl core::marker::UnsafeUnpin for battersea_model::MockFailureSpec
 impl core::panic::unwind_safe::RefUnwindSafe for battersea_model::MockFailureSpec
 impl core::panic::unwind_safe::UnwindSafe for battersea_model::MockFailureSpec
+impl<Q, K> equivalent::Equivalent<K> for battersea_model::MockFailureSpec where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn battersea_model::MockFailureSpec::equivalent(&self, &K) -> bool
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_model::MockFailureSpec where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_model::MockFailureSpec where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<T, U> core::convert::Into<U> for battersea_model::MockFailureSpec where U: core::convert::From<T>
@@ -10948,6 +11154,8 @@ impl core::marker::Unpin for battersea_model::ProviderBinding
 impl core::marker::UnsafeUnpin for battersea_model::ProviderBinding
 impl core::panic::unwind_safe::RefUnwindSafe for battersea_model::ProviderBinding
 impl core::panic::unwind_safe::UnwindSafe for battersea_model::ProviderBinding
+impl<Q, K> equivalent::Equivalent<K> for battersea_model::ProviderBinding where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn battersea_model::ProviderBinding::equivalent(&self, &K) -> bool
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_model::ProviderBinding where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_model::ProviderBinding where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<T, U> core::convert::Into<U> for battersea_model::ProviderBinding where U: core::convert::From<T>
@@ -11008,6 +11216,8 @@ impl core::marker::Unpin for battersea_model::ProviderConfigurationError
 impl core::marker::UnsafeUnpin for battersea_model::ProviderConfigurationError
 impl core::panic::unwind_safe::RefUnwindSafe for battersea_model::ProviderConfigurationError
 impl core::panic::unwind_safe::UnwindSafe for battersea_model::ProviderConfigurationError
+impl<Q, K> equivalent::Equivalent<K> for battersea_model::ProviderConfigurationError where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn battersea_model::ProviderConfigurationError::equivalent(&self, &K) -> bool
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_model::ProviderConfigurationError where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_model::ProviderConfigurationError where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<T, U> core::convert::Into<U> for battersea_model::ProviderConfigurationError where U: core::convert::From<T>
@@ -11068,6 +11278,8 @@ impl core::marker::Unpin for battersea_model::ProviderConnection
 impl core::marker::UnsafeUnpin for battersea_model::ProviderConnection
 impl core::panic::unwind_safe::RefUnwindSafe for battersea_model::ProviderConnection
 impl core::panic::unwind_safe::UnwindSafe for battersea_model::ProviderConnection
+impl<Q, K> equivalent::Equivalent<K> for battersea_model::ProviderConnection where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn battersea_model::ProviderConnection::equivalent(&self, &K) -> bool
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_model::ProviderConnection where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_model::ProviderConnection where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<T, U> core::convert::Into<U> for battersea_model::ProviderConnection where U: core::convert::From<T>
@@ -11126,6 +11338,8 @@ impl core::marker::Unpin for battersea_model::ProviderContentOrigin
 impl core::marker::UnsafeUnpin for battersea_model::ProviderContentOrigin
 impl core::panic::unwind_safe::RefUnwindSafe for battersea_model::ProviderContentOrigin
 impl core::panic::unwind_safe::UnwindSafe for battersea_model::ProviderContentOrigin
+impl<Q, K> equivalent::Equivalent<K> for battersea_model::ProviderContentOrigin where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn battersea_model::ProviderContentOrigin::equivalent(&self, &K) -> bool
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_model::ProviderContentOrigin where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_model::ProviderContentOrigin where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<T, U> core::convert::Into<U> for battersea_model::ProviderContentOrigin where U: core::convert::From<T>
@@ -11272,6 +11486,8 @@ impl core::panic::unwind_safe::RefUnwindSafe for battersea_model::SecretString
 impl core::panic::unwind_safe::UnwindSafe for battersea_model::SecretString
 impl<P, T> core::ops::deref::Receiver for battersea_model::SecretString where P: core::ops::deref::Deref<Target = T> + ?core::marker::Sized, T: ?core::marker::Sized
 pub type battersea_model::SecretString::Target = T
+impl<Q, K> equivalent::Equivalent<K> for battersea_model::SecretString where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn battersea_model::SecretString::equivalent(&self, &K) -> bool
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_model::SecretString where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_model::SecretString where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<T, U> core::convert::Into<U> for battersea_model::SecretString where U: core::convert::From<T>
@@ -11478,6 +11694,8 @@ impl core::marker::Unpin for battersea_model::ToolCallEvidence
 impl core::marker::UnsafeUnpin for battersea_model::ToolCallEvidence
 impl core::panic::unwind_safe::RefUnwindSafe for battersea_model::ToolCallEvidence
 impl core::panic::unwind_safe::UnwindSafe for battersea_model::ToolCallEvidence
+impl<Q, K> equivalent::Equivalent<K> for battersea_model::ToolCallEvidence where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn battersea_model::ToolCallEvidence::equivalent(&self, &K) -> bool
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_model::ToolCallEvidence where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_model::ToolCallEvidence where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<T, U> core::convert::Into<U> for battersea_model::ToolCallEvidence where U: core::convert::From<T>
@@ -11532,6 +11750,8 @@ impl core::marker::Unpin for battersea_model::ToolContentResult
 impl core::marker::UnsafeUnpin for battersea_model::ToolContentResult
 impl core::panic::unwind_safe::RefUnwindSafe for battersea_model::ToolContentResult
 impl core::panic::unwind_safe::UnwindSafe for battersea_model::ToolContentResult
+impl<Q, K> equivalent::Equivalent<K> for battersea_model::ToolContentResult where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn battersea_model::ToolContentResult::equivalent(&self, &K) -> bool
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_model::ToolContentResult where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_model::ToolContentResult where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<T, U> core::convert::Into<U> for battersea_model::ToolContentResult where U: core::convert::From<T>

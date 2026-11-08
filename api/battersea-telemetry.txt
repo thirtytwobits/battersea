@@ -39,8 +39,6 @@ impl core::panic::unwind_safe::RefUnwindSafe for battersea_telemetry::accounting
 impl core::panic::unwind_safe::UnwindSafe for battersea_telemetry::accounting::Cost
 impl<Q, K> equivalent::Equivalent<K> for battersea_telemetry::accounting::Cost where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
 pub fn battersea_telemetry::accounting::Cost::equivalent(&self, &K) -> bool
-impl<Q, K> hashbrown::Equivalent<K> for battersea_telemetry::accounting::Cost where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
-pub fn battersea_telemetry::accounting::Cost::equivalent(&self, &K) -> bool
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_telemetry::accounting::Cost where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_telemetry::accounting::Cost where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<T, U> core::convert::Into<U> for battersea_telemetry::accounting::Cost where U: core::convert::From<T>
@@ -109,8 +107,6 @@ impl core::panic::unwind_safe::RefUnwindSafe for battersea_telemetry::accounting
 impl core::panic::unwind_safe::UnwindSafe for battersea_telemetry::accounting::ReservationState
 impl<Q, K> equivalent::Equivalent<K> for battersea_telemetry::accounting::ReservationState where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
 pub fn battersea_telemetry::accounting::ReservationState::equivalent(&self, &K) -> bool
-impl<Q, K> hashbrown::Equivalent<K> for battersea_telemetry::accounting::ReservationState where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
-pub fn battersea_telemetry::accounting::ReservationState::equivalent(&self, &K) -> bool
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_telemetry::accounting::ReservationState where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_telemetry::accounting::ReservationState where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<T, U> core::convert::Into<U> for battersea_telemetry::accounting::ReservationState where U: core::convert::From<T>
@@ -175,8 +171,6 @@ impl core::marker::UnsafeUnpin for battersea_telemetry::accounting::Budget
 impl core::panic::unwind_safe::RefUnwindSafe for battersea_telemetry::accounting::Budget
 impl core::panic::unwind_safe::UnwindSafe for battersea_telemetry::accounting::Budget
 impl<Q, K> equivalent::Equivalent<K> for battersea_telemetry::accounting::Budget where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
-pub fn battersea_telemetry::accounting::Budget::equivalent(&self, &K) -> bool
-impl<Q, K> hashbrown::Equivalent<K> for battersea_telemetry::accounting::Budget where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
 pub fn battersea_telemetry::accounting::Budget::equivalent(&self, &K) -> bool
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_telemetry::accounting::Budget where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_telemetry::accounting::Budget where ST: ?core::marker::Sized, DT: ?core::marker::Sized
@@ -251,8 +245,6 @@ impl core::panic::unwind_safe::RefUnwindSafe for battersea_telemetry::accounting
 impl core::panic::unwind_safe::UnwindSafe for battersea_telemetry::accounting::Ledger
 impl<Q, K> equivalent::Equivalent<K> for battersea_telemetry::accounting::Ledger where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
 pub fn battersea_telemetry::accounting::Ledger::equivalent(&self, &K) -> bool
-impl<Q, K> hashbrown::Equivalent<K> for battersea_telemetry::accounting::Ledger where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
-pub fn battersea_telemetry::accounting::Ledger::equivalent(&self, &K) -> bool
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_telemetry::accounting::Ledger where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_telemetry::accounting::Ledger where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<T, U> core::convert::Into<U> for battersea_telemetry::accounting::Ledger where U: core::convert::From<T>
@@ -318,8 +310,6 @@ impl core::marker::UnsafeUnpin for battersea_telemetry::accounting::Money
 impl core::panic::unwind_safe::RefUnwindSafe for battersea_telemetry::accounting::Money
 impl core::panic::unwind_safe::UnwindSafe for battersea_telemetry::accounting::Money
 impl<Q, K> equivalent::Equivalent<K> for battersea_telemetry::accounting::Money where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
-pub fn battersea_telemetry::accounting::Money::equivalent(&self, &K) -> bool
-impl<Q, K> hashbrown::Equivalent<K> for battersea_telemetry::accounting::Money where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
 pub fn battersea_telemetry::accounting::Money::equivalent(&self, &K) -> bool
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_telemetry::accounting::Money where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_telemetry::accounting::Money where ST: ?core::marker::Sized, DT: ?core::marker::Sized
@@ -392,8 +382,6 @@ impl core::panic::unwind_safe::RefUnwindSafe for battersea_telemetry::accounting
 impl core::panic::unwind_safe::UnwindSafe for battersea_telemetry::accounting::Price
 impl<Q, K> equivalent::Equivalent<K> for battersea_telemetry::accounting::Price where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
 pub fn battersea_telemetry::accounting::Price::equivalent(&self, &K) -> bool
-impl<Q, K> hashbrown::Equivalent<K> for battersea_telemetry::accounting::Price where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
-pub fn battersea_telemetry::accounting::Price::equivalent(&self, &K) -> bool
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_telemetry::accounting::Price where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_telemetry::accounting::Price where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<T, U> core::convert::Into<U> for battersea_telemetry::accounting::Price where U: core::convert::From<T>
@@ -465,8 +453,6 @@ impl core::panic::unwind_safe::RefUnwindSafe for battersea_telemetry::accounting
 impl core::panic::unwind_safe::UnwindSafe for battersea_telemetry::accounting::PriceCatalogue
 impl<Q, K> equivalent::Equivalent<K> for battersea_telemetry::accounting::PriceCatalogue where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
 pub fn battersea_telemetry::accounting::PriceCatalogue::equivalent(&self, &K) -> bool
-impl<Q, K> hashbrown::Equivalent<K> for battersea_telemetry::accounting::PriceCatalogue where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
-pub fn battersea_telemetry::accounting::PriceCatalogue::equivalent(&self, &K) -> bool
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_telemetry::accounting::PriceCatalogue where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_telemetry::accounting::PriceCatalogue where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<T, U> core::convert::Into<U> for battersea_telemetry::accounting::PriceCatalogue where U: core::convert::From<T>
@@ -533,8 +519,6 @@ impl core::marker::UnsafeUnpin for battersea_telemetry::accounting::Reservation
 impl core::panic::unwind_safe::RefUnwindSafe for battersea_telemetry::accounting::Reservation
 impl core::panic::unwind_safe::UnwindSafe for battersea_telemetry::accounting::Reservation
 impl<Q, K> equivalent::Equivalent<K> for battersea_telemetry::accounting::Reservation where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
-pub fn battersea_telemetry::accounting::Reservation::equivalent(&self, &K) -> bool
-impl<Q, K> hashbrown::Equivalent<K> for battersea_telemetry::accounting::Reservation where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
 pub fn battersea_telemetry::accounting::Reservation::equivalent(&self, &K) -> bool
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_telemetry::accounting::Reservation where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_telemetry::accounting::Reservation where ST: ?core::marker::Sized, DT: ?core::marker::Sized
@@ -603,8 +587,6 @@ impl core::marker::UnsafeUnpin for battersea_telemetry::accounting::Usage
 impl core::panic::unwind_safe::RefUnwindSafe for battersea_telemetry::accounting::Usage
 impl core::panic::unwind_safe::UnwindSafe for battersea_telemetry::accounting::Usage
 impl<Q, K> equivalent::Equivalent<K> for battersea_telemetry::accounting::Usage where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
-pub fn battersea_telemetry::accounting::Usage::equivalent(&self, &K) -> bool
-impl<Q, K> hashbrown::Equivalent<K> for battersea_telemetry::accounting::Usage where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
 pub fn battersea_telemetry::accounting::Usage::equivalent(&self, &K) -> bool
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_telemetry::accounting::Usage where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_telemetry::accounting::Usage where ST: ?core::marker::Sized, DT: ?core::marker::Sized
@@ -1022,8 +1004,6 @@ impl core::panic::unwind_safe::RefUnwindSafe for battersea_telemetry::content::C
 impl core::panic::unwind_safe::UnwindSafe for battersea_telemetry::content::Content
 impl<Q, K> equivalent::Equivalent<K> for battersea_telemetry::content::Content where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
 pub fn battersea_telemetry::content::Content::equivalent(&self, &K) -> bool
-impl<Q, K> hashbrown::Equivalent<K> for battersea_telemetry::content::Content where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
-pub fn battersea_telemetry::content::Content::equivalent(&self, &K) -> bool
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_telemetry::content::Content where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_telemetry::content::Content where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<T, U> core::convert::Into<U> for battersea_telemetry::content::Content where U: core::convert::From<T>
@@ -1314,8 +1294,6 @@ impl core::panic::unwind_safe::RefUnwindSafe for battersea_telemetry::view::Dire
 impl core::panic::unwind_safe::UnwindSafe for battersea_telemetry::view::Direction
 impl<Q, K> equivalent::Equivalent<K> for battersea_telemetry::view::Direction where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
 pub fn battersea_telemetry::view::Direction::equivalent(&self, &K) -> bool
-impl<Q, K> hashbrown::Equivalent<K> for battersea_telemetry::view::Direction where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
-pub fn battersea_telemetry::view::Direction::equivalent(&self, &K) -> bool
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_telemetry::view::Direction where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_telemetry::view::Direction where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<T, U> core::convert::Into<U> for battersea_telemetry::view::Direction where U: core::convert::From<T>
@@ -1383,8 +1361,6 @@ impl core::panic::unwind_safe::RefUnwindSafe for battersea_telemetry::view::Port
 impl core::panic::unwind_safe::UnwindSafe for battersea_telemetry::view::PortAction
 impl<Q, K> equivalent::Equivalent<K> for battersea_telemetry::view::PortAction where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
 pub fn battersea_telemetry::view::PortAction::equivalent(&self, &K) -> bool
-impl<Q, K> hashbrown::Equivalent<K> for battersea_telemetry::view::PortAction where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
-pub fn battersea_telemetry::view::PortAction::equivalent(&self, &K) -> bool
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_telemetry::view::PortAction where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_telemetry::view::PortAction where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<T, U> core::convert::Into<U> for battersea_telemetry::view::PortAction where U: core::convert::From<T>
@@ -1451,8 +1427,6 @@ impl core::marker::UnsafeUnpin for battersea_telemetry::view::RetryState
 impl core::panic::unwind_safe::RefUnwindSafe for battersea_telemetry::view::RetryState
 impl core::panic::unwind_safe::UnwindSafe for battersea_telemetry::view::RetryState
 impl<Q, K> equivalent::Equivalent<K> for battersea_telemetry::view::RetryState where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
-pub fn battersea_telemetry::view::RetryState::equivalent(&self, &K) -> bool
-impl<Q, K> hashbrown::Equivalent<K> for battersea_telemetry::view::RetryState where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
 pub fn battersea_telemetry::view::RetryState::equivalent(&self, &K) -> bool
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_telemetry::view::RetryState where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_telemetry::view::RetryState where ST: ?core::marker::Sized, DT: ?core::marker::Sized
@@ -1629,8 +1603,6 @@ impl core::panic::unwind_safe::RefUnwindSafe for battersea_telemetry::view::Stat
 impl core::panic::unwind_safe::UnwindSafe for battersea_telemetry::view::Status
 impl<Q, K> equivalent::Equivalent<K> for battersea_telemetry::view::Status where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
 pub fn battersea_telemetry::view::Status::equivalent(&self, &K) -> bool
-impl<Q, K> hashbrown::Equivalent<K> for battersea_telemetry::view::Status where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
-pub fn battersea_telemetry::view::Status::equivalent(&self, &K) -> bool
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_telemetry::view::Status where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_telemetry::view::Status where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<T, U> core::convert::Into<U> for battersea_telemetry::view::Status where U: core::convert::From<T>
@@ -1761,8 +1733,6 @@ impl core::panic::unwind_safe::RefUnwindSafe for battersea_telemetry::view::Cont
 impl core::panic::unwind_safe::UnwindSafe for battersea_telemetry::view::Context
 impl<Q, K> equivalent::Equivalent<K> for battersea_telemetry::view::Context where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
 pub fn battersea_telemetry::view::Context::equivalent(&self, &K) -> bool
-impl<Q, K> hashbrown::Equivalent<K> for battersea_telemetry::view::Context where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
-pub fn battersea_telemetry::view::Context::equivalent(&self, &K) -> bool
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_telemetry::view::Context where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_telemetry::view::Context where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<T, U> core::convert::Into<U> for battersea_telemetry::view::Context where U: core::convert::From<T>
@@ -1826,8 +1796,6 @@ impl core::marker::UnsafeUnpin for battersea_telemetry::view::Cursor
 impl core::panic::unwind_safe::RefUnwindSafe for battersea_telemetry::view::Cursor
 impl core::panic::unwind_safe::UnwindSafe for battersea_telemetry::view::Cursor
 impl<Q, K> equivalent::Equivalent<K> for battersea_telemetry::view::Cursor where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
-pub fn battersea_telemetry::view::Cursor::equivalent(&self, &K) -> bool
-impl<Q, K> hashbrown::Equivalent<K> for battersea_telemetry::view::Cursor where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
 pub fn battersea_telemetry::view::Cursor::equivalent(&self, &K) -> bool
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_telemetry::view::Cursor where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_telemetry::view::Cursor where ST: ?core::marker::Sized, DT: ?core::marker::Sized
@@ -2152,8 +2120,6 @@ impl core::panic::unwind_safe::RefUnwindSafe for battersea_telemetry::view::Timi
 impl core::panic::unwind_safe::UnwindSafe for battersea_telemetry::view::TimingSummary
 impl<Q, K> equivalent::Equivalent<K> for battersea_telemetry::view::TimingSummary where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
 pub fn battersea_telemetry::view::TimingSummary::equivalent(&self, &K) -> bool
-impl<Q, K> hashbrown::Equivalent<K> for battersea_telemetry::view::TimingSummary where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
-pub fn battersea_telemetry::view::TimingSummary::equivalent(&self, &K) -> bool
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_telemetry::view::TimingSummary where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_telemetry::view::TimingSummary where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<T, U> core::convert::Into<U> for battersea_telemetry::view::TimingSummary where U: core::convert::From<T>
@@ -2276,8 +2242,6 @@ impl core::marker::UnsafeUnpin for battersea_telemetry::Error
 impl core::panic::unwind_safe::RefUnwindSafe for battersea_telemetry::Error
 impl core::panic::unwind_safe::UnwindSafe for battersea_telemetry::Error
 impl<Q, K> equivalent::Equivalent<K> for battersea_telemetry::Error where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
-pub fn battersea_telemetry::Error::equivalent(&self, &K) -> bool
-impl<Q, K> hashbrown::Equivalent<K> for battersea_telemetry::Error where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
 pub fn battersea_telemetry::Error::equivalent(&self, &K) -> bool
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_telemetry::Error where ST: ?core::marker::Sized, DT: ?core::marker::Sized
 impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_telemetry::Error where ST: ?core::marker::Sized, DT: ?core::marker::Sized
