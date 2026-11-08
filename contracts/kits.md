@@ -1,7 +1,8 @@
 # Kits
 
 Status: implemented; designed in [#70](https://github.com/thirtytwobits/battersea/issues/70).
-`battersea-nodes` is the generic kit.
+`battersea-nodes` is the generic kit; the [conversation kit](kit-conversation.md) is built to
+this standard.
 
 A kit is a domain-specific set of nodes that applications share. It is one Cargo crate. Its
 handlers reach the application only through its port, so an application that implements the

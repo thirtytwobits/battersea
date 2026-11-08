@@ -257,9 +257,9 @@ transcript, and runs the suite against them.
 
 ## Boundary
 
-With this kit, chat, compaction and refinement leave the Application row of the
-[execution contract](execution.md); story memory and media stay. Applications keep sessions,
-storage and durable commits. Battersea owns the conversation nodes and compaction over the port.
+Battersea owns the conversation nodes and compaction over the port. Applications keep
+sessions, storage and durable commits, with the story memory and media the
+[execution contract](execution.md) places under Application.
 
 ## Verification
 

@@ -6,7 +6,9 @@ invoked upgrade.
 ## Ownership and admission
 
 Battersea owns scheduling, delivery, consumption modes, ordering and resource admission.
-The application owns sessions, storage, controller state and durable effects. A provider
+The application owns sessions, storage, controller state and durable effects. Chat,
+compaction and refinement over the application's transcript are the
+[conversation kit](kit-conversation.md)'s, reached through its port. A provider
 pump owns its stream and sends events to the activation driver; it cannot borrow mutable
 graph state or call a node handler. Only the driver applies events to graph state.
 
@@ -210,7 +212,7 @@ older bytes; replacing a stored flow requires explicit, revision-fenced host pub
 | Failure policies | Fail/emit/skip across every callback; handled middle fan-out continues; partial streams skip final execution |
 | Failure boundaries | Cancellation, capacity, journal and unresolved effects retain their control outcomes |
 | Upgrade | Read/import leave bytes, timestamps and ownership unchanged; explicit fenced upgrade retains original |
-| Application | Chat, compaction, refinement, story memory and media preserve attributed outputs and durable completion |
+| Application | Story memory and media preserve attributed outputs and durable completion |
 
 Playback of recorded events, deterministic re-execution and effectful resume are separate
 operations. Quiescent queues do not establish durable completion of external effects.

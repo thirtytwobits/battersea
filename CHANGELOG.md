@@ -64,6 +64,9 @@
   reference host and a conformance suite; the handbook gains **Build a kit**.
 - `contracts/kit-conversation.md` proposes the conversation kit: the nodes of a chat loop, its
   port over the application's transcript, model, tools and spend, and compaction.
+- Chat, compaction and refinement leave the Application row of `contracts/execution.md` for
+  the conversation kit; AGENTS.md, the README and the handbook's **Integrate a host** and
+  **Build a kit** name the kit at that line.
 
 ## 0.23.0
 

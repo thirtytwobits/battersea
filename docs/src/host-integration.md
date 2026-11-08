@@ -1,8 +1,9 @@
 # Integrate a host
 
 Your application owns sessions, durable storage, product tools, media, and presentation.
-Battersea owns graph validation and generic execution. Public packages do not depend on
-a consuming product.
+Battersea owns graph validation and generic execution, and the chat loop, compaction and
+refinement over your transcript through the [conversation kit](contracts/kit-conversation.md)'s
+port. Public packages do not depend on a consuming product.
 
 1. Build a catalogue with your handler IDs, token schemas, parameter schemas, and validators.
 2. Implement `ExecutionHost` with application state and effects.
