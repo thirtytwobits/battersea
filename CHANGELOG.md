@@ -4,7 +4,7 @@
 
 ### Breaking
 
-- Battersea builds on Clapham 0.5.0. A host that also depends on Clapham takes the `v0.5.0` tag.
+- Battersea builds on Clapham 0.5.2. A host that also depends on Clapham takes the `v0.5.2` tag.
   `McpConfig::clock` runs MCP deadlines on a host clock.
 - `ExpiryClock` is `Clock` and adds `sleep_until`. Library code takes its time and timers from the
   host's clock: `battersea_model::clock` provides `sleep`, `timeout`, `timeout_at`,
