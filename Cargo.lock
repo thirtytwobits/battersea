@@ -238,7 +238,7 @@ dependencies = [
 
 [[package]]
 name = "backend-example"
-version = "0.24.0"
+version = "0.25.0"
 dependencies = [
  "battersea-model",
  "battersea-providers",
@@ -286,7 +286,7 @@ checksum = "ac07cdecf99051d9a5238b80f35af32cdeba5b336e55d957b318b50137e18da5"
 
 [[package]]
 name = "battersea-config"
-version = "0.24.0"
+version = "0.25.0"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -303,7 +303,7 @@ dependencies = [
 
 [[package]]
 name = "battersea-derive"
-version = "0.24.0"
+version = "0.25.0"
 dependencies = [
  "battersea-flow",
  "proc-macro2",
@@ -315,7 +315,7 @@ dependencies = [
 
 [[package]]
 name = "battersea-flow"
-version = "0.24.0"
+version = "0.25.0"
 dependencies = [
  "anyhow",
  "jsonschema",
@@ -329,7 +329,7 @@ dependencies = [
 
 [[package]]
 name = "battersea-guard"
-version = "0.24.0"
+version = "0.25.0"
 dependencies = [
  "anyhow",
  "regex-lite",
@@ -339,7 +339,7 @@ dependencies = [
 
 [[package]]
 name = "battersea-kit"
-version = "0.24.0"
+version = "0.25.0"
 dependencies = [
  "async-trait",
  "battersea-flow",
@@ -356,7 +356,7 @@ dependencies = [
 
 [[package]]
 name = "battersea-kit-conversation"
-version = "0.24.0"
+version = "0.25.0"
 dependencies = [
  "async-trait",
  "battersea-flow",
@@ -374,7 +374,7 @@ dependencies = [
 
 [[package]]
 name = "battersea-model"
-version = "0.24.0"
+version = "0.25.0"
 dependencies = [
  "async-trait",
  "base16ct",
@@ -395,7 +395,7 @@ dependencies = [
 
 [[package]]
 name = "battersea-nodes"
-version = "0.24.0"
+version = "0.25.0"
 dependencies = [
  "async-trait",
  "battersea-flow",
@@ -410,7 +410,7 @@ dependencies = [
 
 [[package]]
 name = "battersea-ops"
-version = "0.24.0"
+version = "0.25.0"
 dependencies = [
  "async-trait",
  "battersea-flow",
@@ -426,7 +426,7 @@ dependencies = [
 
 [[package]]
 name = "battersea-pianola"
-version = "0.24.0"
+version = "0.25.0"
 dependencies = [
  "battersea-model",
  "chrono",
@@ -439,7 +439,7 @@ dependencies = [
 
 [[package]]
 name = "battersea-providers"
-version = "0.24.0"
+version = "0.25.0"
 dependencies = [
  "ab_glyph",
  "anyhow",
@@ -467,7 +467,7 @@ dependencies = [
 
 [[package]]
 name = "battersea-runtime"
-version = "0.24.0"
+version = "0.25.0"
 dependencies = [
  "async-trait",
  "base16ct",
@@ -482,7 +482,7 @@ dependencies = [
 
 [[package]]
 name = "battersea-telemetry"
-version = "0.24.0"
+version = "0.25.0"
 dependencies = [
  "axum",
  "base16ct",
@@ -499,7 +499,7 @@ dependencies = [
 
 [[package]]
 name = "battersea-tools"
-version = "0.24.0"
+version = "0.25.0"
 dependencies = [
  "async-trait",
  "battersea-model",
@@ -582,7 +582,7 @@ checksum = "fc652a48c352aef3ea3aed32080501cf3ef6ed5da78602a020c991775b0aff04"
 
 [[package]]
 name = "catalogue-example"
-version = "0.24.0"
+version = "0.25.0"
 dependencies = [
  "battersea-flow",
  "serde_json",
@@ -686,8 +686,8 @@ checksum = "1c133bc6a41be0d194c306b5506d15e6feeea7b1d6604bd3f8310dfb2ca96486"
 
 [[package]]
 name = "clapham"
-version = "0.5.2"
-source = "git+https://github.com/thirtytwobits/clapham?tag=v0.5.2#cbd0d30bc776a2f03248750ae76d03cd1bf1c894"
+version = "0.6.0"
+source = "git+https://github.com/thirtytwobits/clapham?tag=v0.6.0#658623f24b65e67feb49da21eec0c3b2e38ecf9c"
 dependencies = [
  "base16ct",
  "futures-util",
@@ -701,8 +701,8 @@ dependencies = [
 
 [[package]]
 name = "clapham-cli"
-version = "0.5.2"
-source = "git+https://github.com/thirtytwobits/clapham?tag=v0.5.2#cbd0d30bc776a2f03248750ae76d03cd1bf1c894"
+version = "0.6.0"
+source = "git+https://github.com/thirtytwobits/clapham?tag=v0.6.0#658623f24b65e67feb49da21eec0c3b2e38ecf9c"
 dependencies = [
  "clap",
  "clap_complete",
@@ -719,8 +719,8 @@ dependencies = [
 
 [[package]]
 name = "clapham-conformance"
-version = "0.5.2"
-source = "git+https://github.com/thirtytwobits/clapham?tag=v0.5.2#cbd0d30bc776a2f03248750ae76d03cd1bf1c894"
+version = "0.6.0"
+source = "git+https://github.com/thirtytwobits/clapham?tag=v0.6.0#658623f24b65e67feb49da21eec0c3b2e38ecf9c"
 dependencies = [
  "clapham",
  "clapham-cli",
@@ -738,8 +738,8 @@ dependencies = [
 
 [[package]]
 name = "clapham-mcp-client"
-version = "0.5.2"
-source = "git+https://github.com/thirtytwobits/clapham?tag=v0.5.2#cbd0d30bc776a2f03248750ae76d03cd1bf1c894"
+version = "0.6.0"
+source = "git+https://github.com/thirtytwobits/clapham?tag=v0.6.0#658623f24b65e67feb49da21eec0c3b2e38ecf9c"
 dependencies = [
  "base16ct",
  "bytes",
@@ -761,8 +761,8 @@ dependencies = [
 
 [[package]]
 name = "clapham-mcp-server"
-version = "0.5.2"
-source = "git+https://github.com/thirtytwobits/clapham?tag=v0.5.2#cbd0d30bc776a2f03248750ae76d03cd1bf1c894"
+version = "0.6.0"
+source = "git+https://github.com/thirtytwobits/clapham?tag=v0.6.0#658623f24b65e67feb49da21eec0c3b2e38ecf9c"
 dependencies = [
  "axum",
  "base16ct",
@@ -897,7 +897,7 @@ dependencies = [
 
 [[package]]
 name = "custom-node-example"
-version = "0.24.0"
+version = "0.25.0"
 dependencies = [
  "async-trait",
  "battersea-derive",
@@ -953,7 +953,7 @@ checksum = "4583a4551df46e2792f82ceeac45e850d2e2d5debba0b91f102385cda5b11f06"
 
 [[package]]
 name = "declarative-providers-example"
-version = "0.24.0"
+version = "0.25.0"
 dependencies = [
  "async-trait",
  "axum",
@@ -1075,7 +1075,7 @@ checksum = "d0881ea181b1df73ff77ffaaf9c7544ecc11e82fba9b5f27b262a3c73a332555"
 
 [[package]]
 name = "editor-server-example"
-version = "0.24.0"
+version = "0.25.0"
 dependencies = [
  "async-trait",
  "axum",
@@ -1796,7 +1796,7 @@ dependencies = [
 
 [[package]]
 name = "kit-conversation-example"
-version = "0.24.0"
+version = "0.25.0"
 dependencies = [
  "async-trait",
  "battersea-flow",
@@ -1867,7 +1867,7 @@ checksum = "47e1ffaa40ddd1f3ed91f717a33c8c0ee23fff369e3aa8772b9605cc1d22f4c3"
 
 [[package]]
 name = "mcp-example"
-version = "0.24.0"
+version = "0.25.0"
 dependencies = [
  "async-trait",
  "axum",
@@ -2084,7 +2084,7 @@ checksum = "7c87def4c32ab89d880effc9e097653c8da5d6ef28e6b539d313baaacfbafcbe"
 
 [[package]]
 name = "ops-example"
-version = "0.24.0"
+version = "0.25.0"
 dependencies = [
  "async-trait",
  "axum",
@@ -2568,9 +2568,9 @@ dependencies = [
 
 [[package]]
 name = "rmcp"
-version = "3.6.0"
+version = "3.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ceb42e9e47443cd83a834dea57b5816d35481417bae72ade5dc5615c59122e26"
+checksum = "d24a7e92f4bcaa36b97fa93c4fa7ca8f3e669eced949345b3462dba333c7f909"
 dependencies = [
  "async-trait",
  "base64 0.23.1",
@@ -2588,6 +2588,7 @@ dependencies = [
  "schemars",
  "serde",
  "serde_json",
+ "sha2 0.11.1",
  "sse-stream",
  "thiserror 2.0.21",
  "tokio",
@@ -3905,7 +3906,7 @@ dependencies = [
 
 [[package]]
 name = "xtask"
-version = "0.24.0"
+version = "0.25.0"
 dependencies = [
  "base16ct",
  "battersea-flow",
