@@ -267,6 +267,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "base16ct"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fd307490d624467aa6f74b0eabb77633d1f758a7b25f12bceb0b22e08d9726f6"
+
+[[package]]
 name = "base64"
 version = "0.22.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -371,6 +377,7 @@ name = "battersea-model"
 version = "0.23.0"
 dependencies = [
  "async-trait",
+ "base16ct",
  "chrono",
  "futures-util",
  "http",
@@ -378,7 +385,7 @@ dependencies = [
  "schemars",
  "serde",
  "serde_json",
- "sha2",
+ "sha2 0.11.1",
  "thiserror 2.0.21",
  "tokio",
  "tokio-stream",
@@ -449,7 +456,7 @@ dependencies = [
  "reqwest",
  "serde",
  "serde_json",
- "sha2",
+ "sha2 0.11.1",
  "thiserror 2.0.21",
  "tokio",
  "tokio-stream",
@@ -463,11 +470,12 @@ name = "battersea-runtime"
 version = "0.23.0"
 dependencies = [
  "async-trait",
+ "base16ct",
  "battersea-flow",
  "futures-util",
  "serde",
  "serde_json",
- "sha2",
+ "sha2 0.11.1",
  "tokio",
  "tokio-util",
 ]
@@ -477,13 +485,14 @@ name = "battersea-telemetry"
 version = "0.23.0"
 dependencies = [
  "axum",
+ "base16ct",
  "battersea-model",
  "battersea-runtime",
  "reqwest",
  "schemars",
  "serde",
  "serde_json",
- "sha2",
+ "sha2 0.11.1",
  "thiserror 2.0.21",
  "tokio",
 ]
@@ -536,6 +545,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3078c7629b62d3f0439517fa394996acacc5cbc91c5a20d8c658e77abd503a71"
 dependencies = [
  "generic-array",
+]
+
+[[package]]
+name = "block-buffer"
+version = "0.12.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d2f6c7dbe95a6ed67ad9f18e57daf93a2f034c524b99fd2b76d18fdfeb6660aa"
+dependencies = [
+ "hybrid-array",
 ]
 
 [[package]]
@@ -668,22 +686,23 @@ checksum = "1c133bc6a41be0d194c306b5506d15e6feeea7b1d6604bd3f8310dfb2ca96486"
 
 [[package]]
 name = "clapham"
-version = "0.5.0"
-source = "git+https://github.com/thirtytwobits/clapham?tag=v0.5.0#27d07a40e4a63da19578c711c07aba8c8e8008c2"
+version = "0.5.2"
+source = "git+https://github.com/thirtytwobits/clapham?tag=v0.5.2#cbd0d30bc776a2f03248750ae76d03cd1bf1c894"
 dependencies = [
+ "base16ct",
  "futures-util",
  "jsonschema",
  "schemars",
  "serde",
  "serde_json",
- "sha2",
+ "sha2 0.11.1",
  "tokio-util",
 ]
 
 [[package]]
 name = "clapham-cli"
-version = "0.5.0"
-source = "git+https://github.com/thirtytwobits/clapham?tag=v0.5.0#27d07a40e4a63da19578c711c07aba8c8e8008c2"
+version = "0.5.2"
+source = "git+https://github.com/thirtytwobits/clapham?tag=v0.5.2#cbd0d30bc776a2f03248750ae76d03cd1bf1c894"
 dependencies = [
  "clap",
  "clap_complete",
@@ -700,8 +719,8 @@ dependencies = [
 
 [[package]]
 name = "clapham-conformance"
-version = "0.5.0"
-source = "git+https://github.com/thirtytwobits/clapham?tag=v0.5.0#27d07a40e4a63da19578c711c07aba8c8e8008c2"
+version = "0.5.2"
+source = "git+https://github.com/thirtytwobits/clapham?tag=v0.5.2#cbd0d30bc776a2f03248750ae76d03cd1bf1c894"
 dependencies = [
  "clapham",
  "clapham-cli",
@@ -719,9 +738,10 @@ dependencies = [
 
 [[package]]
 name = "clapham-mcp-client"
-version = "0.5.0"
-source = "git+https://github.com/thirtytwobits/clapham?tag=v0.5.0#27d07a40e4a63da19578c711c07aba8c8e8008c2"
+version = "0.5.2"
+source = "git+https://github.com/thirtytwobits/clapham?tag=v0.5.2#cbd0d30bc776a2f03248750ae76d03cd1bf1c894"
 dependencies = [
+ "base16ct",
  "bytes",
  "clapham",
  "futures-util",
@@ -731,7 +751,7 @@ dependencies = [
  "rmcp",
  "serde",
  "serde_json",
- "sha2",
+ "sha2 0.11.1",
  "sse-stream",
  "thiserror 2.0.21",
  "tokio",
@@ -741,10 +761,11 @@ dependencies = [
 
 [[package]]
 name = "clapham-mcp-server"
-version = "0.5.0"
-source = "git+https://github.com/thirtytwobits/clapham?tag=v0.5.0#27d07a40e4a63da19578c711c07aba8c8e8008c2"
+version = "0.5.2"
+source = "git+https://github.com/thirtytwobits/clapham?tag=v0.5.2#cbd0d30bc776a2f03248750ae76d03cd1bf1c894"
 dependencies = [
  "axum",
+ "base16ct",
  "bytes",
  "clapham",
  "http",
@@ -756,17 +777,29 @@ dependencies = [
  "rmcp",
  "serde",
  "serde_json",
- "sha2",
+ "sha2 0.11.1",
  "tokio",
  "tower-service",
  "uuid",
 ]
 
 [[package]]
+name = "cmov"
+version = "0.5.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0c9ea0ac24bc397ab3c98583a3c9ba74fa56b09a4449bbe172b9b1ddb016027a"
+
+[[package]]
 name = "colorchoice"
 version = "1.0.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1d07550c9036bf2ae0c684c4297d503f838287c83c53686d05370d0e139ae570"
+
+[[package]]
+name = "const-oid"
+version = "0.10.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a6ef517f0926dd24a1582492c791b6a4818a4d94e789a334894aa15b0d12f55c"
 
 [[package]]
 name = "core-foundation"
@@ -822,6 +855,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "crypto-common"
+version = "0.2.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ce6e4c961d6cd6c9a86db418387425e8bdeaf05b3c8bc1411e6dca4c252f1453"
+dependencies = [
+ "hybrid-array",
+]
+
+[[package]]
 name = "cssparser"
 version = "0.38.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -842,6 +884,15 @@ checksum = "d045de693cb712d0b22c6a64be5b953f67b3ce00ab5ad3dd5d8b441886ab8e1a"
 dependencies = [
  "quote",
  "syn 3.0.6",
+]
+
+[[package]]
+name = "ctutils"
+version = "0.4.8"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "261af4dc7a06ea8a527a8717d8cbba3417530d6ea14e1edb3de6b67806be474f"
+dependencies = [
+ "cmov",
 ]
 
 [[package]]
@@ -974,9 +1025,20 @@ version = "0.10.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9ed9a281f7bc9b7576e61468ba615a66a5c8cfdff42420a70aa82701a3b1e292"
 dependencies = [
- "block-buffer",
- "crypto-common",
- "subtle",
+ "block-buffer 0.10.4",
+ "crypto-common 0.1.7",
+]
+
+[[package]]
+name = "digest"
+version = "0.11.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f1dd6dbb5841937940781866fa1281a1ff7bd3bf827091440879f9994983d5c2"
+dependencies = [
+ "block-buffer 0.12.1",
+ "const-oid",
+ "crypto-common 0.2.2",
+ "ctutils",
 ]
 
 [[package]]
@@ -1017,6 +1079,7 @@ version = "0.23.0"
 dependencies = [
  "async-trait",
  "axum",
+ "base16ct",
  "battersea-flow",
  "battersea-model",
  "battersea-nodes",
@@ -1031,7 +1094,7 @@ dependencies = [
  "futures-util",
  "serde",
  "serde_json",
- "sha2",
+ "sha2 0.11.1",
  "tempfile",
  "tokio",
  "tokio-util",
@@ -1346,11 +1409,11 @@ checksum = "2304e00983f87ffb38b55b444b5e3b60a884b5d30c0fca7d82fe33449bbe55ea"
 
 [[package]]
 name = "hmac"
-version = "0.12.1"
+version = "0.13.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6c49c37c09c17a53d937dfbb742eb3a961d65a994e6bcdcf37e7399d0cc8ab5e"
+checksum = "6303bc9732ae41b04cb554b844a762b4115a61bfaa81e3e83050991eeb56863f"
 dependencies = [
- "digest",
+ "digest 0.11.3",
 ]
 
 [[package]]
@@ -1414,6 +1477,15 @@ name = "humantime"
 version = "2.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "15cdd26707701c53297e2fa6afb323d55fbc1d0810c3aec078ae3ef0424c3c15"
+
+[[package]]
+name = "hybrid-array"
+version = "0.4.15"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "27f864f10dfb56725ce5ce5472bc52252c8f93a4ab86327122cebf62c5f59a17"
+dependencies = [
+ "typenum",
+]
 
 [[package]]
 name = "hyper"
@@ -1987,7 +2059,7 @@ dependencies = [
  "serde",
  "serde_json",
  "serde_path_to_error",
- "sha2",
+ "sha2 0.10.9",
  "thiserror 1.0.69",
  "url",
 ]
@@ -2841,7 +2913,7 @@ checksum = "a978451301f4db1d02937a4ab3ccce137717b81826e79b7d49ffe3244a13c3b8"
 dependencies = [
  "cfg-if",
  "cpufeatures 0.2.17",
- "digest",
+ "digest 0.10.7",
 ]
 
 [[package]]
@@ -2852,7 +2924,18 @@ checksum = "a7507d819769d01a365ab707794a4084392c824f54a7a6a7862f8c3d0892b283"
 dependencies = [
  "cfg-if",
  "cpufeatures 0.2.17",
- "digest",
+ "digest 0.10.7",
+]
+
+[[package]]
+name = "sha2"
+version = "0.11.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "47d7069beb7d6ac7b9acd1039986e73443f24234f41074da099d6f994ac9ad19"
+dependencies = [
+ "cfg-if",
+ "cpufeatures 0.3.1",
+ "digest 0.11.3",
 ]
 
 [[package]]
@@ -3824,6 +3907,7 @@ dependencies = [
 name = "xtask"
 version = "0.23.0"
 dependencies = [
+ "base16ct",
  "battersea-flow",
  "battersea-guard",
  "battersea-telemetry",
@@ -3835,7 +3919,7 @@ dependencies = [
  "scraper",
  "semver",
  "serde_json",
- "sha2",
+ "sha2 0.11.1",
  "tar",
  "tempfile",
  "toml",

@@ -19,7 +19,7 @@ fn integer_attr(key: &str, value: u64) -> Value {
     json!({"key":key,"value":{"intValue":value.to_string()}})
 }
 fn identity(value: &str, bytes: usize) -> String {
-    format!("{:x}", Sha256::digest(value.as_bytes()))[..bytes * 2].into()
+    base16ct::lower::encode_string(&Sha256::digest(value.as_bytes()))[..bytes * 2].into()
 }
 fn nanos(ms: u64) -> Result<String> {
     ms.checked_mul(1_000_000)

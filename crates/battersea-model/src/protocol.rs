@@ -422,10 +422,9 @@ pub fn configuration_digest(value: &Value) -> String {
             value => value.clone(),
         }
     }
-    format!(
-        "{:x}",
-        Sha256::digest(serde_json::to_vec(&canonical(value)).expect("JSON value"))
-    )
+    base16ct::lower::encode_string(&Sha256::digest(
+        serde_json::to_vec(&canonical(value)).expect("JSON value"),
+    ))
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]

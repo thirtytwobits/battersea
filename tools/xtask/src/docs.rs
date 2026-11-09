@@ -602,7 +602,7 @@ fn verify_checksum(bytes: &[u8], checksums: &str, asset: &str) -> Result<()> {
             (name == asset).then_some(hash)
         })
         .collect::<Vec<_>>();
-    let actual = format!("{:x}", Sha256::digest(bytes));
+    let actual = base16ct::lower::encode_string(&Sha256::digest(bytes));
     if expected.len() != 1 || expected[0] != actual {
         return Err(format!("Missing, duplicate or incorrect SHA-256 checksum for {asset}").into());
     }
@@ -804,7 +804,7 @@ mod tests {
 
     #[test]
     fn checksums_require_exactly_one_matching_filename_and_digest() {
-        let hash = format!("{:x}", Sha256::digest(b"archive"));
+        let hash = base16ct::lower::encode_string(&Sha256::digest(b"archive"));
         assert!(
             verify_checksum(b"archive", &format!("{hash}  docs.tar.gz\n"), "docs.tar.gz").is_ok()
         );

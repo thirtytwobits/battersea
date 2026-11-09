@@ -41,10 +41,9 @@ pub(crate) enum DependencySkip {
 }
 
 pub(crate) fn identity(run: &str, node: &str, sequence: u64) -> String {
-    format!(
-        "{:x}",
-        Sha256::digest(serde_json::to_vec(&(run, node, sequence)).expect("failure identity"))
-    )
+    base16ct::lower::encode_string(&Sha256::digest(
+        serde_json::to_vec(&(run, node, sequence)).expect("failure identity"),
+    ))
 }
 
 pub(crate) async fn handle_error<H: ExecutionHost>(

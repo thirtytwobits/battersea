@@ -17,7 +17,7 @@ pub struct Content {
 impl Content {
     pub fn observe(bytes: &[u8], mask: Option<&ContentMask<'_>>) -> Self {
         Self {
-            sha256: format!("{:x}", Sha256::digest(bytes)),
+            sha256: base16ct::lower::encode_string(&Sha256::digest(bytes)),
             byte_length: bytes.len() as u64,
             masked: mask.map(|mask| mask(bytes)),
         }

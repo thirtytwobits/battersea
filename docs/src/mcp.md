@@ -26,7 +26,7 @@ revision, an absolute deadline on the host's clock and a call capacity. Pass its
 `ToolCallCompleted` retains content and completion evidence. Provider projections preserve text
 and resource references. A tool-reported error reaches the provider as a result; protocol or
 delivery failures stop the conversation with separate tool outcome evidence. See Clapham's
-[MCP client](https://github.com/thirtytwobits/clapham/blob/v0.5.0/docs/mcp.md) and the
+[MCP client](https://github.com/thirtytwobits/clapham/blob/v0.5.2/docs/mcp.md) and the
 [tool contract](contracts/tools.md).
 
 ## Effect ownership

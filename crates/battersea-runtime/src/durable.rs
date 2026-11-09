@@ -39,8 +39,8 @@ pub fn identity(
     Ok(RunIdentity {
         run_id: state.run_id.clone(),
         flow_key: state.flow.flow_key.clone(),
-        graph_revision: format!("{:x}", Sha256::digest(graph.as_bytes())),
-        catalogue_revision: format!("{:x}", Sha256::digest(&definitions)),
+        graph_revision: base16ct::lower::encode_string(&Sha256::digest(graph.as_bytes())),
+        catalogue_revision: base16ct::lower::encode_string(&Sha256::digest(&definitions)),
         configuration_revision,
     })
 }

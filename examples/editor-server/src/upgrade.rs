@@ -77,10 +77,9 @@ fn prepare(app: &App, name: &str) -> Result<(Plan, Vec<u8>), Error> {
     }
     // The fence pins the bytes, catalogue and selected policy, not just the format number.
     let definitions: BTreeMap<_, _> = app.runtime.catalog.definitions().iter().collect();
-    let revision = format!(
-        "{:x}",
-        Sha256::digest(serde_json::to_vec(&(source.as_slice(), definitions, limits)).map_err(io)?)
-    );
+    let revision = base16ct::lower::encode_string(&Sha256::digest(
+        serde_json::to_vec(&(source.as_slice(), definitions, limits)).map_err(io)?,
+    ));
     Ok((Plan { revision, document }, source))
 }
 
@@ -143,7 +142,7 @@ pub fn apply_at(app: &App, name: &str, expected_revision: &str) -> Result<Receip
         &backup.join("receipt.json"),
         &serde_json::to_vec_pretty(&serde_json::json!({
             "flow_key": name, "source_revision": plan.revision,
-            "target_sha256": format!("{:x}", Sha256::digest(upgraded.as_bytes())),
+            "target_sha256": base16ct::lower::encode_string(&Sha256::digest(upgraded.as_bytes())),
         }))
         .map_err(io)?,
     )?;
