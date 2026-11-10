@@ -445,6 +445,14 @@ export type Delta = {
     "cursor": Cursor;
 };
 export type Direction = "input" | "output";
+export type EdgeClose = {
+    "delivered": boolean;
+    "failed": boolean;
+};
+export type EdgeMarking = {
+    "close"?: EdgeClose;
+    "queued": number;
+};
 export type Ledger = {
     "budgets": {
         [key: string]: Budget;
@@ -589,6 +597,11 @@ export type State = {
     "kind": "tool";
     "name": string;
     "status": Status;
+} | {
+    "edges": {
+        [key: string]: EdgeMarking;
+    };
+    "kind": "marking";
 } | {
     "attributes": {
         [key: string]: string;

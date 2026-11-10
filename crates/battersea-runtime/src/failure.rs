@@ -149,7 +149,7 @@ pub(crate) async fn handle_failure<H: ExecutionHost>(
     runtime.handled_failures.insert(node.id.clone(), retained);
     runtime.handling_failures.insert(node.id.clone());
     let result = async {
-        stop_node::<H>(runtime, &node.id);
+        stop_node(host, runtime, &node.id).await;
         if record.policy == FlowFailurePolicy::Emit {
             let port = definition
                 .failure_ports
@@ -200,7 +200,25 @@ pub(crate) async fn handle_failure<H: ExecutionHost>(
     result
 }
 
-fn stop_node<H: ExecutionHost>(runtime: &mut H::State, node: &str) {
+async fn stop_node<H: ExecutionHost>(host: &H, runtime: &mut H::State, node: &str) {
+    let discarded: Vec<String> = runtime
+        .data_queue
+        .iter()
+        .map(|delivery| &delivery.edge)
+        .chain(
+            runtime
+                .control_queue
+                .iter()
+                .filter_map(|delivery| match &delivery.control {
+                    crate::delivery::Control::Signal(edge) => Some(edge),
+                    _ => None,
+                }),
+        )
+        .filter(|edge| edge.target_node_id == node)
+        .map(|edge| edge.id.clone())
+        .collect::<std::collections::BTreeSet<_>>()
+        .into_iter()
+        .collect();
     runtime.stopped_nodes.insert(node.into());
     runtime.executed_nodes.insert(node.into());
     runtime.materialized_sources.insert(node.into());
@@ -218,6 +236,14 @@ fn stop_node<H: ExecutionHost>(runtime: &mut H::State, node: &str) {
             crate::delivery::Control::Signal(edge) => edge.target_node_id != node,
             crate::delivery::Control::Close { .. } => true,
         });
+    crate::marking::publish(
+        host,
+        runtime,
+        node,
+        "Discarded deliveries to a stopped node.",
+        discarded,
+    )
+    .await;
 }
 
 async fn settle_outputs<H: ExecutionHost>(
@@ -265,7 +291,7 @@ async fn skip_input<H: ExecutionHost>(
     if runtime.stopped_nodes.contains(&node.id) {
         return Ok(());
     }
-    stop_node::<H>(runtime, &node.id);
+    stop_node(host, runtime, &node.id).await;
     runtime.dependency_skips.insert(node.id.clone(), reason);
     settle_outputs(host, runtime, node, reason == DependencySkip::FailedInput).await?;
     let (message, reason) = match reason {

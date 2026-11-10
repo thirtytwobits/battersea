@@ -9,13 +9,13 @@ import type { GraphPresentation } from "../graph.js";
 import { type Connection, type EdgeChange, type FinalConnectionState, type NodeChange, type OnNodeDrag, type ReactFlowInstance } from "@xyflow/react";
 import type { AuthoringGraphInteractiveGestureDriver } from "../graph.js";
 import type { FlowStudioEdge, FlowStudioEdgeBridge, FlowStudioNode, FlowStudioPoint, FlowStudioPortSelectionTarget, FlowStudioSelectedEdgeBridge, FlowStudioSelectedEdgeWaypoint, FlowStudioEdgeWaypoint, NodeContextMenuState } from "../core/dataflow-editor-state.js";
-import type { FlowStudioEdgeActivationState } from "../core/flow-edge-activation.js";
+import type { FlowEdgeMarkingState } from "../core/flow-edge-marking.js";
 import type { FlowPortSide } from "../core/flow-node-ports.js";
 export interface DataflowCanvasProps {
     presentation?: GraphPresentation;
     autoLayout?: import("../graph.js").AuthoringGraphAutoLayoutController;
     autoFitViewKey?: string;
-    edgeActivationState: FlowStudioEdgeActivationState;
+    edgeMarking: FlowEdgeMarkingState;
     edges: readonly FlowStudioEdge[];
     flowInstanceRef: React.MutableRefObject<ReactFlowInstance<FlowStudioNode, FlowStudioEdge> | null>;
     edgeGestureDriver: AuthoringGraphInteractiveGestureDriver;
@@ -61,7 +61,7 @@ export interface DataflowCanvasProps {
     selectedEdgeWaypoint?: FlowStudioSelectedEdgeWaypoint | null;
     selectedPort?: FlowStudioPortSelectionTarget | null;
 }
-export declare function DataflowCanvas({ autoLayout, presentation, autoFitViewKey, edgeActivationState, edgeGestureDriver, edges, flowInstanceRef, isConnectionValid, nodeContextMenu, nodes, onConnect, onConnectEnd, onEdgesChange, onNodeClick, onNodeContextMenu, onNodesChange, onPaneClick, onInsertEdgeBridge, onInsertEdgeWaypoint, onMovePort, onPortSelect, onNodeDragStart, onNodeDragStop, onRemoveNode, onSelectEdgeBridge, onSelectEdgeWaypoint, onUpdateEdgeBridgeGap, onUpdateEdgeBridgePosition, onUpdateEdgeWaypointHandle, onUpdateEdgeWaypointPosition, movedPortPulse, selectedEdgeBridge, selectedEdgeWaypoint, selectedPort, }: DataflowCanvasProps): React.JSX.Element;
+export declare function DataflowCanvas({ autoLayout, presentation, autoFitViewKey, edgeMarking, edgeGestureDriver, edges, flowInstanceRef, isConnectionValid, nodeContextMenu, nodes, onConnect, onConnectEnd, onEdgesChange, onNodeClick, onNodeContextMenu, onNodesChange, onPaneClick, onInsertEdgeBridge, onInsertEdgeWaypoint, onMovePort, onPortSelect, onNodeDragStart, onNodeDragStop, onRemoveNode, onSelectEdgeBridge, onSelectEdgeWaypoint, onUpdateEdgeBridgeGap, onUpdateEdgeBridgePosition, onUpdateEdgeWaypointHandle, onUpdateEdgeWaypointPosition, movedPortPulse, selectedEdgeBridge, selectedEdgeWaypoint, selectedPort, }: DataflowCanvasProps): React.JSX.Element;
 
 // components/dataflow-node-palette.d.ts
 /** Copyright (c) Scott A Dixon */
@@ -447,7 +447,7 @@ export declare function resolveSelectedNodeDefinition(selectedNode: FlowStudioNo
  * Resolves edge presentation for the editor's dataflow canvas.
  */
 import type { FlowStudioEdge } from "./dataflow-editor-state.js";
-import type { FlowStudioEdgeActivationPhase } from "./flow-edge-activation.js";
+import { type FlowEdgeMarking } from "./flow-edge-marking.js";
 import type { FlowStudioNode } from "./dataflow-editor-state.js";
 /**
  * Returns true when a token type carries an array/list of values rather than
@@ -460,7 +460,7 @@ import type { FlowStudioNode } from "./dataflow-editor-state.js";
  * `story.character_ids`). Both indicate cardinality > 1.
  */
 export declare function isArrayTokenType(tokenType: string | null | undefined): boolean;
-export declare function resolveFlowCanvasEdge(edge: FlowStudioEdge, nodes: readonly FlowStudioNode[], activationPhase?: FlowStudioEdgeActivationPhase | null): FlowStudioEdge;
+export declare function resolveFlowCanvasEdge(edge: FlowStudioEdge, nodes: readonly FlowStudioNode[], marking?: FlowEdgeMarking | null): FlowStudioEdge;
 
 // core/flow-canvas-node.d.ts
 /**
@@ -667,33 +667,6 @@ export declare function buildDynamicPortRenameMap(options: {
     visualOrderOldIds: readonly string[];
 }): Map<string, string>;
 
-// core/flow-edge-activation.d.ts
-/**
- * Copyright (c) Scott A Dixon
- *
- * Resolves live edge-activation state for the editor's dataflow workspace.
- */
-export interface FlowActivityRecord {
-    phase: string;
-    detail?: unknown;
-}
-export declare const FLOW_STUDIO_EDGE_ACTIVE_FALLBACK_MS = 800;
-export declare const FLOW_STUDIO_EDGE_FADE_OUT_MS = 1200;
-export declare const FLOW_STUDIO_EDGE_MIN_ACTIVE_MS = 280;
-export type FlowStudioEdgeActivationPhase = "active" | "fading";
-export type FlowStudioEdgeActivationState = Record<string, FlowStudioEdgeActivationPhase>;
-export interface FlowStudioEdgeActivityEvent {
-    edgeIds: string[];
-    transition: "activate" | "fade";
-}
-export declare function resolveFlowStudioEdgeFadeDelayMs(options: {
-    activatedAtMs: number;
-    minimumActiveMs?: number;
-    nowMs: number;
-}): number;
-export declare function resolveFlowStudioEdgeActivityEvent<T extends FlowActivityRecord>(record: T): FlowStudioEdgeActivityEvent | null;
-export declare function pruneFlowStudioEdgeActivationState(state: FlowStudioEdgeActivationState, validEdgeIds: ReadonlySet<string>): FlowStudioEdgeActivationState;
-
 // core/flow-edge-bridges.d.ts
 /**
  * Copyright (c) Scott A Dixon
@@ -723,6 +696,32 @@ export declare function buildEdgeInsertionIntervals(segments: readonly FlowEdgeW
 export declare function resolveInsertionIntervalMidpoint(segments: readonly FlowEdgeWaypointSegment[], interval: FlowEdgeInsertionInterval): FlowStudioPoint | null;
 export declare function resolveNearestInsertionInterval(segments: readonly FlowEdgeWaypointSegment[], bridges: readonly FlowStudioEdgeBridge[], point: FlowStudioPoint): FlowEdgeInsertionInterval | null;
 export declare function resolveBridgeGapFromHandle(geometry: ResolvedFlowEdgeBridgeGeometry, handlePosition: FlowStudioPoint): number;
+
+// core/flow-edge-marking.d.ts
+/**
+ * Copyright (c) Scott A Dixon
+ *
+ * Folds the runtime's edge marking into the state the editor draws for each edge.
+ */
+import type { Runtime } from "@battersea/flow";
+/** A record the editor follows: an execution record or a runtime view record's state. */
+export interface FlowActivityRecord {
+    phase: string;
+    detail?: unknown;
+}
+export type FlowEdgeMarking = Runtime.EdgeMarking;
+/** Each edge's marking, keyed by edge id. An edge that holds nothing is absent. */
+export type FlowEdgeMarkingState = Readonly<Record<string, FlowEdgeMarking>>;
+export declare const FLOW_EDGE_MARKING_PHASE = "flow.edge.marking";
+/**
+ * Applies one followed record to the edge marking.
+ *
+ * A runtime view `marking` state replaces the marking. A `flow.edge.marking` execution record
+ * replaces the entry of each edge it names. Other records leave the marking unchanged.
+ */
+export declare function applyFlowEdgeMarking(state: FlowEdgeMarkingState, record: FlowActivityRecord): FlowEdgeMarkingState;
+/** The class names that describe an edge's marking. */
+export declare function resolveFlowEdgeMarkingClassNames(marking: FlowEdgeMarking | null | undefined): string[];
 
 // core/flow-edge-waypoints.d.ts
 /**
@@ -2450,13 +2449,10 @@ export declare function useFlowCanvasEditing(options: FlowCanvasEditingOptions):
     selectedPort: FlowStudioResolvedPort | null;
 };
 
-// hooks/use-flow-edge-activity.d.ts
-import type { FlowStudioEdge } from "../core/dataflow-editor-state.js";
-import { type FlowStudioEdgeActivationState, type FlowActivityRecord } from "../core/flow-edge-activation.js";
-export declare function useFlowEdgeActivity(options: {
-    edges: readonly FlowStudioEdge[];
-    subscribe: ((listener: (record: FlowActivityRecord) => void) => () => void) | null;
-}): FlowStudioEdgeActivationState;
+// hooks/use-flow-edge-marking.d.ts
+import { type FlowActivityRecord, type FlowEdgeMarkingState } from "../core/flow-edge-marking.js";
+/** Follows a subscription's records and returns the edge marking they describe. */
+export declare function useFlowEdgeMarking(subscribe: ((listener: (record: FlowActivityRecord) => void) => () => void) | null): FlowEdgeMarkingState;
 
 // index.d.ts
 export * from "./graph.js";
@@ -2472,7 +2468,8 @@ export * from "./components/flow-parameter-control.js";
 export * from "./components/flow-inspector.js";
 export * from "./hooks/use-dataflow-layout.js";
 export * from "./components/flow-editor.js";
-export * from "./hooks/use-flow-edge-activity.js";
+export * from "./hooks/use-flow-edge-marking.js";
+export * from "./core/flow-edge-marking.js";
 export * from "./components/flow-execution-settings.js";
 export * from "./core/flow-execution-settings.js";
 

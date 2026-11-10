@@ -4,7 +4,10 @@
  * Resolves edge presentation for the editor's dataflow canvas.
  */
 import type { FlowStudioEdge } from "./dataflow-editor-state.js";
-import type { FlowStudioEdgeActivationPhase } from "./flow-edge-activation.js";
+import {
+  resolveFlowEdgeMarkingClassNames,
+  type FlowEdgeMarking,
+} from "./flow-edge-marking.js";
 import { resolveConnectionSourceTokenType } from "./flow-node-ports.js";
 import type { FlowStudioNode } from "./dataflow-editor-state.js";
 
@@ -47,7 +50,7 @@ export function isArrayTokenType(
 export function resolveFlowCanvasEdge(
   edge: FlowStudioEdge,
   nodes: readonly FlowStudioNode[],
-  activationPhase: FlowStudioEdgeActivationPhase | null = null,
+  marking: FlowEdgeMarking | null = null,
 ): FlowStudioEdge {
   const tokenType = resolveConnectionSourceTokenType({
     connection: edge,
@@ -56,7 +59,7 @@ export function resolveFlowCanvasEdge(
 
   return {
     ...edge,
-    animated: activationPhase === "active",
+    animated: (marking?.queued ?? 0) > 0,
     data: {
       bridges: Array.isArray(edge.data?.bridges)
         ? edge.data.bridges
@@ -73,8 +76,7 @@ export function resolveFlowCanvasEdge(
       edge.className,
       edge.data?.kind === "signal" ? "flow-studio-edge--signal" : null,
       isArrayTokenType(tokenType) ? "flow-studio-edge--fragment-array" : null,
-      activationPhase === "active" ? "flow-studio-edge--active" : null,
-      activationPhase === "fading" ? "flow-studio-edge--fading" : null,
+      ...resolveFlowEdgeMarkingClassNames(marking),
     ),
     type: "flowStudio",
   };

@@ -1,5 +1,29 @@
 # Changelog
 
+## Unreleased
+
+### Breaking
+
+- The editor draws each edge's marking: what the edge holds between its source and its target.
+  `DataflowCanvas` takes `edgeMarking` in place of `edgeActivationState`; `useFlowEdgeMarking`
+  and `applyFlowEdgeMarking` replace `useFlowEdgeActivity` and `resolveFlowStudioEdgeActivityEvent`.
+  An edge carries `flow-studio-edge--occupied`, `--closing`, `--closed` and `--failed` in place of
+  `--active` and `--fading`, and the editor keeps no timers for edges.
+- `EventKind::EdgeMarking` and the runtime view's `State::Marking` are new variants.
+
+### Added
+
+- The scheduler publishes `flow.edge.marking` records: the deliveries queued on each edge and the
+  pending or delivered close of each token edge. The runtime view keeps one `marking` record per
+  activation, pinned while the activation is active.
+- Input close records name their edge as `edgeId`.
+
+### Fixed
+
+- `FlowEditor` draws the marking of the edges of the activation it follows; a host that serves the
+  runtime view needs no channel of its own for edge state.
+- The example editor server reports each runtime view change in delta order.
+
 ## 0.25.0
 
 ### Breaking

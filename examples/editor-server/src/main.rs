@@ -422,6 +422,7 @@ fn history(app: &App, id: &str) -> Result<History, Error> {
                     } => "flow.token.emit",
                     RuntimeState::Activation { .. } => "activation.state",
                     RuntimeState::Node { .. } => "flow.node.state",
+                    RuntimeState::Marking { .. } => "flow.edge.marking",
                     _ => "runtime.state",
                 };
                 events.push((

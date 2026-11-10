@@ -204,6 +204,7 @@ pub trait ActivationHost: ExecutionHost {
         })?;
         runtime.activation_token = token.clone();
         runtime.recovery = Some(crate::durable::DurableExecution::new(journal));
+        crate::marking::publish_all(self, runtime, &node, "Restored edge marking.").await;
         self.drive_activation(runtime, &node, token).await
     }
 
@@ -328,6 +329,7 @@ pub trait ActivationHost: ExecutionHost {
         runtime.producers.clear();
         runtime.data_queue.clear();
         runtime.control_queue.clear();
+        crate::marking::publish_all(self, runtime, node, "Activation ended.").await;
         runtime.input_tokens.clear();
         runtime.handled_failures.clear();
         runtime.active_delivery_groups.clear();

@@ -1,0 +1,270 @@
+{
+  "edges": [
+    "a",
+    "b",
+    "go"
+  ],
+  "records": [
+    {
+      "detail": {
+        "sourcePort": "out",
+        "targetCount": 2,
+        "targets": [
+          {
+            "edgeId": "a",
+            "targetNodeId": "first",
+            "targetPort": "in"
+          },
+          {
+            "edgeId": "b",
+            "targetNodeId": "second",
+            "targetPort": "in"
+          }
+        ],
+        "tokenType": "text",
+        "value": "first"
+      },
+      "nodeId": "source",
+      "phase": "flow.token.emit",
+      "summary": "Emitted text on out."
+    },
+    {
+      "detail": {
+        "edges": {
+          "a": {
+            "queued": 1
+          },
+          "b": {
+            "queued": 1
+          }
+        }
+      },
+      "nodeId": "source",
+      "phase": "flow.edge.marking",
+      "summary": "Queued deliveries."
+    },
+    {
+      "detail": {
+        "signalPort": "done",
+        "targetCount": 1,
+        "targets": [
+          {
+            "edgeId": "go",
+            "targetNodeId": "action",
+            "targetPort": "go"
+          }
+        ]
+      },
+      "nodeId": "source",
+      "phase": "flow.signal.emit",
+      "summary": "Emitted signal done."
+    },
+    {
+      "detail": {
+        "edges": {
+          "go": {
+            "queued": 1
+          }
+        }
+      },
+      "nodeId": "source",
+      "phase": "flow.edge.marking",
+      "summary": "Queued signal."
+    },
+    {
+      "detail": {
+        "direction": "output",
+        "sourcePort": "out"
+      },
+      "nodeId": "source",
+      "phase": "flow.token.close",
+      "summary": "Output closed."
+    },
+    {
+      "detail": {
+        "edges": {
+          "a": {
+            "close": {
+              "delivered": false,
+              "failed": false
+            },
+            "queued": 1
+          },
+          "b": {
+            "close": {
+              "delivered": false,
+              "failed": false
+            },
+            "queued": 1
+          }
+        }
+      },
+      "nodeId": "source",
+      "phase": "flow.edge.marking",
+      "summary": "Queued close."
+    },
+    {
+      "detail": {
+        "edges": {
+          "a": {
+            "close": {
+              "delivered": false,
+              "failed": false
+            },
+            "queued": 0
+          }
+        }
+      },
+      "nodeId": "first",
+      "phase": "flow.edge.marking",
+      "summary": "Delivering."
+    },
+    {
+      "detail": {
+        "edgeId": "a",
+        "sourceNodeId": "source",
+        "sourcePort": "out",
+        "targetPort": "in",
+        "tokenType": "text",
+        "value": "first"
+      },
+      "nodeId": "first",
+      "phase": "flow.token.receive",
+      "summary": "Received text on in."
+    },
+    {
+      "detail": {
+        "edges": {
+          "b": {
+            "close": {
+              "delivered": false,
+              "failed": false
+            },
+            "queued": 0
+          }
+        }
+      },
+      "nodeId": "second",
+      "phase": "flow.edge.marking",
+      "summary": "Delivering."
+    },
+    {
+      "detail": {
+        "edgeId": "b",
+        "sourceNodeId": "source",
+        "sourcePort": "out",
+        "targetPort": "in",
+        "tokenType": "text",
+        "value": "first"
+      },
+      "nodeId": "second",
+      "phase": "flow.token.receive",
+      "summary": "Received text on in."
+    },
+    {
+      "detail": {
+        "edges": {
+          "go": {
+            "queued": 0
+          }
+        }
+      },
+      "nodeId": "action",
+      "phase": "flow.edge.marking",
+      "summary": "Delivering signal."
+    },
+    {
+      "detail": {
+        "edgeId": "go",
+        "sourceNodeId": "source",
+        "sourcePort": "done",
+        "targetPort": "go"
+      },
+      "nodeId": "action",
+      "phase": "flow.signal.receive",
+      "summary": "Received signal on go."
+    },
+    {
+      "detail": {
+        "edges": {
+          "a": {
+            "close": {
+              "delivered": true,
+              "failed": false
+            },
+            "queued": 0
+          }
+        }
+      },
+      "nodeId": "first",
+      "phase": "flow.edge.marking",
+      "summary": "Delivered close."
+    },
+    {
+      "detail": {
+        "direction": "input",
+        "edgeId": "a",
+        "sourceNode": "source",
+        "sourcePort": "out",
+        "targetPort": "in"
+      },
+      "nodeId": "first",
+      "phase": "flow.token.close",
+      "summary": "Input closed."
+    },
+    {
+      "detail": {
+        "edges": {
+          "b": {
+            "close": {
+              "delivered": true,
+              "failed": false
+            },
+            "queued": 0
+          }
+        }
+      },
+      "nodeId": "second",
+      "phase": "flow.edge.marking",
+      "summary": "Delivered close."
+    },
+    {
+      "detail": {
+        "direction": "input",
+        "edgeId": "b",
+        "sourceNode": "source",
+        "sourcePort": "out",
+        "targetPort": "in"
+      },
+      "nodeId": "second",
+      "phase": "flow.token.close",
+      "summary": "Input closed."
+    },
+    {
+      "detail": {
+        "edges": {
+          "a": {
+            "close": {
+              "delivered": true,
+              "failed": false
+            },
+            "queued": 0
+          },
+          "b": {
+            "close": {
+              "delivered": true,
+              "failed": false
+            },
+            "queued": 0
+          },
+          "go": {
+            "queued": 0
+          }
+        }
+      },
+      "nodeId": "source",
+      "phase": "flow.edge.marking",
+      "summary": "Activation ended."
+    }
+  ]
+}

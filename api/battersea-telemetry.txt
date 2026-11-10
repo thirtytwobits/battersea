@@ -1471,6 +1471,8 @@ pub battersea_telemetry::view::State::Diagnostic::attributes: alloc::collections
 pub battersea_telemetry::view::State::Diagnostic::category: alloc::string::String
 pub battersea_telemetry::view::State::Diagnostic::content: core::option::Option<battersea_telemetry::content::Content>
 pub battersea_telemetry::view::State::Diagnostic::message: alloc::string::String
+pub battersea_telemetry::view::State::Marking
+pub battersea_telemetry::view::State::Marking::edges: alloc::collections::btree::map::BTreeMap<alloc::string::String, battersea_telemetry::view::EdgeMarking>
 pub battersea_telemetry::view::State::MediaJob
 pub battersea_telemetry::view::State::MediaJob::job_id: alloc::string::String
 pub battersea_telemetry::view::State::MediaJob::provider: alloc::string::String
@@ -1894,6 +1896,136 @@ impl<T> tracing::instrument::WithSubscriber for battersea_telemetry::view::Delta
 impl<T> typenum::type_operators::Same for battersea_telemetry::view::Delta
 pub type battersea_telemetry::view::Delta::Output = T
 impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_telemetry::view::Delta where T: ?core::marker::Sized
+pub struct battersea_telemetry::view::EdgeClose
+pub battersea_telemetry::view::EdgeClose::delivered: bool
+pub battersea_telemetry::view::EdgeClose::failed: bool
+impl core::clone::Clone for battersea_telemetry::view::EdgeClose
+pub fn battersea_telemetry::view::EdgeClose::clone(&self) -> Self
+impl core::cmp::Eq for battersea_telemetry::view::EdgeClose
+impl core::cmp::PartialEq for battersea_telemetry::view::EdgeClose
+pub fn battersea_telemetry::view::EdgeClose::eq(&self, &Self) -> bool
+impl core::fmt::Debug for battersea_telemetry::view::EdgeClose
+pub fn battersea_telemetry::view::EdgeClose::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for battersea_telemetry::view::EdgeClose
+impl schemars::JsonSchema for battersea_telemetry::view::EdgeClose
+pub fn battersea_telemetry::view::EdgeClose::inline_schema() -> bool
+pub fn battersea_telemetry::view::EdgeClose::json_schema(&mut schemars::generate::SchemaGenerator) -> schemars::schema::Schema
+pub fn battersea_telemetry::view::EdgeClose::schema_id() -> alloc::borrow::Cow<'static, str>
+pub fn battersea_telemetry::view::EdgeClose::schema_name() -> alloc::borrow::Cow<'static, str>
+impl serde_core::ser::Serialize for battersea_telemetry::view::EdgeClose
+pub fn battersea_telemetry::view::EdgeClose::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for battersea_telemetry::view::EdgeClose
+pub fn battersea_telemetry::view::EdgeClose::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for battersea_telemetry::view::EdgeClose
+impl core::marker::Send for battersea_telemetry::view::EdgeClose
+impl core::marker::Sync for battersea_telemetry::view::EdgeClose
+impl core::marker::Unpin for battersea_telemetry::view::EdgeClose
+impl core::marker::UnsafeUnpin for battersea_telemetry::view::EdgeClose
+impl core::panic::unwind_safe::RefUnwindSafe for battersea_telemetry::view::EdgeClose
+impl core::panic::unwind_safe::UnwindSafe for battersea_telemetry::view::EdgeClose
+impl<Q, K> equivalent::Equivalent<K> for battersea_telemetry::view::EdgeClose where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn battersea_telemetry::view::EdgeClose::equivalent(&self, &K) -> bool
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_telemetry::view::EdgeClose where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_telemetry::view::EdgeClose where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<T, U> core::convert::Into<U> for battersea_telemetry::view::EdgeClose where U: core::convert::From<T>
+pub fn battersea_telemetry::view::EdgeClose::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_telemetry::view::EdgeClose where U: core::convert::Into<T>
+pub type battersea_telemetry::view::EdgeClose::Error = never
+pub fn battersea_telemetry::view::EdgeClose::try_from(U) -> core::result::Result<T, never>
+impl<T, U> core::convert::TryInto<U> for battersea_telemetry::view::EdgeClose where U: core::convert::TryFrom<T>
+pub type battersea_telemetry::view::EdgeClose::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_telemetry::view::EdgeClose::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for battersea_telemetry::view::EdgeClose where T: core::clone::Clone
+pub type battersea_telemetry::view::EdgeClose::Owned = T
+pub fn battersea_telemetry::view::EdgeClose::clone_into(&self, &mut T)
+pub fn battersea_telemetry::view::EdgeClose::to_owned(&self) -> T
+impl<T> core::any::Any for battersea_telemetry::view::EdgeClose where T: 'static + ?core::marker::Sized
+pub fn battersea_telemetry::view::EdgeClose::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_telemetry::view::EdgeClose where T: ?core::marker::Sized
+pub fn battersea_telemetry::view::EdgeClose::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_telemetry::view::EdgeClose where T: ?core::marker::Sized
+pub fn battersea_telemetry::view::EdgeClose::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for battersea_telemetry::view::EdgeClose where T: core::clone::Clone
+pub unsafe fn battersea_telemetry::view::EdgeClose::clone_to_uninit(&self, *mut u8)
+impl<T> core::convert::From<T> for battersea_telemetry::view::EdgeClose
+pub fn battersea_telemetry::view::EdgeClose::from(T) -> T
+impl<T> dyn_clone::DynClone for battersea_telemetry::view::EdgeClose where T: core::clone::Clone
+pub fn battersea_telemetry::view::EdgeClose::__clone_box(&self, dyn_clone::sealed::Private) -> *mut ()
+impl<T> serde_core::de::DeserializeOwned for battersea_telemetry::view::EdgeClose where T: for<'de> serde_core::de::Deserialize<'de>
+impl<T> tower_http::follow_redirect::policy::PolicyExt for battersea_telemetry::view::EdgeClose where T: ?core::marker::Sized
+pub fn battersea_telemetry::view::EdgeClose::and<P, B, E>(self, P) -> tower_http::follow_redirect::policy::and::And<T, P> where T: core::marker::Sized + tower_http::follow_redirect::policy::Policy<B, E>, P: tower_http::follow_redirect::policy::Policy<B, E>
+pub fn battersea_telemetry::view::EdgeClose::or<P, B, E>(self, P) -> tower_http::follow_redirect::policy::or::Or<T, P> where T: core::marker::Sized + tower_http::follow_redirect::policy::Policy<B, E>, P: tower_http::follow_redirect::policy::Policy<B, E>
+impl<T> tracing::instrument::Instrument for battersea_telemetry::view::EdgeClose
+impl<T> tracing::instrument::WithSubscriber for battersea_telemetry::view::EdgeClose
+impl<T> typenum::type_operators::Same for battersea_telemetry::view::EdgeClose
+pub type battersea_telemetry::view::EdgeClose::Output = T
+impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_telemetry::view::EdgeClose where T: ?core::marker::Sized
+pub struct battersea_telemetry::view::EdgeMarking
+pub battersea_telemetry::view::EdgeMarking::close: core::option::Option<battersea_telemetry::view::EdgeClose>
+pub battersea_telemetry::view::EdgeMarking::queued: u32
+impl battersea_telemetry::view::EdgeMarking
+pub fn battersea_telemetry::view::EdgeMarking::is_empty(&self) -> bool
+impl core::clone::Clone for battersea_telemetry::view::EdgeMarking
+pub fn battersea_telemetry::view::EdgeMarking::clone(&self) -> Self
+impl core::cmp::Eq for battersea_telemetry::view::EdgeMarking
+impl core::cmp::PartialEq for battersea_telemetry::view::EdgeMarking
+pub fn battersea_telemetry::view::EdgeMarking::eq(&self, &Self) -> bool
+impl core::fmt::Debug for battersea_telemetry::view::EdgeMarking
+pub fn battersea_telemetry::view::EdgeMarking::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for battersea_telemetry::view::EdgeMarking
+impl schemars::JsonSchema for battersea_telemetry::view::EdgeMarking
+pub fn battersea_telemetry::view::EdgeMarking::inline_schema() -> bool
+pub fn battersea_telemetry::view::EdgeMarking::json_schema(&mut schemars::generate::SchemaGenerator) -> schemars::schema::Schema
+pub fn battersea_telemetry::view::EdgeMarking::schema_id() -> alloc::borrow::Cow<'static, str>
+pub fn battersea_telemetry::view::EdgeMarking::schema_name() -> alloc::borrow::Cow<'static, str>
+impl serde_core::ser::Serialize for battersea_telemetry::view::EdgeMarking
+pub fn battersea_telemetry::view::EdgeMarking::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for battersea_telemetry::view::EdgeMarking
+pub fn battersea_telemetry::view::EdgeMarking::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for battersea_telemetry::view::EdgeMarking
+impl core::marker::Send for battersea_telemetry::view::EdgeMarking
+impl core::marker::Sync for battersea_telemetry::view::EdgeMarking
+impl core::marker::Unpin for battersea_telemetry::view::EdgeMarking
+impl core::marker::UnsafeUnpin for battersea_telemetry::view::EdgeMarking
+impl core::panic::unwind_safe::RefUnwindSafe for battersea_telemetry::view::EdgeMarking
+impl core::panic::unwind_safe::UnwindSafe for battersea_telemetry::view::EdgeMarking
+impl<Q, K> equivalent::Equivalent<K> for battersea_telemetry::view::EdgeMarking where Q: core::cmp::Eq + ?core::marker::Sized, K: core::borrow::Borrow<Q> + ?core::marker::Sized
+pub fn battersea_telemetry::view::EdgeMarking::equivalent(&self, &K) -> bool
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_telemetry::view::EdgeMarking where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_telemetry::view::EdgeMarking where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<T, U> core::convert::Into<U> for battersea_telemetry::view::EdgeMarking where U: core::convert::From<T>
+pub fn battersea_telemetry::view::EdgeMarking::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_telemetry::view::EdgeMarking where U: core::convert::Into<T>
+pub type battersea_telemetry::view::EdgeMarking::Error = never
+pub fn battersea_telemetry::view::EdgeMarking::try_from(U) -> core::result::Result<T, never>
+impl<T, U> core::convert::TryInto<U> for battersea_telemetry::view::EdgeMarking where U: core::convert::TryFrom<T>
+pub type battersea_telemetry::view::EdgeMarking::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_telemetry::view::EdgeMarking::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for battersea_telemetry::view::EdgeMarking where T: core::clone::Clone
+pub type battersea_telemetry::view::EdgeMarking::Owned = T
+pub fn battersea_telemetry::view::EdgeMarking::clone_into(&self, &mut T)
+pub fn battersea_telemetry::view::EdgeMarking::to_owned(&self) -> T
+impl<T> core::any::Any for battersea_telemetry::view::EdgeMarking where T: 'static + ?core::marker::Sized
+pub fn battersea_telemetry::view::EdgeMarking::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_telemetry::view::EdgeMarking where T: ?core::marker::Sized
+pub fn battersea_telemetry::view::EdgeMarking::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_telemetry::view::EdgeMarking where T: ?core::marker::Sized
+pub fn battersea_telemetry::view::EdgeMarking::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for battersea_telemetry::view::EdgeMarking where T: core::clone::Clone
+pub unsafe fn battersea_telemetry::view::EdgeMarking::clone_to_uninit(&self, *mut u8)
+impl<T> core::convert::From<T> for battersea_telemetry::view::EdgeMarking
+pub fn battersea_telemetry::view::EdgeMarking::from(T) -> T
+impl<T> dyn_clone::DynClone for battersea_telemetry::view::EdgeMarking where T: core::clone::Clone
+pub fn battersea_telemetry::view::EdgeMarking::__clone_box(&self, dyn_clone::sealed::Private) -> *mut ()
+impl<T> serde_core::de::DeserializeOwned for battersea_telemetry::view::EdgeMarking where T: for<'de> serde_core::de::Deserialize<'de>
+impl<T> tower_http::follow_redirect::policy::PolicyExt for battersea_telemetry::view::EdgeMarking where T: ?core::marker::Sized
+pub fn battersea_telemetry::view::EdgeMarking::and<P, B, E>(self, P) -> tower_http::follow_redirect::policy::and::And<T, P> where T: core::marker::Sized + tower_http::follow_redirect::policy::Policy<B, E>, P: tower_http::follow_redirect::policy::Policy<B, E>
+pub fn battersea_telemetry::view::EdgeMarking::or<P, B, E>(self, P) -> tower_http::follow_redirect::policy::or::Or<T, P> where T: core::marker::Sized + tower_http::follow_redirect::policy::Policy<B, E>, P: tower_http::follow_redirect::policy::Policy<B, E>
+impl<T> tracing::instrument::Instrument for battersea_telemetry::view::EdgeMarking
+impl<T> tracing::instrument::WithSubscriber for battersea_telemetry::view::EdgeMarking
+impl<T> typenum::type_operators::Same for battersea_telemetry::view::EdgeMarking
+pub type battersea_telemetry::view::EdgeMarking::Output = T
+impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_telemetry::view::EdgeMarking where T: ?core::marker::Sized
 pub struct battersea_telemetry::view::Record
 pub battersea_telemetry::view::Record::context: battersea_telemetry::view::Context
 pub battersea_telemetry::view::Record::id: alloc::string::String

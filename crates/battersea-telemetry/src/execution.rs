@@ -142,6 +142,32 @@ impl View {
                     },
                 )
             }
+            EventKind::EdgeMarking => {
+                let id = format!("marking:{}", event.run_id);
+                let mut edges = match self.get(&id) {
+                    Some(Record {
+                        state: State::Marking { edges },
+                        ..
+                    }) => edges.clone(),
+                    _ => Default::default(),
+                };
+                let changed: std::collections::BTreeMap<String, EdgeMarking> =
+                    serde_json::from_value(
+                        detail
+                            .and_then(|v| v.get("edges"))
+                            .cloned()
+                            .unwrap_or_else(|| serde_json::json!({})),
+                    )
+                    .map_err(|e| crate::Error::Invalid(e.to_string()))?;
+                for (edge, marking) in changed {
+                    if marking.is_empty() {
+                        edges.remove(&edge);
+                    } else {
+                        edges.insert(edge, marking);
+                    }
+                }
+                (id, State::Marking { edges })
+            }
             _ => (
                 format!(
                     "event:{}:{}:{}",
@@ -176,7 +202,7 @@ impl View {
             context: Context {
                 activation_id: event.run_id.clone(),
                 flow_key: event.flow_key.clone(),
-                node_id: if matches!(state, State::Activation { .. }) {
+                node_id: if matches!(state, State::Activation { .. } | State::Marking { .. }) {
                     None
                 } else {
                     Some(event.node_id.clone())

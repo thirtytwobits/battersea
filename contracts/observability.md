@@ -7,9 +7,39 @@ extend node records; existing records retain their representation when read.
 Status: implemented; the independent editor server exposes the runtime view.
 
 Emit records list the edges they leave along, in delivery order, as
-`targets: [{edgeId, targetNodeId, targetPort}]`. Receive records name their edge as `edgeId`.
-`crates/battersea-runtime/fixtures/edge-activity.json` holds the records of one run; the editor's
-edge activity is tested against it.
+`targets: [{edgeId, targetNodeId, targetPort}]`. Receive, skip, drop and input close records name
+their edge as `edgeId`.
+
+## Edge marking
+
+An edge's marking is what the edge holds: the deliveries queued on it and, for a token edge, the
+close that ends its stream. A close is pending while it waits behind the edge's queued deliveries
+and delivered once the target's input has closed; a failed close ends the stream of a failed
+source. Signal edges hold no close.
+
+The scheduler owns the marking and publishes it as `flow.edge.marking` records,
+`{edges: {EDGE_ID: {queued, close?: {delivered, failed}}}}`, after every change to an edge's
+contents: a queued delivery, signal or close, a delivery taken for its target, a delivered close,
+and deliveries discarded for a stopped node. Each entry replaces that edge's previous entry. A
+restored activation and an ended activation publish every edge; an activation ends with no edge
+holding a delivery, and a pending close it discards leaves its edge.
+
+The marking obeys these invariants:
+
+- An edge holds only deliveries emitted along it, and no more than its queue admits.
+- When a delivery is recorded, its edge holds what was emitted along it less what was delivered or
+  dropped.
+- A delivered close follows every delivery on its edge.
+- A close moves from pending to delivered and keeps whether it failed. A delivered close is final.
+
+The runtime view keeps one `marking` record per activation, `marking:ACTIVATION`, naming each edge
+that holds a delivery or a close. The record is pinned while its activation is active. A view
+client draws an edge's marking from the latest `marking` record; a snapshot holds the marking at
+its cursor.
+
+`crates/battersea-runtime/fixtures/edge-marking.json` holds the records of one run and
+`crates/battersea-telemetry/fixtures/edge-marking-view.json` the view records they produce. The
+editor's edge marking is tested against both.
 
 `battersea-telemetry` owns typed records and revisioned views independently of tracing.
 Hosts serialise writes; reads never evict or mutate. Retention bounds records, encoded bytes,

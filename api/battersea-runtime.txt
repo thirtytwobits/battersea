@@ -1215,6 +1215,7 @@ pub battersea_runtime::EventKind::ActivationAccepted
 pub battersea_runtime::EventKind::ActivationExecutionFinished
 pub battersea_runtime::EventKind::AutomationRejected
 pub battersea_runtime::EventKind::AutomationWrite
+pub battersea_runtime::EventKind::EdgeMarking
 pub battersea_runtime::EventKind::LogicEvaluate
 pub battersea_runtime::EventKind::NodeComplete
 pub battersea_runtime::EventKind::NodeError

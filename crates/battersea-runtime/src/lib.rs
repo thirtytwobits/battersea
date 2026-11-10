@@ -13,6 +13,7 @@ pub use retention::{Retained, RetentionBudget};
 mod event;
 mod handler;
 mod lifecycle;
+mod marking;
 pub use event::{EventKind, ExecutionEvent};
 pub use lifecycle::{ActivationHost, Outcome, RunIdentity, RunPhase, RunRecord};
 pub mod dispatch;

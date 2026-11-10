@@ -41,10 +41,12 @@ export const ports: FlowEditorPorts = {
           if (!response.ok) throw new Error(await response.text());
           const update:Runtime.Update = await response.json();
           if (stopped) return;
-          const previous = new Map(snapshot?.records.map(record=>[record.id,record]) ?? []);
           snapshot = applyRuntimeUpdate(snapshot,update);
-          for (const record of snapshot.records) {
-            if (record.context.activation_id !== id || JSON.stringify(previous.get(record.id)) === JSON.stringify(record)) continue;
+          // Each upsert, in delta order; a resync reports the snapshot's state.
+          const changed = update.kind === "resync" ? update.snapshot.records
+            : update.deltas.flatMap(delta=>delta.changes.flatMap(change=>change.kind === "upsert" ? [change.record] : []));
+          for (const record of changed) {
+            if (record.context.activation_id !== id) continue;
             const state = record.state;
             const phase = state.kind === "activation" && ["succeeded","failed","cancelled","interrupted"].includes(state.status) ? state.status
               : state.kind === "port" ? `flow.token.${state.action}` : `runtime.${state.kind}`;
