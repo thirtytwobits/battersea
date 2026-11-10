@@ -720,6 +720,16 @@ export declare const FLOW_EDGE_MARKING_PHASE = "flow.edge.marking";
  * replaces the entry of each edge it names. Other records leave the marking unchanged.
  */
 export declare function applyFlowEdgeMarking(state: FlowEdgeMarkingState, record: FlowActivityRecord): FlowEdgeMarkingState;
+/** The marking of an activation's edges and the flow the activation runs. */
+export interface FlowFollowedEdgeMarking {
+    flowKey: string;
+    marking: FlowEdgeMarkingState;
+}
+/**
+ * The marking to draw for the loaded flow. A followed activation's marking belongs to the flow it
+ * runs, so another flow, including a clone that shares its edge ids, draws no marking.
+ */
+export declare function resolveFlowEdgeMarkingForFlow(followed: FlowFollowedEdgeMarking | null, flowKey: string): FlowEdgeMarkingState;
 /** The class names that describe an edge's marking. */
 export declare function resolveFlowEdgeMarkingClassNames(marking: FlowEdgeMarking | null | undefined): string[];
 

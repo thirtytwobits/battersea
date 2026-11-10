@@ -40,7 +40,8 @@ import { updateWorkspaceNodeParameterValue } from "../core/dataflow-parameter-st
 import { useDataflowStructuralUndo } from "../hooks/use-dataflow-structural-undo.js";
 import {
   applyFlowEdgeMarking,
-  type FlowEdgeMarkingState,
+  resolveFlowEdgeMarkingForFlow,
+  type FlowFollowedEdgeMarking,
 } from "../core/flow-edge-marking.js";
 import { useDataflowFlowLifecycle } from "../hooks/use-dataflow-flow-lifecycle.js";
 import { useFlowCanvasEditing } from "../hooks/use-flow-canvas-editing.js";
@@ -94,7 +95,8 @@ function FlowEditorBody({
     null,
   );
   const [events, setEvents] = React.useState<FlowDiagnostic[]>([]);
-  const [edgeMarking, setEdgeMarking] = React.useState<FlowEdgeMarkingState>({});
+  const [followedMarking, setFollowedMarking] =
+    React.useState<FlowFollowedEdgeMarking | null>(null);
   const [activationValues, setActivationValues] = React.useState<
     Record<string, unknown>
   >({});
@@ -204,7 +206,7 @@ function FlowEditorBody({
     setActivation(null);
     setError("");
     setEvents([]);
-    setEdgeMarking({});
+    setFollowedMarking({ flowKey: workspace.draftFlowKey, marking: {} });
     try {
       const result = await ports.activation.activate({
         flow_key: workspace.draftFlowKey,
@@ -237,7 +239,12 @@ function FlowEditorBody({
             ? current
             : [...current, event],
         );
-        setEdgeMarking((current) => applyFlowEdgeMarking(current, event));
+        setFollowedMarking((current) =>
+          current && {
+            ...current,
+            marking: applyFlowEdgeMarking(current.marking, event),
+          },
+        );
         if (["succeeded", "failed", "cancelled"].includes(event.phase))
           setActivation({
             id: result.id,
@@ -352,7 +359,10 @@ function FlowEditorBody({
             presentation={presentation}
             autoLayout={autoLayout}
             autoFitViewKey={lifecycle.autoFitViewKey}
-            edgeMarking={edgeMarking}
+            edgeMarking={resolveFlowEdgeMarkingForFlow(
+              followedMarking,
+              workspace.draftFlowKey,
+            )}
             edgeGestureDriver={canvas.edgeGestureDriver}
             edges={workspace.edges}
             nodes={renderedNodes}

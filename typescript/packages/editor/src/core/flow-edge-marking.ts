@@ -77,6 +77,25 @@ export function applyFlowEdgeMarking(
   return next;
 }
 
+/** The marking of an activation's edges and the flow the activation runs. */
+export interface FlowFollowedEdgeMarking {
+  flowKey: string;
+  marking: FlowEdgeMarkingState;
+}
+
+const NO_MARKING: FlowEdgeMarkingState = Object.freeze({});
+
+/**
+ * The marking to draw for the loaded flow. A followed activation's marking belongs to the flow it
+ * runs, so another flow, including a clone that shares its edge ids, draws no marking.
+ */
+export function resolveFlowEdgeMarkingForFlow(
+  followed: FlowFollowedEdgeMarking | null,
+  flowKey: string,
+): FlowEdgeMarkingState {
+  return followed?.flowKey === flowKey ? followed.marking : NO_MARKING;
+}
+
 /** The class names that describe an edge's marking. */
 export function resolveFlowEdgeMarkingClassNames(
   marking: FlowEdgeMarking | null | undefined,

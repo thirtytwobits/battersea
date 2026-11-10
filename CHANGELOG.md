@@ -20,8 +20,8 @@
 
 ### Fixed
 
-- `FlowEditor` draws the marking of the edges of the activation it follows; a host that serves the
-  runtime view needs no channel of its own for edge state.
+- `FlowEditor` draws the marking of the activation it follows while that activation's flow is
+  loaded; a host that serves the runtime view needs no channel of its own for edge state.
 - The example editor server reports each runtime view change in delta order.
 
 ## 0.25.0

@@ -11,6 +11,7 @@ import type { Runtime } from "@battersea/flow";
 import {
   applyFlowEdgeMarking,
   resolveFlowEdgeMarkingClassNames,
+  resolveFlowEdgeMarkingForFlow,
   type FlowActivityRecord,
   type FlowEdgeMarkingState
 } from "@battersea/editor/core/flow-edge-marking";
@@ -99,4 +100,15 @@ test("records that hold no marking leave it unchanged", () => {
   ]) {
     assert.equal(applyFlowEdgeMarking(state, record), state);
   }
+});
+
+test("an activation's marking is drawn only on the flow it runs", () => {
+  const followed = { flowKey: "story", marking: { a: { queued: 1 } } };
+  assert.equal(resolveFlowEdgeMarkingForFlow(followed, "story"), followed.marking);
+  assert.deepEqual(resolveFlowEdgeMarkingForFlow(followed, "story-copy"), {});
+  assert.deepEqual(resolveFlowEdgeMarkingForFlow(null, "story"), {});
+  assert.equal(
+    resolveFlowEdgeMarkingForFlow(followed, "other"),
+    resolveFlowEdgeMarkingForFlow(null, "story")
+  );
 });
