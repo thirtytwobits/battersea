@@ -176,3 +176,67 @@ fn a_live_activations_marking_is_kept_while_terminal_history_is_evicted() {
     assert!(ids.contains(&"marking:run".to_string()), "{ids:?}");
     assert!(ids.contains(&"activation:run".to_string()), "{ids:?}");
 }
+
+#[test]
+fn an_ending_activation_unpins_its_marking_in_the_same_write() {
+    let record = |id: &str, time: u64, state: State| Record {
+        id: id.into(),
+        context: Context {
+            activation_id: "run".into(),
+            flow_key: "flow".into(),
+            node_id: None,
+            session_id: None,
+        },
+        started_at_ms: 0,
+        updated_at_ms: time,
+        state,
+    };
+    let accepted = record(
+        "activation:run",
+        0,
+        State::Activation {
+            status: Status::Accepted,
+        },
+    );
+    let marking = record(
+        "marking:run",
+        1,
+        State::Marking {
+            edges: [(
+                "a".to_string(),
+                EdgeMarking {
+                    queued: 1,
+                    close: None,
+                },
+            )]
+            .into(),
+        },
+    );
+    let size = |record: &Record| serde_json::to_vec(record).unwrap().len();
+    let mut view = View::new(
+        "test-process".into(),
+        Retention {
+            max_records: 64,
+            max_record_bytes: size(&accepted) + size(&marking),
+            max_delta_bytes: 4096,
+            max_deltas: 64,
+            max_age_ms: 1_000,
+        },
+    )
+    .unwrap();
+    view.record(accepted, |_| Ok(())).unwrap();
+    view.record(marking, |_| Ok(())).unwrap();
+    view.record(
+        record(
+            "activation:run",
+            2,
+            State::Activation {
+                status: Status::Cancelled,
+            },
+        ),
+        |_| Ok(()),
+    )
+    .unwrap();
+    let ids: Vec<String> = view.snapshot().records.into_iter().map(|r| r.id).collect();
+    assert_eq!(ids, vec!["activation:run".to_string()]);
+}

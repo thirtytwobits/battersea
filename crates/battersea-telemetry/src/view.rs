@@ -390,7 +390,7 @@ impl View {
                     r.updated_at_ms,
                     r.id.clone(),
                     self.record_sizes[&r.id],
-                    pinned(&self.records, r),
+                    pinned(&self.records, record.as_ref(), r),
                 )
             })
             .chain(record.iter().map(|r| {
@@ -398,7 +398,7 @@ impl View {
                     r.updated_at_ms,
                     r.id.clone(),
                     new_size,
-                    pinned(&self.records, r),
+                    pinned(&self.records, record.as_ref(), r),
                 )
             }))
             .collect();
@@ -468,21 +468,24 @@ pub fn active(status: &Status) -> bool {
     )
 }
 /// An active resource is pinned. A marking is pinned while its activation is active, so it
-/// remains complete for the life of the run.
-fn pinned(records: &BTreeMap<String, Record>, record: &Record) -> bool {
+/// remains complete for the life of the run. The activation is read from `incoming` when the
+/// write replaces it, so a write that ends an activation unpins its marking.
+fn pinned(records: &BTreeMap<String, Record>, incoming: Option<&Record>, record: &Record) -> bool {
     match &record.state {
         State::Activation { status }
         | State::Node { status, .. }
         | State::Request { status, .. }
         | State::MediaJob { status, .. }
         | State::Tool { status, .. } => active(status),
-        State::Marking { .. } => records
-            .get(&crate::otlp::activation_resource_id(
-                &record.context.activation_id,
-            ))
-            .is_some_and(|activation| {
-                matches!(&activation.state, State::Activation { status } if active(status))
-            }),
+        State::Marking { .. } => {
+            let id = crate::otlp::activation_resource_id(&record.context.activation_id);
+            incoming
+                .filter(|incoming| incoming.id == id)
+                .or_else(|| records.get(&id))
+                .is_some_and(|activation| {
+                    matches!(&activation.state, State::Activation { status } if active(status))
+                })
+        }
         _ => false,
     }
 }
