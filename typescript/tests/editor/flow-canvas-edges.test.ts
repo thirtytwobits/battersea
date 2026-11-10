@@ -113,7 +113,7 @@ test("resolveFlowCanvasEdge preserves existing edge classes", () => {
   assert.equal(resolved.animated, false);
 });
 
-test("resolveFlowCanvasEdge marks active edges for glow treatment", () => {
+test("resolveFlowCanvasEdge animates an edge that holds deliveries", () => {
   const edge: FlowStudioEdge = {
     data: {
       kind: "token",
@@ -130,12 +130,12 @@ test("resolveFlowCanvasEdge marks active edges for glow treatment", () => {
     makeNode({ id: "target-1", inputTokenType: "prompt.fragment" })
   ];
 
-  const resolved = resolveFlowCanvasEdge(edge, nodes, "active");
-  assert.equal(resolved.className, "flow-studio-edge flow-studio-edge--active");
+  const resolved = resolveFlowCanvasEdge(edge, nodes, { queued: 2 });
+  assert.equal(resolved.className, "flow-studio-edge flow-studio-edge--occupied");
   assert.equal(resolved.animated, true);
 });
 
-test("resolveFlowCanvasEdge marks fading edges separately from active ones", () => {
+test("resolveFlowCanvasEdge marks a delivered failed close without animation", () => {
   const edge: FlowStudioEdge = {
     data: {
       kind: "signal",
@@ -149,8 +149,14 @@ test("resolveFlowCanvasEdge marks fading edges separately from active ones", () 
   };
   const nodes = [makeNode({ id: "source-1" }), makeNode({ id: "target-1" })];
 
-  const resolved = resolveFlowCanvasEdge(edge, nodes, "fading");
-  assert.equal(resolved.className, "flow-studio-edge flow-studio-edge--signal flow-studio-edge--fading");
+  const resolved = resolveFlowCanvasEdge(edge, nodes, {
+    queued: 0,
+    close: { delivered: true, failed: true }
+  });
+  assert.equal(
+    resolved.className,
+    "flow-studio-edge flow-studio-edge--signal flow-studio-edge--closed flow-studio-edge--failed"
+  );
   assert.equal(resolved.animated, false);
 });
 

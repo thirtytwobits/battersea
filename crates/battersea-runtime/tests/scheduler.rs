@@ -668,8 +668,132 @@ fn signal(id: &str, source: &str, target: &str, port: &str) -> Value {
     json!({"id":id,"kind":"signal","source_node_id":source,"source_port":"done","target_node_id":target,"target_port":port})
 }
 async fn run(host: &Host, run: &mut Run) -> Result<(), Error> {
-    host.run_activation(run, "source", HashMap::new(), CancellationToken::new())
-        .await
+    let result = host
+        .run_activation(run, "source", HashMap::new(), CancellationToken::new())
+        .await;
+    assert_marking_invariants(&host.events.lock().unwrap(), &run.flow);
+    result
+}
+
+/// The published edge marking obeys the place invariants of contracts/observability.md:
+/// an edge holds only deliveries emitted along it and no more than its queue admits, a delivery
+/// leaves its edge holding what was emitted along it less what was delivered or dropped, a delivered
+/// close follows every delivery, a close moves from pending to delivered without changing whether
+/// it failed, a pending close is discarded only when the activation ends, and an ended activation
+/// leaves no edge holding a delivery.
+fn assert_marking_invariants(events: &[ExecutionEvent], flow: &FlowDocument) {
+    #[derive(Default)]
+    struct Place {
+        queued: u64,
+        close: Option<(bool, bool)>,
+        emitted: u64,
+        admitted: u64,
+        delivered: u64,
+        dropped: u64,
+        discarded: bool,
+        marked: bool,
+    }
+    let mut attempt = None;
+    let mut places: HashMap<String, Place> = HashMap::new();
+    let mut ended = false;
+    for event in events {
+        if attempt != Some(event.attempt) {
+            attempt = Some(event.attempt);
+            places.clear();
+            ended = false;
+        }
+        let detail = event.detail.clone().unwrap_or_default();
+        match event.kind {
+            EventKind::TokenEmit | EventKind::SignalEmit => {
+                for target in detail["targets"].as_array().unwrap() {
+                    let id = target["edgeId"].as_str().unwrap().to_string();
+                    places.entry(id).or_default().emitted += 1;
+                }
+            }
+            EventKind::TokenDrop => {
+                let id = detail["edgeId"].as_str().unwrap().to_string();
+                places.entry(id).or_default().dropped += 1;
+            }
+            EventKind::TokenReceive | EventKind::TokenSkip | EventKind::SignalReceive => {
+                let id = detail["edgeId"].as_str().unwrap();
+                let place = places.entry(id.into()).or_default();
+                // A test that delivers directly bypasses the edge's queue.
+                if !place.marked {
+                    continue;
+                }
+                place.delivered += 1;
+                if !place.discarded {
+                    assert_eq!(
+                        place.queued,
+                        place.emitted - place.delivered - place.dropped,
+                        "the marking of {id} counts the delivery before it is recorded"
+                    );
+                }
+            }
+            EventKind::EdgeMarking => {
+                let summary = &event.summary;
+                assert!(
+                    !ended,
+                    "no marking follows the end of the activation: {summary}"
+                );
+                ended = summary.starts_with("Activation ended");
+                for (id, marking) in detail["edges"].as_object().unwrap() {
+                    let place = places.entry(id.clone()).or_default();
+                    let queued = marking["queued"].as_u64().unwrap();
+                    let close = marking.get("close").map(|close| {
+                        (
+                            close["delivered"].as_bool().unwrap(),
+                            close["failed"].as_bool().unwrap(),
+                        )
+                    });
+                    if let Some(limits) = flow
+                        .edges
+                        .iter()
+                        .find(|edge| edge.id == *id)
+                        .and_then(|edge| edge.queue.as_ref())
+                    {
+                        assert!(queued <= u64::from(limits.items), "{id} holds {queued}");
+                    }
+                    place.admitted += queued.saturating_sub(place.queued);
+                    assert!(
+                        place.admitted <= place.emitted,
+                        "{id} holds only emitted deliveries"
+                    );
+                    if let Some((true, _)) = close {
+                        assert_eq!(
+                            queued, 0,
+                            "a delivered close on {id} follows its deliveries"
+                        );
+                    }
+                    match (place.close, close) {
+                        (None, _) => {}
+                        (Some((false, failed)), Some((_, now))) => assert_eq!(failed, now, "{id}"),
+                        (Some((true, failed)), Some((true, now))) => {
+                            assert_eq!(failed, now, "{id}")
+                        }
+                        (Some((true, _)), _) => panic!("a delivered close on {id} is final"),
+                        (Some((false, _)), None) => assert!(
+                            ended,
+                            "a pending close on {id} is discarded only when the activation ends"
+                        ),
+                    }
+                    place.discarded |= summary.starts_with("Discarded");
+                    place.marked = true;
+                    place.queued = queued;
+                    place.close = close;
+                }
+            }
+            _ => {}
+        }
+    }
+    if ended {
+        for (id, place) in &places {
+            assert_eq!(
+                place.queued, 0,
+                "{id} holds a delivery after the activation ended"
+            );
+        }
+    }
 }
 
 fn policy_node(id: &str, kind: &str, policy: &str, params: Value) -> Value {
@@ -1718,10 +1842,10 @@ async fn an_instrument_relays_its_signal_and_is_never_run_as_a_node() {
     );
 }
 
-/// The editor's edge activity reads `fixtures/edge-activity.json`, so the fixture is the
-/// records this run publishes.
+/// The view and the editor read `fixtures/edge-marking.json`, so the fixture is the records this
+/// run publishes.
 #[tokio::test]
-async fn emit_records_name_the_edges_their_receive_records_name() {
+async fn a_run_publishes_each_edges_marking_beside_the_records_that_name_its_edges() {
     let (host, mut state) = fixture(
         vec![
             node(
@@ -1751,14 +1875,16 @@ async fn emit_records_name_the_edges_their_receive_records_name() {
                 event.kind,
                 EventKind::TokenEmit
                     | EventKind::TokenReceive
+                    | EventKind::TokenClose
                     | EventKind::SignalEmit
                     | EventKind::SignalReceive
+                    | EventKind::EdgeMarking
             )
         })
-        .map(|event| json!({"phase":event.kind.category(),"detail":event.detail}))
+        .map(|event| json!({"phase":event.kind.category(),"nodeId":event.node_id,"summary":event.summary,"detail":event.detail}))
         .collect::<Vec<_>>();
     let fixture: Value =
-        serde_json::from_str(include_str!("../fixtures/edge-activity.json")).unwrap();
+        serde_json::from_str(include_str!("../fixtures/edge-marking.json")).unwrap();
     let edges = state
         .flow
         .edges
@@ -1769,9 +1895,85 @@ async fn emit_records_name_the_edges_their_receive_records_name() {
     assert_eq!(
         Value::from(records.clone()),
         fixture["records"],
-        "fixtures/edge-activity.json must hold the published records:\n{}",
+        "fixtures/edge-marking.json must hold the published records:\n{}",
         serde_json::to_string_pretty(&records).unwrap()
     );
+}
+
+/// Each edge's marking after every `flow.edge.marking` record, in order.
+fn markings(events: &[ExecutionEvent]) -> Vec<(String, serde_json::Map<String, Value>)> {
+    let mut marking = serde_json::Map::new();
+    events
+        .iter()
+        .filter(|event| event.kind == EventKind::EdgeMarking)
+        .map(|event| {
+            for (id, entry) in event.detail.as_ref().unwrap()["edges"].as_object().unwrap() {
+                if *entry == json!({"queued":0}) {
+                    marking.remove(id);
+                } else {
+                    marking.insert(id.clone(), entry.clone());
+                }
+            }
+            (event.summary.clone(), marking.clone())
+        })
+        .collect()
+}
+
+#[tokio::test]
+async fn a_failed_stream_leaves_its_edge_closed_as_failed() {
+    let (host, mut state) = fixture(
+        vec![
+            policy_node(
+                "source",
+                "Source",
+                "skip",
+                json!({"values":["prefix"],"pump":true,"recoverable_provider":true}),
+            ),
+            node("join", "Join", json!({})),
+        ],
+        vec![edge("stream", "source", "join", 0, "stream")],
+        "stream",
+    );
+    run(&host, &mut state).await.unwrap();
+    let markings = markings(&host.events.lock().unwrap());
+    assert!(
+        markings.iter().any(|(_, m)| m.get("stream")
+            == Some(&json!({"queued":0,"close":{"delivered":false,"failed":true}}))),
+        "the failed close waits on the edge before its delivery: {markings:#?}"
+    );
+    assert_eq!(
+        markings.last().unwrap().1["stream"],
+        json!({"queued":0,"close":{"delivered":true,"failed":true}})
+    );
+}
+
+#[tokio::test]
+async fn an_ended_activation_discards_what_its_edges_hold() {
+    let (host, mut state) = fixture(
+        vec![
+            node(
+                "source",
+                "Source",
+                json!({"values":["payload"],"pump":true}),
+            ),
+            node("first", "Sink", json!({})),
+            node("middle", "Sink", json!({"fail":true})),
+            node("last", "Sink", json!({})),
+        ],
+        vec![
+            edge("first", "source", "first", 0, "stream"),
+            edge("middle", "source", "middle", 1, "stream"),
+            edge("last", "source", "last", 2, "stream"),
+        ],
+        "stream",
+    );
+    assert!(run(&host, &mut state).await.is_err());
+    let markings = markings(&host.events.lock().unwrap());
+    let (summary, before) = &markings[markings.len() - 2];
+    assert_eq!(before["last"]["queued"], 1, "{summary}");
+    let (summary, ended) = markings.last().unwrap();
+    assert_eq!(summary, "Activation ended.");
+    assert!(!ended.contains_key("last"), "{ended:#?}");
 }
 
 #[tokio::test]

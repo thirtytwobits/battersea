@@ -1,0 +1,398 @@
+[
+  {
+    "context": {
+      "activation_id": "run",
+      "flow_key": "flow",
+      "node_id": "source"
+    },
+    "id": "port:run:source:Output:out",
+    "started_at_ms": 0,
+    "state": {
+      "action": "emit",
+      "content": {
+        "byte_length": 7,
+        "sha256": "de5f2cbf4c10a0d146f2a671aac363e8640fefc469ad42ac25364f19e4bc194f"
+      },
+      "direction": "output",
+      "kind": "port",
+      "port": "out",
+      "token_type": "text"
+    },
+    "updated_at_ms": 0
+  },
+  {
+    "context": {
+      "activation_id": "run",
+      "flow_key": "flow"
+    },
+    "id": "marking:run",
+    "started_at_ms": 1,
+    "state": {
+      "edges": {
+        "a": {
+          "queued": 1
+        },
+        "b": {
+          "queued": 1
+        }
+      },
+      "kind": "marking"
+    },
+    "updated_at_ms": 1
+  },
+  {
+    "context": {
+      "activation_id": "run",
+      "flow_key": "flow",
+      "node_id": "source"
+    },
+    "id": "port:run:source:Output:done",
+    "started_at_ms": 2,
+    "state": {
+      "action": "emit",
+      "direction": "output",
+      "kind": "port",
+      "port": "done",
+      "token_type": "signal"
+    },
+    "updated_at_ms": 2
+  },
+  {
+    "context": {
+      "activation_id": "run",
+      "flow_key": "flow"
+    },
+    "id": "marking:run",
+    "started_at_ms": 1,
+    "state": {
+      "edges": {
+        "a": {
+          "queued": 1
+        },
+        "b": {
+          "queued": 1
+        },
+        "go": {
+          "queued": 1
+        }
+      },
+      "kind": "marking"
+    },
+    "updated_at_ms": 3
+  },
+  {
+    "context": {
+      "activation_id": "run",
+      "flow_key": "flow",
+      "node_id": "source"
+    },
+    "id": "port:run:source:Output:out",
+    "started_at_ms": 0,
+    "state": {
+      "action": "close",
+      "direction": "output",
+      "kind": "port",
+      "port": "out",
+      "token_type": "text"
+    },
+    "updated_at_ms": 4
+  },
+  {
+    "context": {
+      "activation_id": "run",
+      "flow_key": "flow"
+    },
+    "id": "marking:run",
+    "started_at_ms": 1,
+    "state": {
+      "edges": {
+        "a": {
+          "close": {
+            "delivered": false,
+            "failed": false
+          },
+          "queued": 1
+        },
+        "b": {
+          "close": {
+            "delivered": false,
+            "failed": false
+          },
+          "queued": 1
+        },
+        "go": {
+          "queued": 1
+        }
+      },
+      "kind": "marking"
+    },
+    "updated_at_ms": 5
+  },
+  {
+    "context": {
+      "activation_id": "run",
+      "flow_key": "flow"
+    },
+    "id": "marking:run",
+    "started_at_ms": 1,
+    "state": {
+      "edges": {
+        "a": {
+          "close": {
+            "delivered": false,
+            "failed": false
+          },
+          "queued": 0
+        },
+        "b": {
+          "close": {
+            "delivered": false,
+            "failed": false
+          },
+          "queued": 1
+        },
+        "go": {
+          "queued": 1
+        }
+      },
+      "kind": "marking"
+    },
+    "updated_at_ms": 6
+  },
+  {
+    "context": {
+      "activation_id": "run",
+      "flow_key": "flow",
+      "node_id": "first"
+    },
+    "id": "port:run:first:Input:in",
+    "started_at_ms": 7,
+    "state": {
+      "action": "receive",
+      "content": {
+        "byte_length": 7,
+        "sha256": "de5f2cbf4c10a0d146f2a671aac363e8640fefc469ad42ac25364f19e4bc194f"
+      },
+      "direction": "input",
+      "kind": "port",
+      "port": "in",
+      "token_type": "text"
+    },
+    "updated_at_ms": 7
+  },
+  {
+    "context": {
+      "activation_id": "run",
+      "flow_key": "flow"
+    },
+    "id": "marking:run",
+    "started_at_ms": 1,
+    "state": {
+      "edges": {
+        "a": {
+          "close": {
+            "delivered": false,
+            "failed": false
+          },
+          "queued": 0
+        },
+        "b": {
+          "close": {
+            "delivered": false,
+            "failed": false
+          },
+          "queued": 0
+        },
+        "go": {
+          "queued": 1
+        }
+      },
+      "kind": "marking"
+    },
+    "updated_at_ms": 8
+  },
+  {
+    "context": {
+      "activation_id": "run",
+      "flow_key": "flow",
+      "node_id": "second"
+    },
+    "id": "port:run:second:Input:in",
+    "started_at_ms": 9,
+    "state": {
+      "action": "receive",
+      "content": {
+        "byte_length": 7,
+        "sha256": "de5f2cbf4c10a0d146f2a671aac363e8640fefc469ad42ac25364f19e4bc194f"
+      },
+      "direction": "input",
+      "kind": "port",
+      "port": "in",
+      "token_type": "text"
+    },
+    "updated_at_ms": 9
+  },
+  {
+    "context": {
+      "activation_id": "run",
+      "flow_key": "flow"
+    },
+    "id": "marking:run",
+    "started_at_ms": 1,
+    "state": {
+      "edges": {
+        "a": {
+          "close": {
+            "delivered": false,
+            "failed": false
+          },
+          "queued": 0
+        },
+        "b": {
+          "close": {
+            "delivered": false,
+            "failed": false
+          },
+          "queued": 0
+        }
+      },
+      "kind": "marking"
+    },
+    "updated_at_ms": 10
+  },
+  {
+    "context": {
+      "activation_id": "run",
+      "flow_key": "flow",
+      "node_id": "action"
+    },
+    "id": "port:run:action:Input:go",
+    "started_at_ms": 11,
+    "state": {
+      "action": "receive",
+      "direction": "input",
+      "kind": "port",
+      "port": "go",
+      "token_type": "signal"
+    },
+    "updated_at_ms": 11
+  },
+  {
+    "context": {
+      "activation_id": "run",
+      "flow_key": "flow"
+    },
+    "id": "marking:run",
+    "started_at_ms": 1,
+    "state": {
+      "edges": {
+        "a": {
+          "close": {
+            "delivered": true,
+            "failed": false
+          },
+          "queued": 0
+        },
+        "b": {
+          "close": {
+            "delivered": false,
+            "failed": false
+          },
+          "queued": 0
+        }
+      },
+      "kind": "marking"
+    },
+    "updated_at_ms": 12
+  },
+  {
+    "context": {
+      "activation_id": "run",
+      "flow_key": "flow",
+      "node_id": "first"
+    },
+    "id": "port:run:first:Input:in",
+    "started_at_ms": 7,
+    "state": {
+      "action": "close",
+      "direction": "input",
+      "kind": "port",
+      "port": "in",
+      "token_type": "text"
+    },
+    "updated_at_ms": 13
+  },
+  {
+    "context": {
+      "activation_id": "run",
+      "flow_key": "flow"
+    },
+    "id": "marking:run",
+    "started_at_ms": 1,
+    "state": {
+      "edges": {
+        "a": {
+          "close": {
+            "delivered": true,
+            "failed": false
+          },
+          "queued": 0
+        },
+        "b": {
+          "close": {
+            "delivered": true,
+            "failed": false
+          },
+          "queued": 0
+        }
+      },
+      "kind": "marking"
+    },
+    "updated_at_ms": 14
+  },
+  {
+    "context": {
+      "activation_id": "run",
+      "flow_key": "flow",
+      "node_id": "second"
+    },
+    "id": "port:run:second:Input:in",
+    "started_at_ms": 9,
+    "state": {
+      "action": "close",
+      "direction": "input",
+      "kind": "port",
+      "port": "in",
+      "token_type": "text"
+    },
+    "updated_at_ms": 15
+  },
+  {
+    "context": {
+      "activation_id": "run",
+      "flow_key": "flow"
+    },
+    "id": "marking:run",
+    "started_at_ms": 1,
+    "state": {
+      "edges": {
+        "a": {
+          "close": {
+            "delivered": true,
+            "failed": false
+          },
+          "queued": 0
+        },
+        "b": {
+          "close": {
+            "delivered": true,
+            "failed": false
+          },
+          "queued": 0
+        }
+      },
+      "kind": "marking"
+    },
+    "updated_at_ms": 16
+  }
+]

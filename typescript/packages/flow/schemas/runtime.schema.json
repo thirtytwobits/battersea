@@ -243,6 +243,41 @@
       ],
       "type": "string"
     },
+    "EdgeClose": {
+      "additionalProperties": false,
+      "description": "A close is pending behind the edge's queued deliveries until the target's input closes.\nA failed close ends the stream of a failed source.",
+      "properties": {
+        "delivered": {
+          "type": "boolean"
+        },
+        "failed": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "delivered",
+        "failed"
+      ],
+      "type": "object"
+    },
+    "EdgeMarking": {
+      "additionalProperties": false,
+      "description": "The deliveries queued on an edge and the close that ends a token edge's stream.",
+      "properties": {
+        "close": {
+          "$ref": "#/$defs/EdgeClose"
+        },
+        "queued": {
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "queued"
+      ],
+      "type": "object"
+    },
     "Ledger": {
       "additionalProperties": false,
       "properties": {
@@ -937,6 +972,27 @@
             "call_id",
             "name",
             "status"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "description": "What each edge of an activation holds, keyed by edge id. An edge that holds no\ndeliveries and no close is absent.",
+          "properties": {
+            "edges": {
+              "additionalProperties": {
+                "$ref": "#/$defs/EdgeMarking"
+              },
+              "type": "object"
+            },
+            "kind": {
+              "const": "marking",
+              "type": "string"
+            }
+          },
+          "required": [
+            "kind",
+            "edges"
           ],
           "type": "object"
         },

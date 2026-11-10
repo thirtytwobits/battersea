@@ -748,6 +748,7 @@ pub trait ExecutionHost: Sized + Send + Sync {
         self.publish_execution_record(runtime, source_node_id, EventKind::TokenEmit, format!("Emitted {} on {source_port}.", value.token_type), Some(json!({"sourcePort":source_port,"tokenType":value.token_type,"targetCount":edges.len(),"targets":edge_targets(&edges),"value":value.value}))).await;
         let mut charges = charges;
         let emission = runtime.delivery_sequence;
+        let edge_ids: Vec<String> = edges.iter().map(|edge| edge.id.clone()).collect();
         for edge in edges {
             let value = Retained::charged(
                 value.clone(),
@@ -764,6 +765,14 @@ pub trait ExecutionHost: Sized + Send + Sync {
                 cause,
             });
         }
+        crate::marking::publish(
+            self,
+            runtime,
+            source_node_id,
+            "Queued deliveries.",
+            edge_ids,
+        )
+        .await;
         Ok(())
     }
 
@@ -1216,6 +1225,8 @@ pub trait ExecutionHost: Sized + Send + Sync {
             Some(json!({"signalPort":signal_port,"targetCount":usize::from(edge.is_some()),"targets":edge_targets(&edge)})),
         )
         .await;
+        let edge_ids = edge.into_iter().map(|edge| edge.id).collect();
+        crate::marking::publish(self, runtime, &node.id, "Queued signal.", edge_ids).await;
         Ok(())
     }
 
@@ -1360,6 +1371,12 @@ pub trait ExecutionHost: Sized + Send + Sync {
                 cause,
                 _charge: charge,
             });
+        let edge_ids = runtime
+            .outgoing_edges
+            .get(&(node_id.to_string(), port.to_string()))
+            .map(|edges| edges.iter().map(|edge| edge.id.clone()).collect())
+            .unwrap_or_default();
+        crate::marking::publish(self, runtime, node_id, "Queued close.", edge_ids).await;
         Ok(())
     }
 
@@ -1548,6 +1565,7 @@ pub trait ExecutionHost: Sized + Send + Sync {
                 return Ok(false);
             }
             let delivery = runtime.data_queue.pop_front().expect("data front");
+            crate::marking::publish(self, runtime, &delivery.edge.target_node_id, "Delivering.", vec![delivery.edge.id.clone()]).await;
             runtime.active_delivery_groups.insert(delivery.emission);
             let previous = std::mem::replace(&mut runtime.signal_cause, delivery.cause.clone());
             let result = self
@@ -1584,7 +1602,8 @@ pub trait ExecutionHost: Sized + Send + Sync {
                             if runtime.failed_outputs.contains(&(node.clone(), port.clone())) {
                                 runtime.failed_inputs.insert((edge.target_node_id.clone(), edge.target_port.clone()));
                             }
-                            self.publish_execution_record(runtime,&edge.target_node_id,EventKind::TokenClose,"Input closed.".into(),Some(json!({"targetPort":edge.target_port,"sourceNode":node,"sourcePort":port,"direction":"input"}))).await;
+                            crate::marking::publish(self, runtime, &edge.target_node_id, "Delivered close.", vec![edge.id.clone()]).await;
+                            self.publish_execution_record(runtime,&edge.target_node_id,EventKind::TokenClose,"Input closed.".into(),Some(json!({"edgeId":edge.id,"targetPort":edge.target_port,"sourceNode":node,"sourcePort":port,"direction":"input"}))).await;
                             let target = runtime.nodes_by_id.get(&edge.target_node_id).cloned().ok_or_else(|| Self::Error::internal("Missing closure target."))?;
                             if self.has_failed_input(runtime, &target.id) {
                                 crate::failure::skip_dependency(self, runtime, &target).await?;
@@ -1595,6 +1614,7 @@ pub trait ExecutionHost: Sized + Send + Sync {
                         self.enqueue_ready_nodes(runtime);
                     }
                     crate::delivery::Control::Signal(edge) => {
+                        crate::marking::publish(self, runtime, &edge.target_node_id, "Delivering signal.", vec![edge.id.clone()]).await;
                         let target = runtime.nodes_by_id.get(&edge.target_node_id).cloned().ok_or_else(|| Self::Error::internal("Missing signal target."))?;
                         if runtime.stopped_nodes.contains(&target.id) { return Ok(()); }
                         let key = (target.id.clone(), edge.target_port.clone());

@@ -40,7 +40,7 @@ import {
   isArrayTokenType,
   resolveFlowCanvasEdge,
 } from "../core/flow-canvas-edges.js";
-import type { FlowStudioEdgeActivationState } from "../core/flow-edge-activation.js";
+import type { FlowEdgeMarkingState } from "../core/flow-edge-marking.js";
 import type { FlowPortSide } from "../core/flow-node-ports.js";
 import { DATAFLOW_CANVAS_DROPZONE_ID } from "../core/flow-drag.js";
 
@@ -99,7 +99,7 @@ export interface DataflowCanvasProps {
   presentation?: GraphPresentation;
   autoLayout?: import("../graph.js").AuthoringGraphAutoLayoutController;
   autoFitViewKey?: string;
-  edgeActivationState: FlowStudioEdgeActivationState;
+  edgeMarking: FlowEdgeMarkingState;
   edges: readonly FlowStudioEdge[];
   flowInstanceRef: React.MutableRefObject<ReactFlowInstance<
     FlowStudioNode,
@@ -184,7 +184,7 @@ export function DataflowCanvas({
   autoLayout,
   presentation,
   autoFitViewKey,
-  edgeActivationState,
+  edgeMarking,
   edgeGestureDriver,
   edges,
   flowInstanceRef,
@@ -227,7 +227,7 @@ export function DataflowCanvas({
         const resolvedEdge = resolveFlowCanvasEdge(
           edge,
           nodes,
-          edgeActivationState[edge.id] ?? null,
+          edgeMarking[edge.id] ?? null,
         );
         const data: FlowStudioEdgeData = {
           addBridgeLabel: "Add bridge",
@@ -312,7 +312,7 @@ export function DataflowCanvas({
         };
       }),
     [
-      edgeActivationState,
+      edgeMarking,
       edges,
       nodes,
       edgeGestureDriver,

@@ -123,6 +123,11 @@ pub enum State {
         name: String,
         status: Status,
     },
+    /// What each edge of an activation holds, keyed by edge id. An edge that holds no
+    /// deliveries and no close is absent.
+    Marking {
+        edges: BTreeMap<String, EdgeMarking>,
+    },
     Diagnostic {
         category: String,
         attributes: BTreeMap<String, String>,
@@ -137,6 +142,28 @@ pub enum State {
 pub enum Direction {
     Input,
     Output,
+}
+/// The deliveries queued on an edge and the close that ends a token edge's stream.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct EdgeMarking {
+    pub queued: u32,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[schemars(with = "EdgeClose")]
+    pub close: Option<EdgeClose>,
+}
+impl EdgeMarking {
+    pub fn is_empty(&self) -> bool {
+        self.queued == 0 && self.close.is_none()
+    }
+}
+/// A close is pending behind the edge's queued deliveries until the target's input closes.
+/// A failed close ends the stream of a failed source.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct EdgeClose {
+    pub delivered: bool,
+    pub failed: bool,
 }
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
@@ -363,14 +390,17 @@ impl View {
                     r.updated_at_ms,
                     r.id.clone(),
                     self.record_sizes[&r.id],
-                    pinned(r),
+                    pinned(&self.records, record.as_ref(), r),
                 )
             })
-            .chain(
-                record
-                    .iter()
-                    .map(|r| (r.updated_at_ms, r.id.clone(), new_size, pinned(r))),
-            )
+            .chain(record.iter().map(|r| {
+                (
+                    r.updated_at_ms,
+                    r.id.clone(),
+                    new_size,
+                    pinned(&self.records, record.as_ref(), r),
+                )
+            }))
             .collect();
         candidates.sort_by(|a, b| (a.0, &a.1).cmp(&(b.0, &b.1)));
         let mut removals = Vec::new();
@@ -437,13 +467,25 @@ pub fn active(status: &Status) -> bool {
         Status::Accepted | Status::Running | Status::Waiting | Status::CompletionPending
     )
 }
-fn pinned(record: &Record) -> bool {
+/// An active resource is pinned. A marking is pinned while its activation is active, so it
+/// remains complete for the life of the run. The activation is read from `incoming` when the
+/// write replaces it, so a write that ends an activation unpins its marking.
+fn pinned(records: &BTreeMap<String, Record>, incoming: Option<&Record>, record: &Record) -> bool {
     match &record.state {
         State::Activation { status }
         | State::Node { status, .. }
         | State::Request { status, .. }
         | State::MediaJob { status, .. }
         | State::Tool { status, .. } => active(status),
+        State::Marking { .. } => {
+            let id = crate::otlp::activation_resource_id(&record.context.activation_id);
+            incoming
+                .filter(|incoming| incoming.id == id)
+                .or_else(|| records.get(&id))
+                .is_some_and(|activation| {
+                    matches!(&activation.state, State::Activation { status } if active(status))
+                })
+        }
         _ => false,
     }
 }

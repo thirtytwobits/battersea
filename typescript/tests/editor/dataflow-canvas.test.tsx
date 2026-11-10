@@ -20,7 +20,7 @@ function renderDataflowCanvas(overrides: Partial<React.ComponentProps<typeof Dat
   return renderToStaticMarkup(
     <DataflowCanvas
       edgeGestureDriver={NO_OP_GESTURE_DRIVER}
-      edgeActivationState={{}}
+      edgeMarking={{}}
       edges={[]}
       flowInstanceRef={{ current: null }}
       isConnectionValid={() => true}
