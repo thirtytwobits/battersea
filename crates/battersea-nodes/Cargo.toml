@@ -14,9 +14,9 @@ include = ["src/**", "Cargo.toml", "LICENSE", "NOTICE"]
 conformance = ["battersea-kit/conformance"]
 
 [dependencies]
-battersea-flow = { path = "../battersea-flow", version = "0.25.0" }
-battersea-runtime = { path = "../battersea-runtime", version = "0.25.0" }
-battersea-kit = { path = "../battersea-kit", version = "0.25.0" }
+battersea-flow = { path = "../battersea-flow", version = "0.26.0" }
+battersea-runtime = { path = "../battersea-runtime", version = "0.26.0" }
+battersea-kit = { path = "../battersea-kit", version = "0.26.0" }
 async-trait.workspace = true
 serde_json.workspace = true
 serde.workspace = true
@@ -24,5 +24,5 @@ thiserror.workspace = true
 tokio-util.workspace = true
 
 [dev-dependencies]
-battersea-kit = { path = "../battersea-kit", version = "0.25.0", features = ["conformance"] }
+battersea-kit = { path = "../battersea-kit", version = "0.26.0", features = ["conformance"] }
 tokio.workspace = true
