@@ -172,11 +172,15 @@ impl ProviderRegistry {
         self.validate_chat_backend(&backend)?;
         let inner = (self.chat_provider(&backend.provider)?.factory)(
             backend.clone(),
-            logger,
+            logger.clone(),
             clock.clone(),
         )?;
         Ok(Arc::new(AdmittedAdapter {
-            backend,
+            report: Arc::new(Report {
+                context: inner.describe_debug_context(),
+                backend,
+                logger,
+            }),
             inner,
             clock,
         }))
@@ -233,7 +237,15 @@ impl ProviderRegistry {
         clock: Arc<dyn Clock>,
     ) -> Result<Arc<dyn MediaGenerationAdapter>, Failure> {
         self.validate_media_backend(&backend)?;
-        (self.media_provider(&backend.provider)?.factory)(backend, clock)
+        let inner = (self.media_provider(&backend.provider)?.factory)(backend.clone(), clock)?;
+        Ok(Arc::new(AdmittedMedia {
+            origin: Arc::new(MediaOrigin {
+                provider: backend.provider,
+                backend: backend.id,
+                model: backend.model,
+            }),
+            inner,
+        }))
     }
     pub fn prepare_media(
         &self,
@@ -290,10 +302,56 @@ impl ProviderRegistry {
     }
 }
 
-struct AdmittedAdapter {
+/// Names the operation a failure belongs to and passes the failure to the observer. Every
+/// failure of an admitted adapter leaves through [`Report::failure`].
+struct Report {
     backend: EngineBackendConfig,
+    context: EngineAdapterDebugContext,
+    logger: Option<Arc<dyn EngineAdapterLogger>>,
+}
+impl Report {
+    fn stamp(&self, operation: &str, failure: &mut Failure) {
+        let origin = &mut failure.origin;
+        origin.operation.get_or_insert_with(|| operation.into());
+        origin.provider = Some(self.backend.provider.clone());
+        origin.backend = Some(self.backend.id.clone());
+        origin.model = Some(self.backend.model.clone());
+    }
+    async fn failure(&self, operation: &str, mut failure: Failure) -> Failure {
+        self.stamp(operation, &mut failure);
+        crate::adapter::emit_error(
+            self.logger.as_ref(),
+            &self.context,
+            EngineOperation::FlowTextStream,
+            &failure,
+        )
+        .await;
+        failure
+    }
+    async fn result<T>(&self, operation: &str, result: Result<T, Failure>) -> Result<T, Failure> {
+        match result {
+            Ok(value) => Ok(value),
+            Err(failure) => Err(self.failure(operation, failure).await),
+        }
+    }
+    fn stamped<T>(&self, operation: &str, result: Result<T, Failure>) -> Result<T, Failure> {
+        result.map_err(|mut failure| {
+            self.stamp(operation, &mut failure);
+            failure
+        })
+    }
+}
+
+struct AdmittedAdapter {
+    report: Arc<Report>,
     inner: Arc<dyn EngineAdapter>,
     clock: Arc<dyn Clock>,
+}
+impl std::ops::Deref for AdmittedAdapter {
+    type Target = Report;
+    fn deref(&self) -> &Report {
+        &self.report
+    }
 }
 impl AdmittedAdapter {
     async fn validate_conversation_output(
@@ -337,8 +395,10 @@ impl EngineAdapter for AdmittedAdapter {
         request: &crate::ConversationRequest,
         state: Option<&Value>,
     ) -> Result<crate::ConversationBinding, Failure> {
-        validate_chat_request(&self.backend, &request.to_request())?;
-        self.inner.validate_conversation(request, state)
+        self.stamped("validate_conversation", {
+            validate_chat_request(&self.backend, &request.to_request())
+                .and_then(|()| self.inner.validate_conversation(request, state))
+        })
     }
     fn validate_conversation_turn(
         &self,
@@ -347,9 +407,12 @@ impl EngineAdapter for AdmittedAdapter {
         results: &[crate::ConversationToolResult],
         turn: &crate::ConversationTurn,
     ) -> Result<crate::ConversationBinding, Failure> {
-        validate_chat_request(&self.backend, &request.to_request())?;
-        self.inner
-            .validate_conversation_turn(request, previous, results, turn)
+        self.stamped("validate_conversation_turn", {
+            validate_chat_request(&self.backend, &request.to_request()).and_then(|()| {
+                self.inner
+                    .validate_conversation_turn(request, previous, results, turn)
+            })
+        })
     }
     fn validate_conversation_step(
         &self,
@@ -359,9 +422,12 @@ impl EngineAdapter for AdmittedAdapter {
         command: &crate::ConversationCommand,
         step: &crate::ConversationStep,
     ) -> Result<crate::ConversationBinding, Failure> {
-        validate_chat_request(&self.backend, &request.to_request())?;
-        self.inner
-            .validate_conversation_step(request, previous, results, command, step)
+        self.stamped("validate_conversation_step", {
+            validate_chat_request(&self.backend, &request.to_request()).and_then(|()| {
+                self.inner
+                    .validate_conversation_step(request, previous, results, command, step)
+            })
+        })
     }
     async fn conversation_step(
         &self,
@@ -370,7 +436,51 @@ impl EngineAdapter for AdmittedAdapter {
         results: Vec<crate::ConversationToolResult>,
         command: crate::ConversationCommand,
     ) -> Result<crate::ConversationStep, Failure> {
-        self.validate_conversation(&request, previous.as_ref())?;
+        let step = self.step(request, previous, results, command).await;
+        self.result("conversation_step", step).await
+    }
+    async fn conversation_turn(
+        &self,
+        request: crate::ConversationRequest,
+        state: Option<Value>,
+        results: Vec<crate::ConversationToolResult>,
+    ) -> Result<crate::ConversationTurn, Failure> {
+        let turn = self.turn(request, state, results).await;
+        self.result("conversation_turn", turn).await
+    }
+
+    fn describe_debug_context(&self) -> EngineAdapterDebugContext {
+        self.inner.describe_debug_context()
+    }
+    async fn count_text_stream_input_tokens(
+        &self,
+        request: EngineTextStreamRequest,
+    ) -> Result<u64, Failure> {
+        let count = self.count(request).await;
+        self.result("count_tokens", count).await
+    }
+    async fn stream_text(
+        &self,
+        request: EngineTextStreamRequest,
+    ) -> Result<EngineTextStream, Failure> {
+        let stream = self.stream(request).await;
+        self.result(STREAM_TEXT, stream).await
+    }
+}
+
+const STREAM_TEXT: &str = "stream_text";
+
+impl AdmittedAdapter {
+    async fn step(
+        &self,
+        request: crate::ConversationRequest,
+        previous: Option<Value>,
+        results: Vec<crate::ConversationToolResult>,
+        command: crate::ConversationCommand,
+    ) -> Result<crate::ConversationStep, Failure> {
+        validate_chat_request(&self.backend, &request.to_request())?;
+        self.inner
+            .validate_conversation(&request, previous.as_ref())?;
         let call = self
             .inner
             .conversation_step(request.clone(), previous, results, command);
@@ -396,13 +506,14 @@ impl EngineAdapter for AdmittedAdapter {
         crate::adapter::payload::check_payload(&step, &self.backend.provider)?;
         Ok(step)
     }
-    async fn conversation_turn(
+    async fn turn(
         &self,
         request: crate::ConversationRequest,
         state: Option<Value>,
         results: Vec<crate::ConversationToolResult>,
     ) -> Result<crate::ConversationTurn, Failure> {
-        self.validate_conversation(&request, state.as_ref())?;
+        validate_chat_request(&self.backend, &request.to_request())?;
+        self.inner.validate_conversation(&request, state.as_ref())?;
         let request_for_output = request.clone();
         let call = self.inner.conversation_turn(request, state, results);
         let mut turn = match self.backend.options.timeout_ms {
@@ -426,13 +537,7 @@ impl EngineAdapter for AdmittedAdapter {
         Ok(turn)
     }
 
-    fn describe_debug_context(&self) -> EngineAdapterDebugContext {
-        self.inner.describe_debug_context()
-    }
-    async fn count_text_stream_input_tokens(
-        &self,
-        request: EngineTextStreamRequest,
-    ) -> Result<u64, Failure> {
+    async fn count(&self, request: EngineTextStreamRequest) -> Result<u64, Failure> {
         validate_chat_request(&self.backend, &request)?;
         let call = self.inner.count_text_stream_input_tokens(request);
         match self.backend.options.timeout_ms {
@@ -452,10 +557,7 @@ impl EngineAdapter for AdmittedAdapter {
             None => call.await,
         }
     }
-    async fn stream_text(
-        &self,
-        request: EngineTextStreamRequest,
-    ) -> Result<EngineTextStream, Failure> {
+    async fn stream(&self, request: EngineTextStreamRequest) -> Result<EngineTextStream, Failure> {
         validate_chat_request(&self.backend, &request)?;
         let deadline = self.backend.options.timeout_ms.and_then(|ms| {
             crate::clock::deadline_after(self.clock.as_ref(), std::time::Duration::from_millis(ms))
@@ -497,37 +599,204 @@ impl EngineAdapter for AdmittedAdapter {
             output_modalities,
         );
         let stream = validated;
+        struct Open {
+            stream: EngineTextStream,
+            deadline: Option<tokio::time::Instant>,
+            tool_call: Option<crate::ToolCallEvidence>,
+            clock: Arc<dyn Clock>,
+            report: Arc<Report>,
+            request_id: Option<String>,
+            response_id: Option<String>,
+        }
         Ok(Box::pin(futures_util::stream::unfold(
-            Some((stream, deadline, provider, None, self.clock.clone())),
+            Some(Open {
+                stream,
+                deadline,
+                tool_call: None,
+                clock: self.clock.clone(),
+                report: self.report.clone(),
+                request_id: None,
+                response_id: None,
+            }),
             |state| async move {
                 use futures_util::StreamExt;
-                let (mut stream, deadline, provider, mut tool_call, clock) = state?;
-                let next = match deadline {
-                    Some(deadline) => {
-                        match crate::clock::timeout_at(clock.as_ref(), deadline, stream.next())
-                            .await
-                        {
-                            Ok(next) => next,
-                            Err(_) => {
-                                let mut error = Failure::new(
-                                    provider,
-                                    "Request deadline exceeded.",
-                                    ErrorKind::Timeout,
-                                );
-                                error.tool_call = tool_call.map(Box::new);
-                                return Some((Err(error), None));
+                let mut open = state?;
+                loop {
+                    let next = match open.deadline {
+                        Some(deadline) => crate::clock::timeout_at(
+                            open.clock.as_ref(),
+                            deadline,
+                            open.stream.next(),
+                        )
+                        .await
+                        .unwrap_or_else(|_| {
+                            let mut error = Failure::new(
+                                &open.report.backend.provider,
+                                "Request deadline exceeded.",
+                                ErrorKind::Timeout,
+                            );
+                            error.tool_call = open.tool_call.clone().map(Box::new);
+                            Some(Err(error))
+                        }),
+                        None => open.stream.next().await,
+                    };
+                    match next? {
+                        Ok(EngineTextStreamEvent::ResponseOpened {
+                            request_id,
+                            response_id,
+                        }) => {
+                            open.request_id = request_id;
+                            open.response_id = response_id;
+                        }
+                        Ok(event) => {
+                            super::adapter::retain_tool_evidence(&mut open.tool_call, &event);
+                            return Some((Ok(event), Some(open)));
+                        }
+                        Err(mut failure) => {
+                            let exchange = &mut failure.exchange;
+                            if exchange.request_id.is_none() {
+                                exchange.request_id = open.request_id.take();
                             }
+                            if exchange.response_id.is_none() {
+                                exchange.response_id = open.response_id.take();
+                            }
+                            let failure = open.report.failure(STREAM_TEXT, failure).await;
+                            return Some((Err(failure), None));
                         }
                     }
-                    None => stream.next().await,
-                };
-                next.map(|event| {
-                    if let Ok(event) = &event {
-                        super::adapter::retain_tool_evidence(&mut tool_call, event);
-                    }
-                    (event, Some((stream, deadline, provider, tool_call, clock)))
-                })
+                }
             },
         )))
+    }
+}
+
+/// Names the media operation a failure belongs to.
+struct MediaOrigin {
+    provider: String,
+    backend: String,
+    model: String,
+}
+impl MediaOrigin {
+    fn stamp(&self, operation: &str, mut failure: Failure) -> Failure {
+        let origin = &mut failure.origin;
+        origin.operation.get_or_insert_with(|| operation.into());
+        origin.provider = Some(self.provider.clone());
+        origin.backend = Some(self.backend.clone());
+        origin.model = Some(self.model.clone());
+        failure
+    }
+}
+
+struct AdmittedMedia {
+    origin: Arc<MediaOrigin>,
+    inner: Arc<dyn MediaGenerationAdapter>,
+}
+#[async_trait]
+impl MediaGenerationAdapter for AdmittedMedia {
+    fn backend(&self) -> &MediaBackendConfig {
+        self.inner.backend()
+    }
+    fn clock(&self) -> Arc<dyn Clock> {
+        self.inner.clock()
+    }
+    fn prepare(&self, request: MediaRenderRequest) -> Result<PreparedMediaRequest, Failure> {
+        self.inner
+            .prepare(request)
+            .map_err(|failure| self.origin.stamp("media_prepare", failure))
+    }
+    async fn submit(
+        &self,
+        prepared: PreparedMediaRequest,
+        cancellation: tokio_util::sync::CancellationToken,
+        activity: Option<Arc<dyn crate::media::MediaGenerationActivityReporter>>,
+        batch: Option<Arc<dyn crate::media::MediaGenerationBatchReporter>>,
+    ) -> Result<crate::media::MediaSubmission, Failure> {
+        match self
+            .inner
+            .submit(prepared, cancellation, activity, batch)
+            .await
+        {
+            Ok(crate::media::MediaSubmission::Pending(inner)) => Ok(
+                crate::media::MediaSubmission::Pending(Box::new(AdmittedJob {
+                    origin: self.origin.clone(),
+                    inner,
+                })),
+            ),
+            Ok(complete) => Ok(complete),
+            Err(failure) => Err(self.origin.stamp("media_submit", failure)),
+        }
+    }
+    async fn cancel(&self, id: &str) -> Result<(), Failure> {
+        self.inner
+            .cancel(id)
+            .await
+            .map_err(|failure| self.origin.stamp("media_cancel", failure))
+    }
+}
+
+struct AdmittedJob {
+    origin: Arc<MediaOrigin>,
+    inner: Box<dyn crate::media::MediaJob>,
+}
+#[async_trait]
+impl crate::media::MediaJob for AdmittedJob {
+    fn provider(&self) -> &str {
+        self.inner.provider()
+    }
+    fn id(&self) -> &str {
+        self.inner.id()
+    }
+    fn clock(&self) -> Arc<dyn Clock> {
+        self.inner.clock()
+    }
+    fn snapshot(&self) -> crate::media::MediaJobSnapshot {
+        self.inner.snapshot()
+    }
+    fn poll_policy(&self) -> crate::media::MediaPollPolicy {
+        self.inner.poll_policy()
+    }
+    async fn wait(
+        &mut self,
+        cancellation: tokio_util::sync::CancellationToken,
+    ) -> Result<crate::media::MediaRenderResult, Failure> {
+        self.inner
+            .wait(cancellation)
+            .await
+            .map_err(|failure| self.origin.stamp("media_wait", failure))
+    }
+    async fn poll(
+        &mut self,
+        cancellation: tokio_util::sync::CancellationToken,
+    ) -> Result<crate::media::MediaJobStatus, Failure> {
+        self.inner
+            .poll(cancellation)
+            .await
+            .map_err(|failure| self.origin.stamp("media_poll", failure))
+    }
+    async fn retrieve(
+        &mut self,
+        cancellation: tokio_util::sync::CancellationToken,
+    ) -> Result<crate::media::MediaRenderResult, Failure> {
+        self.inner
+            .retrieve(cancellation)
+            .await
+            .map_err(|failure| self.origin.stamp("media_retrieve", failure))
+    }
+    async fn cancel(&mut self) -> Result<(), Failure> {
+        self.inner
+            .cancel()
+            .await
+            .map_err(|failure| self.origin.stamp("media_cancel", failure))
+    }
+    async fn webhook(
+        &mut self,
+        webhook: crate::media::MediaWebhook<'_>,
+        secret: &str,
+        now: chrono::DateTime<chrono::Utc>,
+    ) -> Result<crate::media::MediaJobStatus, Failure> {
+        self.inner
+            .webhook(webhook, secret, now)
+            .await
+            .map_err(|failure| self.origin.stamp("media_webhook", failure))
     }
 }

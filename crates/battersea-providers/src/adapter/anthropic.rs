@@ -150,6 +150,7 @@ impl EngineAdapter for AnthropicEngineAdapter {
             self.clock.as_ref(),
         )
         .await?;
+        let opened = crate::retry::opened(&response);
         let status = response.status().as_u16();
         let request_id = response
             .headers()
@@ -239,7 +240,7 @@ impl EngineAdapter for AnthropicEngineAdapter {
             .boxed();
 
         Ok(super::with_stream_idle_watchdog(
-            Box::pin(stream),
+            Box::pin(stream::once(std::future::ready(Ok(opened))).chain(stream)),
             std::time::Duration::from_millis(self.stream_idle_timeout_ms),
             "anthropic",
             self.clock.clone(),
@@ -371,6 +372,7 @@ impl ToolConversation for AnthropicToolConversation {
             self.clock.as_ref(),
         )
         .await?;
+        send_event(events, crate::retry::opened(&response)).await?;
         let status = response.status().as_u16();
         let request_id = response
             .headers()

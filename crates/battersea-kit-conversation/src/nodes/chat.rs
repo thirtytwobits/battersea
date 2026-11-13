@@ -254,6 +254,7 @@ fn provider_events(
                         EngineTextStreamEvent::MessageStart { .. } => progress.flush_round(),
                         EngineTextStreamEvent::TokenUsage { usage } => progress.observe(usage),
                         EngineTextStreamEvent::ContentBlock { .. }
+                        | EngineTextStreamEvent::ResponseOpened { .. }
                         | EngineTextStreamEvent::StructuredOutput { .. }
                         | EngineTextStreamEvent::TextDelta { .. }
                         | EngineTextStreamEvent::ReasoningDelta { .. } => {}

@@ -533,6 +533,7 @@ impl ToolConversation for Conversation {
             self.clock.as_ref(),
         )
         .await?;
+        send_event(events, crate::retry::opened(&response)).await?;
         let request_id = response
             .headers()
             .get("x-request-id")
@@ -919,6 +920,10 @@ fn retain_event(
     retained: &mut usize,
     event: EngineTextStreamEvent,
 ) -> Result<(), Failure> {
+    // The opened response is an observation of the exchange, not part of the durable turn.
+    if matches!(event, EngineTextStreamEvent::ResponseOpened { .. }) {
+        return Ok(());
+    }
     *retained = retained.saturating_add(payload::check_payload(&event, provider)?);
     if *retained > payload::PROVIDER_PAYLOAD_BYTES {
         return Err(invalid(

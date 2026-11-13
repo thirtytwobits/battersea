@@ -48,7 +48,12 @@ impl EngineAdapterLogger for StreamObserver {
     async fn on_stream_event(&self, entry: EngineAdapterStreamLog) {
         self.0.lock().unwrap().push(entry.event_type);
     }
+    async fn on_error(&self, _entry: battersea_model::EngineAdapterErrorLog) {
+        self.0.lock().unwrap().push(ON_ERROR.into());
+    }
 }
+const ON_ERROR: &str = "battersea.on_error";
+const REQUEST_ID: &str = "req-fixture";
 impl StreamObserver {
     fn count(&self, event_type: &str) -> usize {
         self.0
@@ -73,7 +78,7 @@ async fn reply(State(state): State<ServerState>, Json(body): Json<Value>) -> imp
         .unwrap()
         .pop_front()
         .expect("unexpected provider request");
-    ([("content-type", kind)], body)
+    ([("content-type", kind), ("request-id", REQUEST_ID)], body)
 }
 async fn server(
     replies: Vec<(&'static str, String)>,
@@ -1044,6 +1049,38 @@ async fn plain_stream(
         .await;
     server.abort();
     (events, observer)
+}
+
+/// contracts/failures.md: a failure raised after the response headers carries the operation's
+/// origin and the identifiers the provider issued, and reaches the observer once.
+#[tokio::test]
+async fn a_stream_failure_after_the_headers_carries_origin_and_the_issued_identifier() {
+    for provider in ["anthropic", "openai"] {
+        let body = "event: message_start\ndata: {malformed\n\n".to_string();
+        let (events, observer) = plain_stream(provider, body).await;
+        assert!(
+            !events
+                .iter()
+                .any(|event| matches!(event, Ok(EngineTextStreamEvent::ResponseOpened { .. }))),
+            "{provider}"
+        );
+        let failure = events.last().unwrap().as_ref().unwrap_err();
+        assert_eq!(
+            failure.exchange.request_id.as_deref(),
+            Some(REQUEST_ID),
+            "{provider}"
+        );
+        let origin = &failure.origin;
+        assert_eq!(
+            origin.operation.as_deref(),
+            Some("stream_text"),
+            "{provider}"
+        );
+        assert_eq!(origin.provider.as_deref(), Some(provider));
+        assert_eq!(origin.backend.as_deref(), Some("fixture"), "{provider}");
+        assert_eq!(origin.model.as_deref(), Some("fixture-model"), "{provider}");
+        assert_eq!(observer.count(ON_ERROR), 1, "{provider}");
+    }
 }
 
 #[tokio::test]

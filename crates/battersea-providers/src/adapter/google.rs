@@ -238,6 +238,7 @@ impl EngineAdapter for GoogleEngineAdapter {
             self.clock.as_ref(),
         )
         .await?;
+        let opened = crate::retry::opened(&response);
         let status = response.status().as_u16();
         emit_response(
             self.logger.as_ref(),
@@ -306,7 +307,7 @@ impl EngineAdapter for GoogleEngineAdapter {
             .boxed();
 
         Ok(super::with_stream_idle_watchdog(
-            Box::pin(stream),
+            Box::pin(stream::once(std::future::ready(Ok(opened))).chain(stream)),
             std::time::Duration::from_millis(self.stream_idle_timeout_ms),
             "google",
             self.clock.clone(),
@@ -457,6 +458,7 @@ impl ToolConversation for GoogleToolConversation {
             self.clock.as_ref(),
         )
         .await?;
+        send_event(events, crate::retry::opened(&response)).await?;
         let status = response.status().as_u16();
         let raw: Value = response
             .bounded_json()

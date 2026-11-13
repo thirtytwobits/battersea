@@ -482,6 +482,14 @@ pub enum EngineTextStreamEvent {
     MessageStop {
         reason: StopReason,
     },
+    /// A provider response opened. An adapter built by the registry consumes this event and
+    /// carries the identifiers on any later failure of the stream.
+    ResponseOpened {
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        request_id: Option<String>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        response_id: Option<String>,
+    },
     ContentBlock {
         block: crate::ContentBlock,
     },

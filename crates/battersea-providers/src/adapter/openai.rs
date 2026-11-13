@@ -3,8 +3,8 @@ use super::tool_loop::{
     run_tool_loop, send_event, ExecutedToolCall, ToolConversation, ToolEventSender,
 };
 use super::{
-    emit_error, emit_request, emit_response, emit_stream_event, missing_backend_option,
-    EngineAdapter, EngineAdapterDebugContext, EngineAdapterLogger, EngineAdapterResponseDetail,
+    emit_request, emit_response, emit_stream_event, missing_backend_option, EngineAdapter,
+    EngineAdapterDebugContext, EngineAdapterLogger, EngineAdapterResponseDetail,
     EngineBackendConfig, EngineLocalToolCall, EngineTextStream, EngineTextStreamEvent,
     EngineTextStreamRequest, EngineTokenUsage,
 };
@@ -336,7 +336,7 @@ impl EngineAdapter for OpenAiEngineAdapter {
         )
         .await;
 
-        let stream = open_response_stream(
+        let (opened, stream) = open_response_stream(
             &self.http_client,
             &self.base_url,
             &self.backend,
@@ -439,10 +439,7 @@ impl EngineAdapter for OpenAiEngineAdapter {
 
                             Ok(events)
                         }
-                        Err(error) => {
-                            emit_error(logger.as_ref(), &context, operation, &error).await;
-                            Err(error)
-                        }
+                        Err(error) => Err(error),
                     }
                 }
             })
@@ -456,7 +453,7 @@ impl EngineAdapter for OpenAiEngineAdapter {
             .boxed();
 
         Ok(super::with_stream_idle_watchdog(
-            Box::pin(mapped),
+            Box::pin(stream::once(std::future::ready(Ok(opened))).chain(mapped)),
             std::time::Duration::from_millis(self.stream_idle_timeout_ms),
             "openai",
             self.clock.clone(),
@@ -603,7 +600,6 @@ impl OpenAiEngineAdapter {
                         .await;
                 }
                 Err(error) => {
-                    emit_error(logger.as_ref(), &context, operation, &error).await;
                     let _ = tx.send(Err(error)).await;
                 }
             }
@@ -689,12 +685,10 @@ impl OpenAiEngineAdapter {
                     )
                     .await;
                     if let Some(error) = missing {
-                        emit_error(logger.as_ref(), &context, operation, &error).await;
                         let _ = tx.send(Err(error)).await;
                     }
                 }
                 Err(error) => {
-                    emit_error(logger.as_ref(), &context, operation, &error).await;
                     let _ = tx.send(Err(error)).await;
                 }
             }
@@ -914,7 +908,7 @@ impl OpenAiToolConversation {
         events: &ToolEventSender,
         idle_ms: u64,
     ) -> Result<Value, Failure> {
-        let mut stream = open_response_stream(
+        let (opened, mut stream) = open_response_stream(
             &self.http_client,
             &self.base_url,
             &self.backend,
@@ -923,6 +917,7 @@ impl OpenAiToolConversation {
             self.clock.as_ref(),
         )
         .await?;
+        send_event(events, opened).await?;
         loop {
             let (event, value) = battersea_model::clock::timeout(
                 self.clock.as_ref(),
@@ -995,7 +990,13 @@ async fn open_response_stream(
     logger: &Option<Arc<dyn EngineAdapterLogger>>,
     clock: &dyn Clock,
 ) -> Result<
-    futures_util::stream::BoxStream<'static, Result<(Option<ResponseStreamEvent>, Value), Failure>>,
+    (
+        EngineTextStreamEvent,
+        futures_util::stream::BoxStream<
+            'static,
+            Result<(Option<ResponseStreamEvent>, Value), Failure>,
+        >,
+    ),
     Failure,
 > {
     battersea_model::adapter::payload::check_payload(body, "openai")?;
@@ -1009,7 +1010,8 @@ async fn open_response_stream(
         clock,
     )
     .await?;
-    Ok(crate::http_payload::bounded_stream(response)
+    let opened = crate::retry::opened(&response);
+    let stream = crate::http_payload::bounded_stream(response)
         .eventsource()
         .filter_map(|event| async move {
             match event {
@@ -1026,7 +1028,8 @@ async fn open_response_stream(
                 Err(error) => Some(Err(Failure::transport("openai", error.to_string()))),
             }
         })
-        .boxed())
+        .boxed();
+    Ok((opened, stream))
 }
 
 /// Decodes one Responses stream event, returning `None` for an event type the SDK does not model.
@@ -1152,6 +1155,7 @@ async fn create_and_poll_background(
         clock.as_ref(),
     )
     .await?;
+    let _ = tx.send(Ok(crate::retry::opened(&created))).await;
     let response: Value = created
         .bounded_json()
         .await
@@ -1221,6 +1225,7 @@ async fn create_and_poll_background(
             clock.as_ref(),
         )
         .await?;
+        let _ = tx.send(Ok(crate::retry::opened(&polled))).await;
         let response: Value = polled
             .bounded_json()
             .await
@@ -1272,7 +1277,6 @@ async fn emit_background_terminal_response(
     )
     .await;
     if let Some(error) = missing_output_error {
-        emit_error(logger.as_ref(), context, operation, &error).await;
         let _ = tx.send(Err(error)).await;
         return;
     }
@@ -1379,6 +1383,7 @@ async fn drive_background_stream(
         clock.as_ref(),
     )
     .await?;
+    let _ = tx.send(Ok(crate::retry::opened(&created))).await;
     let mut sse = Box::pin(crate::http_payload::bounded_stream(created).eventsource());
 
     loop {
@@ -1571,6 +1576,7 @@ async fn drive_background_stream(
             clock.as_ref(),
         )
         .await?;
+        let _ = tx.send(Ok(crate::retry::opened(&resumed))).await;
         sse = Box::pin(crate::http_payload::bounded_stream(resumed).eventsource());
     }
 }

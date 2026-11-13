@@ -53,6 +53,25 @@ fn provider_reason(body: &str) -> Option<String> {
     (!message.is_empty()).then(|| message.to_owned())
 }
 
+/// The identifier a provider issued for a request, from its response headers.
+fn request_id(headers: &reqwest::header::HeaderMap) -> Option<String> {
+    ["request-id", "x-request-id"].iter().find_map(|name| {
+        headers
+            .get(*name)
+            .and_then(|value| value.to_str().ok())
+            .map(str::to_owned)
+    })
+}
+
+/// The event that announces the identifiers `response` carries. An adapter emits it before
+/// any other event of the response, so a later failure of the stream carries them.
+pub(crate) fn opened(response: &Response) -> battersea_model::EngineTextStreamEvent {
+    battersea_model::EngineTextStreamEvent::ResponseOpened {
+        request_id: request_id(response.headers()),
+        response_id: None,
+    }
+}
+
 /// Sends `request`, retrying safe failures with backoff timed by `clock`. The caller's operation
 /// deadline bounds every attempt and delay.
 pub(crate) async fn send(
@@ -94,13 +113,7 @@ pub(crate) async fn send(
                     500..=599 => ErrorKind::Server,
                     _ => ErrorKind::Request,
                 };
-                let request_id = ["request-id", "x-request-id"].iter().find_map(|name| {
-                    response
-                        .headers()
-                        .get(*name)
-                        .and_then(|v| v.to_str().ok())
-                        .map(str::to_owned)
-                });
+                let request_id = request_id(response.headers());
                 let delay_named = response
                     .headers()
                     .contains_key(reqwest::header::RETRY_AFTER);

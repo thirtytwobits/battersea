@@ -1,9 +1,9 @@
 //! Provider-neutral orchestration for engine-local tools.
 
 use super::{
-    emit_error, emit_stream_event, error::DispatchState, EngineAdapterDebugContext,
-    EngineAdapterLogger, EngineLocalToolCall, EngineLocalToolExecutor, EngineLocalToolResult,
-    EngineTextStreamEvent, EngineTextStreamRequest, Failure,
+    emit_stream_event, error::DispatchState, EngineAdapterDebugContext, EngineAdapterLogger,
+    EngineLocalToolCall, EngineLocalToolExecutor, EngineLocalToolResult, EngineTextStreamEvent,
+    EngineTextStreamRequest, Failure,
 };
 use async_trait::async_trait;
 use serde_json::{json, Value};
@@ -102,7 +102,6 @@ pub async fn run_tool_loop(
                 if error.tool_call.is_none() {
                     error.tool_call = active_tool.clone().map(Box::new);
                 }
-                emit_error(logger.as_ref(), &context, request.shared.operation, &error).await;
                 let _ = events.send(Err(error)).await;
             }
         }

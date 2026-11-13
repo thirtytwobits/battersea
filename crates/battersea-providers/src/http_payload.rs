@@ -7,7 +7,13 @@ use serde::de::DeserializeOwned;
 pub(crate) fn bounded_stream(
     response: reqwest::Response,
 ) -> impl Stream<Item = Result<impl AsRef<[u8]>, Failure>> + Send {
-    limit_stream(response.bytes_stream(), PROVIDER_PAYLOAD_BYTES)
+    // reqwest prints the request URL, which can hold a query credential.
+    limit_stream(
+        response
+            .bytes_stream()
+            .map(|chunk| chunk.map_err(reqwest::Error::without_url)),
+        PROVIDER_PAYLOAD_BYTES,
+    )
 }
 
 fn limit_stream<T: AsRef<[u8]>, E: std::fmt::Display>(
@@ -30,7 +36,11 @@ fn limit_stream<T: AsRef<[u8]>, E: std::fmt::Display>(
             }
             (Some(_), Err(error)) => {
                 *remaining = None;
-                Some(Err(Failure::transport("http", error.to_string())))
+                Some(Err(Failure::transport(
+                    "http",
+                    "Provider response stream failed.",
+                )
+                .caused_by_text(error.to_string())))
             }
         };
         std::future::ready(value)
@@ -52,12 +62,20 @@ impl BoundedResponse for reqwest::Response {
         while let Some(chunk) = stream.next().await {
             bytes.extend_from_slice(chunk?.as_ref());
         }
-        String::from_utf8(bytes)
-            .map_err(|error| Failure::invalid_response("http", error.to_string()))
+        String::from_utf8(bytes).map_err(|error| {
+            Failure::invalid_response("http", "Provider response is not UTF-8.").caused_by(&error)
+        })
     }
     async fn bounded_json<T: DeserializeOwned + Send>(self) -> Result<T, Failure> {
-        serde_json::from_str(&self.bounded_text().await?)
-            .map_err(|error| Failure::invalid_response("http", error.to_string()))
+        let text = self.bounded_text().await?;
+        serde_json::from_str(&text).map_err(|error| {
+            Failure::invalid_response("http", "Provider response is not the expected JSON.")
+                .with_native(
+                    battersea_model::Reporter::Provider,
+                    serde_json::from_str(&text).unwrap_or(serde_json::Value::String(text.clone())),
+                )
+                .caused_by(&error)
+        })
     }
 }
 
