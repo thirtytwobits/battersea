@@ -1,5 +1,5 @@
 //! Explicit provider registration. Construction and admission perform no provider I/O.
-use crate::{adapter::*, media::*, Clock, EngineAdapterRequestError, ErrorKind};
+use crate::{adapter::*, media::*, Clock, ErrorKind, Failure};
 use async_trait::async_trait;
 use serde_json::Value;
 use std::{collections::BTreeMap, sync::Arc};
@@ -8,19 +8,13 @@ type ChatFactory = dyn Fn(
         EngineBackendConfig,
         Option<Arc<dyn EngineAdapterLogger>>,
         Arc<dyn Clock>,
-    ) -> Result<Arc<dyn EngineAdapter>, EngineAdapterRequestError>
+    ) -> Result<Arc<dyn EngineAdapter>, Failure>
     + Send
     + Sync;
-type MediaFactory = dyn Fn(
-        MediaBackendConfig,
-        Arc<dyn Clock>,
-    ) -> Result<Arc<dyn MediaGenerationAdapter>, EngineAdapterRequestError>
+type MediaFactory = dyn Fn(MediaBackendConfig, Arc<dyn Clock>) -> Result<Arc<dyn MediaGenerationAdapter>, Failure>
     + Send
     + Sync;
-type MediaPrepare = dyn Fn(
-        &MediaBackendConfig,
-        MediaRenderRequest,
-    ) -> Result<PreparedMediaRequest, EngineAdapterRequestError>
+type MediaPrepare = dyn Fn(&MediaBackendConfig, MediaRenderRequest) -> Result<PreparedMediaRequest, Failure>
     + Send
     + Sync;
 
@@ -56,15 +50,15 @@ pub struct ProviderRegistry {
     chat: BTreeMap<String, ChatProvider>,
     media: BTreeMap<String, MediaProvider>,
 }
-fn invalid(provider: &str, message: impl Into<String>) -> EngineAdapterRequestError {
-    EngineAdapterRequestError::new(provider, message, ErrorKind::InvalidRequest)
+fn invalid(provider: &str, message: impl Into<String>) -> Failure {
+    Failure::new(provider, message, ErrorKind::InvalidRequest)
 }
 impl ProviderRegistry {
     pub fn register_chat(
         &mut self,
         id: impl Into<String>,
         provider: ChatProvider,
-    ) -> Result<(), EngineAdapterRequestError> {
+    ) -> Result<(), Failure> {
         let id = id.into();
         if id.trim().is_empty() || self.chat.contains_key(&id) {
             return Err(invalid(&id, "Duplicate or blank chat provider identifier."));
@@ -76,7 +70,7 @@ impl ProviderRegistry {
         &mut self,
         id: impl Into<String>,
         provider: MediaProvider,
-    ) -> Result<(), EngineAdapterRequestError> {
+    ) -> Result<(), Failure> {
         let id = id.into();
         if id.trim().is_empty() || self.media.contains_key(&id) {
             return Err(invalid(
@@ -87,20 +81,17 @@ impl ProviderRegistry {
         self.media.insert(id, provider);
         Ok(())
     }
-    pub fn chat_provider(&self, id: &str) -> Result<&ChatProvider, EngineAdapterRequestError> {
+    pub fn chat_provider(&self, id: &str) -> Result<&ChatProvider, Failure> {
         self.chat
             .get(id)
             .ok_or_else(|| invalid(id, "Chat provider is not registered."))
     }
-    pub fn media_provider(&self, id: &str) -> Result<&MediaProvider, EngineAdapterRequestError> {
+    pub fn media_provider(&self, id: &str) -> Result<&MediaProvider, Failure> {
         self.media
             .get(id)
             .ok_or_else(|| invalid(id, "Media provider is not registered."))
     }
-    pub fn validate_chat_backend(
-        &self,
-        backend: &EngineBackendConfig,
-    ) -> Result<(), EngineAdapterRequestError> {
+    pub fn validate_chat_backend(&self, backend: &EngineBackendConfig) -> Result<(), Failure> {
         let provider = self.chat_provider(&backend.provider)?;
         backend
             .capabilities
@@ -177,7 +168,7 @@ impl ProviderRegistry {
         backend: EngineBackendConfig,
         logger: Option<Arc<dyn EngineAdapterLogger>>,
         clock: Arc<dyn Clock>,
-    ) -> Result<Arc<dyn EngineAdapter>, EngineAdapterRequestError> {
+    ) -> Result<Arc<dyn EngineAdapter>, Failure> {
         self.validate_chat_backend(&backend)?;
         let inner = (self.chat_provider(&backend.provider)?.factory)(
             backend.clone(),
@@ -190,10 +181,7 @@ impl ProviderRegistry {
             clock,
         }))
     }
-    pub fn validate_media_backend(
-        &self,
-        backend: &MediaBackendConfig,
-    ) -> Result<(), EngineAdapterRequestError> {
+    pub fn validate_media_backend(&self, backend: &MediaBackendConfig) -> Result<(), Failure> {
         let provider = self.media_provider(&backend.provider)?;
         let capabilities = &provider.capabilities;
         for parameter in &backend.capabilities.supported_media_parameters {
@@ -243,7 +231,7 @@ impl ProviderRegistry {
         &self,
         backend: MediaBackendConfig,
         clock: Arc<dyn Clock>,
-    ) -> Result<Arc<dyn MediaGenerationAdapter>, EngineAdapterRequestError> {
+    ) -> Result<Arc<dyn MediaGenerationAdapter>, Failure> {
         self.validate_media_backend(&backend)?;
         (self.media_provider(&backend.provider)?.factory)(backend, clock)
     }
@@ -251,7 +239,7 @@ impl ProviderRegistry {
         &self,
         backend: &MediaBackendConfig,
         request: MediaRenderRequest,
-    ) -> Result<PreparedMediaRequest, EngineAdapterRequestError> {
+    ) -> Result<PreparedMediaRequest, Failure> {
         self.validate_media_backend(backend)?;
         let provider = self.media_provider(&backend.provider)?;
         let configured_kind = match backend.capability {
@@ -312,7 +300,7 @@ impl AdmittedAdapter {
         &self,
         request: &crate::ConversationRequest,
         turn: &mut crate::ConversationTurn,
-    ) -> Result<(), EngineAdapterRequestError> {
+    ) -> Result<(), Failure> {
         let format = request.shared.chat.response_format.clone();
         let modalities = request
             .shared
@@ -348,7 +336,7 @@ impl EngineAdapter for AdmittedAdapter {
         &self,
         request: &crate::ConversationRequest,
         state: Option<&Value>,
-    ) -> Result<crate::ConversationBinding, EngineAdapterRequestError> {
+    ) -> Result<crate::ConversationBinding, Failure> {
         validate_chat_request(&self.backend, &request.to_request())?;
         self.inner.validate_conversation(request, state)
     }
@@ -358,7 +346,7 @@ impl EngineAdapter for AdmittedAdapter {
         previous: Option<&Value>,
         results: &[crate::ConversationToolResult],
         turn: &crate::ConversationTurn,
-    ) -> Result<crate::ConversationBinding, EngineAdapterRequestError> {
+    ) -> Result<crate::ConversationBinding, Failure> {
         validate_chat_request(&self.backend, &request.to_request())?;
         self.inner
             .validate_conversation_turn(request, previous, results, turn)
@@ -370,7 +358,7 @@ impl EngineAdapter for AdmittedAdapter {
         results: &[crate::ConversationToolResult],
         command: &crate::ConversationCommand,
         step: &crate::ConversationStep,
-    ) -> Result<crate::ConversationBinding, EngineAdapterRequestError> {
+    ) -> Result<crate::ConversationBinding, Failure> {
         validate_chat_request(&self.backend, &request.to_request())?;
         self.inner
             .validate_conversation_step(request, previous, results, command, step)
@@ -381,7 +369,7 @@ impl EngineAdapter for AdmittedAdapter {
         previous: Option<Value>,
         results: Vec<crate::ConversationToolResult>,
         command: crate::ConversationCommand,
-    ) -> Result<crate::ConversationStep, EngineAdapterRequestError> {
+    ) -> Result<crate::ConversationStep, Failure> {
         self.validate_conversation(&request, previous.as_ref())?;
         let call = self
             .inner
@@ -394,7 +382,7 @@ impl EngineAdapter for AdmittedAdapter {
             )
             .await
             .map_err(|_| {
-                EngineAdapterRequestError::new(
+                Failure::new(
                     &self.backend.provider,
                     "Provider operation deadline exceeded.",
                     ErrorKind::Timeout,
@@ -413,7 +401,7 @@ impl EngineAdapter for AdmittedAdapter {
         request: crate::ConversationRequest,
         state: Option<Value>,
         results: Vec<crate::ConversationToolResult>,
-    ) -> Result<crate::ConversationTurn, EngineAdapterRequestError> {
+    ) -> Result<crate::ConversationTurn, Failure> {
         self.validate_conversation(&request, state.as_ref())?;
         let request_for_output = request.clone();
         let call = self.inner.conversation_turn(request, state, results);
@@ -425,7 +413,7 @@ impl EngineAdapter for AdmittedAdapter {
             )
             .await
             .map_err(|_| {
-                EngineAdapterRequestError::new(
+                Failure::new(
                     &self.backend.provider,
                     "Provider turn deadline exceeded.",
                     ErrorKind::Timeout,
@@ -444,7 +432,7 @@ impl EngineAdapter for AdmittedAdapter {
     async fn count_text_stream_input_tokens(
         &self,
         request: EngineTextStreamRequest,
-    ) -> Result<u64, EngineAdapterRequestError> {
+    ) -> Result<u64, Failure> {
         validate_chat_request(&self.backend, &request)?;
         let call = self.inner.count_text_stream_input_tokens(request);
         match self.backend.options.timeout_ms {
@@ -455,7 +443,7 @@ impl EngineAdapter for AdmittedAdapter {
             )
             .await
             .map_err(|_| {
-                EngineAdapterRequestError::new(
+                Failure::new(
                     &self.backend.provider,
                     "Token counting deadline exceeded.",
                     ErrorKind::Timeout,
@@ -467,7 +455,7 @@ impl EngineAdapter for AdmittedAdapter {
     async fn stream_text(
         &self,
         request: EngineTextStreamRequest,
-    ) -> Result<EngineTextStream, EngineAdapterRequestError> {
+    ) -> Result<EngineTextStream, Failure> {
         validate_chat_request(&self.backend, &request)?;
         let deadline = self.backend.options.timeout_ms.and_then(|ms| {
             crate::clock::deadline_after(self.clock.as_ref(), std::time::Duration::from_millis(ms))
@@ -484,7 +472,7 @@ impl EngineAdapter for AdmittedAdapter {
             Some(deadline) => crate::clock::timeout_at(self.clock.as_ref(), deadline, call)
                 .await
                 .map_err(|_| {
-                    EngineAdapterRequestError::new(
+                    Failure::new(
                         &self.backend.provider,
                         "Request deadline exceeded.",
                         ErrorKind::Timeout,
@@ -521,7 +509,7 @@ impl EngineAdapter for AdmittedAdapter {
                         {
                             Ok(next) => next,
                             Err(_) => {
-                                let mut error = EngineAdapterRequestError::new(
+                                let mut error = Failure::new(
                                     provider,
                                     "Request deadline exceeded.",
                                     ErrorKind::Timeout,

@@ -1,7 +1,6 @@
 //! Completion validation shared by every registered provider.
 use super::{
-    error::EngineAdapterRequestError, payload::PROVIDER_PAYLOAD_BYTES, EngineTextStream,
-    EngineTextStreamEvent,
+    error::Failure, payload::PROVIDER_PAYLOAD_BYTES, EngineTextStream, EngineTextStreamEvent,
 };
 use crate::ResponseFormat;
 use futures_util::StreamExt;
@@ -74,7 +73,7 @@ pub fn validate_output(
                                 if modality.is_some_and(|mode| !state.modalities.contains(&mode)) {
                                     state.done = true;
                                     return Some((
-                                        Err(EngineAdapterRequestError::invalid_response(
+                                        Err(Failure::invalid_response(
                                             &state.provider,
                                             "Provider returned an unrequested output modality.",
                                         )),
@@ -92,7 +91,7 @@ pub fn validate_output(
                             {
                                 state.done = true;
                                 return Some((
-                                    Err(EngineAdapterRequestError::invalid_response(
+                                    Err(Failure::invalid_response(
                                         &state.provider,
                                         "Provider returned unrequested text output.",
                                     )),
@@ -105,7 +104,7 @@ pub fn validate_output(
                                 {
                                     state.done = true;
                                     return Some((
-                                        Err(EngineAdapterRequestError::invalid_response(
+                                        Err(Failure::invalid_response(
                                             &state.provider,
                                             "Structured output exceeds its byte limit.",
                                         )),
@@ -124,7 +123,7 @@ pub fn validate_output(
                             EngineTextStreamEvent::MessageStop { reason } => {
                                 state.done = true;
                                 if *reason != StopReason::Complete {
-                                    return Some((Err(EngineAdapterRequestError::invalid_response(&state.provider, format!("Provider stopped without a complete result: {reason:?}."))), state));
+                                    return Some((Err(Failure::invalid_response(&state.provider, format!("Provider stopped without a complete result: {reason:?}."))), state));
                                 }
                                 if let Some(format) = &state.format {
                                     match format.parse(&state.provider, &state.text) {
@@ -153,7 +152,7 @@ pub fn validate_output(
                     }
                     None => {
                         state.done = true;
-                        Err(EngineAdapterRequestError::invalid_response(
+                        Err(Failure::invalid_response(
                             &state.provider,
                             "Provider stream ended without completing its final message.",
                         ))

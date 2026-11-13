@@ -21,7 +21,7 @@ mod request_preparation_tests;
 #[cfg(feature = "runway")]
 pub(crate) mod runway;
 
-use crate::adapter::error::EngineAdapterRequestError;
+use crate::adapter::error::Failure;
 #[cfg(test)]
 use crate::adapter::{EngineAuthConfig, EngineBackendOptions};
 
@@ -167,8 +167,8 @@ pub async fn with_estimated_generation_progress<T>(
     activity_reporter: Option<Arc<dyn MediaGenerationActivityReporter>>,
     cancellation: CancellationToken,
     clock: &dyn Clock,
-    work: impl std::future::Future<Output = Result<T, EngineAdapterRequestError>>,
-) -> Result<T, EngineAdapterRequestError> {
+    work: impl std::future::Future<Output = Result<T, Failure>>,
+) -> Result<T, Failure> {
     let progress = async {
         let Some(reporter) = activity_reporter else {
             return futures_util::future::pending().await;
@@ -189,10 +189,10 @@ pub async fn with_estimated_generation_progress<T>(
     };
     tokio::select! {
         biased;
-        _ = cancellation.cancelled() => Err(EngineAdapterRequestError::new(&backend.provider, "Media generation cancelled.", "cancelled")),
+        _ = cancellation.cancelled() => Err(Failure::new(&backend.provider, "Media generation cancelled.", "cancelled")),
         result = progress => {
             result?;
-            Err(EngineAdapterRequestError::new(&backend.provider, "Media generation cancelled.", "cancelled"))
+            Err(Failure::new(&backend.provider, "Media generation cancelled.", "cancelled"))
         },
         result = work => result,
     }
@@ -209,15 +209,15 @@ pub async fn with_estimated_generation_progress<T>(
 pub(crate) async fn within_request_deadline<T>(
     backend: &MediaBackendConfig,
     clock: &dyn Clock,
-    request: impl std::future::Future<Output = Result<T, EngineAdapterRequestError>>,
-) -> Result<T, EngineAdapterRequestError> {
+    request: impl std::future::Future<Output = Result<T, Failure>>,
+) -> Result<T, Failure> {
     let Some(timeout_ms) = backend.options.timeout_ms else {
         return request.await;
     };
     battersea_model::clock::timeout(clock, Duration::from_millis(timeout_ms), request)
         .await
         .unwrap_or_else(|_| {
-            Err(EngineAdapterRequestError::new(
+            Err(Failure::new(
                 &backend.provider,
                 "Media request deadline exceeded.",
                 battersea_model::ErrorKind::Timeout,
@@ -340,7 +340,7 @@ async fn emit_estimated_generation_progress_ticks(
     interval_ms: u64,
     cancellation: CancellationToken,
     clock: &dyn Clock,
-) -> Result<(), crate::EngineAdapterRequestError> {
+) -> Result<(), crate::Failure> {
     const PROGRESS_CAP: f32 = 0.95;
     let started = clock.instant();
     let interval = Duration::from_millis(interval_ms);
@@ -401,7 +401,7 @@ pub(crate) fn read_bool_option(
 pub fn prepare_media_request(
     backend: &MediaBackendConfig,
     request: MediaRenderRequest,
-) -> Result<PreparedMediaRequest, EngineAdapterRequestError> {
+) -> Result<PreparedMediaRequest, Failure> {
     crate::builtin_registry().prepare_media(backend, request)
 }
 
@@ -617,12 +617,12 @@ mod tests {
             async fn report_activity(
                 &self,
                 _: MediaGenerationActivityUpdate,
-            ) -> Result<(), crate::EngineAdapterRequestError> {
+            ) -> Result<(), crate::Failure> {
                 self.entered.notify_one();
                 if self.block {
                     futures_util::future::pending::<()>().await;
                 }
-                Err(crate::EngineAdapterRequestError::invalid_response(
+                Err(crate::Failure::invalid_response(
                     "test",
                     "consumer refused progress",
                 ))
@@ -639,8 +639,7 @@ mod tests {
             });
             let work = async move {
                 let _guard = guard;
-                futures_util::future::pending::<Result<(), crate::EngineAdapterRequestError>>()
-                    .await
+                futures_util::future::pending::<Result<(), crate::Failure>>().await
             };
             let backend = progress_test_backend();
             let clock = ManualClock::new(0);
@@ -682,7 +681,7 @@ mod tests {
             async fn report_activity(
                 &self,
                 update: MediaGenerationActivityUpdate,
-            ) -> Result<(), crate::EngineAdapterRequestError> {
+            ) -> Result<(), crate::Failure> {
                 self.updates.lock().expect("updates lock").push(update);
                 Ok(())
             }

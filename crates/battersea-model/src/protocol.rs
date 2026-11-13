@@ -1,7 +1,7 @@
 //! Protocol implementations and immutable configured service identities.
 mod redaction;
 
-use crate::{ChatProvider, EngineAdapterRequestError, ErrorKind, MediaProvider};
+use crate::{ChatProvider, ErrorKind, Failure, MediaProvider};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use sha2::{Digest, Sha256};
@@ -323,9 +323,9 @@ impl ProviderConnection {
         Ok(())
     }
     /// Append a protocol-owned relative route, preserving the configured path prefix.
-    pub fn route(&self, path: &str) -> Result<url::Url, EngineAdapterRequestError> {
+    pub fn route(&self, path: &str) -> Result<url::Url, Failure> {
         let invalid = || {
-            EngineAdapterRequestError::new(
+            Failure::new(
                 "configuration",
                 "Invalid relative protocol route.",
                 ErrorKind::InvalidRequest,
@@ -383,25 +383,13 @@ impl ProviderBinding {
         self.revision =
             configuration_digest(&serde_json::to_value(&self).expect("serialisable binding"));
     }
-    pub fn error(
-        &self,
-        mut error: EngineAdapterRequestError,
-        secret: Option<&str>,
-    ) -> EngineAdapterRequestError {
-        error.provider = self.provider.clone().into_boxed_str();
+    /// Names this binding's provider as the failure's origin and masks `secret` in every
+    /// part of the failure.
+    pub fn error(&self, mut error: Failure, secret: Option<&str>) -> Failure {
+        error.origin.provider = Some(self.provider.clone());
         if let Some(secret) = secret.filter(|s| !s.is_empty()) {
-            error.message = SecretString::from(secret)
-                .redact(&error.message)
-                .into_boxed_str();
-            error.request_id = error
-                .request_id
-                .map(|id| SecretString::from(secret).redact(&id).into_boxed_str());
-            if let Some(evidence) = &mut error.tool_call {
-                evidence.request_id = evidence
-                    .request_id
-                    .take()
-                    .map(|id| SecretString::from(secret).redact(&id));
-            }
+            let secret = SecretString::from(secret);
+            error.visit_text(&mut |text| *text = secret.redact(text));
         }
         error
     }
@@ -553,18 +541,19 @@ mod tests {
             connection: connection("https://service.example/v1/"),
         };
         for request_id in ["special+ /token", "special%2B+%2Ftoken"] {
-            let error = EngineAdapterRequestError::transport("remote", "tool failed")
-                .with_tool_call(crate::ToolCallEvidence {
+            let error = Failure::transport("remote", "tool failed").with_tool_call(
+                crate::ToolCallEvidence {
                     call_id: "call".into(),
                     tool_name: "lookup".into(),
                     outcome: crate::ToolCallOutcome::Uncertain,
                     request_id: Some(format!("request-{request_id}")),
-                });
+                },
+            );
             let error = binding.error(error, Some("special+ /token"));
             let wire = serde_json::to_value(&error).unwrap();
             assert_eq!(wire["tool_call"]["request_id"], "request-[REDACTED]");
             assert!(!format!("{error:?}").contains(request_id));
-            let evidence = error.tool_call.unwrap();
+            let evidence = error.tool_call.clone().unwrap();
             assert_eq!(evidence.call_id, "call");
             assert_eq!(evidence.tool_name, "lookup");
             assert_eq!(evidence.outcome, crate::ToolCallOutcome::Uncertain);

@@ -21,13 +21,13 @@ use serde_json::Value;
 use std::collections::BTreeMap;
 use std::sync::Arc;
 
-use self::error::EngineAdapterRequestError;
+use self::error::Failure;
 
 /// Error for a chat-backend value that configuration must supply. The
 /// adapters carry no hardcoded transport, auth, or endpoint defaults: if
 /// configuration does not provide the value, the request cannot proceed.
-pub fn missing_backend_option(provider: &str, field: &str) -> EngineAdapterRequestError {
-    EngineAdapterRequestError::new(
+pub fn missing_backend_option(provider: &str, field: &str) -> Failure {
+    Failure::new(
         provider,
         format!("Backend must configure {field}."),
         "invalid_request",
@@ -292,17 +292,6 @@ pub struct EngineAdapterDebugContext {
     pub max_retries: Option<u32>,
 }
 
-/// Captures a parsed backend error in a provider-neutral structure.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub struct EngineAdapterErrorInfo {
-    pub message: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub status_code: Option<u16>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub request_id: Option<String>,
-    pub classification: String,
-}
-
 /// Summarises an outbound request in a form suitable for structured logging.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct EngineAdapterRequestLog {
@@ -364,12 +353,12 @@ pub struct EngineAdapterStreamLog {
     pub detail: Value,
 }
 
-/// Captures a failed provider request together with parsed error details.
+/// Captures a failed provider request with its failure.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct EngineAdapterErrorLog {
     pub context: EngineAdapterDebugContext,
     pub operation: EngineOperation,
-    pub detail: EngineAdapterErrorInfo,
+    pub detail: Failure,
 }
 
 /// One retry of a prepared HTTP request; it never represents a tool-loop restart.
@@ -433,10 +422,7 @@ pub use tool_result::*;
 #[allow(clippy::double_must_use)]
 #[async_trait]
 pub trait EngineLocalToolExecutor: Send + Sync {
-    async fn call(
-        &self,
-        call: EngineLocalToolCall,
-    ) -> Result<EngineLocalToolResult, EngineAdapterRequestError>;
+    async fn call(&self, call: EngineLocalToolCall) -> Result<EngineLocalToolResult, Failure>;
 }
 
 /// The executor of a request offered no tools: it refuses every call as
@@ -447,11 +433,8 @@ pub struct NoLocalTools;
 #[allow(clippy::double_must_use)]
 #[async_trait]
 impl EngineLocalToolExecutor for NoLocalTools {
-    async fn call(
-        &self,
-        call: EngineLocalToolCall,
-    ) -> Result<EngineLocalToolResult, EngineAdapterRequestError> {
-        Err(EngineAdapterRequestError::new(
+    async fn call(&self, call: EngineLocalToolCall) -> Result<EngineLocalToolResult, Failure> {
+        Err(Failure::new(
             "tools",
             format!("Tool \"{}\" is not registered.", call.name),
             error::ErrorKind::InvalidRequest,
@@ -553,8 +536,7 @@ pub enum EngineTextStreamEvent {
 }
 
 /// Streams text and usage events from a provider while surfacing transport and provider failures.
-pub type EngineTextStream =
-    BoxStream<'static, Result<EngineTextStreamEvent, EngineAdapterRequestError>>;
+pub type EngineTextStream = BoxStream<'static, Result<EngineTextStreamEvent, Failure>>;
 
 pub(crate) fn retain_tool_evidence(
     retained: &mut Option<error::ToolCallEvidence>,
@@ -622,7 +604,7 @@ pub fn with_stream_idle_watchdog(
                     }
                     Ok(None) => None,
                     Err(_) => {
-                        let mut error = EngineAdapterRequestError::new(
+                        let mut error = Failure::new(
                             provider,
                             format!(
                                 "Provider stream idle deadline exceeded ({}ms).",
@@ -648,7 +630,7 @@ pub fn local_tool_name(name: &str) -> String {
 pub fn validate_chat_request(
     backend: &EngineBackendConfig,
     request: &EngineTextStreamRequest,
-) -> Result<(), EngineAdapterRequestError> {
+) -> Result<(), Failure> {
     crate::validate_messages(
         &backend.provider,
         &backend.capabilities.content,
@@ -660,7 +642,7 @@ pub fn validate_chat_request(
                 .context_overflow
                 .contains(&request.shared.chat.context_overflow)
         {
-            return Err(EngineAdapterRequestError::new(
+            return Err(Failure::new(
                 &backend.provider,
                 "Unsupported streaming or context overflow mode.",
                 error::ErrorKind::InvalidRequest,
@@ -670,11 +652,7 @@ pub fn validate_chat_request(
             .capabilities
             .validate_declared_chat_parameters(&request.shared.chat)
             .map_err(|message| {
-                EngineAdapterRequestError::new(
-                    &backend.provider,
-                    message,
-                    error::ErrorKind::InvalidRequest,
-                )
+                Failure::new(&backend.provider, message, error::ErrorKind::InvalidRequest)
             })?;
     }
     if !request.shared.chat.stream
@@ -683,14 +661,14 @@ pub fn validate_chat_request(
             .as_ref()
             .is_some_and(|b| b.chat_streaming.contains(&false))
     {
-        return Err(EngineAdapterRequestError::new(
+        return Err(Failure::new(
             &backend.provider,
             "This request path requires streaming mode.",
             error::ErrorKind::InvalidRequest,
         ));
     }
     if request.max_tool_rounds == 0 || request.max_tool_rounds > 32 {
-        return Err(EngineAdapterRequestError::new(
+        return Err(Failure::new(
             &backend.provider,
             "Tool rounds must be between 1 and 32.",
             error::ErrorKind::InvalidRequest,
@@ -700,7 +678,7 @@ pub fn validate_chat_request(
     let mut names = std::collections::HashSet::new();
     for tool in &request.local_tools {
         if tool.name.trim().is_empty() || !names.insert(local_tool_name(&tool.name)) {
-            return Err(EngineAdapterRequestError::new(
+            return Err(Failure::new(
                 &backend.provider,
                 "Duplicate tool names after provider normalization.",
                 error::ErrorKind::InvalidRequest,
@@ -708,7 +686,7 @@ pub fn validate_chat_request(
             .with_tool_code(crate::ToolCode::DuplicateTool));
         }
         jsonschema::validator_for(&tool.input_schema).map_err(|error| {
-            EngineAdapterRequestError::new(
+            Failure::new(
                 &backend.provider,
                 format!("Invalid tool schema: {error}"),
                 error::ErrorKind::InvalidRequest,
@@ -719,9 +697,7 @@ pub fn validate_chat_request(
     backend
         .capabilities
         .validate_chat_parameters(&request.shared.chat)
-        .map_err(|message| {
-            EngineAdapterRequestError::new(&backend.provider, message, "invalid_request")
-        })?;
+        .map_err(|message| Failure::new(&backend.provider, message, "invalid_request"))?;
     if let Some(name) = request.shared.chat.tool_choice.tool_name.as_deref() {
         if request.shared.chat.tool_choice.mode == crate::engine::EngineChatToolChoiceMode::Tool
             && !request
@@ -729,7 +705,7 @@ pub fn validate_chat_request(
                 .iter()
                 .any(|tool| local_tool_name(&tool.name) == local_tool_name(name))
         {
-            return Err(EngineAdapterRequestError::new(
+            return Err(Failure::new(
                 &backend.provider,
                 format!("Named tool is not offered: {name}."),
                 "invalid_request",
@@ -750,7 +726,7 @@ pub trait EngineAdapter: Send + Sync {
         &self,
         _request: &ConversationRequest,
         _state: Option<&Value>,
-    ) -> Result<ConversationBinding, EngineAdapterRequestError> {
+    ) -> Result<ConversationBinding, Failure> {
         Err(continuation::unsupported())
     }
 
@@ -763,7 +739,7 @@ pub trait EngineAdapter: Send + Sync {
         _previous: Option<&Value>,
         _results: &[ConversationToolResult],
         _turn: &ConversationTurn,
-    ) -> Result<ConversationBinding, EngineAdapterRequestError> {
+    ) -> Result<ConversationBinding, Failure> {
         Err(continuation::unsupported())
     }
 
@@ -773,7 +749,7 @@ pub trait EngineAdapter: Send + Sync {
         _request: ConversationRequest,
         _state: Option<Value>,
         _results: Vec<ConversationToolResult>,
-    ) -> Result<ConversationTurn, EngineAdapterRequestError> {
+    ) -> Result<ConversationTurn, Failure> {
         Err(continuation::unsupported())
     }
 
@@ -785,7 +761,7 @@ pub trait EngineAdapter: Send + Sync {
         results: &[ConversationToolResult],
         command: &ConversationCommand,
         step: &ConversationStep,
-    ) -> Result<ConversationBinding, EngineAdapterRequestError> {
+    ) -> Result<ConversationBinding, Failure> {
         match (command, step) {
             (ConversationCommand::Start, ConversationStep::Completed { turn }) => {
                 self.validate_conversation_turn(request, previous, results, turn)
@@ -802,7 +778,7 @@ pub trait EngineAdapter: Send + Sync {
         previous: Option<Value>,
         results: Vec<ConversationToolResult>,
         command: ConversationCommand,
-    ) -> Result<ConversationStep, EngineAdapterRequestError> {
+    ) -> Result<ConversationStep, Failure> {
         match command {
             ConversationCommand::Start => self
                 .conversation_turn(request, previous, results)
@@ -817,12 +793,12 @@ pub trait EngineAdapter: Send + Sync {
     async fn count_text_stream_input_tokens(
         &self,
         request: EngineTextStreamRequest,
-    ) -> Result<u64, EngineAdapterRequestError>;
+    ) -> Result<u64, Failure>;
 
     async fn stream_text(
         &self,
         request: EngineTextStreamRequest,
-    ) -> Result<EngineTextStream, EngineAdapterRequestError>;
+    ) -> Result<EngineTextStream, Failure>;
 }
 
 /// Emits one structured request log entry when a logger is configured and otherwise does nothing.
@@ -898,19 +874,14 @@ pub async fn emit_error(
     logger: Option<&Arc<dyn EngineAdapterLogger>>,
     context: &EngineAdapterDebugContext,
     operation: EngineOperation,
-    error: &EngineAdapterRequestError,
+    error: &Failure,
 ) {
     if let Some(logger) = logger {
         logger
             .on_error(EngineAdapterErrorLog {
                 context: context.clone(),
                 operation,
-                detail: EngineAdapterErrorInfo {
-                    message: error.message.to_string(),
-                    status_code: error.status_code,
-                    request_id: error.request_id.as_deref().map(str::to_owned),
-                    classification: error.classification.to_string(),
-                },
+                detail: error.clone(),
             })
             .await;
     }
@@ -930,7 +901,7 @@ impl EngineAdapterRequest {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::adapter::error::EngineAdapterRequestError;
+    use crate::adapter::error::Failure;
     use async_trait::async_trait;
     use serde_json::json;
     use std::collections::BTreeMap;
@@ -1068,7 +1039,7 @@ mod tests {
     async fn emit_helpers_are_noops_without_a_logger() {
         let context = sample_context();
         let request = sample_request();
-        let error = EngineAdapterRequestError::new("openai", "broken", "request");
+        let error = Failure::new("openai", "broken", "request");
 
         emit_request(
             None,
@@ -1111,7 +1082,7 @@ mod tests {
         let request = sample_request();
         let concrete = Arc::new(RecordingLogger::default());
         let logger: Arc<dyn EngineAdapterLogger> = concrete.clone();
-        let error = EngineAdapterRequestError::new("openai", "bad request", "request")
+        let error = Failure::new("openai", "bad request", "request")
             .with_status_code(400)
             .with_request_id(Some("req-42".to_string()));
 
@@ -1191,8 +1162,11 @@ mod tests {
         let errors = concrete.errors.lock().expect("lock errors");
         assert_eq!(errors.len(), 1);
         assert_eq!(errors[0].detail.message, "bad request");
-        assert_eq!(errors[0].detail.status_code, Some(400));
-        assert_eq!(errors[0].detail.request_id.as_deref(), Some("req-42"));
-        assert_eq!(errors[0].detail.classification.as_str(), "request");
+        assert_eq!(errors[0].detail.exchange.status, Some(400));
+        assert_eq!(
+            errors[0].detail.exchange.request_id.as_deref(),
+            Some("req-42")
+        );
+        assert_eq!(errors[0].detail.kind.as_str(), "request");
     }
 }

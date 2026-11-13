@@ -21,11 +21,11 @@ struct Checkpoint {
 
 const CHECKPOINT_VERSION: u32 = 1;
 
-fn invalid(message: &str) -> EngineAdapterRequestError {
-    EngineAdapterRequestError::invalid_response("anthropic", message)
+fn invalid(message: &str) -> Failure {
+    Failure::invalid_response("anthropic", message)
 }
 
-fn decode(state: &Value) -> Result<Checkpoint, EngineAdapterRequestError> {
+fn decode(state: &Value) -> Result<Checkpoint, Failure> {
     check_payload(state, "anthropic")?;
     serde_json::from_value(state.clone()).map_err(|_| invalid("Invalid Anthropic checkpoint."))
 }
@@ -48,7 +48,7 @@ fn same_calls<'a>(
 
 /// Classify one native assistant block. Durable turns admit text, signed thinking, redacted
 /// thinking and client tool use; every other field of an admitted block is retained verbatim.
-fn validate_block(block: &Value) -> Result<(), EngineAdapterRequestError> {
+fn validate_block(block: &Value) -> Result<(), Failure> {
     let valid = match anthropic_content_block_type(block) {
         Some("text") => block["text"].is_string(),
         Some("thinking") => block["thinking"].is_string() && block["signature"].is_string(),
@@ -69,7 +69,7 @@ fn validate_block(block: &Value) -> Result<(), EngineAdapterRequestError> {
 fn assistant_calls(
     request: &ConversationRequest,
     content: &Value,
-) -> Result<Vec<EngineLocalToolCall>, EngineAdapterRequestError> {
+) -> Result<Vec<EngineLocalToolCall>, Failure> {
     let blocks = content
         .as_array()
         .filter(|blocks| !blocks.is_empty())
@@ -82,9 +82,7 @@ fn assistant_calls(
     Ok(calls)
 }
 
-fn tool_result_message(
-    results: &[ConversationToolResult],
-) -> Result<Value, EngineAdapterRequestError> {
+fn tool_result_message(results: &[ConversationToolResult]) -> Result<Value, Failure> {
     let content = results
         .iter()
         .map(|item| {
@@ -92,7 +90,7 @@ fn tool_result_message(
                 "content": item.result.provider_content()?.to_string(),
                 "is_error": item.result.is_error()}))
         })
-        .collect::<Result<Vec<_>, EngineAdapterRequestError>>()?;
+        .collect::<Result<Vec<_>, Failure>>()?;
     Ok(json!({"role": "user", "content": content}))
 }
 
@@ -101,11 +99,11 @@ impl AnthropicEngineAdapter {
         &self,
         request: &ConversationRequest,
         state: Option<&Value>,
-    ) -> Result<ConversationBinding, EngineAdapterRequestError> {
+    ) -> Result<ConversationBinding, Failure> {
         super::super::validate_chat_request(&self.backend, &request.to_request())?;
         require_anthropic_max_tokens(&request.shared.chat)?;
         if request.shared.chat.context_overflow != EngineContextOverflow::Error {
-            return Err(EngineAdapterRequestError::new(
+            return Err(Failure::new(
                 "anthropic",
                 "Durable Anthropic continuation requires contextOverflow=error.",
                 ErrorKind::InvalidRequest,
@@ -177,7 +175,7 @@ impl AnthropicEngineAdapter {
         request: &ConversationRequest,
         previous: Option<&Value>,
         results: &[ConversationToolResult],
-    ) -> Result<Vec<Value>, EngineAdapterRequestError> {
+    ) -> Result<Vec<Value>, Failure> {
         let (mut messages, calls) = if let Some(state) = previous {
             self.validate_durable_request(request, Some(state))?;
             let checkpoint = decode(state)?;
@@ -215,7 +213,7 @@ impl AnthropicEngineAdapter {
         previous: Option<&Value>,
         results: &[ConversationToolResult],
         turn: &ConversationTurn,
-    ) -> Result<ConversationBinding, EngineAdapterRequestError> {
+    ) -> Result<ConversationBinding, Failure> {
         check_payload(turn, "anthropic")?;
         let binding = self.validate_durable_request(request, Some(&turn.state))?;
         let checkpoint = decode(&turn.state)?;
@@ -264,7 +262,7 @@ impl AnthropicEngineAdapter {
         request: ConversationRequest,
         state: Option<Value>,
         results: Vec<ConversationToolResult>,
-    ) -> Result<ConversationTurn, EngineAdapterRequestError> {
+    ) -> Result<ConversationTurn, Failure> {
         let binding = self.validate_durable_request(&request, state.as_ref())?;
         let messages = self.continuation_messages(&request, state.as_ref(), &results)?;
         let body = build_local_tool_body(&self.backend, &request.to_request(), messages.clone())?;
@@ -342,7 +340,7 @@ fn response_events(
     request: &ConversationRequest,
     response: &Value,
     structured: bool,
-) -> Result<Vec<EngineTextStreamEvent>, EngineAdapterRequestError> {
+) -> Result<Vec<EngineTextStreamEvent>, Failure> {
     if response["type"] != "message"
         || response["role"] != "assistant"
         || response["id"].as_str().is_none_or(|id| id.is_empty())

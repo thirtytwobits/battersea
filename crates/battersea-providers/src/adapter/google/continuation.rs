@@ -32,11 +32,11 @@ const DATA_FIELDS: &[&str] = &[
     "codeExecutionResult",
 ];
 
-fn invalid(message: &str) -> EngineAdapterRequestError {
-    EngineAdapterRequestError::invalid_response("google", message)
+fn invalid(message: &str) -> Failure {
+    Failure::invalid_response("google", message)
 }
 
-fn decode(state: &Value) -> Result<Checkpoint, EngineAdapterRequestError> {
+fn decode(state: &Value) -> Result<Checkpoint, Failure> {
     check_payload(state, "google")?;
     serde_json::from_value(state.clone()).map_err(|_| invalid("Invalid Gemini checkpoint."))
 }
@@ -49,7 +49,7 @@ fn request_revision(request: &ConversationRequest) -> String {
 fn original_len(
     backend: &EngineBackendConfig,
     request: &ConversationRequest,
-) -> Result<usize, EngineAdapterRequestError> {
+) -> Result<usize, Failure> {
     Ok(crate::content::messages("google", &backend.provider, &request.shared.messages)?.len())
 }
 
@@ -66,7 +66,7 @@ fn same_calls<'a>(
 }
 
 /// Durable turns admit text, thought text and function-call parts.
-fn validate_part(part: &Value) -> Result<(), EngineAdapterRequestError> {
+fn validate_part(part: &Value) -> Result<(), Failure> {
     let fields = part
         .as_object()
         .ok_or_else(|| invalid("Malformed Gemini part."))?;
@@ -100,7 +100,7 @@ fn model_calls(
     request: &ConversationRequest,
     content: &Value,
     turn: usize,
-) -> Result<Vec<EngineLocalToolCall>, EngineAdapterRequestError> {
+) -> Result<Vec<EngineLocalToolCall>, Failure> {
     let parts = content["parts"]
         .as_array()
         .filter(|parts| !parts.is_empty() && content["role"] == "model")
@@ -138,7 +138,7 @@ fn call_parts(content: &Value) -> Vec<&Value> {
 fn function_responses(
     content: &Value,
     results: &[ConversationToolResult],
-) -> Result<Value, EngineAdapterRequestError> {
+) -> Result<Value, Failure> {
     let parts = call_parts(content)
         .into_iter()
         .zip(results)
@@ -153,7 +153,7 @@ fn function_responses(
             }
             Ok(json!({"functionResponse": function_response}))
         })
-        .collect::<Result<Vec<_>, EngineAdapterRequestError>>()?;
+        .collect::<Result<Vec<_>, Failure>>()?;
     Ok(json!({"role": "user", "parts": parts}))
 }
 
@@ -162,10 +162,10 @@ impl GoogleEngineAdapter {
         &self,
         request: &ConversationRequest,
         state: Option<&Value>,
-    ) -> Result<ConversationBinding, EngineAdapterRequestError> {
+    ) -> Result<ConversationBinding, Failure> {
         super::super::validate_chat_request(&self.backend, &request.to_request())?;
         if request.shared.chat.context_overflow != EngineContextOverflow::Error {
-            return Err(EngineAdapterRequestError::new(
+            return Err(Failure::new(
                 "google",
                 "Durable Gemini continuation requires contextOverflow=error.",
                 ErrorKind::InvalidRequest,
@@ -178,7 +178,7 @@ impl GoogleEngineAdapter {
             .as_ref()
             .is_some_and(|modalities| modalities.as_slice() != [Modality::Text])
         {
-            return Err(EngineAdapterRequestError::new(
+            return Err(Failure::new(
                 "google",
                 "Durable Gemini continuation requires text output.",
                 ErrorKind::InvalidRequest,
@@ -246,7 +246,7 @@ impl GoogleEngineAdapter {
         request: &ConversationRequest,
         previous: Option<&Value>,
         results: &[ConversationToolResult],
-    ) -> Result<Vec<Value>, EngineAdapterRequestError> {
+    ) -> Result<Vec<Value>, Failure> {
         let (mut contents, calls, model) = if let Some(state) = previous {
             self.validate_durable_request(request, Some(state))?;
             let checkpoint = decode(state)?;
@@ -286,7 +286,7 @@ impl GoogleEngineAdapter {
         previous: Option<&Value>,
         results: &[ConversationToolResult],
         turn: &ConversationTurn,
-    ) -> Result<ConversationBinding, EngineAdapterRequestError> {
+    ) -> Result<ConversationBinding, Failure> {
         check_payload(turn, "google")?;
         let binding = self.validate_durable_request(request, Some(&turn.state))?;
         let checkpoint = decode(&turn.state)?;
@@ -340,7 +340,7 @@ impl GoogleEngineAdapter {
         request: ConversationRequest,
         state: Option<Value>,
         results: Vec<ConversationToolResult>,
-    ) -> Result<ConversationTurn, EngineAdapterRequestError> {
+    ) -> Result<ConversationTurn, Failure> {
         let binding = self.validate_durable_request(&request, state.as_ref())?;
         let contents = self.continuation_contents(&request, state.as_ref(), &results)?;
         let body = build_local_tool_body(&self.backend, &request.to_request(), contents.clone());
@@ -419,7 +419,7 @@ fn response_events(
     request: &ConversationRequest,
     response: &Value,
     structured: bool,
-) -> Result<Vec<EngineTextStreamEvent>, EngineAdapterRequestError> {
+) -> Result<Vec<EngineTextStreamEvent>, Failure> {
     let parsed: GeminiGenerateContentResponse = serde_json::from_value(response.clone())
         .map_err(|_| invalid("Invalid native Gemini response."))?;
     if !response["promptFeedback"]["blockReason"].is_null() {

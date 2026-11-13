@@ -50,14 +50,11 @@ impl EngineAdapter for Transport {
     async fn count_text_stream_input_tokens(
         &self,
         _: EngineTextStreamRequest,
-    ) -> Result<u64, EngineAdapterRequestError> {
+    ) -> Result<u64, Failure> {
         self.0.fetch_add(1, Ordering::SeqCst);
         std::future::pending().await
     }
-    async fn stream_text(
-        &self,
-        _: EngineTextStreamRequest,
-    ) -> Result<EngineTextStream, EngineAdapterRequestError> {
+    async fn stream_text(&self, _: EngineTextStreamRequest) -> Result<EngineTextStream, Failure> {
         self.0.fetch_add(1, Ordering::SeqCst);
         Ok(Box::pin(stream::pending()))
     }
@@ -100,7 +97,7 @@ async fn open_provider_admission_rejects_modalities_and_modes_before_transport()
             .await
             .err()
             .unwrap()
-            .classification,
+            .kind,
         ErrorKind::InvalidRequest
     ));
     assert!(matches!(
@@ -108,18 +105,13 @@ async fn open_provider_admission_rejects_modalities_and_modes_before_transport()
             .count_text_stream_input_tokens(invalid)
             .await
             .unwrap_err()
-            .classification,
+            .kind,
         ErrorKind::InvalidRequest
     ));
     let mut invalid = request(&backend);
     invalid.shared.chat.stream = false;
     assert!(matches!(
-        adapter
-            .stream_text(invalid)
-            .await
-            .err()
-            .unwrap()
-            .classification,
+        adapter.stream_text(invalid).await.err().unwrap().kind,
         ErrorKind::InvalidRequest
     ));
     let mut invalid = request(&backend);
@@ -166,7 +158,7 @@ fn registry_rejects_unknown_or_inconsistent_backend_before_factory() {
                 .create_chat(invalid, None, clock())
                 .err()
                 .unwrap()
-                .classification,
+                .kind,
             ErrorKind::InvalidRequest
         ));
     }
@@ -184,15 +176,12 @@ async fn request_deadline_covers_token_count_and_consumption_of_a_stalled_stream
         clock.advance_to_timer_within(window)
     );
     assert_eq!(remaining, window);
-    assert!(matches!(
-        count.unwrap_err().classification,
-        ErrorKind::Timeout
-    ));
+    assert!(matches!(count.unwrap_err().kind, ErrorKind::Timeout));
     let mut stream = adapter.stream_text(request(&backend())).await.unwrap();
     let (error, remaining) = tokio::join!(stream.next(), clock.advance_to_timer_within(window));
     assert_eq!(remaining, window);
     assert!(matches!(
-        error.unwrap().unwrap_err().classification,
+        error.unwrap().unwrap_err().kind,
         ErrorKind::Timeout
     ));
     assert!(stream.next().await.is_none());
@@ -212,7 +201,7 @@ async fn idle_watchdog_reports_one_typed_timeout_then_ends() {
     );
     assert_eq!(remaining, Duration::from_millis(10));
     assert!(matches!(
-        error.unwrap().unwrap_err().classification,
+        error.unwrap().unwrap_err().kind,
         ErrorKind::Timeout
     ));
     assert!(stream.next().await.is_none());
@@ -260,13 +249,10 @@ impl EngineAdapter for ToolEvents {
     async fn count_text_stream_input_tokens(
         &self,
         _: EngineTextStreamRequest,
-    ) -> Result<u64, EngineAdapterRequestError> {
+    ) -> Result<u64, Failure> {
         Ok(0)
     }
-    async fn stream_text(
-        &self,
-        _: EngineTextStreamRequest,
-    ) -> Result<EngineTextStream, EngineAdapterRequestError> {
+    async fn stream_text(&self, _: EngineTextStreamRequest) -> Result<EngineTextStream, Failure> {
         Ok(Box::pin(
             stream::iter(self.0.clone().into_iter().map(Ok)).chain(stream::pending()),
         ))
@@ -354,8 +340,8 @@ async fn stream_watchdogs_retain_started_and_completed_tool_evidence() {
                 Duration::from_millis(if idle { 10 } else { 100 })
             );
             let error = error.unwrap().unwrap_err();
-            assert_eq!(error.classification, ErrorKind::Timeout);
-            let evidence = error.tool_call.unwrap();
+            assert_eq!(error.kind, ErrorKind::Timeout);
+            let evidence = error.tool_call.clone().unwrap();
             assert_eq!(evidence.call_id, "effect-1");
             assert_eq!(
                 evidence.outcome,
@@ -378,10 +364,7 @@ impl MediaJob for PendingJob {
     fn clock(&self) -> Arc<dyn Clock> {
         Arc::new(self.1.clone())
     }
-    async fn wait(
-        &mut self,
-        _: CancellationToken,
-    ) -> Result<MediaRenderResult, EngineAdapterRequestError> {
+    async fn wait(&mut self, _: CancellationToken) -> Result<MediaRenderResult, Failure> {
         std::future::pending().await
     }
     fn snapshot(&self) -> MediaJobSnapshot {
@@ -401,19 +384,13 @@ impl MediaJob for PendingJob {
             max_retries: 0,
         }
     }
-    async fn poll(
-        &mut self,
-        _: CancellationToken,
-    ) -> Result<MediaJobStatus, EngineAdapterRequestError> {
+    async fn poll(&mut self, _: CancellationToken) -> Result<MediaJobStatus, Failure> {
         std::future::pending().await
     }
-    async fn retrieve(
-        &mut self,
-        _: CancellationToken,
-    ) -> Result<MediaRenderResult, EngineAdapterRequestError> {
+    async fn retrieve(&mut self, _: CancellationToken) -> Result<MediaRenderResult, Failure> {
         unreachable!()
     }
-    async fn cancel(&mut self) -> Result<(), EngineAdapterRequestError> {
+    async fn cancel(&mut self) -> Result<(), Failure> {
         self.0.fetch_add(1, Ordering::SeqCst);
         Ok(())
     }
@@ -443,7 +420,7 @@ async fn pending_media_jobs_cancel_once_on_cancellation_or_deadline() {
         }
         .unwrap_err();
         assert_eq!(
-            result.classification,
+            result.kind,
             if cancelled {
                 ErrorKind::Cancelled
             } else {

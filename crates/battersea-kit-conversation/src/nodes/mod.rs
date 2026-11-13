@@ -10,8 +10,8 @@ use battersea_flow::{
     FlowNode, FlowNodeDefinition,
 };
 use battersea_model::{
-    engine::EngineChatParameters, EngineAdapter, EngineAdapterRequest, EngineAdapterRequestError,
-    EngineOperation, EngineTextStreamRequest, Message,
+    engine::EngineChatParameters, EngineAdapter, EngineAdapterRequest, EngineOperation,
+    EngineTextStreamRequest, Failure, Message,
 };
 use battersea_runtime::{error_codes, ExecutionError, RegistryBuilder, Token};
 use serde::{de::DeserializeOwned, Serialize};
@@ -149,7 +149,7 @@ pub(crate) fn request(
 pub(crate) async fn count(
     engine: &dyn EngineAdapter,
     messages: Vec<Message>,
-) -> Result<u64, EngineAdapterRequestError> {
+) -> Result<u64, Failure> {
     if messages.is_empty() {
         return Ok(0);
     }
@@ -161,7 +161,7 @@ pub(crate) async fn count(
 }
 
 /// A provider's refusal as the kit's `conversation.provider_failed`.
-pub(crate) fn provider_failed<E: ExecutionError>(error: &EngineAdapterRequestError) -> E {
+pub(crate) fn provider_failed<E: ExecutionError>(error: &Failure) -> E {
     E::invalid_request(codes::PROVIDER_FAILED, error.message.to_string())
 }
 
@@ -234,7 +234,7 @@ mod tests {
         async fn count_text_stream_input_tokens(
             &self,
             request: EngineTextStreamRequest,
-        ) -> Result<u64, EngineAdapterRequestError> {
+        ) -> Result<u64, Failure> {
             let backend = EngineBackendConfig {
                 binding: None,
                 id: "test".into(),
@@ -266,7 +266,7 @@ mod tests {
         async fn stream_text(
             &self,
             _request: EngineTextStreamRequest,
-        ) -> Result<EngineTextStream, EngineAdapterRequestError> {
+        ) -> Result<EngineTextStream, Failure> {
             unreachable!("counting only")
         }
     }

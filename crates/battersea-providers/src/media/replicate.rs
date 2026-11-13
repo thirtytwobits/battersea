@@ -16,13 +16,13 @@ pub(crate) struct Replicate {
     base: reqwest::Url,
     kind: MediaKind,
 }
-fn invalid(message: impl Into<String>) -> EngineAdapterRequestError {
-    EngineAdapterRequestError::new("replicate", message, ErrorKind::InvalidRequest)
+fn invalid(message: impl Into<String>) -> Failure {
+    Failure::new("replicate", message, ErrorKind::InvalidRequest)
 }
 pub(crate) fn create(
     backend: MediaBackendConfig,
     clock: Arc<dyn battersea_model::Clock>,
-) -> Result<Arc<dyn MediaGenerationAdapter>, EngineAdapterRequestError> {
+) -> Result<Arc<dyn MediaGenerationAdapter>, Failure> {
     poll_policy(&backend)?;
     let base = reqwest::Url::parse(&backend.endpoint)
         .map_err(|_| invalid("Invalid Replicate endpoint."))?;
@@ -68,7 +68,7 @@ pub(crate) fn create(
 pub(crate) fn prepare(
     backend: &MediaBackendConfig,
     request: MediaRenderRequest,
-) -> Result<PreparedMediaRequest, EngineAdapterRequestError> {
+) -> Result<PreparedMediaRequest, Failure> {
     poll_policy(backend)?;
     // Versioned models use a pinned version; official models use owner/name.
     let (path, version) = if let Some((model, version)) = backend.model.split_once(':') {
@@ -106,7 +106,7 @@ pub(crate) fn prepare(
             return Err(invalid("Input field mappings must be distinct."));
         }
     }
-    let mut put = |key: &str, value: Option<Value>| -> Result<(), EngineAdapterRequestError> {
+    let mut put = |key: &str, value: Option<Value>| -> Result<(), Failure> {
         if let Some(value) = value {
             let field = fields
                 .get(key)
@@ -179,7 +179,7 @@ pub(crate) fn prepare(
         render_input: request,
     })
 }
-fn validate_model(model: &str) -> Result<(), EngineAdapterRequestError> {
+fn validate_model(model: &str) -> Result<(), Failure> {
     let parts: Vec<_> = model.split('/').collect();
     if parts.len() != 2
         || parts.iter().any(|s| {
@@ -212,8 +212,8 @@ impl Replicate {
             request.bearer_auth(self.backend.auth.api_key.as_deref().unwrap())
         }
     }
-    fn decode(&self, raw: Value) -> Result<RemoteUpdate, EngineAdapterRequestError> {
-        let bad = |message| EngineAdapterRequestError::invalid_response("replicate", message);
+    fn decode(&self, raw: Value) -> Result<RemoteUpdate, Failure> {
+        let bad = |message| Failure::invalid_response("replicate", message);
         let id = raw["id"]
             .as_str()
             .ok_or_else(|| bad("Prediction has no identity."))?
@@ -308,10 +308,7 @@ impl MediaGenerationAdapter for Replicate {
     fn clock(&self) -> Arc<dyn battersea_model::Clock> {
         self.clock.clone()
     }
-    fn prepare(
-        &self,
-        request: MediaRenderRequest,
-    ) -> Result<PreparedMediaRequest, EngineAdapterRequestError> {
+    fn prepare(&self, request: MediaRenderRequest) -> Result<PreparedMediaRequest, Failure> {
         super::prepare_media_request(&self.backend, request)
     }
     async fn submit(
@@ -320,7 +317,7 @@ impl MediaGenerationAdapter for Replicate {
         cancellation: CancellationToken,
         reporter: Option<Arc<dyn MediaGenerationActivityReporter>>,
         _batches: Option<Arc<dyn MediaGenerationBatchReporter>>,
-    ) -> Result<MediaSubmission, EngineAdapterRequestError> {
+    ) -> Result<MediaSubmission, Failure> {
         let timing = MediaTimingRecorder::start(self.clock.clone());
         let work = async {
             let raw = within_request_deadline(&self.backend, self.clock.as_ref(), async {
@@ -330,12 +327,13 @@ impl MediaGenerationAdapter for Replicate {
                     .send()
                     .await
                     .map_err(|error| {
-                        EngineAdapterRequestError::transport("replicate", error.to_string())
-                            .with_dispatch(if error.is_connect() {
+                        Failure::transport("replicate", error.to_string()).with_dispatch(
+                            if error.is_connect() {
                                 DispatchState::NotSent
                             } else {
                                 DispatchState::Unknown
-                            })
+                            },
+                        )
                     })?;
                 json_response("replicate", response, self.clock.as_ref()).await
             })
@@ -351,13 +349,13 @@ impl MediaGenerationAdapter for Replicate {
             job.announce(cancellation.clone()).await?;
             Ok(MediaSubmission::Pending(Box::new(job)))
         };
-        tokio::select! { biased; _ = cancellation.cancelled() => Err(EngineAdapterRequestError::new("replicate", "Media submission cancelled.", ErrorKind::Cancelled)), result = work => result }
+        tokio::select! { biased; _ = cancellation.cancelled() => Err(Failure::new("replicate", "Media submission cancelled.", ErrorKind::Cancelled)), result = work => result }
     }
-    async fn cancel(&self, id: &str) -> Result<(), EngineAdapterRequestError> {
+    async fn cancel(&self, id: &str) -> Result<(), Failure> {
         validate_id("replicate", id)?;
         match JobTransport::cancel(self, id).await? {
             MediaJobStatus::Cancelled => Ok(()),
-            _ => Err(EngineAdapterRequestError::new(
+            _ => Err(Failure::new(
                 "replicate",
                 "Provider has not confirmed cancellation.",
                 ErrorKind::Provider,
@@ -378,38 +376,34 @@ impl JobTransport for Replicate {
     fn clock(&self) -> Arc<dyn battersea_model::Clock> {
         self.clock.clone()
     }
-    fn decode(
-        &self,
-        raw: Value,
-        _submission: bool,
-    ) -> Result<RemoteUpdate, EngineAdapterRequestError> {
+    fn decode(&self, raw: Value, _submission: bool) -> Result<RemoteUpdate, Failure> {
         self.decode(raw)
     }
-    async fn poll(&self, id: &str) -> Result<RemoteUpdate, EngineAdapterRequestError> {
+    async fn poll(&self, id: &str) -> Result<RemoteUpdate, Failure> {
         let raw = within_request_deadline(&self.backend, self.clock.as_ref(), async {
             let response = self
                 .request(reqwest::Method::GET, &format!("predictions/{id}"))
                 .send()
                 .await
-                .map_err(|e| EngineAdapterRequestError::transport("replicate", e.to_string()))?;
+                .map_err(|e| Failure::transport("replicate", e.to_string()))?;
             json_response("replicate", response, self.clock.as_ref()).await
         })
         .await?;
         self.decode(raw)
     }
-    async fn cancel(&self, id: &str) -> Result<MediaJobStatus, EngineAdapterRequestError> {
+    async fn cancel(&self, id: &str) -> Result<MediaJobStatus, Failure> {
         let raw = within_request_deadline(&self.backend, self.clock.as_ref(), async {
             let response = self
                 .request(reqwest::Method::POST, &format!("predictions/{id}/cancel"))
                 .send()
                 .await
-                .map_err(|e| EngineAdapterRequestError::transport("replicate", e.to_string()))?;
+                .map_err(|e| Failure::transport("replicate", e.to_string()))?;
             json_response("replicate", response, self.clock.as_ref()).await
         })
         .await?;
         let update = self.decode(raw)?;
         if update.id != id {
-            return Err(EngineAdapterRequestError::invalid_response(
+            return Err(Failure::invalid_response(
                 "replicate",
                 "Cancellation returned a different prediction.",
             ));
@@ -432,12 +426,11 @@ impl JobTransport for Replicate {
         webhook: MediaWebhook<'_>,
         secret: &str,
         now: DateTime<Utc>,
-    ) -> Result<RemoteUpdate, EngineAdapterRequestError> {
+    ) -> Result<RemoteUpdate, Failure> {
         verify_webhook(&webhook, secret, now)?;
         self.decode(
-            serde_json::from_slice(webhook.body).map_err(|e| {
-                EngineAdapterRequestError::invalid_response("replicate", e.to_string())
-            })?,
+            serde_json::from_slice(webhook.body)
+                .map_err(|e| Failure::invalid_response("replicate", e.to_string()))?,
         )
     }
 }
@@ -445,9 +438,9 @@ fn verify_webhook(
     webhook: &MediaWebhook<'_>,
     secret: &str,
     now: DateTime<Utc>,
-) -> Result<(), EngineAdapterRequestError> {
+) -> Result<(), Failure> {
     let fail = || {
-        EngineAdapterRequestError::new(
+        Failure::new(
             "replicate",
             "Invalid or stale webhook signature.",
             ErrorKind::Authentication,

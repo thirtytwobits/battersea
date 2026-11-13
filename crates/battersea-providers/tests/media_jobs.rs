@@ -344,7 +344,7 @@ async fn transient_poll_errors_retry_only_gets_and_respect_retry_after_bound() {
             .wait(CancellationToken::new(), Some(deadline))
             .await;
         if rate_limited {
-            assert_eq!(result.unwrap_err().classification, ErrorKind::RateLimit);
+            assert_eq!(result.unwrap_err().kind, ErrorKind::RateLimit);
         } else {
             result.unwrap();
         }
@@ -396,10 +396,10 @@ async fn cancellation_deadline_and_drop_cleanup_target_the_accepted_job_once() {
                 .await
                 .unwrap_err();
             assert!(matches!(
-                error.classification,
+                error.kind,
                 ErrorKind::Cancelled | ErrorKind::Timeout
             ));
-            assert_eq!(error.request_id.as_deref(), Some("accepted-job"));
+            assert_eq!(error.exchange.request_id.as_deref(), Some("accepted-job"));
         }
         while state.calls.lock().unwrap().len() < 2 {
             tokio::task::yield_now().await;
@@ -450,13 +450,8 @@ async fn each_staged_request_fails_at_the_backend_timeout_on_the_adapter_clock()
             Arc::new(clock.clone()),
         )
         .unwrap();
-    let timed_out = |error: battersea_model::adapter::error::EngineAdapterRequestError| {
-        assert_eq!(
-            error.classification,
-            ErrorKind::Timeout,
-            "{}",
-            error.message
-        );
+    let timed_out = |error: battersea_model::adapter::error::Failure| {
+        assert_eq!(error.kind, ErrorKind::Timeout, "{}", error.message);
         error
     };
 
@@ -474,7 +469,7 @@ async fn each_staged_request_fails_at_the_backend_timeout_on_the_adapter_clock()
             .unwrap(),
     );
     assert_eq!(
-        error.dispatch,
+        error.exchange.dispatch,
         battersea_model::adapter::error::DispatchState::Unknown
     );
 
@@ -503,7 +498,7 @@ async fn each_staged_request_fails_at_the_backend_timeout_on_the_adapter_clock()
             .await
             .unwrap_err(),
     );
-    assert_eq!(error.request_id.as_deref(), Some("accepted-job"));
+    assert_eq!(error.exchange.request_id.as_deref(), Some("accepted-job"));
     timed_out(
         past_the_request_deadline(&clock, &state, 4, job.cancel())
             .await
@@ -636,7 +631,7 @@ async fn retrieval_failure_is_repeatable_without_regenerating_or_publishing_part
         job.retrieve(CancellationToken::new())
             .await
             .unwrap_err()
-            .classification,
+            .kind,
         ErrorKind::Retrieval
     );
     assert!(!job.snapshot().outputs_retrieved);
@@ -695,7 +690,7 @@ async fn expired_removed_and_malformed_results_never_produce_success_or_new_gene
         .await;
         let error = job.retrieve(CancellationToken::new()).await.unwrap_err();
         assert!(matches!(
-            error.classification,
+            error.kind,
             ErrorKind::Expired | ErrorKind::InvalidResponse
         ));
         assert!(!job.snapshot().outputs_retrieved);
@@ -793,7 +788,7 @@ async fn signed_callbacks_are_idempotent_reject_replays_and_preserve_terminal_re
             )
             .await
             .unwrap_err()
-            .classification,
+            .kind,
             ErrorKind::Authentication
         );
     }
@@ -829,7 +824,7 @@ async fn signed_callbacks_are_idempotent_reject_replays_and_preserve_terminal_re
         )
         .await
         .unwrap_err()
-        .classification,
+        .kind,
         ErrorKind::InvalidResponse
     );
     assert_eq!(
@@ -864,8 +859,8 @@ async fn malformed_poll_identity_or_status_stops_and_cleans_up_the_original_job(
             .wait(CancellationToken::new(), None)
             .await
             .unwrap_err();
-        assert_eq!(error.classification, ErrorKind::InvalidResponse);
-        assert_eq!(error.request_id.as_deref(), Some("accepted-job"));
+        assert_eq!(error.kind, ErrorKind::InvalidResponse);
+        assert_eq!(error.exchange.request_id.as_deref(), Some("accepted-job"));
         assert!(state
             .calls
             .lock()
@@ -898,9 +893,9 @@ async fn failed_remote_cancellation_reports_uncertainty_and_does_not_double_canc
         .wait(token, None)
         .await
         .unwrap_err();
-    assert_eq!(error.classification, ErrorKind::Cancelled);
+    assert_eq!(error.kind, ErrorKind::Cancelled);
     assert!(error.message.contains("Remote cancellation failed"));
-    assert_eq!(error.request_id.as_deref(), Some("accepted-job"));
+    assert_eq!(error.exchange.request_id.as_deref(), Some("accepted-job"));
     tokio::task::yield_now().await;
     assert_eq!(state.calls.lock().unwrap().len(), 2);
     task.abort();
@@ -930,7 +925,7 @@ async fn aggregate_output_bound_prevents_partial_publication() {
         job.retrieve(CancellationToken::new())
             .await
             .unwrap_err()
-            .classification,
+            .kind,
         ErrorKind::Retrieval
     );
     assert!(!job.snapshot().outputs_retrieved);
@@ -953,7 +948,7 @@ async fn ambiguous_submission_is_not_replayed_even_with_retries_configured() {
         .await
         .unwrap_err();
     assert_eq!(
-        error.dispatch,
+        error.exchange.dispatch,
         battersea_model::adapter::error::DispatchState::Unknown
     );
     assert_eq!(state.calls.lock().unwrap().len(), 1);
@@ -1002,7 +997,7 @@ impl MediaGenerationActivityReporter for Reporter {
     async fn report_activity(
         &self,
         update: MediaGenerationActivityUpdate,
-    ) -> Result<(), battersea_model::EngineAdapterRequestError> {
+    ) -> Result<(), battersea_model::Failure> {
         self.0.lock().unwrap().push(update);
         Ok(())
     }
@@ -1069,8 +1064,8 @@ async fn malformed_accepted_submission_keeps_identity_and_disposes_remote_work()
         )
         .await
         .unwrap_err();
-    assert_eq!(error.classification, ErrorKind::InvalidResponse);
-    assert_eq!(error.request_id.as_deref(), Some("accepted-job"));
+    assert_eq!(error.kind, ErrorKind::InvalidResponse);
+    assert_eq!(error.exchange.request_id.as_deref(), Some("accepted-job"));
     while state.calls.lock().unwrap().len() != 2 {
         tokio::task::yield_now().await;
     }

@@ -4,7 +4,7 @@ use super::{
     MediaGenerationActivityUpdate, MediaGenerationAdapter, MediaRenderRequest, MediaRenderResult,
     MediaTimingRecorder,
 };
-use crate::adapter::error::EngineAdapterRequestError;
+use crate::adapter::error::Failure;
 use crate::http_payload::BoundedResponse as _;
 #[cfg(test)]
 use async_openai::error::OpenAIError;
@@ -27,7 +27,7 @@ use tokio_util::sync::CancellationToken;
 pub(crate) fn create_openai_media_generator(
     backend: MediaBackendConfig,
     clock: Arc<dyn battersea_model::Clock>,
-) -> Result<Arc<dyn MediaGenerationAdapter>, EngineAdapterRequestError> {
+) -> Result<Arc<dyn MediaGenerationAdapter>, Failure> {
     backend
         .options
         .timeout_ms
@@ -36,7 +36,7 @@ pub(crate) fn create_openai_media_generator(
         .retry(reqwest::retry::never())
         .redirect(reqwest::redirect::Policy::none())
         .build()
-        .map_err(|error| EngineAdapterRequestError::transport("openai", error.to_string()))?;
+        .map_err(|error| Failure::transport("openai", error.to_string()))?;
     if let Some(binding) = &backend.binding {
         crate::connection::headers(binding, &backend.auth)?;
     }
@@ -49,8 +49,8 @@ pub(crate) fn create_openai_media_generator(
 
 /// Error for an OpenAI media backend option that configuration must supply.
 /// No hardcoded defaults exist in the adapter: absent config → no value.
-fn missing_openai_media_option(key: &str) -> EngineAdapterRequestError {
-    EngineAdapterRequestError::new(
+fn missing_openai_media_option(key: &str) -> Failure {
+    Failure::new(
         "openai",
         format!("OpenAI media backend must configure options.{key}."),
         "invalid_request",
@@ -100,10 +100,7 @@ impl MediaGenerationAdapter for OpenAiMediaGenerator {
         self.clock.clone()
     }
 
-    fn prepare(
-        &self,
-        request: MediaRenderRequest,
-    ) -> Result<super::PreparedMediaRequest, EngineAdapterRequestError> {
+    fn prepare(&self, request: MediaRenderRequest) -> Result<super::PreparedMediaRequest, Failure> {
         super::prepare_media_request(self.backend(), request)
     }
 
@@ -113,7 +110,7 @@ impl MediaGenerationAdapter for OpenAiMediaGenerator {
         cancellation: CancellationToken,
         activity_reporter: Option<Arc<dyn MediaGenerationActivityReporter>>,
         batch_reporter: Option<Arc<dyn super::MediaGenerationBatchReporter>>,
-    ) -> Result<super::MediaSubmission, EngineAdapterRequestError> {
+    ) -> Result<super::MediaSubmission, Failure> {
         self.render(prepared, cancellation, activity_reporter, batch_reporter)
             .await
             .map(super::MediaSubmission::Complete)
@@ -126,10 +123,10 @@ impl OpenAiMediaGenerator {
         cancellation: CancellationToken,
         activity_reporter: Option<Arc<dyn MediaGenerationActivityReporter>>,
         _batch_reporter: Option<Arc<dyn super::MediaGenerationBatchReporter>>,
-    ) -> Result<MediaRenderResult, EngineAdapterRequestError> {
+    ) -> Result<MediaRenderResult, Failure> {
         let request = prepared.render_input.clone();
         if request.kind != MediaKind::Image {
-            return Err(EngineAdapterRequestError::new(
+            return Err(Failure::new(
                 "openai",
                 "OpenAI media backend only supports image generation.",
                 "invalid_request",
@@ -177,7 +174,7 @@ impl OpenAiMediaGenerator {
             );
             tokio::select! {
                 _ = cancellation.cancelled() => {
-                    return Err(EngineAdapterRequestError::new("openai", "Media generation cancelled.", "cancelled"));
+                    return Err(Failure::new("openai", "Media generation cancelled.", "cancelled"));
                 }
                 result = request_future => result?
             }
@@ -238,7 +235,7 @@ impl OpenAiMediaGenerator {
                             .map(|b64_json| format!("data:{mime_type};base64,{b64_json}"))
                     })
                     .ok_or_else(|| {
-                        EngineAdapterRequestError::new(
+                        Failure::new(
                             "openai",
                             "OpenAI image response did not contain a URL or inline image data.",
                             "request",
@@ -256,7 +253,7 @@ impl OpenAiMediaGenerator {
                     provider_asset_id: None,
                 })
             })
-            .collect::<Result<Vec<_>, EngineAdapterRequestError>>()?;
+            .collect::<Result<Vec<_>, Failure>>()?;
 
         Ok(MediaRenderResult {
             provider_job_id: None,
@@ -271,7 +268,7 @@ impl OpenAiMediaGenerator {
 fn image_request(
     client: &reqwest::Client,
     backend: &MediaBackendConfig,
-) -> Result<reqwest::RequestBuilder, EngineAdapterRequestError> {
+) -> Result<reqwest::RequestBuilder, Failure> {
     if let Some(binding) = &backend.binding {
         crate::connection::authenticate(
             client.post(binding.connection.route("images/generations")?),
@@ -292,20 +289,20 @@ async fn send_image_generation_json_request(
     http_client: &reqwest::Client,
     backend: &MediaBackendConfig,
     request_body: Value,
-) -> Result<OpenAiImagesResponse, EngineAdapterRequestError> {
+) -> Result<OpenAiImagesResponse, Failure> {
     let response = image_request(http_client, backend)?
         .json(&request_body)
         .send()
         .await
-        .map_err(|error| EngineAdapterRequestError::transport("openai", error.to_string()))?;
+        .map_err(|error| Failure::transport("openai", error.to_string()))?;
     let status = response.status();
     if !status.is_success() {
         let body = response
             .bounded_text()
             .await
-            .map_err(|error| EngineAdapterRequestError::transport("openai", error.to_string()))?;
+            .map_err(|error| Failure::transport("openai", error.to_string()))?;
         return Err(parse_openai_error_body(&body).unwrap_or_else(|| {
-            EngineAdapterRequestError::new(
+            Failure::new(
                 "openai",
                 format!("OpenAI image generation failed with HTTP status {status}."),
                 "request",
@@ -316,7 +313,7 @@ async fn send_image_generation_json_request(
     response
         .bounded_json::<OpenAiImagesResponse>()
         .await
-        .map_err(|error| EngineAdapterRequestError::invalid_response("openai", error.to_string()))
+        .map_err(|error| Failure::invalid_response("openai", error.to_string()))
 }
 
 async fn send_image_generation_stream_request(
@@ -327,20 +324,20 @@ async fn send_image_generation_stream_request(
     partial_images: u8,
     activity_reporter: Option<Arc<dyn MediaGenerationActivityReporter>>,
     cancellation: CancellationToken,
-) -> Result<OpenAiImagesResponse, EngineAdapterRequestError> {
+) -> Result<OpenAiImagesResponse, Failure> {
     let response = image_request(http_client, backend)?
         .json(&request_body)
         .send()
         .await
-        .map_err(|error| EngineAdapterRequestError::transport("openai", error.to_string()))?;
+        .map_err(|error| Failure::transport("openai", error.to_string()))?;
     let status = response.status();
     if !status.is_success() {
         let body = response
             .bounded_text()
             .await
-            .map_err(|error| EngineAdapterRequestError::transport("openai", error.to_string()))?;
+            .map_err(|error| Failure::transport("openai", error.to_string()))?;
         return Err(parse_openai_error_body(&body).unwrap_or_else(|| {
-            EngineAdapterRequestError::new(
+            Failure::new(
                 "openai",
                 format!("OpenAI image generation failed with HTTP status {status}."),
                 "request",
@@ -352,18 +349,17 @@ async fn send_image_generation_stream_request(
     let mut completed_events = Vec::new();
     while let Some(event_result) = tokio::select! {
         _ = cancellation.cancelled() => {
-            return Err(EngineAdapterRequestError::new("openai", "Media generation cancelled.", "cancelled"));
+            return Err(Failure::new("openai", "Media generation cancelled.", "cancelled"));
         }
         event_result = stream.next() => event_result
     } {
-        let event = event_result
-            .map_err(|error| EngineAdapterRequestError::transport("openai", error.to_string()))?;
+        let event =
+            event_result.map_err(|error| Failure::transport("openai", error.to_string()))?;
         if event.data.trim() == "[DONE]" {
             break;
         }
-        let parsed: ImageGenStreamEvent = serde_json::from_str(&event.data).map_err(|error| {
-            EngineAdapterRequestError::invalid_response("openai", error.to_string())
-        })?;
+        let parsed: ImageGenStreamEvent = serde_json::from_str(&event.data)
+            .map_err(|error| Failure::invalid_response("openai", error.to_string()))?;
         match parsed {
             ImageGenStreamEvent::PartialImage(partial) => {
                 emit_openai_partial_image_update(
@@ -381,7 +377,7 @@ async fn send_image_generation_stream_request(
     }
 
     if completed_events.is_empty() {
-        return Err(EngineAdapterRequestError::invalid_response(
+        return Err(Failure::invalid_response(
             "openai",
             "OpenAI image generation stream ended without a completed image event.",
         ));
@@ -395,7 +391,7 @@ async fn emit_openai_partial_image_update(
     slot_count: usize,
     partial: &ImageGenPartialImageEvent,
     requested_partial_images: u8,
-) -> Result<(), crate::EngineAdapterRequestError> {
+) -> Result<(), crate::Failure> {
     const PROGRESS_CAP: f32 = 0.9;
     let Some(reporter) = activity_reporter else {
         return Ok(());
@@ -503,9 +499,7 @@ fn enum_json_string<T: Serialize>(value: &T) -> Option<String> {
 
 /// Reads the configured partial-image count. Required from config — the
 /// adapter carries no hardcoded default.
-fn require_openai_partial_images(
-    backend: &MediaBackendConfig,
-) -> Result<u8, EngineAdapterRequestError> {
+fn require_openai_partial_images(backend: &MediaBackendConfig) -> Result<u8, Failure> {
     let value = read_u64_option_opt(&backend.options.extra, "partialImages")
         .ok_or_else(|| missing_openai_media_option("partialImages"))?;
     u8::try_from(value)
@@ -522,11 +516,9 @@ fn should_stream_openai_partial_images(
 }
 
 #[cfg(test)]
-fn parse_openai_images_response_body(
-    body: &str,
-) -> Result<OpenAiImagesResponse, EngineAdapterRequestError> {
+fn parse_openai_images_response_body(body: &str) -> Result<OpenAiImagesResponse, Failure> {
     serde_json::from_str(body).map_err(|error| {
-        EngineAdapterRequestError::transport(
+        Failure::transport(
             "openai",
             format!(
                 "failed to deserialize api response: error:{} content:{}",
@@ -537,7 +529,7 @@ fn parse_openai_images_response_body(
     })
 }
 
-fn parse_openai_error_body(body: &str) -> Option<EngineAdapterRequestError> {
+fn parse_openai_error_body(body: &str) -> Option<Failure> {
     #[derive(Deserialize)]
     struct ErrorEnvelope {
         error: OpenAiErrorBody,
@@ -550,7 +542,7 @@ fn parse_openai_error_body(body: &str) -> Option<EngineAdapterRequestError> {
 
     serde_json::from_str::<ErrorEnvelope>(body)
         .ok()
-        .map(|envelope| EngineAdapterRequestError::new("openai", envelope.error.message, "request"))
+        .map(|envelope| Failure::new("openai", envelope.error.message, "request"))
 }
 
 #[cfg(test)]
@@ -568,15 +560,11 @@ fn truncate_for_error(body: &str) -> String {
 
 /// Normalises OpenAI media-generation failures into the shared provider-neutral error shape.
 #[cfg(test)]
-fn normalize_openai_error(error: OpenAIError) -> EngineAdapterRequestError {
+fn normalize_openai_error(error: OpenAIError) -> Failure {
     match error {
-        OpenAIError::ApiError(inner) => {
-            EngineAdapterRequestError::new("openai", inner.message.clone(), "request")
-        }
-        OpenAIError::Reqwest(error) => {
-            EngineAdapterRequestError::transport("openai", error.to_string())
-        }
-        other => EngineAdapterRequestError::transport("openai", other.to_string()),
+        OpenAIError::ApiError(inner) => Failure::new("openai", inner.message.clone(), "request"),
+        OpenAIError::Reqwest(error) => Failure::transport("openai", error.to_string()),
+        other => Failure::transport("openai", other.to_string()),
     }
 }
 
@@ -633,7 +621,7 @@ fn parse_quality(value: Option<&str>) -> Option<ImageQuality> {
 /// Validates the current GPT Image 2.5 quality vocabulary. `async-openai`
 /// 0.33 predates `xhigh` and `max`; request serialization below deliberately
 /// preserves those values instead of silently dropping them.
-fn configured_openai_quality(value: Option<&str>) -> Result<String, EngineAdapterRequestError> {
+fn configured_openai_quality(value: Option<&str>) -> Result<String, Failure> {
     let quality = value
         .map(str::trim)
         .filter(|value| !value.is_empty())
@@ -644,7 +632,7 @@ fn configured_openai_quality(value: Option<&str>) -> Result<String, EngineAdapte
     ) {
         Ok(quality.to_string())
     } else {
-        Err(EngineAdapterRequestError::new(
+        Err(Failure::new(
             "openai",
             format!("OpenAI media backend has unsupported options.quality \"{quality}\"."),
             "invalid_request",
@@ -685,7 +673,7 @@ fn parse_background(value: Option<&str>) -> Option<ImageBackground> {
 pub(crate) fn prepare_body(
     backend: &MediaBackendConfig,
     request: MediaRenderRequest,
-) -> Result<Value, EngineAdapterRequestError> {
+) -> Result<Value, Failure> {
     let requested_asset_count = match request.options.count {
         Some(count) => count.max(1),
         None => u8::try_from(
@@ -760,9 +748,8 @@ pub(crate) fn prepare_body(
     // Capture the request body before it's moved into the SDK
     // call so the provenance row can reproduce the exact image
     // request. Credentials ride in headers, not this body.
-    let mut provider_request = serde_json::to_value(&create_request).map_err(|error| {
-        EngineAdapterRequestError::invalid_response("openai", error.to_string())
-    })?;
+    let mut provider_request = serde_json::to_value(&create_request)
+        .map_err(|error| Failure::invalid_response("openai", error.to_string()))?;
     provider_request["quality"] = Value::String(configured_quality);
     Ok(provider_request)
 }
@@ -868,7 +855,7 @@ mod tests {
         async fn report_activity(
             &self,
             update: MediaGenerationActivityUpdate,
-        ) -> Result<(), crate::EngineAdapterRequestError> {
+        ) -> Result<(), crate::Failure> {
             self.updates.lock().expect("updates lock").push(update);
             Ok(())
         }
@@ -988,8 +975,8 @@ mod tests {
             .generate(request, CancellationToken::new(), None, None)
             .await
             .expect_err("video should be rejected");
-        assert_eq!(&*error.provider, "openai");
-        assert_eq!(error.classification.as_str(), "invalid_request");
+        assert_eq!(error.origin.provider.as_deref(), Some("openai"));
+        assert_eq!(error.kind.as_str(), "invalid_request");
     }
 
     #[tokio::test(flavor = "current_thread")]
@@ -1242,16 +1229,16 @@ mod tests {
             param: None,
             code: None,
         }));
-        assert_eq!(&*api.provider, "openai");
-        assert_eq!(api.classification.as_str(), "request");
+        assert_eq!(api.origin.provider.as_deref(), Some("openai"));
+        assert_eq!(api.kind.as_str(), "request");
         assert_eq!(&*api.message, "invalid prompt");
 
         let transport = normalize_openai_error(OpenAIError::StreamError(Box::new(
             async_openai::error::StreamError::EventStream("socket closed".to_string()),
         )));
-        assert_eq!(transport.classification.as_str(), "transport");
+        assert_eq!(transport.kind.as_str(), "transport");
 
         let other = normalize_openai_error(OpenAIError::InvalidArgument("bad args".to_string()));
-        assert_eq!(other.classification.as_str(), "transport");
+        assert_eq!(other.kind.as_str(), "transport");
     }
 }

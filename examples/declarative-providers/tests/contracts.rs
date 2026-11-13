@@ -161,7 +161,7 @@ fn request(config: &ProviderConfiguration) -> EngineTextStreamRequest {
 async fn events(
     adapter: &Arc<dyn EngineAdapter>,
     request: EngineTextStreamRequest,
-) -> Result<Vec<EngineTextStreamEvent>, EngineAdapterRequestError> {
+) -> Result<Vec<EngineTextStreamEvent>, Failure> {
     let mut stream = adapter.stream_text(request).await?;
     let mut events = Vec::new();
     while let Some(event) = stream.next().await {
@@ -177,7 +177,7 @@ async fn events_advancing(
     request: EngineTextStreamRequest,
     clock: &battersea_model::ManualClock,
     window: std::time::Duration,
-) -> Result<Vec<EngineTextStreamEvent>, EngineAdapterRequestError> {
+) -> Result<Vec<EngineTextStreamEvent>, Failure> {
     let collect = events(adapter, request);
     tokio::pin!(collect);
     loop {
@@ -359,8 +359,8 @@ async fn services_sharing_an_adapter_keep_authentication_continuation_and_revisi
     )
     .await
     .unwrap_err();
-    assert_eq!(&*error.provider, "research");
-    assert_eq!(error.dispatch, DispatchState::NotSent);
+    assert_eq!(error.origin.provider.as_deref(), Some("research"));
+    assert_eq!(error.exchange.dispatch, DispatchState::NotSent);
     events(configured.chat("research-chat").unwrap(), request(&config))
         .await
         .unwrap();
@@ -457,8 +457,8 @@ async fn completions_reject_unsupported_image_formats_before_dispatch() {
                 mime_type: mime.into(),
             });
             let error = events(adapter, req).await.unwrap_err();
-            assert_eq!(error.classification, ErrorKind::InvalidRequest);
-            assert_eq!(error.dispatch, DispatchState::NotSent);
+            assert_eq!(error.kind, ErrorKind::InvalidRequest);
+            assert_eq!(error.exchange.dispatch, DispatchState::NotSent);
         }
     }
     assert!(wire.requests.lock().unwrap().is_empty());
@@ -492,10 +492,7 @@ async fn completions_reject_unsupported_image_formats_before_dispatch() {
 struct Echo(Arc<AtomicUsize>);
 #[async_trait]
 impl EngineLocalToolExecutor for Echo {
-    async fn call(
-        &self,
-        call: EngineLocalToolCall,
-    ) -> Result<EngineLocalToolResult, EngineAdapterRequestError> {
+    async fn call(&self, call: EngineLocalToolCall) -> Result<EngineLocalToolResult, Failure> {
         self.0.fetch_add(1, Ordering::SeqCst);
         Ok(EngineLocalToolResult::Json {
             content: call.arguments,
@@ -1110,8 +1107,8 @@ async fn encoded_credentials_are_masked_in_returned_errors_and_request_and_error
                 &*error.message,
                 "Provider HTTP request failed with status 401: rejected [REDACTED]"
             );
-            assert_eq!(error.classification, ErrorKind::Authentication);
-            assert_eq!(error.status_code, Some(401));
+            assert_eq!(error.kind, ErrorKind::Authentication);
+            assert_eq!(error.exchange.status, Some(401));
             let entries = logs.0.lock().unwrap();
             let logged_error = entries
                 .iter()
@@ -1175,7 +1172,7 @@ async fn runway_error_bodies_mask_uri_and_json_escaped_credentials() {
             .await
             .err()
             .unwrap();
-        assert_eq!(error.status_code, Some(401));
+        assert_eq!(error.exchange.status, Some(401));
         let body: Value = serde_json::from_str(&error.message).unwrap();
         assert_eq!(body["error"], "rejected [REDACTED]");
     }
@@ -1219,8 +1216,8 @@ async fn credentials_are_redacted_and_rotation_requires_a_new_binding() {
     let error = events(configured.chat("office-chat").unwrap(), request(&config))
         .await
         .unwrap_err();
-    assert_eq!(&*error.provider, "office");
-    assert_eq!(error.classification, ErrorKind::Authentication);
+    assert_eq!(error.origin.provider.as_deref(), Some("office"));
+    assert_eq!(error.kind, ErrorKind::Authentication);
     let diagnostics = format!(
         "{error:?} {:?} {:?}",
         configured.snapshot(),
@@ -1306,7 +1303,7 @@ async fn incomplete_streams_and_server_failures_do_not_replay_generation() {
         let error = events(configured.chat("office-chat").unwrap(), request(&config))
             .await
             .unwrap_err();
-        assert_ne!(error.dispatch, DispatchState::NotSent);
+        assert_ne!(error.exchange.dispatch, DispatchState::NotSent);
         assert_eq!(wire.requests.lock().unwrap().len(), 1);
         task.abort();
     }

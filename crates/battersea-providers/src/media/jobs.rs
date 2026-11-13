@@ -24,13 +24,9 @@ pub(crate) trait JobTransport: Send + Sync {
     fn backend(&self) -> &MediaBackendConfig;
     /// The adapter's clock; it judges output expiry, provider delays and cleanup deadlines.
     fn clock(&self) -> Arc<dyn battersea_model::Clock>;
-    fn decode(
-        &self,
-        raw: Value,
-        submission: bool,
-    ) -> Result<RemoteUpdate, EngineAdapterRequestError>;
-    async fn poll(&self, id: &str) -> Result<RemoteUpdate, EngineAdapterRequestError>;
-    async fn cancel(&self, id: &str) -> Result<MediaJobStatus, EngineAdapterRequestError>;
+    fn decode(&self, raw: Value, submission: bool) -> Result<RemoteUpdate, Failure>;
+    async fn poll(&self, id: &str) -> Result<RemoteUpdate, Failure>;
+    async fn cancel(&self, id: &str) -> Result<MediaJobStatus, Failure>;
     fn asset_auth(&self, _url: &Url) -> Option<&str> {
         None
     }
@@ -39,8 +35,8 @@ pub(crate) trait JobTransport: Send + Sync {
         _webhook: MediaWebhook<'_>,
         _secret: &str,
         _now: DateTime<Utc>,
-    ) -> Result<RemoteUpdate, EngineAdapterRequestError> {
-        Err(EngineAdapterRequestError::new(
+    ) -> Result<RemoteUpdate, Failure> {
+        Err(Failure::new(
             self.provider(),
             "Provider does not support webhooks.",
             ErrorKind::InvalidRequest,
@@ -48,9 +44,7 @@ pub(crate) trait JobTransport: Send + Sync {
     }
 }
 
-pub(crate) fn poll_policy(
-    backend: &MediaBackendConfig,
-) -> Result<MediaPollPolicy, EngineAdapterRequestError> {
+pub(crate) fn poll_policy(backend: &MediaBackendConfig) -> Result<MediaPollPolicy, Failure> {
     let option = |key: &str| {
         backend
             .options
@@ -59,7 +53,7 @@ pub(crate) fn poll_policy(
             .and_then(|v| v.as_u64().or_else(|| v.as_str()?.parse().ok()))
     };
     let missing = |key| {
-        EngineAdapterRequestError::new(
+        Failure::new(
             &backend.provider,
             format!("Media backend must configure options.{key}."),
             ErrorKind::InvalidRequest,
@@ -114,14 +108,11 @@ impl RemoteJob {
         reporter: Option<Arc<dyn MediaGenerationActivityReporter>>,
         slot_count: u8,
         timing: MediaTimingRecorder,
-    ) -> Result<Self, EngineAdapterRequestError> {
+    ) -> Result<Self, Failure> {
         let id = raw["id"]
             .as_str()
             .ok_or_else(|| {
-                EngineAdapterRequestError::invalid_response(
-                    transport.provider(),
-                    "Submission has no job identity.",
-                )
+                Failure::invalid_response(transport.provider(), "Submission has no job identity.")
             })?
             .to_owned();
         validate_id(transport.provider(), &id)?;
@@ -164,15 +155,12 @@ impl RemoteJob {
         let _ = job.accept(update);
         Ok(job)
     }
-    fn error(&self, kind: ErrorKind, message: impl Into<String>) -> EngineAdapterRequestError {
-        EngineAdapterRequestError::new(self.transport.provider(), message, kind)
+    fn error(&self, kind: ErrorKind, message: impl Into<String>) -> Failure {
+        Failure::new(self.transport.provider(), message, kind)
             .with_request_id(Some(self.snapshot.id.clone()))
             .with_dispatch(DispatchState::Accepted)
     }
-    fn accept(
-        &mut self,
-        update: RemoteUpdate,
-    ) -> Result<MediaJobStatus, EngineAdapterRequestError> {
+    fn accept(&mut self, update: RemoteUpdate) -> Result<MediaJobStatus, Failure> {
         if update.id != self.snapshot.id {
             return Err(self.error(
                 ErrorKind::InvalidResponse,
@@ -199,7 +187,7 @@ impl RemoteJob {
         self.update = update;
         self.checked_status()
     }
-    fn checked_status(&self) -> Result<MediaJobStatus, EngineAdapterRequestError> {
+    fn checked_status(&self) -> Result<MediaJobStatus, Failure> {
         match self.snapshot.status {
             MediaJobStatus::Failed => Err(self.error(
                 ErrorKind::Provider,
@@ -217,17 +205,14 @@ impl RemoteJob {
             status => Ok(status),
         }
     }
-    pub(crate) async fn announce(
-        &self,
-        cancellation: CancellationToken,
-    ) -> Result<(), EngineAdapterRequestError> {
+    pub(crate) async fn announce(&self, cancellation: CancellationToken) -> Result<(), Failure> {
         tokio::select! {
             biased;
             _ = cancellation.cancelled() => Err(self.error(ErrorKind::Cancelled, "Media job reporting cancelled.")),
             result = self.report() => result,
         }
     }
-    async fn report(&self) -> Result<(), EngineAdapterRequestError> {
+    async fn report(&self) -> Result<(), Failure> {
         let Some(reporter) = &self.reporter else {
             return Ok(());
         };
@@ -254,7 +239,7 @@ impl RemoteJob {
         }
         Ok(())
     }
-    async fn retrieve_outputs(&mut self) -> Result<MediaRenderResult, EngineAdapterRequestError> {
+    async fn retrieve_outputs(&mut self) -> Result<MediaRenderResult, Failure> {
         if let Some(result) = &self.result {
             return Ok(result.clone());
         }
@@ -467,10 +452,7 @@ impl MediaJob for RemoteJob {
     fn poll_policy(&self) -> MediaPollPolicy {
         self.policy
     }
-    async fn poll(
-        &mut self,
-        cancellation: CancellationToken,
-    ) -> Result<MediaJobStatus, EngineAdapterRequestError> {
+    async fn poll(&mut self, cancellation: CancellationToken) -> Result<MediaJobStatus, Failure> {
         if self.snapshot.status.is_terminal() {
             return self.checked_status();
         }
@@ -480,7 +462,7 @@ impl MediaJob for RemoteJob {
             result = self.transport.poll(&self.snapshot.id) => match result {
                 Ok(update) => update,
                 Err(error) => {
-                    if error.classification == ErrorKind::Expired { self.snapshot.status = MediaJobStatus::Expired; }
+                    if error.kind == ErrorKind::Expired { self.snapshot.status = MediaJobStatus::Expired; }
                     return Err(error.with_request_id(Some(self.snapshot.id.clone())).with_dispatch(DispatchState::Accepted));
                 }
             },
@@ -496,14 +478,14 @@ impl MediaJob for RemoteJob {
     async fn retrieve(
         &mut self,
         cancellation: CancellationToken,
-    ) -> Result<MediaRenderResult, EngineAdapterRequestError> {
+    ) -> Result<MediaRenderResult, Failure> {
         tokio::select! {
             biased;
             _ = cancellation.cancelled() => Err(self.error(ErrorKind::Cancelled, "Media retrieval cancelled.")),
             result = self.retrieve_outputs() => result,
         }
     }
-    async fn cancel(&mut self) -> Result<(), EngineAdapterRequestError> {
+    async fn cancel(&mut self) -> Result<(), Failure> {
         if self.snapshot.status.is_terminal() {
             return Ok(());
         }
@@ -524,7 +506,7 @@ impl MediaJob for RemoteJob {
         webhook: MediaWebhook<'_>,
         secret: &str,
         now: DateTime<Utc>,
-    ) -> Result<MediaJobStatus, EngineAdapterRequestError> {
+    ) -> Result<MediaJobStatus, Failure> {
         let update = self.transport.webhook(webhook, secret, now)?;
         self.accept(update)
     }
@@ -547,13 +529,13 @@ impl Drop for RemoteJob {
     }
 }
 
-pub(crate) fn validate_id(provider: &str, id: &str) -> Result<(), EngineAdapterRequestError> {
+pub(crate) fn validate_id(provider: &str, id: &str) -> Result<(), Failure> {
     if id.is_empty()
         || !id
             .bytes()
             .all(|c| c.is_ascii_alphanumeric() || matches!(c, b'-' | b'_'))
     {
-        return Err(EngineAdapterRequestError::invalid_response(
+        return Err(Failure::invalid_response(
             provider,
             "Invalid provider job identity.",
         ));
@@ -565,11 +547,11 @@ pub(crate) async fn json_response(
     provider: &str,
     response: reqwest::Response,
     clock: &dyn battersea_model::Clock,
-) -> Result<Value, EngineAdapterRequestError> {
+) -> Result<Value, Failure> {
     use crate::http_payload::BoundedResponse as _;
     let status = response.status();
     if !status.is_success() {
-        let mut error = EngineAdapterRequestError::new(
+        let mut error = Failure::new(
             provider,
             format!("Media job operation failed with HTTP {}.", status.as_u16()),
             match status.as_u16() {
@@ -600,12 +582,9 @@ pub(crate) async fn json_response(
                         })
                 })
                 .ok_or_else(|| {
-                    EngineAdapterRequestError::invalid_response(
-                        provider,
-                        "Invalid Retry-After header.",
-                    )
+                    Failure::invalid_response(provider, "Invalid Retry-After header.")
                 })?;
-            error.retry_after_ms = Some(delay);
+            error.exchange.retry_after_ms = Some(delay);
         }
         return Err(error);
     }

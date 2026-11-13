@@ -227,7 +227,7 @@ pub struct MediaBackendConfig {
     pub long_description: String,
 }
 
-use crate::EngineAdapterRequestError;
+use crate::Failure;
 use async_trait::async_trait;
 use serde_json::Value;
 use std::sync::Arc;
@@ -312,20 +312,14 @@ pub struct MediaGenerationActivityUpdate {
 #[allow(clippy::double_must_use)] // async_trait marks its boxed Future must_use.
 #[async_trait]
 pub trait MediaGenerationActivityReporter: Send + Sync {
-    async fn report_activity(
-        &self,
-        update: MediaGenerationActivityUpdate,
-    ) -> Result<(), EngineAdapterRequestError>;
+    async fn report_activity(&self, update: MediaGenerationActivityUpdate) -> Result<(), Failure>;
 }
 
 /// Receives staged partial media batches while a generation call is still running.
 #[allow(clippy::double_must_use)] // async_trait marks its boxed Future must_use.
 #[async_trait]
 pub trait MediaGenerationBatchReporter: Send + Sync {
-    async fn report_batch(
-        &self,
-        result: MediaRenderResult,
-    ) -> Result<(), EngineAdapterRequestError>;
+    async fn report_batch(&self, result: MediaRenderResult) -> Result<(), Failure>;
 }
 
 /// Immutable inputs shared by capture and dispatch. Only preparation constructs this value.
@@ -359,10 +353,7 @@ pub trait MediaGenerationAdapter: Send + Sync {
     /// The clock the adapter was created with; it drives the generation deadline.
     fn clock(&self) -> Arc<dyn crate::Clock>;
 
-    fn prepare(
-        &self,
-        request: MediaRenderRequest,
-    ) -> Result<PreparedMediaRequest, EngineAdapterRequestError>;
+    fn prepare(&self, request: MediaRenderRequest) -> Result<PreparedMediaRequest, Failure>;
 
     async fn generate(
         &self,
@@ -370,7 +361,7 @@ pub trait MediaGenerationAdapter: Send + Sync {
         cancellation: CancellationToken,
         activity_reporter: Option<Arc<dyn MediaGenerationActivityReporter>>,
         batch_reporter: Option<Arc<dyn MediaGenerationBatchReporter>>,
-    ) -> Result<MediaRenderResult, EngineAdapterRequestError> {
+    ) -> Result<MediaRenderResult, Failure> {
         let prepared = self.prepare(request)?;
         let clock = self.clock();
         let deadline = self.backend().options.timeout_ms.and_then(|ms| {
@@ -383,11 +374,11 @@ pub trait MediaGenerationAdapter: Send + Sync {
             batch_reporter,
         );
         let submission_work = async {
-            Ok::<_, EngineAdapterRequestError>(match deadline {
+            Ok::<_, Failure>(match deadline {
                 Some(deadline) => crate::clock::timeout_at(clock.as_ref(), deadline, submit)
                     .await
                     .map_err(|_| {
-                        EngineAdapterRequestError::new(
+                        Failure::new(
                             &self.backend().provider,
                             "Media submission deadline exceeded.",
                             crate::ErrorKind::Timeout,
@@ -398,7 +389,7 @@ pub trait MediaGenerationAdapter: Send + Sync {
         };
         let submission = tokio::select! {
             biased;
-            _ = cancellation.cancelled() => return Err(EngineAdapterRequestError::new(&self.backend().provider, "Media submission cancelled.", crate::ErrorKind::Cancelled)),
+            _ = cancellation.cancelled() => return Err(Failure::new(&self.backend().provider, "Media submission cancelled.", crate::ErrorKind::Cancelled)),
             result = submission_work => result?,
         };
         submission.wait(cancellation, deadline).await
@@ -410,10 +401,10 @@ pub trait MediaGenerationAdapter: Send + Sync {
         cancellation: CancellationToken,
         activity_reporter: Option<Arc<dyn MediaGenerationActivityReporter>>,
         batch_reporter: Option<Arc<dyn MediaGenerationBatchReporter>>,
-    ) -> Result<MediaSubmission, EngineAdapterRequestError>;
+    ) -> Result<MediaSubmission, Failure>;
 
-    async fn cancel(&self, _provider_job_id: &str) -> Result<(), EngineAdapterRequestError> {
-        Err(EngineAdapterRequestError::new(
+    async fn cancel(&self, _provider_job_id: &str) -> Result<(), Failure> {
+        Err(Failure::new(
             &self.backend().provider,
             "Provider has no remote cancellation operation.",
             crate::ErrorKind::InvalidRequest,
@@ -439,7 +430,7 @@ pub trait MediaJob: Send + Sync {
     async fn wait(
         &mut self,
         cancellation: CancellationToken,
-    ) -> Result<MediaRenderResult, EngineAdapterRequestError> {
+    ) -> Result<MediaRenderResult, Failure> {
         let policy = self.poll_policy();
         policy.validate()?;
         let clock = self.clock();
@@ -447,7 +438,7 @@ pub trait MediaJob: Send + Sync {
         loop {
             let result = tokio::select! {
                 biased;
-                _ = cancellation.cancelled() => return Err(EngineAdapterRequestError::new("media", "Media job cancelled.", crate::ErrorKind::Cancelled)),
+                _ = cancellation.cancelled() => return Err(Failure::new("media", "Media job cancelled.", crate::ErrorKind::Cancelled)),
                 result = self.poll(cancellation.clone()) => result,
             };
             let delay = match result {
@@ -457,7 +448,7 @@ pub trait MediaJob: Send + Sync {
                     policy.interval_ms
                 }
                 Ok(status) => {
-                    return Err(EngineAdapterRequestError::new(
+                    return Err(Failure::new(
                         "media",
                         format!("Media job is {status:?}."),
                         match status {
@@ -470,7 +461,7 @@ pub trait MediaJob: Send + Sync {
                 Err(error)
                     if !self.snapshot().status.is_terminal()
                         && matches!(
-                            error.classification,
+                            error.kind,
                             crate::ErrorKind::Transport
                                 | crate::ErrorKind::Timeout
                                 | crate::ErrorKind::RateLimit
@@ -482,7 +473,7 @@ pub trait MediaJob: Send + Sync {
                         .retry_delay_ms
                         .saturating_mul(1_u64 << retries.min(63))
                         .min(policy.max_retry_delay_ms)
-                        .max(error.retry_after_ms.unwrap_or(0));
+                        .max(error.exchange.retry_after_ms.unwrap_or(0));
                     if delay > policy.max_retry_delay_ms {
                         return Err(error);
                     }
@@ -493,7 +484,7 @@ pub trait MediaJob: Send + Sync {
             };
             tokio::select! {
                 biased;
-                _ = cancellation.cancelled() => return Err(EngineAdapterRequestError::new("media", "Media job cancelled.", crate::ErrorKind::Cancelled)),
+                _ = cancellation.cancelled() => return Err(Failure::new("media", "Media job cancelled.", crate::ErrorKind::Cancelled)),
                 _ = crate::clock::sleep(clock.as_ref(), std::time::Duration::from_millis(delay)) => {}
             }
         }
@@ -502,23 +493,20 @@ pub trait MediaJob: Send + Sync {
     fn snapshot(&self) -> MediaJobSnapshot;
     fn poll_policy(&self) -> MediaPollPolicy;
     /// Retrieve one provider status; never submit generation.
-    async fn poll(
-        &mut self,
-        cancellation: CancellationToken,
-    ) -> Result<MediaJobStatus, EngineAdapterRequestError>;
+    async fn poll(&mut self, cancellation: CancellationToken) -> Result<MediaJobStatus, Failure>;
     /// Retrieve outputs of a succeeded job. Repeated calls return the retained result.
     async fn retrieve(
         &mut self,
         cancellation: CancellationToken,
-    ) -> Result<MediaRenderResult, EngineAdapterRequestError>;
-    async fn cancel(&mut self) -> Result<(), EngineAdapterRequestError>;
+    ) -> Result<MediaRenderResult, Failure>;
+    async fn cancel(&mut self) -> Result<(), Failure>;
     async fn webhook(
         &mut self,
         _webhook: MediaWebhook<'_>,
         _secret: &str,
         _now: chrono::DateTime<chrono::Utc>,
-    ) -> Result<MediaJobStatus, EngineAdapterRequestError> {
-        Err(EngineAdapterRequestError::new(
+    ) -> Result<MediaJobStatus, Failure> {
+        Err(Failure::new(
             "media",
             "This job does not support webhooks.",
             crate::ErrorKind::InvalidRequest,
@@ -531,19 +519,19 @@ impl MediaSubmission {
         self,
         cancellation: CancellationToken,
         deadline: Option<tokio::time::Instant>,
-    ) -> Result<MediaRenderResult, EngineAdapterRequestError> {
+    ) -> Result<MediaRenderResult, Failure> {
         match self {
             Self::Complete(result) => Ok(result),
             Self::Pending(mut job) => {
                 let clock = job.clock();
                 let result = tokio::select! {
                     biased;
-                    _ = cancellation.cancelled() => Err(EngineAdapterRequestError::new(job.provider(), "Media job cancelled.", crate::ErrorKind::Cancelled)),
+                    _ = cancellation.cancelled() => Err(Failure::new(job.provider(), "Media job cancelled.", crate::ErrorKind::Cancelled)),
                     result = async {
                         match deadline {
-                            Some(deadline) if deadline <= clock.instant() => Err(EngineAdapterRequestError::new(job.provider(), "Media job deadline exceeded.", crate::ErrorKind::Timeout)),
+                            Some(deadline) if deadline <= clock.instant() => Err(Failure::new(job.provider(), "Media job deadline exceeded.", crate::ErrorKind::Timeout)),
                             Some(deadline) => crate::clock::timeout_at(clock.as_ref(), deadline, job.wait(cancellation.clone())).await
-                                .map_err(|_| EngineAdapterRequestError::new(job.provider(), "Media job deadline exceeded.", crate::ErrorKind::Timeout))?,
+                                .map_err(|_| Failure::new(job.provider(), "Media job deadline exceeded.", crate::ErrorKind::Timeout))?,
                             None => job.wait(cancellation.clone()).await,
                         }
                     } => result,
@@ -568,14 +556,12 @@ impl MediaSubmission {
                                     "{} Remote cancellation failed: {}",
                                     error.message, cleanup.message
                                 )
-                                .into()
                             }
                             Err(_) => {
                                 error.message = format!(
                                     "{} Remote cancellation timed out; remote outcome is unknown.",
                                     error.message
                                 )
-                                .into()
                             }
                         }
                     }
@@ -617,12 +603,12 @@ pub struct MediaPollPolicy {
     pub max_retries: u32,
 }
 impl MediaPollPolicy {
-    pub fn validate(self) -> Result<(), EngineAdapterRequestError> {
+    pub fn validate(self) -> Result<(), Failure> {
         if self.interval_ms == 0
             || self.retry_delay_ms == 0
             || self.max_retry_delay_ms < self.retry_delay_ms
         {
-            return Err(EngineAdapterRequestError::new(
+            return Err(Failure::new(
                 "media",
                 "Polling intervals must be positive and retry bounds ordered.",
                 crate::ErrorKind::InvalidRequest,

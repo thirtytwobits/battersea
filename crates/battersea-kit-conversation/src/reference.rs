@@ -12,9 +12,9 @@ use crate::{
 use async_trait::async_trait;
 use battersea_kit::{ManualClock, ReferenceError, ReferenceHost, ReferenceState};
 use battersea_model::{
-    sleep, utc_now, Clock, EngineAdapter, EngineAdapterDebugContext, EngineAdapterRequestError,
-    EngineLocalToolCall, EngineTextStream, EngineTextStreamEvent, EngineTextStreamRequest,
-    EngineTokenUsage, ErrorKind, StopReason, ToolCallEvidence, ToolCallOutcome, ToolCode,
+    sleep, utc_now, Clock, EngineAdapter, EngineAdapterDebugContext, EngineLocalToolCall,
+    EngineTextStream, EngineTextStreamEvent, EngineTextStreamRequest, EngineTokenUsage, ErrorKind,
+    Failure, StopReason, ToolCallEvidence, ToolCallOutcome, ToolCode,
 };
 use battersea_runtime::{ExecutionError, HandlerRegistry};
 use futures_util::stream;
@@ -375,10 +375,10 @@ pub enum ScriptedResponse {
 
 /// One item of a scripted stream.
 enum Item {
-    Event(Box<Result<EngineTextStreamEvent, EngineAdapterRequestError>>),
+    Event(Box<Result<EngineTextStreamEvent, Failure>>),
     Wait(Duration),
 }
-fn event(event: Result<EngineTextStreamEvent, EngineAdapterRequestError>) -> Item {
+fn event(event: Result<EngineTextStreamEvent, Failure>) -> Item {
     Item::Event(Box::new(event))
 }
 
@@ -445,13 +445,13 @@ impl EngineAdapter for ScriptedEngine {
     async fn count_text_stream_input_tokens(
         &self,
         request: EngineTextStreamRequest,
-    ) -> Result<u64, EngineAdapterRequestError> {
+    ) -> Result<u64, Failure> {
         Ok(Self::words(&request))
     }
     async fn stream_text(
         &self,
         request: EngineTextStreamRequest,
-    ) -> Result<EngineTextStream, EngineAdapterRequestError> {
+    ) -> Result<EngineTextStream, Failure> {
         let input = Self::words(&request);
         // Events already produced, tool evidence among them, reach the caller before an
         // error ends the stream.
@@ -461,7 +461,7 @@ impl EngineAdapter for ScriptedEngine {
         let mut round = 0u32;
         loop {
             let Some(response) = self.take() else {
-                let error = EngineAdapterRequestError::new(
+                let error = Failure::new(
                     "reference",
                     "The script has no response left.",
                     ErrorKind::Mock,
@@ -507,7 +507,7 @@ impl EngineAdapter for ScriptedEngine {
                 }
                 ScriptedResponse::ToolCalls(calls) => {
                     if round as usize >= request.max_tool_rounds {
-                        let error = EngineAdapterRequestError::new(
+                        let error = Failure::new(
                             "reference",
                             "The script asks for more tool rounds than the request allows.",
                             ErrorKind::Request,
@@ -529,7 +529,7 @@ impl EngineAdapter for ScriptedEngine {
                         })));
                         let result = match &request.local_tool_executor {
                             Some(executor) => executor.call(call.clone()).await,
-                            None => Err(EngineAdapterRequestError::new(
+                            None => Err(Failure::new(
                                 "reference",
                                 format!("Tool {:?} has no executor.", call.name),
                                 ErrorKind::InvalidRequest,
@@ -550,7 +550,11 @@ impl EngineAdapter for ScriptedEngine {
                                         call_id: call.id.clone(),
                                         tool_name: call.name.clone(),
                                         outcome: ToolCallOutcome::Uncertain,
-                                        request_id: error.request_id.as_deref().map(String::from),
+                                        request_id: error
+                                            .exchange
+                                            .request_id
+                                            .as_deref()
+                                            .map(String::from),
                                     }
                                 })
                             }
@@ -573,9 +577,7 @@ impl EngineAdapter for ScriptedEngine {
                                 ok: false,
                                 result: Value::Null,
                                 error_message: Some(error.message.to_string()),
-                                error_classification: Some(
-                                    error.classification.as_str().to_string(),
-                                ),
+                                error_classification: Some(error.kind.as_str().to_string()),
                                 tool_result: None,
                                 tool_call: Some(evidence),
                                 finished_at: self.now(),

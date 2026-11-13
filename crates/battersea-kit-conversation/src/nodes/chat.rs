@@ -15,9 +15,8 @@ use crate::{
 use async_trait::async_trait;
 use battersea_flow::{FlowNode, FlowNodeDefinition};
 use battersea_model::{
-    engine::EngineChatParameters, EngineAdapterRequestError, EngineTextStream,
-    EngineTextStreamEvent, EngineTokenUsage, ErrorKind, Message, Role, StopReason,
-    ToolCallEvidence, ToolCode,
+    engine::EngineChatParameters, EngineTextStream, EngineTextStreamEvent, EngineTokenUsage,
+    ErrorKind, Failure, Message, Role, StopReason, ToolCallEvidence, ToolCode,
 };
 use battersea_runtime::{ExecutionError, NodeHandler, ProviderEvent, Token};
 use futures_util::{stream, Stream, StreamExt};
@@ -37,7 +36,7 @@ struct Completion {
     usage: EngineTokenUsage,
     stop_reason: Option<String>,
     started_at: u64,
-    failure: Option<EngineAdapterRequestError>,
+    failure: Option<Failure>,
 }
 
 /// The stream's accumulation.
@@ -110,7 +109,7 @@ impl Progress {
             }),
         }
     }
-    fn completion(&mut self, failure: Option<EngineAdapterRequestError>) -> ProviderEvent {
+    fn completion(&mut self, failure: Option<Failure>) -> ProviderEvent {
         self.done = true;
         if let Some(evidence) = failure
             .as_ref()
@@ -440,7 +439,7 @@ impl<H: Port> NodeHandler<H> for ChatHandler {
             Some(error) if error.tool_code == Some(ToolCode::ToolRoundsExceeded) => {
                 (CallOutcome::Failed, Some(codes::TOOL_ROUNDS_EXHAUSTED))
             }
-            Some(error) if error.classification == ErrorKind::Cancelled => {
+            Some(error) if error.kind == ErrorKind::Cancelled => {
                 (CallOutcome::Cancelled, Some(codes::PROVIDER_FAILED))
             }
             Some(_) => (CallOutcome::Failed, Some(codes::PROVIDER_FAILED)),
@@ -496,12 +495,12 @@ impl<H: Port> NodeHandler<H> for ChatHandler {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use battersea_model::{EngineAdapterRequestError, ToolCallOutcome};
+    use battersea_model::{Failure, ToolCallOutcome};
     use serde_json::json;
 
     /// The completion the stream of `events` ends with.
     async fn completion_of(
-        events: Vec<Result<EngineTextStreamEvent, EngineAdapterRequestError>>,
+        events: Vec<Result<EngineTextStreamEvent, Failure>>,
     ) -> (Vec<ProviderEvent>, Completion) {
         let mut events = provider_events(Box::pin(stream::iter(events)), 7)
             .collect::<Vec<_>>()
@@ -570,7 +569,7 @@ mod tests {
 
     #[tokio::test]
     async fn tool_rounds_close_at_the_next_message_and_at_a_failed_end() {
-        let mut error = EngineAdapterRequestError::new("test", "rounds", ErrorKind::Request)
+        let mut error = Failure::new("test", "rounds", ErrorKind::Request)
             .with_tool_code(ToolCode::ToolRoundsExceeded);
         error.tool_call = Some(Box::new(ToolCallEvidence {
             call_id: "call-2".into(),

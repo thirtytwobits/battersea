@@ -125,7 +125,7 @@ both queues and wakes producers waiting for capacity.
 
 Each node authors `failure_policy`: `fail`, `emit` or `skip`. Omission means `fail`.
 Only explicitly classified, recoverable node failures are eligible. Classification carries
-a stable host code and a sanitised message and confirms that external effects have settled.
+a stable host code and the [failure](failures.md) and confirms that external effects have settled.
 Unclassified errors and runtime-owned refusal codes retain their original outcome.
 Cancellation, capacity admission, contract violations, panics, journal failures and unresolved
 effect intents bypass node policies. Classification does not authorise retry or effect replay.
@@ -166,9 +166,9 @@ failing phase publishes exactly one value; other failure ports close absent. Sou
 hybrid snapshot failure ports retain snapshot dependency ordering.
 
 The `node_failure` payload contains `id`, `node_id`, `phase`, `operation`, `code` and
-`message`. Its identity combines the run, node and first failure's delivery sequence and
-is retained by recovery. Code and message are bounded to 128 and 4096 UTF-8 bytes.
-Hosts sanitise messages before classification. Failure output admission uses the activation's
+`failure`. Its identity combines the run, node and first failure's delivery sequence and
+is retained by recovery. Code is bounded to 128 UTF-8 bytes. The host's `FailureDisclosure`
+decides which parts of the failure the payload carries. Failure output admission uses the activation's
 existing limits, FIFO ordering and fan-out reservations. Publication and closure follow
 previously admitted emissions. Admission and closure failures retain their control outcome.
 A node cannot reapply its policy to its own failure publication.

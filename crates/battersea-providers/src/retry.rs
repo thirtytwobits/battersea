@@ -1,8 +1,6 @@
 //! Retries of immutable HTTP requests, below the conversation/tool-effect boundary.
 use crate::http_payload::BoundedResponse as _;
-use crate::{
-    EngineAdapterLogger, EngineAdapterRequestError, EngineAdapterRetryLog, EngineBackendConfig,
-};
+use crate::{EngineAdapterLogger, EngineAdapterRetryLog, EngineBackendConfig, Failure};
 use battersea_model::{
     adapter::error::{DispatchState, ErrorKind},
     Clock,
@@ -10,11 +8,11 @@ use battersea_model::{
 use reqwest::{RequestBuilder, Response};
 use std::{sync::Arc, time::Duration};
 
-pub(crate) fn validate(backend: &EngineBackendConfig) -> Result<(), EngineAdapterRequestError> {
+pub(crate) fn validate(backend: &EngineBackendConfig) -> Result<(), Failure> {
     if backend.options.max_retries.unwrap_or(0) > 0 {
         match (backend.options.retry_initial_delay_ms, backend.options.retry_max_delay_ms) {
             (Some(initial), Some(maximum)) if initial > 0 && maximum >= initial => {},
-            _ => return Err(EngineAdapterRequestError::new(&backend.provider,
+            _ => return Err(Failure::new(&backend.provider,
                 "Retries require positive retryInitialDelayMs and retryMaxDelayMs >= retryInitialDelayMs.", ErrorKind::InvalidRequest)),
         }
     }
@@ -62,14 +60,14 @@ pub(crate) async fn send(
     backend: &EngineBackendConfig,
     logger: Option<&Arc<dyn EngineAdapterLogger>>,
     clock: &dyn Clock,
-) -> Result<Response, EngineAdapterRequestError> {
+) -> Result<Response, Failure> {
     validate(backend)?;
     // Building before sending separates malformed requests from ambiguous transport failures.
     let request =
         crate::connection::authenticate(request, backend.binding.as_ref(), &backend.auth)?;
     let (client, prepared) = request.build_split();
     let prepared = prepared.map_err(|e| {
-        EngineAdapterRequestError::new(
+        Failure::new(
             &backend.provider,
             e.without_url().to_string(),
             ErrorKind::InvalidRequest,
@@ -79,7 +77,7 @@ pub(crate) async fn send(
     let retries = backend.options.max_retries.unwrap_or(0);
     for retry in 0..=retries {
         let attempt = prepared.try_clone().ok_or_else(|| {
-            EngineAdapterRequestError::new(
+            Failure::new(
                 &backend.provider,
                 "Request body cannot be replayed.",
                 ErrorKind::InvalidRequest,
@@ -113,7 +111,7 @@ pub(crate) async fn send(
                     .ok()
                     .as_deref()
                     .and_then(provider_reason);
-                let mut error = EngineAdapterRequestError::new(
+                let mut error = Failure::new(
                     &backend.provider,
                     match reason {
                         Some(reason) => {
@@ -129,11 +127,11 @@ pub(crate) async fn send(
                 } else {
                     DispatchState::Unknown
                 });
-                error.request_id = request_id.map(String::into_boxed_str);
-                error.retry_after_ms = retry_after_ms;
-                if delay_named && error.retry_after_ms.is_none() {
+                error.exchange.request_id = request_id;
+                error.exchange.retry_after_ms = retry_after_ms;
+                if delay_named && error.exchange.retry_after_ms.is_none() {
                     // An unreadable provider delay cannot authorise an earlier retry.
-                    error.retry_after_ms = Some(u64::MAX);
+                    error.exchange.retry_after_ms = Some(u64::MAX);
                 }
                 error
             }
@@ -146,31 +144,27 @@ pub(crate) async fn send(
                 } else {
                     ErrorKind::Transport
                 };
-                EngineAdapterRequestError::new(
-                    &backend.provider,
-                    error.without_url().to_string(),
-                    kind,
-                )
-                .with_dispatch(if not_sent {
-                    DispatchState::NotSent
-                } else {
-                    DispatchState::Unknown
-                })
+                Failure::new(&backend.provider, error.without_url().to_string(), kind)
+                    .with_dispatch(if not_sent {
+                        DispatchState::NotSent
+                    } else {
+                        DispatchState::Unknown
+                    })
             }
         };
-        failure.attempts = retry.saturating_add(1);
-        let safe = (failure.dispatch == DispatchState::NotSent
-            && failure.classification != ErrorKind::InvalidRequest)
-            || failure.status_code == Some(429)
+        failure.exchange.attempts = retry.saturating_add(1);
+        let safe = (failure.exchange.dispatch == DispatchState::NotSent
+            && failure.kind != ErrorKind::InvalidRequest)
+            || failure.exchange.status == Some(429)
             || (retrieval
                 && matches!(
-                    failure.classification,
+                    failure.kind,
                     ErrorKind::Transport | ErrorKind::Timeout | ErrorKind::Server
                 ));
         if retry == retries || !safe {
             return Err(failure);
         }
-        let Some(delay_ms) = delay_ms(backend, retry, failure.retry_after_ms) else {
+        let Some(delay_ms) = delay_ms(backend, retry, failure.exchange.retry_after_ms) else {
             return Err(failure);
         };
         if let Some(logger) = logger {
@@ -180,9 +174,9 @@ pub(crate) async fn send(
                     backend: backend.id.clone(),
                     attempt: retry.saturating_add(2),
                     delay_ms,
-                    dispatch: failure.dispatch,
-                    status_code: failure.status_code,
-                    request_id: failure.request_id.as_deref().map(str::to_owned),
+                    dispatch: failure.exchange.dispatch,
+                    status_code: failure.exchange.status,
+                    request_id: failure.exchange.request_id.as_deref().map(str::to_owned),
                     resume: retrieval,
                 })
                 .await;

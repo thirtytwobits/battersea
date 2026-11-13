@@ -1,4 +1,4 @@
-use super::error::EngineAdapterRequestError;
+use super::error::Failure;
 use super::tool_loop::{
     run_tool_loop, send_event, ExecutedToolCall, ToolConversation, ToolEventSender,
 };
@@ -34,7 +34,7 @@ pub(crate) fn create_openai_adapter(
     backend: EngineBackendConfig,
     logger: Option<Arc<dyn EngineAdapterLogger>>,
     clock: Arc<dyn Clock>,
-) -> Result<Arc<dyn EngineAdapter>, EngineAdapterRequestError> {
+) -> Result<Arc<dyn EngineAdapter>, Failure> {
     crate::retry::validate(&backend)?;
     validate_stream_mode(&backend, backend.chat.stream)?;
     let timeout_ms = backend
@@ -96,7 +96,7 @@ pub(crate) fn create_openai_adapter(
                     })?,
                 ),
                 other => {
-                    return Err(EngineAdapterRequestError::new(
+                    return Err(Failure::new(
                         "openai",
                         format!(
                             "Unknown backgroundMode \"{other}\"; expected \"stream\" or \"poll\"."
@@ -112,7 +112,7 @@ pub(crate) fn create_openai_adapter(
         && background_mode == "poll"
         && background_poll_interval_ms >= timeout_ms.min(background_max_wait_ms)
     {
-        return Err(EngineAdapterRequestError::new(
+        return Err(Failure::new(
             &backend.provider,
             "Background polling interval must be shorter than operation and background wait timeouts.",
             battersea_model::ErrorKind::InvalidRequest,
@@ -129,7 +129,7 @@ pub(crate) fn create_openai_adapter(
         .retry(reqwest::retry::never())
         .redirect(reqwest::redirect::Policy::none())
         .build()
-        .map_err(|error| EngineAdapterRequestError::transport("openai", error.to_string()))?;
+        .map_err(|error| Failure::transport("openai", error.to_string()))?;
 
     Ok(Arc::new(OpenAiEngineAdapter {
         http_client,
@@ -156,17 +156,14 @@ pub(crate) fn create_openai_adapter(
     }))
 }
 
-fn validate_stream_mode(
-    backend: &EngineBackendConfig,
-    stream: bool,
-) -> Result<(), EngineAdapterRequestError> {
+fn validate_stream_mode(backend: &EngineBackendConfig, stream: bool) -> Result<(), Failure> {
     if stream
         || (backend.options.background == Some(true)
             && backend.options.background_mode.as_deref() == Some("poll"))
     {
         return Ok(());
     }
-    Err(EngineAdapterRequestError::new(
+    Err(Failure::new(
         &backend.provider,
         "Non-streaming Responses requests require background polling.",
         battersea_model::ErrorKind::InvalidRequest,
@@ -264,7 +261,7 @@ impl EngineAdapter for OpenAiEngineAdapter {
         &self,
         request: &battersea_model::ConversationRequest,
         state: Option<&Value>,
-    ) -> Result<battersea_model::ConversationBinding, EngineAdapterRequestError> {
+    ) -> Result<battersea_model::ConversationBinding, Failure> {
         self.validate_durable_request(request, state)
     }
 
@@ -274,7 +271,7 @@ impl EngineAdapter for OpenAiEngineAdapter {
         previous: Option<&Value>,
         results: &[battersea_model::ConversationToolResult],
         turn: &battersea_model::ConversationTurn,
-    ) -> Result<battersea_model::ConversationBinding, EngineAdapterRequestError> {
+    ) -> Result<battersea_model::ConversationBinding, Failure> {
         self.validate_durable_turn(request, previous, results, turn)
     }
 
@@ -283,7 +280,7 @@ impl EngineAdapter for OpenAiEngineAdapter {
         request: battersea_model::ConversationRequest,
         state: Option<Value>,
         results: Vec<battersea_model::ConversationToolResult>,
-    ) -> Result<battersea_model::ConversationTurn, EngineAdapterRequestError> {
+    ) -> Result<battersea_model::ConversationTurn, Failure> {
         self.durable_turn(request, state, results).await
     }
 
@@ -294,7 +291,7 @@ impl EngineAdapter for OpenAiEngineAdapter {
         results: &[battersea_model::ConversationToolResult],
         command: &battersea_model::ConversationCommand,
         step: &battersea_model::ConversationStep,
-    ) -> Result<battersea_model::ConversationBinding, EngineAdapterRequestError> {
+    ) -> Result<battersea_model::ConversationBinding, Failure> {
         self.validate_durable_step(request, previous, results, command, step)
     }
     async fn conversation_step(
@@ -303,7 +300,7 @@ impl EngineAdapter for OpenAiEngineAdapter {
         previous: Option<Value>,
         results: Vec<battersea_model::ConversationToolResult>,
         command: battersea_model::ConversationCommand,
-    ) -> Result<battersea_model::ConversationStep, EngineAdapterRequestError> {
+    ) -> Result<battersea_model::ConversationStep, Failure> {
         self.durable_step(request, previous, results, command).await
     }
 
@@ -314,7 +311,7 @@ impl EngineAdapter for OpenAiEngineAdapter {
     async fn stream_text(
         &self,
         request: EngineTextStreamRequest,
-    ) -> Result<EngineTextStream, EngineAdapterRequestError> {
+    ) -> Result<EngineTextStream, Failure> {
         super::validate_chat_request(&self.backend, &request)?;
         validate_stream_mode(&self.backend, request.shared.chat.stream)?;
         if !request.local_tools.is_empty() {
@@ -401,9 +398,7 @@ impl EngineAdapter for OpenAiEngineAdapter {
                                         .unwrap_or_else(|| {
                                             "OpenAI streaming response failed.".to_string()
                                         });
-                                    return Err(EngineAdapterRequestError::invalid_response(
-                                        "openai", message,
-                                    ));
+                                    return Err(Failure::invalid_response("openai", message));
                                 }
                                 ResponseStreamEvent::ResponseIncomplete(item) => {
                                     let response = serde_json::to_value(&item.response)
@@ -411,10 +406,7 @@ impl EngineAdapter for OpenAiEngineAdapter {
                                     return Err(openai_missing_output_text_error(&response));
                                 }
                                 ResponseStreamEvent::ResponseError(item) => {
-                                    return Err(EngineAdapterRequestError::transport(
-                                        "openai",
-                                        item.message.clone(),
-                                    ));
+                                    return Err(Failure::transport("openai", item.message.clone()));
                                 }
                                 _ => {}
                             }
@@ -474,7 +466,7 @@ impl EngineAdapter for OpenAiEngineAdapter {
     async fn count_text_stream_input_tokens(
         &self,
         request: EngineTextStreamRequest,
-    ) -> Result<u64, EngineAdapterRequestError> {
+    ) -> Result<u64, Failure> {
         super::validate_chat_request(&self.backend, &request)?;
         validate_stream_mode(&self.backend, request.shared.chat.stream)?;
         let body = build_input_token_count_body(&self.backend, &request)?;
@@ -488,14 +480,15 @@ impl EngineAdapter for OpenAiEngineAdapter {
             self.clock.as_ref(),
         )
         .await?;
-        let payload: Value = response.bounded_json().await.map_err(|error| {
-            EngineAdapterRequestError::invalid_response("openai", error.to_string())
-        })?;
+        let payload: Value = response
+            .bounded_json()
+            .await
+            .map_err(|error| Failure::invalid_response("openai", error.to_string()))?;
         payload
             .get("input_tokens")
             .and_then(Value::as_u64)
             .ok_or_else(|| {
-                EngineAdapterRequestError::invalid_response(
+                Failure::invalid_response(
                     "openai",
                     "OpenAI input token count response omitted input_tokens.",
                 )
@@ -507,9 +500,9 @@ impl OpenAiEngineAdapter {
     async fn stream_text_with_local_tools(
         &self,
         request: EngineTextStreamRequest,
-    ) -> Result<EngineTextStream, EngineAdapterRequestError> {
+    ) -> Result<EngineTextStream, Failure> {
         let executor = request.local_tool_executor.clone().ok_or_else(|| {
-            EngineAdapterRequestError::new(
+            Failure::new(
                 "openai",
                 "Local engine tool executor is unavailable.",
                 "request",
@@ -565,7 +558,7 @@ impl OpenAiEngineAdapter {
     async fn background_text(
         &self,
         request: EngineTextStreamRequest,
-    ) -> Result<EngineTextStream, EngineAdapterRequestError> {
+    ) -> Result<EngineTextStream, Failure> {
         let body = to_background_body(build_stream_body(&self.backend, &request)?);
         battersea_model::adapter::payload::check_payload(&body, "openai")?;
         emit_request(
@@ -577,8 +570,7 @@ impl OpenAiEngineAdapter {
         )
         .await;
 
-        let (tx, rx) =
-            mpsc::channel::<Result<EngineTextStreamEvent, EngineAdapterRequestError>>(64);
+        let (tx, rx) = mpsc::channel::<Result<EngineTextStreamEvent, Failure>>(64);
         let http_client = self.http_client.clone();
         let base_url = self.base_url.clone();
         let backend = self.backend.clone();
@@ -626,7 +618,7 @@ impl OpenAiEngineAdapter {
     async fn background_stream(
         &self,
         request: EngineTextStreamRequest,
-    ) -> Result<EngineTextStream, EngineAdapterRequestError> {
+    ) -> Result<EngineTextStream, Failure> {
         let body = to_background_stream_body(build_stream_body(&self.backend, &request)?);
         battersea_model::adapter::payload::check_payload(&body, "openai")?;
         emit_request(
@@ -638,8 +630,7 @@ impl OpenAiEngineAdapter {
         )
         .await;
 
-        let (tx, rx) =
-            mpsc::channel::<Result<EngineTextStreamEvent, EngineAdapterRequestError>>(64);
+        let (tx, rx) = mpsc::channel::<Result<EngineTextStreamEvent, Failure>>(64);
         let http_client = self.http_client.clone();
         let base_url = self.base_url.clone();
         let backend = self.backend.clone();
@@ -732,10 +723,7 @@ fn is_terminal_background_status(status: &str) -> bool {
 /// Maps a terminal background response to either its value (completed /
 /// incomplete — the caller extracts whatever text exists) or an error
 /// (failed / cancelled / unexpected).
-fn finalize_background_response(
-    response: Value,
-    status: &str,
-) -> Result<Value, EngineAdapterRequestError> {
+fn finalize_background_response(response: Value, status: &str) -> Result<Value, Failure> {
     match status {
         "completed" => Ok(response),
         "incomplete" => Err(openai_missing_output_text_error(&response)),
@@ -746,15 +734,13 @@ fn finalize_background_response(
                 .and_then(Value::as_str)
                 .unwrap_or("OpenAI background response failed.")
                 .to_string();
-            Err(EngineAdapterRequestError::invalid_response(
-                "openai", message,
-            ))
+            Err(Failure::invalid_response("openai", message))
         }
-        "cancelled" => Err(EngineAdapterRequestError::transport(
+        "cancelled" => Err(Failure::transport(
             "openai",
             "OpenAI background response was cancelled.".to_string(),
         )),
-        other => Err(EngineAdapterRequestError::invalid_response(
+        other => Err(Failure::invalid_response(
             "openai",
             format!("OpenAI background response ended in unexpected status \"{other}\"."),
         )),
@@ -799,7 +785,7 @@ impl ToolConversation for OpenAiToolConversation {
         request: &EngineTextStreamRequest,
         results: Vec<ExecutedToolCall>,
         events: &ToolEventSender,
-    ) -> Result<Vec<EngineLocalToolCall>, EngineAdapterRequestError> {
+    ) -> Result<Vec<EngineLocalToolCall>, Failure> {
         self.input.extend(results.into_iter().map(|item| json!({
             "type": "function_call_output", "call_id": item.call.id, "output": item.provider_content.to_string()
         })));
@@ -869,7 +855,7 @@ impl ToolConversation for OpenAiToolConversation {
                     .is_some_and(|blocks| blocks.iter().any(|block| block["type"] == "refusal"))
             })
         }) {
-            return Err(EngineAdapterRequestError::invalid_response(
+            return Err(Failure::invalid_response(
                 "openai",
                 "Provider refused the tool conversation.",
             ));
@@ -927,7 +913,7 @@ impl OpenAiToolConversation {
         operation: super::EngineOperation,
         events: &ToolEventSender,
         idle_ms: u64,
-    ) -> Result<Value, EngineAdapterRequestError> {
+    ) -> Result<Value, Failure> {
         let mut stream = open_response_stream(
             &self.http_client,
             &self.base_url,
@@ -945,13 +931,10 @@ impl OpenAiToolConversation {
             )
             .await
             .map_err(|_| {
-                EngineAdapterRequestError::transport(
-                    "openai",
-                    format!("OpenAI stream stalled for {idle_ms}ms."),
-                )
+                Failure::transport("openai", format!("OpenAI stream stalled for {idle_ms}ms."))
             })?
             .ok_or_else(|| {
-                EngineAdapterRequestError::invalid_response(
+                Failure::invalid_response(
                     "openai",
                     "OpenAI tool stream ended without ResponseCompleted.",
                 )
@@ -969,7 +952,7 @@ impl OpenAiToolConversation {
             };
             match &event {
                 ResponseStreamEvent::ResponseFailed(item) => {
-                    return Err(EngineAdapterRequestError::invalid_response(
+                    return Err(Failure::invalid_response(
                         "openai",
                         item.response
                             .error
@@ -984,10 +967,7 @@ impl OpenAiToolConversation {
                     ))
                 }
                 ResponseStreamEvent::ResponseError(item) => {
-                    return Err(EngineAdapterRequestError::transport(
-                        "openai",
-                        item.message.clone(),
-                    ))
+                    return Err(Failure::transport("openai", item.message.clone()))
                 }
                 _ => {}
             }
@@ -1015,11 +995,8 @@ async fn open_response_stream(
     logger: &Option<Arc<dyn EngineAdapterLogger>>,
     clock: &dyn Clock,
 ) -> Result<
-    futures_util::stream::BoxStream<
-        'static,
-        Result<(Option<ResponseStreamEvent>, Value), EngineAdapterRequestError>,
-    >,
-    EngineAdapterRequestError,
+    futures_util::stream::BoxStream<'static, Result<(Option<ResponseStreamEvent>, Value), Failure>>,
+    Failure,
 > {
     battersea_model::adapter::payload::check_payload(body, "openai")?;
     let response = crate::retry::send(
@@ -1046,10 +1023,7 @@ async fn open_response_stream(
                     })?;
                     Ok((decode_stream_event(&raw)?, raw))
                 })()),
-                Err(error) => Some(Err(EngineAdapterRequestError::transport(
-                    "openai",
-                    error.to_string(),
-                ))),
+                Err(error) => Some(Err(Failure::transport("openai", error.to_string()))),
             }
         })
         .boxed())
@@ -1057,9 +1031,7 @@ async fn open_response_stream(
 
 /// Decodes one Responses stream event, returning `None` for an event type the SDK does not model.
 /// An event of a modelled type that fails to decode is an error.
-fn decode_stream_event(
-    raw: &Value,
-) -> Result<Option<ResponseStreamEvent>, EngineAdapterRequestError> {
+fn decode_stream_event(raw: &Value) -> Result<Option<ResponseStreamEvent>, Failure> {
     match serde_json::from_value(raw.clone()) {
         Ok(event) => Ok(Some(event)),
         Err(_) if !is_modelled_stream_event_type(raw) => Ok(None),
@@ -1166,8 +1138,8 @@ async fn create_and_poll_background(
     poll_interval_ms: u64,
     max_wait_ms: u64,
     clock: &Arc<dyn Clock>,
-    tx: &mpsc::Sender<Result<EngineTextStreamEvent, EngineAdapterRequestError>>,
-) -> Result<Value, EngineAdapterRequestError> {
+    tx: &mpsc::Sender<Result<EngineTextStreamEvent, Failure>>,
+) -> Result<Value, Failure> {
     let headers = build_openai_headers(backend)?;
 
     let created = crate::retry::send(
@@ -1180,14 +1152,15 @@ async fn create_and_poll_background(
         clock.as_ref(),
     )
     .await?;
-    let response: Value = created.bounded_json().await.map_err(|error| {
-        EngineAdapterRequestError::invalid_response("openai", error.to_string())
-    })?;
+    let response: Value = created
+        .bounded_json()
+        .await
+        .map_err(|error| Failure::invalid_response("openai", error.to_string()))?;
     let id = response
         .get("id")
         .and_then(Value::as_str)
         .ok_or_else(|| {
-            EngineAdapterRequestError::invalid_response(
+            Failure::invalid_response(
                 "openai",
                 "OpenAI background create returned no response id.".to_string(),
             )
@@ -1214,7 +1187,7 @@ async fn create_and_poll_background(
     loop {
         if tx.is_closed() {
             guard.cancel().await;
-            return Err(EngineAdapterRequestError::transport(
+            return Err(Failure::transport(
                 "openai",
                 "OpenAI background response cancelled — consumer dropped the stream.".to_string(),
             ));
@@ -1223,7 +1196,7 @@ async fn create_and_poll_background(
             >= std::time::Duration::from_millis(max_wait_ms)
         {
             guard.cancel().await;
-            return Err(EngineAdapterRequestError::transport(
+            return Err(Failure::transport(
                 "openai",
                 format!(
                     "OpenAI background response exceeded backgroundMaxWaitMs ({max_wait_ms}ms); \
@@ -1248,9 +1221,10 @@ async fn create_and_poll_background(
             clock.as_ref(),
         )
         .await?;
-        let response: Value = polled.bounded_json().await.map_err(|error| {
-            EngineAdapterRequestError::invalid_response("openai", error.to_string())
-        })?;
+        let response: Value = polled
+            .bounded_json()
+            .await
+            .map_err(|error| Failure::invalid_response("openai", error.to_string()))?;
         let status = response
             .get("status")
             .and_then(Value::as_str)
@@ -1272,7 +1246,7 @@ async fn emit_background_terminal_response(
     context: &EngineAdapterDebugContext,
     operation: super::EngineOperation,
     response: &Value,
-    tx: &mpsc::Sender<Result<EngineTextStreamEvent, EngineAdapterRequestError>>,
+    tx: &mpsc::Sender<Result<EngineTextStreamEvent, Failure>>,
 ) {
     let output_text = read_openai_output_text(response);
     let missing_output_error = output_text
@@ -1380,8 +1354,8 @@ async fn drive_background_stream(
     context: &EngineAdapterDebugContext,
     operation: super::EngineOperation,
     clock: &Arc<dyn Clock>,
-    tx: &mpsc::Sender<Result<EngineTextStreamEvent, EngineAdapterRequestError>>,
-) -> Result<Value, EngineAdapterRequestError> {
+    tx: &mpsc::Sender<Result<EngineTextStreamEvent, Failure>>,
+) -> Result<Value, Failure> {
     let headers = build_openai_headers(backend)?;
     let deadline = clock.instant() + std::time::Duration::from_millis(max_wait_ms);
     let mut guard = BackgroundResponseGuard {
@@ -1411,14 +1385,14 @@ async fn drive_background_stream(
         let reconnect_reason = loop {
             if tx.is_closed() {
                 guard.cancel().await;
-                return Err(EngineAdapterRequestError::transport(
+                return Err(Failure::transport(
                     "openai",
                     "OpenAI background stream cancelled — consumer dropped the stream.".to_string(),
                 ));
             }
             if clock.instant() >= deadline {
                 guard.cancel().await;
-                return Err(EngineAdapterRequestError::transport(
+                return Err(Failure::transport(
                     "openai",
                     format!(
                         "OpenAI background stream exceeded backgroundMaxWaitMs ({max_wait_ms}ms); \
@@ -1443,7 +1417,7 @@ async fn drive_background_stream(
                         .and_then(Value::as_i64)
                         .filter(|seq| *seq >= 0)
                         .ok_or_else(|| {
-                            EngineAdapterRequestError::invalid_response(
+                            Failure::invalid_response(
                                 "openai",
                                 "Resumable event omitted its sequence number.",
                             )
@@ -1458,7 +1432,7 @@ async fn drive_background_stream(
                         .and_then(Value::as_str)
                     {
                         if guard.id.as_deref().is_some_and(|known| known != id) {
-                            return Err(EngineAdapterRequestError::invalid_response(
+                            return Err(Failure::invalid_response(
                                 "openai",
                                 "Resumed stream changed response identity.",
                             ));
@@ -1491,7 +1465,7 @@ async fn drive_background_stream(
                         );
                         if !is_empty && tx.send(Ok(text_event)).await.is_err() {
                             guard.cancel().await;
-                            return Err(EngineAdapterRequestError::transport(
+                            return Err(Failure::transport(
                                 "openai",
                                 "OpenAI background stream cancelled — consumer dropped the stream."
                                     .to_string(),
@@ -1526,9 +1500,7 @@ async fn drive_background_stream(
                                 .unwrap_or_else(|| {
                                     "OpenAI background response failed.".to_string()
                                 });
-                            return Err(EngineAdapterRequestError::invalid_response(
-                                "openai", message,
-                            ));
+                            return Err(Failure::invalid_response("openai", message));
                         }
                         ResponseStreamEvent::ResponseIncomplete(item) => {
                             guard.id = None;
@@ -1537,10 +1509,7 @@ async fn drive_background_stream(
                             return Err(openai_missing_output_text_error(&response));
                         }
                         ResponseStreamEvent::ResponseError(item) => {
-                            return Err(EngineAdapterRequestError::transport(
-                                "openai",
-                                item.message.clone(),
-                            ));
+                            return Err(Failure::transport("openai", item.message.clone()));
                         }
                         _ => {}
                     }
@@ -1552,7 +1521,7 @@ async fn drive_background_stream(
         };
 
         let Some(id) = guard.id.clone() else {
-            return Err(EngineAdapterRequestError::invalid_response(
+            return Err(Failure::invalid_response(
                 "openai",
                 "OpenAI background stream ended before returning a response id; cannot resume."
                     .to_string(),
@@ -1561,7 +1530,7 @@ async fn drive_background_stream(
         reconnects += 1;
         if reconnects > max_reconnects {
             guard.cancel().await;
-            return Err(EngineAdapterRequestError::transport(
+            return Err(Failure::transport(
                 "openai",
                 format!(
                     "OpenAI background stream exceeded backgroundMaxReconnects ({max_reconnects}) \
@@ -1571,7 +1540,7 @@ async fn drive_background_stream(
         }
         if clock.instant() >= deadline {
             guard.cancel().await;
-            return Err(EngineAdapterRequestError::transport(
+            return Err(Failure::transport(
                 "openai",
                 format!(
                     "OpenAI background stream exceeded backgroundMaxWaitMs ({max_wait_ms}ms); \
@@ -1619,7 +1588,7 @@ fn apply_openai_temperature(body: &mut Value, backend: &EngineBackendConfig, tem
 fn build_stream_body(
     backend: &EngineBackendConfig,
     request: &EngineTextStreamRequest,
-) -> Result<Value, EngineAdapterRequestError> {
+) -> Result<Value, Failure> {
     let mut body = json!({
         "model": backend.model,
         "stream": true,
@@ -1784,9 +1753,7 @@ fn openai_prompt_cache_retention(value: EnginePromptCacheRetention) -> &'static 
     }
 }
 
-fn collect_openai_function_calls(
-    response: &Value,
-) -> Result<Vec<EngineLocalToolCall>, EngineAdapterRequestError> {
+fn collect_openai_function_calls(response: &Value) -> Result<Vec<EngineLocalToolCall>, Failure> {
     response
         .get("output")
         .and_then(Value::as_array)
@@ -1796,10 +1763,7 @@ fn collect_openai_function_calls(
         .map(|item| {
             let arguments = match item.get("arguments") {
                 Some(Value::String(text)) => Some(serde_json::from_str(text).map_err(|error| {
-                    EngineAdapterRequestError::invalid_response(
-                        "openai",
-                        format!("Invalid tool arguments: {error}"),
-                    )
+                    Failure::invalid_response("openai", format!("Invalid tool arguments: {error}"))
                 })?),
                 value => value.cloned(),
             };
@@ -1816,7 +1780,7 @@ fn collect_openai_function_calls(
 fn build_input_token_count_body(
     backend: &EngineBackendConfig,
     request: &EngineTextStreamRequest,
-) -> Result<Value, EngineAdapterRequestError> {
+) -> Result<Value, Failure> {
     let generation = if request.local_tools.is_empty() {
         build_stream_body(backend, request)?
     } else {
@@ -1847,9 +1811,7 @@ fn build_input_token_count_body(
     Ok(body)
 }
 
-fn build_openai_headers(
-    backend: &EngineBackendConfig,
-) -> Result<HeaderMap, EngineAdapterRequestError> {
+fn build_openai_headers(backend: &EngineBackendConfig) -> Result<HeaderMap, Failure> {
     if let Some(binding) = &backend.binding {
         return crate::connection::headers(binding, &backend.auth);
     }
@@ -1861,12 +1823,12 @@ fn build_openai_headers(
         .ok_or_else(|| missing_backend_option("openai", "auth.header"))?;
     headers.insert(
         HeaderName::from_bytes(header_name.as_bytes())
-            .map_err(|error| EngineAdapterRequestError::transport("openai", error.to_string()))?,
+            .map_err(|error| Failure::transport("openai", error.to_string()))?,
         HeaderValue::from_str(&format!(
             "Bearer {}",
             backend.auth.api_key.as_deref().unwrap_or("")
         ))
-        .map_err(|error| EngineAdapterRequestError::transport("openai", error.to_string()))?,
+        .map_err(|error| Failure::transport("openai", error.to_string()))?,
     );
     Ok(headers)
 }
@@ -1931,7 +1893,7 @@ fn read_openai_output_text(value: &Value) -> String {
         .to_string()
 }
 
-fn openai_missing_output_text_error(response: &Value) -> EngineAdapterRequestError {
+fn openai_missing_output_text_error(response: &Value) -> Failure {
     if let Some(message) = response
         .get("error")
         .and_then(|error| error.get("message"))
@@ -1939,7 +1901,7 @@ fn openai_missing_output_text_error(response: &Value) -> EngineAdapterRequestErr
         .map(str::trim)
         .filter(|message| !message.is_empty())
     {
-        return EngineAdapterRequestError::invalid_response(
+        return Failure::invalid_response(
             "openai",
             format!("OpenAI response failed before producing text: {message}"),
         );
@@ -1960,7 +1922,7 @@ fn openai_missing_output_text_error(response: &Value) -> EngineAdapterRequestErr
             }
             None => "OpenAI response ended incomplete before producing text.".to_string(),
         };
-        return EngineAdapterRequestError::invalid_response("openai", message);
+        return Failure::invalid_response("openai", message);
     }
 
     let output_types = collect_openai_output_item_types(response);
@@ -1972,7 +1934,7 @@ fn openai_missing_output_text_error(response: &Value) -> EngineAdapterRequestErr
             output_types.join(", ")
         )
     };
-    EngineAdapterRequestError::invalid_response("openai", message)
+    Failure::invalid_response("openai", message)
 }
 
 fn collect_openai_output_item_types(response: &Value) -> Vec<String> {
@@ -1992,17 +1954,17 @@ fn collect_openai_output_item_types(response: &Value) -> Vec<String> {
 
 /// Normalises OpenAI client, API, transport, and deserialisation failures into the shared
 /// provider-neutral error shape.
-fn normalize_openai_error(error: OpenAIError) -> EngineAdapterRequestError {
+fn normalize_openai_error(error: OpenAIError) -> Failure {
     match error {
         OpenAIError::Reqwest(inner) => {
-            let mut normalized = EngineAdapterRequestError::transport("openai", inner.to_string());
+            let mut normalized = Failure::transport("openai", inner.to_string());
             if let Some(status) = inner.status() {
-                normalized.status_code = Some(status.as_u16());
-                normalized.classification = classify_status(status.as_u16()).into();
+                normalized.exchange.status = Some(status.as_u16());
+                normalized.kind = classify_status(status.as_u16()).into();
             }
             normalized
         }
-        OpenAIError::ApiError(inner) => EngineAdapterRequestError::new(
+        OpenAIError::ApiError(inner) => Failure::new(
             "openai",
             inner.message,
             classify_openai_message(inner.r#type.as_deref(), inner.code.as_deref()),
@@ -2022,25 +1984,21 @@ fn normalize_openai_error(error: OpenAIError) -> EngineAdapterRequestError {
                         .get("message")
                         .and_then(serde_json::Value::as_str)
                         .unwrap_or("Provider returned an unspecified error");
-                    return EngineAdapterRequestError::new(
+                    return Failure::new(
                         "openai",
                         message,
                         classify_openai_message(error_type, error_code),
                     );
                 }
             }
-            EngineAdapterRequestError::invalid_response(
+            Failure::invalid_response(
                 "openai",
                 format!("Failed to deserialize OpenAI response: {content}"),
             )
         }
-        OpenAIError::StreamError(inner) => {
-            EngineAdapterRequestError::transport("openai", inner.to_string())
-        }
-        OpenAIError::InvalidArgument(message) => {
-            EngineAdapterRequestError::new("openai", message, "request")
-        }
-        other => EngineAdapterRequestError::transport("openai", other.to_string()),
+        OpenAIError::StreamError(inner) => Failure::transport("openai", inner.to_string()),
+        OpenAIError::InvalidArgument(message) => Failure::new("openai", message, "request"),
+        other => Failure::transport("openai", other.to_string()),
     }
 }
 
@@ -2406,8 +2364,8 @@ mod tests {
             Ok(_) => panic!("invalid header name should fail"),
             Err(error) => error,
         };
-        assert_eq!(&*error.provider, "openai");
-        assert_eq!(error.classification.as_str(), "transport");
+        assert_eq!(error.origin.provider.as_deref(), Some("openai"));
+        assert_eq!(error.kind.as_str(), "transport");
     }
 
     #[test]
@@ -2606,7 +2564,7 @@ mod tests {
                 "type": "reasoning"
             }]
         }));
-        assert_eq!(incomplete.classification.as_str(), "invalid_response");
+        assert_eq!(incomplete.kind.as_str(), "invalid_response");
         assert_eq!(
             &*incomplete.message,
             "OpenAI response ended incomplete before producing text: max_output_tokens."
@@ -2646,8 +2604,8 @@ mod tests {
             .expect_err("status error");
         handle.join().expect("join server");
         let normalized = normalize_openai_error(OpenAIError::Reqwest(reqwest_error));
-        assert_eq!(normalized.classification.as_str(), "rate_limit");
-        assert_eq!(normalized.status_code, Some(429));
+        assert_eq!(normalized.kind.as_str(), "rate_limit");
+        assert_eq!(normalized.exchange.status, Some(429));
 
         let api_auth = normalize_openai_error(OpenAIError::ApiError(ApiError {
             message: "bad key".to_string(),
@@ -2655,7 +2613,7 @@ mod tests {
             param: None,
             code: None,
         }));
-        assert_eq!(api_auth.classification.as_str(), "auth");
+        assert_eq!(api_auth.kind.as_str(), "auth");
         assert_eq!(&*api_auth.message, "bad key");
 
         let api_rate_limit = normalize_openai_error(OpenAIError::ApiError(ApiError {
@@ -2664,13 +2622,13 @@ mod tests {
             param: None,
             code: None,
         }));
-        assert_eq!(api_rate_limit.classification.as_str(), "rate_limit");
+        assert_eq!(api_rate_limit.kind.as_str(), "rate_limit");
 
         let invalid_response = normalize_openai_error(OpenAIError::JSONDeserialize(
             serde_json::from_str::<serde_json::Value>("{").expect_err("json error"),
             "{\"bad\":".to_string(),
         ));
-        assert_eq!(invalid_response.classification.as_str(), "invalid_response");
+        assert_eq!(invalid_response.kind.as_str(), "invalid_response");
         assert!(invalid_response
             .message
             .contains("Failed to deserialize OpenAI response"));
@@ -2678,7 +2636,7 @@ mod tests {
         let stream = normalize_openai_error(OpenAIError::StreamError(Box::new(
             StreamError::EventStream("stream broke".to_string()),
         )));
-        assert_eq!(stream.classification.as_str(), "transport");
+        assert_eq!(stream.kind.as_str(), "transport");
     }
 
     #[test]
@@ -2723,31 +2681,31 @@ mod tests {
             parse_err(),
             r#"{"type":"error","error":{"type":"invalid_request_error","code":"rate_limit_exceeded","message":"You've exceeded the rate limit, please slow down and try again after 0.0 seconds.","param":null},"sequence_number":2}"#.to_string(),
         ));
-        assert_eq!(responses_api.classification.as_str(), "rate_limit");
+        assert_eq!(responses_api.kind.as_str(), "rate_limit");
         assert!(responses_api.message.contains("rate limit"));
-        assert_eq!(&*responses_api.provider, "openai");
+        assert_eq!(responses_api.origin.provider.as_deref(), Some("openai"));
 
         // OpenAI Chat Completions API error: {"error":{"type":"rate_limit_error",...}}
         let completions_api = normalize_openai_error(OpenAIError::JSONDeserialize(
             parse_err(),
             r#"{"error":{"type":"rate_limit_error","code":null,"message":"Rate limit reached for requests.","param":null}}"#.to_string(),
         ));
-        assert_eq!(completions_api.classification.as_str(), "rate_limit");
-        assert_eq!(&*completions_api.provider, "openai");
+        assert_eq!(completions_api.kind.as_str(), "rate_limit");
+        assert_eq!(completions_api.origin.provider.as_deref(), Some("openai"));
 
         // Auth error in envelope form
         let auth_envelope = normalize_openai_error(OpenAIError::JSONDeserialize(
             parse_err(),
             r#"{"error":{"type":"authentication_error","code":null,"message":"Invalid API key.","param":null}}"#.to_string(),
         ));
-        assert_eq!(auth_envelope.classification.as_str(), "auth");
+        assert_eq!(auth_envelope.kind.as_str(), "auth");
 
         // Unrecognised body still falls back to invalid_response
         let unrecognised = normalize_openai_error(OpenAIError::JSONDeserialize(
             parse_err(),
             r#"{"something_else":"value"}"#.to_string(),
         ));
-        assert_eq!(unrecognised.classification.as_str(), "invalid_response");
+        assert_eq!(unrecognised.kind.as_str(), "invalid_response");
         assert!(unrecognised
             .message
             .contains("Failed to deserialize OpenAI response"));
@@ -2837,7 +2795,7 @@ mod tests {
         let failed =
             finalize_background_response(json!({ "error": { "message": "boom" } }), "failed")
                 .expect_err("failed status is an error");
-        assert_eq!(failed.classification.as_str(), "invalid_response");
+        assert_eq!(failed.kind.as_str(), "invalid_response");
         assert!(failed.message.contains("boom"));
 
         let cancelled = finalize_background_response(json!({}), "cancelled")

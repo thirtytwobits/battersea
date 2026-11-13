@@ -3,7 +3,7 @@
 use super::*;
 use battersea_model::{ConversationCommand, ConversationStep};
 
-fn native_response(response: &Value) -> Result<(), EngineAdapterRequestError> {
+fn native_response(response: &Value) -> Result<(), Failure> {
     check_payload(response, "openai")?;
     serde_json::from_value::<async_openai::types::responses::Response>(response.clone())
         .map_err(|_| invalid("Invalid background Responses response."))?;
@@ -38,7 +38,7 @@ impl OpenAiEngineAdapter {
         previous: Option<&Value>,
         results: &[ConversationToolResult],
         state: &Value,
-    ) -> Result<Checkpoint, EngineAdapterRequestError> {
+    ) -> Result<Checkpoint, Failure> {
         let binding = self.validate_durable_request(request, previous)?;
         let checkpoint = decode(state)?;
         native_response(&checkpoint.response)?;
@@ -69,7 +69,7 @@ impl OpenAiEngineAdapter {
         results: &[ConversationToolResult],
         command: &ConversationCommand,
         step: &ConversationStep,
-    ) -> Result<ConversationBinding, EngineAdapterRequestError> {
+    ) -> Result<ConversationBinding, Failure> {
         let binding = self.validate_durable_request(request, previous)?;
         let pending = match command {
             ConversationCommand::Start => None,
@@ -126,7 +126,7 @@ impl OpenAiEngineAdapter {
         previous: Option<Value>,
         results: Vec<ConversationToolResult>,
         command: ConversationCommand,
-    ) -> Result<ConversationStep, EngineAdapterRequestError> {
+    ) -> Result<ConversationStep, Failure> {
         let binding = self.validate_durable_request(&request, previous.as_ref())?;
         if !self.background {
             return match command {
@@ -205,7 +205,7 @@ impl OpenAiEngineAdapter {
                 .map_err(|_| invalid("Invalid background response payload."))?,
             Err(error)
                 if matches!(command, ConversationCommand::Cancel { .. })
-                    && matches!(error.status_code, Some(400 | 409)) =>
+                    && matches!(error.exchange.status, Some(400 | 409)) =>
             {
                 // A response can finish between the last retrieval and cancellation.
                 let id = crate::connection::segment(

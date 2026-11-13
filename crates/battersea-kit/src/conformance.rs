@@ -207,11 +207,11 @@ pub enum Divergence {
 
 /// The first divergence, naming its case.
 #[derive(Debug, Clone)]
-pub struct Failure {
+pub struct CaseFailure {
     pub case: String,
     pub divergence: Box<Divergence>,
 }
-impl std::fmt::Display for Failure {
+impl std::fmt::Display for CaseFailure {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "case {:?}: ", self.case)?;
         match &*self.divergence {
@@ -248,7 +248,7 @@ impl std::fmt::Display for Failure {
         }
     }
 }
-impl std::error::Error for Failure {}
+impl std::error::Error for CaseFailure {}
 
 /// An event with the host's own error wording removed: the summary and error message of a
 /// failure record and the message of a terminal outcome. Codes and every other field stay.
@@ -350,14 +350,14 @@ pub async fn run<Op, R, C, A>(
     reference: &R,
     candidate: &C,
     access: &A,
-) -> Result<(), Failure>
+) -> Result<(), CaseFailure>
 where
     R: Fixture,
     C: Fixture,
     A: PortAccess<R::Host, Op> + PortAccess<C::Host, Op>,
 {
     for case in &suite.cases {
-        let failure = |divergence| Failure {
+        let failure = |divergence| CaseFailure {
             case: case.name.clone(),
             divergence: Box::new(divergence),
         };

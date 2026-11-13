@@ -102,12 +102,9 @@ impl EngineAdapter for Provider {
         &self,
         _: &ConversationRequest,
         state: Option<&Value>,
-    ) -> Result<ConversationBinding, EngineAdapterRequestError> {
+    ) -> Result<ConversationBinding, Failure> {
         if state.is_some_and(|s| s["version"] != 1) {
-            return Err(EngineAdapterRequestError::invalid_response(
-                "fixture",
-                "Invalid version",
-            ));
+            return Err(Failure::invalid_response("fixture", "Invalid version"));
         }
         Ok(ConversationBinding {
             origin: ProviderContentOrigin {
@@ -125,10 +122,10 @@ impl EngineAdapter for Provider {
         _previous: Option<&Value>,
         _results: &[ConversationToolResult],
         turn: &ConversationTurn,
-    ) -> Result<ConversationBinding, EngineAdapterRequestError> {
+    ) -> Result<ConversationBinding, Failure> {
         let binding = self.validate_conversation(request, Some(&turn.state))?;
         if serde_json::to_value(&turn.calls).unwrap() != turn.state["calls"] {
-            return Err(EngineAdapterRequestError::invalid_response(
+            return Err(Failure::invalid_response(
                 "fixture",
                 "Calls differ from transcript",
             ));
@@ -138,13 +135,10 @@ impl EngineAdapter for Provider {
     async fn count_text_stream_input_tokens(
         &self,
         _: EngineTextStreamRequest,
-    ) -> Result<u64, EngineAdapterRequestError> {
+    ) -> Result<u64, Failure> {
         Ok(0)
     }
-    async fn stream_text(
-        &self,
-        _: EngineTextStreamRequest,
-    ) -> Result<EngineTextStream, EngineAdapterRequestError> {
+    async fn stream_text(&self, _: EngineTextStreamRequest) -> Result<EngineTextStream, Failure> {
         unreachable!()
     }
     async fn conversation_turn(
@@ -152,7 +146,7 @@ impl EngineAdapter for Provider {
         _: ConversationRequest,
         state: Option<Value>,
         results: Vec<ConversationToolResult>,
-    ) -> Result<ConversationTurn, EngineAdapterRequestError> {
+    ) -> Result<ConversationTurn, Failure> {
         self.calls.fetch_add(1, Ordering::SeqCst);
         self.delivered.lock().unwrap().push(results);
         let first = state.is_none();
@@ -274,7 +268,7 @@ async fn open(
     .await
     .unwrap()
 }
-fn code(e: EngineAdapterRequestError, code: ToolCode) {
+fn code(e: Failure, code: ToolCode) {
     assert_eq!(e.tool_code, Some(code));
 }
 
@@ -539,8 +533,8 @@ async fn expiry_and_attempt_budgets_survive_reopen_and_reconciliation() {
     d.record_tool_result(3, result("a")).await.unwrap();
     d.record_tool_result(4, result("b")).await.unwrap();
     let expired = d.resume(5).await.unwrap_err();
-    assert_eq!(expired.classification, ErrorKind::Expired);
-    assert_eq!(expired.dispatch, DispatchState::NotSent);
+    assert_eq!(expired.kind, ErrorKind::Expired);
+    assert_eq!(expired.exchange.dispatch, DispatchState::NotSent);
     assert_eq!(
         expired.tool_call.as_ref().unwrap().outcome,
         ToolCallOutcome::Completed
@@ -644,7 +638,7 @@ async fn a_deadline_during_generation_never_turns_an_intent_into_a_retry() {
         clock.advance_to_timer_within(Duration::from_millis(200))
     );
     assert_eq!(remaining, Duration::from_millis(200));
-    assert_eq!(resumed.unwrap_err().classification, ErrorKind::Timeout);
+    assert_eq!(resumed.unwrap_err().kind, ErrorKind::Timeout);
     drop(d);
     let d = open(store, provider.clone(), scope).await;
     code(

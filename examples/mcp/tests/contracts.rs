@@ -1,8 +1,8 @@
 //! Copyright (c) Scott A Dixon
 //! Behavioural contracts across the public MCP, registry and provider interfaces.
 use battersea_model::{
-    EngineAdapter, EngineAdapterRequestError, EngineTextStreamEvent, EngineTextStreamRequest,
-    ToolCallOutcome, ToolCode,
+    EngineAdapter, EngineTextStreamEvent, EngineTextStreamRequest, Failure, ToolCallOutcome,
+    ToolCode,
 };
 use battersea_tools::{ToolApprovalDecision, ToolApprovalPolicy, ToolApprovalRequest};
 use clapham_mcp_client::{McpConnection, McpHttpOptions, McpSelection};
@@ -130,7 +130,7 @@ async fn remote_approval_precedes_effects_and_provider_retries_reuse_the_decisio
                 ToolApprovalDecision::Deny | ToolApprovalDecision::Pending => {
                     let error = result.unwrap_err();
                     assert_eq!(
-                        error.tool_call.unwrap().outcome,
+                        error.tool_call.clone().unwrap().outcome,
                         ToolCallOutcome::NotDispatched
                     );
                     assert_eq!(
@@ -155,7 +155,7 @@ async fn remote_approval_precedes_effects_and_provider_retries_reuse_the_decisio
                 .unwrap_err();
             assert_eq!(duplicate.tool_code, Some(ToolCode::InvalidToolCallId));
             assert_eq!(
-                duplicate.tool_call.unwrap().outcome,
+                duplicate.tool_call.clone().unwrap().outcome,
                 ToolCallOutcome::NotDispatched
             );
             assert_eq!(policy.calls.load(Ordering::SeqCst), 1);
@@ -224,7 +224,7 @@ impl Remote {
 async fn collect(
     adapter: &Arc<dyn EngineAdapter>,
     request: EngineTextStreamRequest,
-) -> std::result::Result<Vec<EngineTextStreamEvent>, EngineAdapterRequestError> {
+) -> std::result::Result<Vec<EngineTextStreamEvent>, Failure> {
     let mut stream = adapter.stream_text(request).await?;
     let mut events = Vec::new();
     while let Some(event) = stream.next().await {
@@ -368,7 +368,7 @@ async fn remote_failures_preserve_tool_outcomes_without_provider_replay() {
                 collect(&adapter, host::request(&tools, "operator", chat)),
                 lost_reply
             );
-            let evidence = result.unwrap_err().tool_call.unwrap();
+            let evidence = result.unwrap_err().tool_call.clone().unwrap();
             assert_eq!(evidence.outcome, outcome, "{transport:?} {fault:?}");
             assert_eq!(evidence.call_id, "effect-1");
             assert_eq!(fixture.requests.lock().unwrap().len(), 1);
@@ -448,7 +448,7 @@ async fn schema_and_host_profile_refusals_precede_remote_dispatch() {
                 .await
                 .unwrap_err();
             assert_eq!(
-                error.tool_call.unwrap().outcome,
+                error.tool_call.clone().unwrap().outcome,
                 ToolCallOutcome::NotDispatched
             );
             assert_eq!(fixture::effect_count(&ledger).unwrap(), 0);
@@ -480,7 +480,7 @@ async fn changed_definitions_stop_a_pinned_provider_conversation() {
             .await
             .unwrap_err();
         assert_eq!(
-            error.tool_call.unwrap().outcome,
+            error.tool_call.clone().unwrap().outcome,
             ToolCallOutcome::NotDispatched
         );
         assert_eq!(fixture::effect_count(&ledger).unwrap(), 0);
@@ -521,7 +521,7 @@ async fn catalogue_admission_and_alias_collisions_use_shared_registry_rules() {
     let error = host::registry(vec![colliding.contribution()], &[])
         .err()
         .unwrap()
-        .downcast::<EngineAdapterRequestError>()
+        .downcast::<Failure>()
         .unwrap();
     assert_eq!(error.tool_code, Some(ToolCode::DuplicateTool));
     connection.close();
@@ -1200,7 +1200,10 @@ async fn interrupted_or_invalid_provider_continuations_keep_the_tool_result_and_
             assert!(task.await.unwrap_err().is_cancelled());
         } else {
             let error = conversation.resume(4).await.unwrap_err();
-            assert_eq!(error.tool_call.unwrap().outcome, ToolCallOutcome::Completed);
+            assert_eq!(
+                error.tool_call.clone().unwrap().outcome,
+                ToolCallOutcome::Completed
+            );
             drop(conversation);
         }
         let (adapter, _) = connect(&provider.endpoint).unwrap();
@@ -2475,8 +2478,11 @@ async fn native_turns_admit_complete_evidence_and_whole_call_batches(api: Api) {
     .resume(1)
     .await
     .unwrap_err();
-    assert_eq!(expired.classification, battersea_model::ErrorKind::Expired);
-    assert_eq!(expired.dispatch, battersea_model::DispatchState::NotSent);
+    assert_eq!(expired.kind, battersea_model::ErrorKind::Expired);
+    assert_eq!(
+        expired.exchange.dispatch,
+        battersea_model::DispatchState::NotSent
+    );
     assert!(fixture.requests.lock().unwrap().is_empty());
     remote.close().await;
 }

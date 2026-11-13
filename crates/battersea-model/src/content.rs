@@ -1,5 +1,5 @@
 //! Model-declared content capabilities and native structured-output validation.
-use crate::{ContentBlock, EngineAdapterRequestError, ErrorKind, Message, Role};
+use crate::{ContentBlock, ErrorKind, Failure, Message, Role};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
@@ -91,8 +91,8 @@ impl ResponseFormat {
         }
         Ok(())
     }
-    pub fn parse(&self, provider: &str, text: &str) -> Result<Value, EngineAdapterRequestError> {
-        let invalid = |message| EngineAdapterRequestError::invalid_response(provider, message);
+    pub fn parse(&self, provider: &str, text: &str) -> Result<Value, Failure> {
+        let invalid = |message| Failure::invalid_response(provider, message);
         let value: Value = serde_json::from_str(text)
             .map_err(|e| invalid(format!("Malformed structured output: {e}")))?;
         match self {
@@ -137,8 +137,8 @@ pub fn validate_messages(
     provider: &str,
     capabilities: &ContentCapabilities,
     messages: &[Message],
-) -> Result<(), EngineAdapterRequestError> {
-    let invalid = |text| EngineAdapterRequestError::new(provider, text, ErrorKind::InvalidRequest);
+) -> Result<(), Failure> {
+    let invalid = |text| Failure::new(provider, text, ErrorKind::InvalidRequest);
     let mut conversation = false;
     let mut calls = std::collections::HashMap::new();
     let mut completed = std::collections::HashSet::new();

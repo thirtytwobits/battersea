@@ -9,9 +9,7 @@
     )),
     allow(dead_code)
 )]
-use battersea_model::{
-    Authentication, EngineAdapterRequestError, EngineAuthConfig, ErrorKind, ProviderBinding,
-};
+use battersea_model::{Authentication, EngineAuthConfig, ErrorKind, Failure, ProviderBinding};
 use reqwest::{
     header::{HeaderMap, HeaderName, HeaderValue},
     RequestBuilder,
@@ -20,9 +18,9 @@ use reqwest::{
 pub(crate) fn headers(
     binding: &ProviderBinding,
     auth: &EngineAuthConfig,
-) -> Result<HeaderMap, EngineAdapterRequestError> {
+) -> Result<HeaderMap, Failure> {
     let invalid = || {
-        EngineAdapterRequestError::new(
+        Failure::new(
             &binding.provider,
             "Invalid authentication declaration or credential.",
             ErrorKind::InvalidRequest,
@@ -60,7 +58,7 @@ pub(crate) fn authenticate(
     request: RequestBuilder,
     binding: Option<&ProviderBinding>,
     auth: &EngineAuthConfig,
-) -> Result<RequestBuilder, EngineAdapterRequestError> {
+) -> Result<RequestBuilder, Failure> {
     let Some(binding) = binding else {
         return Ok(request);
     };
@@ -69,7 +67,7 @@ pub(crate) fn authenticate(
         Authentication::Query { parameter, .. } => request.query(&[(
             parameter,
             auth.api_key.as_deref().ok_or_else(|| {
-                EngineAdapterRequestError::new(
+                Failure::new(
                     &binding.provider,
                     "Missing credential.",
                     ErrorKind::InvalidRequest,

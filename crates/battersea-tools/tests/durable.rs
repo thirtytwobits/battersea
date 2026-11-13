@@ -73,10 +73,7 @@ struct Effect {
 }
 #[async_trait]
 impl EngineLocalToolExecutor for Effect {
-    async fn call(
-        &self,
-        call: EngineLocalToolCall,
-    ) -> Result<EngineLocalToolResult, EngineAdapterRequestError> {
+    async fn call(&self, call: EngineLocalToolCall) -> Result<EngineLocalToolResult, Failure> {
         self.calls.fetch_add(1, Ordering::SeqCst);
         if self.wait {
             std::future::pending::<()>().await;
@@ -180,7 +177,7 @@ async fn approve(executor: &DurableToolExecutor) -> u64 {
         .unwrap()
         .revision
 }
-fn code(error: EngineAdapterRequestError, code: ToolCode) {
+fn code(error: Failure, code: ToolCode) {
     assert_eq!(error.tool_code, Some(code));
 }
 
@@ -1007,6 +1004,9 @@ async fn a_tool_still_running_at_expiry_is_reported_uncertain() {
     let (resumed, remaining) = tokio::join!(e.resume("one", 3), expire);
     assert_eq!(remaining, Duration::from_secs(60));
     let error = resumed.unwrap_err();
-    assert_eq!(error.classification, battersea_model::ErrorKind::Timeout);
-    assert_eq!(error.tool_call.unwrap().outcome, ToolCallOutcome::Uncertain);
+    assert_eq!(error.kind, battersea_model::ErrorKind::Timeout);
+    assert_eq!(
+        error.tool_call.clone().unwrap().outcome,
+        ToolCallOutcome::Uncertain
+    );
 }

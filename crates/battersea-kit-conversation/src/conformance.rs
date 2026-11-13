@@ -9,14 +9,14 @@ use crate::{
 };
 use async_trait::async_trait;
 use battersea_flow::{registry::Registry, FlowExecutionLimits, FlowQueueLimits};
-pub use battersea_kit::conformance::{Divergence, Failure, Fixture, Outcome, Played, Side};
+pub use battersea_kit::conformance::{CaseFailure, Divergence, Fixture, Outcome, Played, Side};
 use battersea_kit::{
     conformance::{Case, PortAccess, Suite},
     ManualClock, ReferenceHost, ReferenceState,
 };
 use battersea_model::{
-    EngineAdapterRequestError, EngineLocalToolCall, EngineLocalToolDefinition,
-    EngineLocalToolExecutor, EngineLocalToolResult, Role,
+    EngineLocalToolCall, EngineLocalToolDefinition, EngineLocalToolExecutor, EngineLocalToolResult,
+    Failure, Role,
 };
 use battersea_runtime::{ExecutionError, ExecutionEvent, RegistryBuilder, SchedulerState};
 pub use reference::ScriptedResponse;
@@ -271,10 +271,7 @@ pub enum Op {
 pub struct Echo;
 #[async_trait]
 impl EngineLocalToolExecutor for Echo {
-    async fn call(
-        &self,
-        call: EngineLocalToolCall,
-    ) -> Result<EngineLocalToolResult, EngineAdapterRequestError> {
+    async fn call(&self, call: EngineLocalToolCall) -> Result<EngineLocalToolResult, Failure> {
         Ok(EngineLocalToolResult::json(call.arguments))
     }
 }
@@ -746,7 +743,7 @@ impl Fixture for ReferenceFixture {
 
 /// Plays every case on the reference host and on `fixture`'s host and reports the first
 /// divergence.
-pub async fn run<F: Fixture>(fixture: &F) -> Result<(), Failure>
+pub async fn run<F: Fixture>(fixture: &F) -> Result<(), CaseFailure>
 where
     F::Host: Probe,
 {

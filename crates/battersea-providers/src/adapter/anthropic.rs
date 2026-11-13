@@ -1,4 +1,4 @@
-use super::error::EngineAdapterRequestError;
+use super::error::Failure;
 use super::tool_loop::{
     run_tool_loop, send_event, ExecutedToolCall, ToolConversation, ToolEventSender,
 };
@@ -33,7 +33,7 @@ pub(crate) fn create_anthropic_adapter(
     mut backend: EngineBackendConfig,
     logger: Option<Arc<dyn EngineAdapterLogger>>,
     clock: Arc<dyn Clock>,
-) -> Result<Arc<dyn EngineAdapter>, EngineAdapterRequestError> {
+) -> Result<Arc<dyn EngineAdapter>, Failure> {
     let provider = "anthropic";
     crate::retry::validate(&backend)?;
     let timeout_ms = backend
@@ -62,7 +62,7 @@ pub(crate) fn create_anthropic_adapter(
         .redirect(reqwest::redirect::Policy::none())
         .default_headers(build_headers(&backend)?)
         .build()
-        .map_err(|error| EngineAdapterRequestError::transport("anthropic", error.to_string()))?;
+        .map_err(|error| Failure::transport("anthropic", error.to_string()))?;
     Ok(Arc::new(AnthropicEngineAdapter {
         client,
         logger,
@@ -96,7 +96,7 @@ impl EngineAdapter for AnthropicEngineAdapter {
         &self,
         request: &battersea_model::ConversationRequest,
         state: Option<&Value>,
-    ) -> Result<battersea_model::ConversationBinding, EngineAdapterRequestError> {
+    ) -> Result<battersea_model::ConversationBinding, Failure> {
         self.validate_durable_request(request, state)
     }
 
@@ -106,7 +106,7 @@ impl EngineAdapter for AnthropicEngineAdapter {
         previous: Option<&Value>,
         results: &[battersea_model::ConversationToolResult],
         turn: &battersea_model::ConversationTurn,
-    ) -> Result<battersea_model::ConversationBinding, EngineAdapterRequestError> {
+    ) -> Result<battersea_model::ConversationBinding, Failure> {
         self.validate_durable_turn(request, previous, results, turn)
     }
 
@@ -115,7 +115,7 @@ impl EngineAdapter for AnthropicEngineAdapter {
         request: battersea_model::ConversationRequest,
         state: Option<Value>,
         results: Vec<battersea_model::ConversationToolResult>,
-    ) -> Result<battersea_model::ConversationTurn, EngineAdapterRequestError> {
+    ) -> Result<battersea_model::ConversationTurn, Failure> {
         self.durable_turn(request, state, results).await
     }
 
@@ -126,7 +126,7 @@ impl EngineAdapter for AnthropicEngineAdapter {
     async fn stream_text(
         &self,
         request: EngineTextStreamRequest,
-    ) -> Result<EngineTextStream, EngineAdapterRequestError> {
+    ) -> Result<EngineTextStream, Failure> {
         super::validate_chat_request(&self.backend, &request)?;
         if !request.local_tools.is_empty() {
             return self.stream_text_with_local_tools(request).await;
@@ -187,10 +187,7 @@ impl EngineAdapter for AnthropicEngineAdapter {
                     match event {
                         Ok(event) => {
                             let invalid = |error: serde_json::Error| {
-                                EngineAdapterRequestError::invalid_response(
-                                    "anthropic",
-                                    error.to_string(),
-                                )
+                                Failure::invalid_response("anthropic", error.to_string())
                             };
                             let raw: Value = serde_json::from_str(&event.data).map_err(invalid)?;
                             let parsed: AnthropicStreamEvent =
@@ -220,17 +217,14 @@ impl EngineAdapter for AnthropicEngineAdapter {
                             decoder
                                 .lock()
                                 .map_err(|_| {
-                                    EngineAdapterRequestError::invalid_response(
+                                    Failure::invalid_response(
                                         "anthropic",
                                         "Stream decoder lock poisoned.",
                                     )
                                 })?
                                 .decode(parsed)
                         }
-                        Err(error) => Err(EngineAdapterRequestError::transport(
-                            "anthropic",
-                            error.to_string(),
-                        )),
+                        Err(error) => Err(Failure::transport("anthropic", error.to_string())),
                     }
                 }
             })
@@ -255,7 +249,7 @@ impl EngineAdapter for AnthropicEngineAdapter {
     async fn count_text_stream_input_tokens(
         &self,
         request: EngineTextStreamRequest,
-    ) -> Result<u64, EngineAdapterRequestError> {
+    ) -> Result<u64, Failure> {
         super::validate_chat_request(&self.backend, &request)?;
         let body = build_input_token_count_body(&self.backend, &request)?;
         let response = crate::retry::send(
@@ -288,7 +282,7 @@ impl EngineAdapter for AnthropicEngineAdapter {
             .get("input_tokens")
             .and_then(Value::as_u64)
             .ok_or_else(|| {
-                EngineAdapterRequestError::invalid_response(
+                Failure::invalid_response(
                     "anthropic",
                     "Anthropic token count response omitted input_tokens.",
                 )
@@ -301,17 +295,16 @@ impl AnthropicEngineAdapter {
     async fn stream_text_with_local_tools(
         &self,
         request: EngineTextStreamRequest,
-    ) -> Result<EngineTextStream, EngineAdapterRequestError> {
+    ) -> Result<EngineTextStream, Failure> {
         let executor = request.local_tool_executor.clone().ok_or_else(|| {
-            EngineAdapterRequestError::new(
+            Failure::new(
                 "anthropic",
                 "Local engine tool executor is unavailable.",
                 "request",
             )
         })?;
 
-        let (tx, rx) =
-            mpsc::channel::<Result<EngineTextStreamEvent, EngineAdapterRequestError>>(64);
+        let (tx, rx) = mpsc::channel::<Result<EngineTextStreamEvent, Failure>>(64);
         let client = self.client.clone();
         let backend = self.backend.clone();
         let logger = self.logger.clone();
@@ -352,7 +345,7 @@ impl ToolConversation for AnthropicToolConversation {
         request: &EngineTextStreamRequest,
         results: Vec<ExecutedToolCall>,
         events: &ToolEventSender,
-    ) -> Result<Vec<EngineLocalToolCall>, EngineAdapterRequestError> {
+    ) -> Result<Vec<EngineLocalToolCall>, Failure> {
         if !results.is_empty() {
             self.messages.push(
                 json!({"role": "user", "content": results.into_iter().map(|item| json!({
@@ -390,7 +383,7 @@ impl ToolConversation for AnthropicToolConversation {
             payload.stop_reason.as_deref(),
             Some("end_turn" | "tool_use" | "stop_sequence")
         ) {
-            return Err(EngineAdapterRequestError::invalid_response(
+            return Err(Failure::invalid_response(
                 "anthropic",
                 format!(
                     "Anthropic turn did not complete: {:?}.",
@@ -461,7 +454,7 @@ impl ToolConversation for AnthropicToolConversation {
 
 /// Builds the default Anthropic request headers, applying provider defaults when custom names or
 /// version values are not configured.
-fn build_headers(backend: &EngineBackendConfig) -> Result<HeaderMap, EngineAdapterRequestError> {
+fn build_headers(backend: &EngineBackendConfig) -> Result<HeaderMap, Failure> {
     if let Some(binding) = &backend.binding {
         return crate::connection::headers(binding, &backend.auth);
     }
@@ -473,12 +466,10 @@ fn build_headers(backend: &EngineBackendConfig) -> Result<HeaderMap, EngineAdapt
         .as_deref()
         .ok_or_else(|| missing_backend_option(provider, "auth.header"))?;
     headers.insert(
-        HeaderName::from_bytes(header_name.as_bytes()).map_err(|error| {
-            EngineAdapterRequestError::transport("anthropic", error.to_string())
-        })?,
-        HeaderValue::from_str(backend.auth.api_key.as_deref().unwrap_or("")).map_err(|error| {
-            EngineAdapterRequestError::transport("anthropic", error.to_string())
-        })?,
+        HeaderName::from_bytes(header_name.as_bytes())
+            .map_err(|error| Failure::transport("anthropic", error.to_string()))?,
+        HeaderValue::from_str(backend.auth.api_key.as_deref().unwrap_or(""))
+            .map_err(|error| Failure::transport("anthropic", error.to_string()))?,
     );
     let version_header = backend
         .auth
@@ -491,12 +482,10 @@ fn build_headers(backend: &EngineBackendConfig) -> Result<HeaderMap, EngineAdapt
         .as_deref()
         .ok_or_else(|| missing_backend_option(provider, "auth.version"))?;
     headers.insert(
-        HeaderName::from_bytes(version_header.as_bytes()).map_err(|error| {
-            EngineAdapterRequestError::transport("anthropic", error.to_string())
-        })?,
-        HeaderValue::from_str(version).map_err(|error| {
-            EngineAdapterRequestError::transport("anthropic", error.to_string())
-        })?,
+        HeaderName::from_bytes(version_header.as_bytes())
+            .map_err(|error| Failure::transport("anthropic", error.to_string()))?,
+        HeaderValue::from_str(version)
+            .map_err(|error| Failure::transport("anthropic", error.to_string()))?,
     );
     headers.insert("content-type", HeaderValue::from_static("application/json"));
     headers.insert("accept", HeaderValue::from_static("application/json"));
@@ -507,7 +496,7 @@ fn build_headers(backend: &EngineBackendConfig) -> Result<HeaderMap, EngineAdapt
 fn build_stream_body(
     backend: &EngineBackendConfig,
     request: &EngineTextStreamRequest,
-) -> Result<Value, EngineAdapterRequestError> {
+) -> Result<Value, Failure> {
     let mut body = json!({
         "model": backend.model,
         "max_tokens": require_anthropic_max_tokens(&request.shared.chat)?,
@@ -525,7 +514,7 @@ fn build_local_tool_body(
     backend: &EngineBackendConfig,
     request: &EngineTextStreamRequest,
     messages: Vec<Value>,
-) -> Result<Value, EngineAdapterRequestError> {
+) -> Result<Value, Failure> {
     let mut shared = request.shared.clone();
     if let Some(tool_name) = shared.chat.tool_choice.tool_name.as_mut() {
         *tool_name = super::local_tool_name(tool_name);
@@ -552,9 +541,9 @@ fn build_local_tool_body(
 
 fn require_anthropic_max_tokens(
     chat: &battersea_model::engine::EngineChatParameters,
-) -> Result<u32, EngineAdapterRequestError> {
+) -> Result<u32, Failure> {
     chat.max_output_tokens.ok_or_else(|| {
-        EngineAdapterRequestError::new(
+        Failure::new(
             "anthropic",
             "Anthropic requests require maxOutputTokens.",
             "request",
@@ -737,10 +726,10 @@ async fn read_anthropic_json<T: DeserializeOwned>(
     response: reqwest::Response,
     request_id: Option<String>,
     context: &EngineAdapterDebugContext,
-) -> Result<T, EngineAdapterRequestError> {
+) -> Result<T, Failure> {
     let status = response.status().as_u16();
     let body = response.bounded_text().await.map_err(|error| {
-        EngineAdapterRequestError::transport(
+        Failure::transport(
             "anthropic",
             format!(
                 "Anthropic response body read failed for backend `{}` model `{}`{}: {}",
@@ -764,8 +753,8 @@ fn anthropic_decode_error(
     request_id: Option<String>,
     context: &EngineAdapterDebugContext,
     status: u16,
-) -> EngineAdapterRequestError {
-    EngineAdapterRequestError::invalid_response(
+) -> Failure {
+    Failure::invalid_response(
         "anthropic",
         format!(
             "Anthropic response decode failed for backend `{}` model `{}`{}: {}. Body: {}",
@@ -833,7 +822,7 @@ fn apply_anthropic_tool_choice(
 fn build_input_token_count_body(
     backend: &EngineBackendConfig,
     request: &EngineTextStreamRequest,
-) -> Result<Value, EngineAdapterRequestError> {
+) -> Result<Value, Failure> {
     let generation = if request.local_tools.is_empty() {
         build_stream_body(backend, request)?
     } else {
@@ -933,9 +922,7 @@ fn anthropic_content_block_reasoning(block: &Value) -> Option<&str> {
     }
 }
 
-fn collect_anthropic_tool_calls(
-    blocks: &[Value],
-) -> Result<Vec<EngineLocalToolCall>, EngineAdapterRequestError> {
+fn collect_anthropic_tool_calls(blocks: &[Value]) -> Result<Vec<EngineLocalToolCall>, Failure> {
     blocks
         .iter()
         .filter(|block| anthropic_content_block_type(block) == Some("tool_use"))
@@ -996,7 +983,7 @@ impl AnthropicStreamDecoder {
     fn decode(
         &mut self,
         event: AnthropicStreamEvent,
-    ) -> Result<Vec<EngineTextStreamEvent>, EngineAdapterRequestError> {
+    ) -> Result<Vec<EngineTextStreamEvent>, Failure> {
         let mut events = event
             .token_usage()
             .map(|usage| vec![EngineTextStreamEvent::TokenUsage { usage }])
@@ -1037,7 +1024,7 @@ impl AnthropicStreamDecoder {
                 if let Some(mut payload) = self.blocks.remove(&index) {
                     if let Some(arguments) = self.arguments.remove(&index) {
                         payload["input"] = serde_json::from_str(&arguments).map_err(|e| {
-                            EngineAdapterRequestError::invalid_response(
+                            Failure::invalid_response(
                                 "anthropic",
                                 format!("Malformed streamed tool arguments: {e}"),
                             )
@@ -1064,13 +1051,10 @@ impl AnthropicStreamDecoder {
             }
             AnthropicStreamEvent::MessageStop {} => {
                 let reason = self.stop.take().ok_or_else(|| {
-                    EngineAdapterRequestError::invalid_response(
-                        "anthropic",
-                        "Message stopped without a reason.",
-                    )
+                    Failure::invalid_response("anthropic", "Message stopped without a reason.")
                 })?;
                 if !self.blocks.is_empty() {
-                    return Err(EngineAdapterRequestError::invalid_response(
+                    return Err(Failure::invalid_response(
                         "anthropic",
                         "Message stopped with incomplete content blocks.",
                     ));
@@ -1078,7 +1062,7 @@ impl AnthropicStreamDecoder {
                 events.push(EngineTextStreamEvent::MessageStop { reason });
             }
             AnthropicStreamEvent::Error { error } => {
-                return Err(EngineAdapterRequestError::invalid_response(
+                return Err(Failure::invalid_response(
                     "anthropic",
                     error
                         .message
@@ -1465,9 +1449,9 @@ mod tests {
             200,
         );
 
-        assert_eq!(error.classification.as_str(), "invalid_response");
-        assert_eq!(error.status_code, Some(200));
-        assert_eq!(error.request_id.as_deref(), Some("req_123"));
+        assert_eq!(error.kind.as_str(), "invalid_response");
+        assert_eq!(error.exchange.status, Some(200));
+        assert_eq!(error.exchange.request_id.as_deref(), Some("req_123"));
         assert!(error.message.contains("backend `anthropic-debug-backend`"));
         assert!(error.message.contains("model `anthropic-debug-model`"));
         assert!(error.message.contains("request `req_123`"));
@@ -1641,8 +1625,8 @@ mod tests {
             Ok(_) => panic!("invalid header should fail"),
             Err(error) => error,
         };
-        assert_eq!(&*error.provider, "anthropic");
-        assert_eq!(error.classification.as_str(), "transport");
+        assert_eq!(error.origin.provider.as_deref(), Some("anthropic"));
+        assert_eq!(error.kind.as_str(), "transport");
     }
 
     #[test]
@@ -1690,7 +1674,7 @@ mod tests {
         assert_eq!(
             build_headers(&invalid_value)
                 .expect_err("invalid header value")
-                .classification
+                .kind
                 .as_str(),
             "transport"
         );
@@ -1964,9 +1948,9 @@ mod tests {
             .await
             .expect_err("a refused key fails the request");
 
-        assert_eq!(error.classification, ErrorKind::Authentication);
-        assert_eq!(error.status_code, Some(401));
-        assert_eq!(error.request_id.as_deref(), Some("req-refused"));
+        assert_eq!(error.kind, ErrorKind::Authentication);
+        assert_eq!(error.exchange.status, Some(401));
+        assert_eq!(error.exchange.request_id.as_deref(), Some("req-refused"));
         assert!(
             error.message.contains("invalid x-api-key"),
             "{}",

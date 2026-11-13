@@ -1,19 +1,19 @@
 //! Bound raw HTTP bytes before JSON or SSE decoding retains them.
-use crate::EngineAdapterRequestError;
+use crate::Failure;
 use battersea_model::adapter::payload::PROVIDER_PAYLOAD_BYTES;
 use futures_util::{Stream, StreamExt};
 use serde::de::DeserializeOwned;
 
 pub(crate) fn bounded_stream(
     response: reqwest::Response,
-) -> impl Stream<Item = Result<impl AsRef<[u8]>, EngineAdapterRequestError>> + Send {
+) -> impl Stream<Item = Result<impl AsRef<[u8]>, Failure>> + Send {
     limit_stream(response.bytes_stream(), PROVIDER_PAYLOAD_BYTES)
 }
 
 fn limit_stream<T: AsRef<[u8]>, E: std::fmt::Display>(
     stream: impl Stream<Item = Result<T, E>>,
     limit: usize,
-) -> impl Stream<Item = Result<T, EngineAdapterRequestError>> {
+) -> impl Stream<Item = Result<T, Failure>> {
     stream.scan(Some(limit), |remaining, chunk| {
         let value = match (remaining.as_mut(), chunk) {
             (None, _) => None,
@@ -23,17 +23,14 @@ fn limit_stream<T: AsRef<[u8]>, E: std::fmt::Display>(
             }
             (Some(_), Ok(_)) => {
                 *remaining = None;
-                Some(Err(EngineAdapterRequestError::invalid_response(
+                Some(Err(Failure::invalid_response(
                     "http",
                     "Provider response exceeds its encoded-byte limit.",
                 )))
             }
             (Some(_), Err(error)) => {
                 *remaining = None;
-                Some(Err(EngineAdapterRequestError::transport(
-                    "http",
-                    error.to_string(),
-                )))
+                Some(Err(Failure::transport("http", error.to_string())))
             }
         };
         std::future::ready(value)
@@ -43,13 +40,12 @@ fn limit_stream<T: AsRef<[u8]>, E: std::fmt::Display>(
 #[allow(clippy::double_must_use)] // async_trait marks its boxed Future must_use.
 #[async_trait::async_trait]
 pub(crate) trait BoundedResponse {
-    async fn bounded_text(self) -> Result<String, EngineAdapterRequestError>;
-    async fn bounded_json<T: DeserializeOwned + Send>(self)
-        -> Result<T, EngineAdapterRequestError>;
+    async fn bounded_text(self) -> Result<String, Failure>;
+    async fn bounded_json<T: DeserializeOwned + Send>(self) -> Result<T, Failure>;
 }
 #[async_trait::async_trait]
 impl BoundedResponse for reqwest::Response {
-    async fn bounded_text(self) -> Result<String, EngineAdapterRequestError> {
+    async fn bounded_text(self) -> Result<String, Failure> {
         let stream = bounded_stream(self);
         futures_util::pin_mut!(stream);
         let mut bytes = Vec::new();
@@ -57,13 +53,11 @@ impl BoundedResponse for reqwest::Response {
             bytes.extend_from_slice(chunk?.as_ref());
         }
         String::from_utf8(bytes)
-            .map_err(|error| EngineAdapterRequestError::invalid_response("http", error.to_string()))
+            .map_err(|error| Failure::invalid_response("http", error.to_string()))
     }
-    async fn bounded_json<T: DeserializeOwned + Send>(
-        self,
-    ) -> Result<T, EngineAdapterRequestError> {
+    async fn bounded_json<T: DeserializeOwned + Send>(self) -> Result<T, Failure> {
         serde_json::from_str(&self.bounded_text().await?)
-            .map_err(|error| EngineAdapterRequestError::invalid_response("http", error.to_string()))
+            .map_err(|error| Failure::invalid_response("http", error.to_string()))
     }
 }
 

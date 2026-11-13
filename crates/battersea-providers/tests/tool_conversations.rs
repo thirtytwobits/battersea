@@ -14,9 +14,9 @@ use battersea_model::engine::{
 use battersea_model::ManualClock;
 use battersea_providers::{
     adapter::EngineAuthConfig, EngineAdapter, EngineAdapterLogger, EngineAdapterRequest,
-    EngineAdapterRequestError, EngineAdapterStreamLog, EngineBackendConfig, EngineBackendOptions,
-    EngineLocalToolCall, EngineLocalToolDefinition, EngineLocalToolExecutor, EngineLocalToolResult,
-    EngineOperation, EngineTextStreamEvent, EngineTextStreamRequest,
+    EngineAdapterStreamLog, EngineBackendConfig, EngineBackendOptions, EngineLocalToolCall,
+    EngineLocalToolDefinition, EngineLocalToolExecutor, EngineLocalToolResult, EngineOperation,
+    EngineTextStreamEvent, EngineTextStreamRequest, Failure,
 };
 use futures_util::StreamExt;
 use serde_json::{json, Value};
@@ -32,10 +32,7 @@ struct RecordingExecutor(
 );
 #[async_trait]
 impl EngineLocalToolExecutor for RecordingExecutor {
-    async fn call(
-        &self,
-        call: EngineLocalToolCall,
-    ) -> Result<EngineLocalToolResult, EngineAdapterRequestError> {
+    async fn call(&self, call: EngineLocalToolCall) -> Result<EngineLocalToolResult, Failure> {
         self.0.lock().unwrap().push(call.clone());
         Ok(self
             .1
@@ -231,7 +228,7 @@ async fn durable_responses_reject_unsupported_modes_before_dispatch() {
         };
         let adapter = adapter(backend);
         let error = adapter.validate_conversation(&request, None).unwrap_err();
-        assert_eq!(error.classification, ErrorKind::InvalidRequest);
+        assert_eq!(error.kind, ErrorKind::InvalidRequest);
         if streaming {
             assert_eq!(error.tool_code, Some(ToolCode::UnsupportedToolContinuation));
         }
@@ -563,8 +560,8 @@ async fn configured_tool_choice_restrictions_fail_before_counting_or_generation(
                 Err(error) => error,
                 Ok(_) => panic!("unsupported choice accepted"),
             };
-            assert_eq!(count_error.classification.as_str(), "invalid_request");
-            assert_eq!(generation_error.classification, count_error.classification);
+            assert_eq!(count_error.kind.as_str(), "invalid_request");
+            assert_eq!(generation_error.kind, count_error.kind);
         }
     }
 }
@@ -606,7 +603,7 @@ async fn truncation_and_malformed_calls_never_reach_the_executor() {
             .collect()
             .await;
         assert!(
-            matches!(events.last(), Some(Err(error)) if error.classification.as_str() == "invalid_response")
+            matches!(events.last(), Some(Err(error)) if error.kind.as_str() == "invalid_response")
         );
         assert!(!events.iter().any(|event| matches!(
             event,
@@ -692,10 +689,10 @@ async fn unsupported_effort_fails_before_counting_or_generation_for_every_provid
             .count_text_stream_input_tokens(request.clone())
             .await
             .unwrap_err();
-        assert_eq!(error.classification.as_str(), "invalid_request");
+        assert_eq!(error.kind.as_str(), "invalid_request");
         assert!(error.message.contains("reasoning effort"));
         match adapter.stream_text(request).await {
-            Err(error) => assert_eq!(error.classification.as_str(), "invalid_request"),
+            Err(error) => assert_eq!(error.kind.as_str(), "invalid_request"),
             Ok(_) => panic!("unsupported effort accepted by {provider}"),
         }
     }
@@ -1005,7 +1002,10 @@ async fn ambiguous_server_failure_and_partial_stream_never_replay_generation() {
                     .find_map(Result::err)
                     .expect("truncation must fail"),
             };
-            assert_eq!(error.dispatch, battersea_model::DispatchState::Unknown);
+            assert_eq!(
+                error.exchange.dispatch,
+                battersea_model::DispatchState::Unknown
+            );
             assert_eq!(state.requests.lock().unwrap().len(), 1);
             server.abort();
         }
@@ -1028,7 +1028,7 @@ async fn plain_stream(
     provider: &str,
     body: String,
 ) -> (
-    Vec<Result<EngineTextStreamEvent, EngineAdapterRequestError>>,
+    Vec<Result<EngineTextStreamEvent, Failure>>,
     Arc<StreamObserver>,
 ) {
     let (url, _, server) = server(vec![("text/event-stream", body)]).await;
@@ -1133,7 +1133,7 @@ async fn malformed_modelled_stream_events_fail_as_invalid_response() {
             .find_map(Result::err)
             .unwrap_or_else(|| panic!("{event} must fail"));
         assert_eq!(
-            error.classification,
+            error.kind,
             battersea_model::ErrorKind::InvalidResponse,
             "{event}"
         );
@@ -1152,8 +1152,11 @@ async fn retry_after_beyond_the_configured_delay_bound_stops_without_retrying_ea
         .await
         .err()
         .expect("rate limit");
-    assert_eq!(error.dispatch, battersea_model::DispatchState::Rejected);
-    assert_eq!(error.retry_after_ms, Some(3_600_000));
+    assert_eq!(
+        error.exchange.dispatch,
+        battersea_model::DispatchState::Rejected
+    );
+    assert_eq!(error.exchange.retry_after_ms, Some(3_600_000));
     assert_eq!(state.requests.lock().unwrap().len(), 1);
     server.abort();
 }
@@ -1185,9 +1188,7 @@ async fn the_operation_deadline_covers_backoff_and_retry_does_not_reset_it() {
         clock.advance(std::time::Duration::from_millis(50));
     };
     let (result, ()) = tokio::join!(adapter.stream_text(request), expire);
-    assert!(
-        matches!(result,Err(error) if error.classification==battersea_model::ErrorKind::Timeout)
-    );
+    assert!(matches!(result,Err(error) if error.kind==battersea_model::ErrorKind::Timeout));
     assert_eq!(state.requests.lock().unwrap().len(), 1);
     server.abort();
 }
@@ -1360,8 +1361,11 @@ async fn connection_refusal_retries_only_within_the_explicit_attempt_bound() {
             "{provider}"
         );
         let error = result.err().expect("connection refused");
-        assert_eq!(error.dispatch, battersea_model::DispatchState::NotSent);
-        assert_eq!(error.attempts, attempts);
+        assert_eq!(
+            error.exchange.dispatch,
+            battersea_model::DispatchState::NotSent
+        );
+        assert_eq!(error.exchange.attempts, attempts);
     }
 }
 
@@ -1388,8 +1392,11 @@ async fn accepted_connection_loss_does_not_recreate_generation() {
             .await
             .err()
             .expect("connection lost");
-        assert_eq!(error.dispatch, battersea_model::DispatchState::Unknown);
-        assert_eq!(error.attempts, 1);
+        assert_eq!(
+            error.exchange.dispatch,
+            battersea_model::DispatchState::Unknown
+        );
+        assert_eq!(error.exchange.attempts, 1);
         // The finished request made no second connection.
         let listener = server.await.unwrap();
         assert!(futures_util::poll!(Box::pin(listener.accept())).is_pending());

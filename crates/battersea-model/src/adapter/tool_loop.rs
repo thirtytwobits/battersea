@@ -2,15 +2,15 @@
 
 use super::{
     emit_error, emit_stream_event, error::DispatchState, EngineAdapterDebugContext,
-    EngineAdapterLogger, EngineAdapterRequestError, EngineLocalToolCall, EngineLocalToolExecutor,
-    EngineLocalToolResult, EngineTextStreamEvent, EngineTextStreamRequest,
+    EngineAdapterLogger, EngineLocalToolCall, EngineLocalToolExecutor, EngineLocalToolResult,
+    EngineTextStreamEvent, EngineTextStreamRequest, Failure,
 };
 use async_trait::async_trait;
 use serde_json::{json, Value};
 use std::{collections::HashSet, sync::Arc};
 use tokio::sync::mpsc;
 
-pub type ToolEventSender = mpsc::Sender<Result<EngineTextStreamEvent, EngineAdapterRequestError>>;
+pub type ToolEventSender = mpsc::Sender<Result<EngineTextStreamEvent, Failure>>;
 
 pub struct ExecutedToolCall {
     pub call: EngineLocalToolCall,
@@ -31,7 +31,7 @@ pub trait ToolConversation: Send {
         request: &EngineTextStreamRequest,
         results: Vec<ExecutedToolCall>,
         events: &ToolEventSender,
-    ) -> Result<Vec<EngineLocalToolCall>, EngineAdapterRequestError>;
+    ) -> Result<Vec<EngineLocalToolCall>, Failure>;
 }
 
 pub fn decode_tool_call(
@@ -39,9 +39,9 @@ pub fn decode_tool_call(
     id: Option<&Value>,
     name: Option<&Value>,
     arguments: Option<Value>,
-) -> Result<EngineLocalToolCall, EngineAdapterRequestError> {
+) -> Result<EngineLocalToolCall, Failure> {
     let invalid = || {
-        EngineAdapterRequestError::invalid_response(provider, "Malformed provider tool call.")
+        Failure::invalid_response(provider, "Malformed provider tool call.")
             .with_tool_code(crate::ToolCode::MalformedToolCall)
     };
     let id = id
@@ -63,11 +63,12 @@ pub fn decode_tool_call(
 pub async fn send_event(
     events: &ToolEventSender,
     event: EngineTextStreamEvent,
-) -> Result<(), EngineAdapterRequestError> {
+) -> Result<(), Failure> {
     super::payload::check_payload(&event, "tools")?;
-    events.send(Ok(event)).await.map_err(|_| {
-        EngineAdapterRequestError::new("engine", "Tool stream consumer disconnected.", "cancelled")
-    })
+    events
+        .send(Ok(event))
+        .await
+        .map_err(|_| Failure::new("engine", "Tool stream consumer disconnected.", "cancelled"))
 }
 
 pub async fn run_tool_loop(
@@ -90,7 +91,7 @@ pub async fn run_tool_loop(
             match context.timeout_ms {
                 Some(ms) => crate::clock::timeout(clock.as_ref(), std::time::Duration::from_millis(ms), run).await
                     .map_err(|_| {
-                        let mut error = EngineAdapterRequestError::new(&context.provider, "Request deadline exceeded during tool orchestration.", super::error::ErrorKind::Timeout);
+                        let mut error = Failure::new(&context.provider, "Request deadline exceeded during tool orchestration.", super::error::ErrorKind::Timeout);
                         error.tool_call = active_tool.clone().map(Box::new);
                         error
                     })?,
@@ -110,8 +111,8 @@ pub async fn run_tool_loop(
 
 /// A local tool fails after the provider has answered the turn that called it, so its failure
 /// cannot report the provider request as not sent.
-fn after_provider_turn(error: EngineAdapterRequestError) -> EngineAdapterRequestError {
-    if error.dispatch == DispatchState::NotSent {
+fn after_provider_turn(error: Failure) -> Failure {
+    if error.exchange.dispatch == DispatchState::NotSent {
         error.with_dispatch(DispatchState::Unknown)
     } else {
         error
@@ -120,9 +121,9 @@ fn after_provider_turn(error: EngineAdapterRequestError) -> EngineAdapterRequest
 
 async fn forward_turn_event(
     events: &ToolEventSender,
-    event: Result<EngineTextStreamEvent, EngineAdapterRequestError>,
+    event: Result<EngineTextStreamEvent, Failure>,
     turn_index: u32,
-) -> Result<(), EngineAdapterRequestError> {
+) -> Result<(), Failure> {
     let mut event = event?;
     if matches!(event, EngineTextStreamEvent::MessageStop { .. }) {
         return Ok(());
@@ -143,7 +144,7 @@ async fn drive_tool_loop(
     clock: &dyn crate::Clock,
     events: &ToolEventSender,
     active_tool: &mut Option<crate::ToolCallEvidence>,
-) -> Result<(), EngineAdapterRequestError> {
+) -> Result<(), Failure> {
     let operation = request.shared.operation;
     emit_stream_event(
         logger.as_ref(),
@@ -159,10 +160,7 @@ async fn drive_tool_loop(
     let mut retained_tool_bytes = 0usize;
     for turn in 0..request.max_tool_rounds {
         let turn = u32::try_from(turn).map_err(|_| {
-            EngineAdapterRequestError::invalid_response(
-                &context.provider,
-                "Tool turn index overflow.",
-            )
+            Failure::invalid_response(&context.provider, "Tool turn index overflow.")
         })?;
         send_event(
             events,
@@ -265,7 +263,7 @@ async fn drive_tool_loop(
                             })?,
                     );
                     if retained_tool_bytes > super::payload::PROVIDER_PAYLOAD_BYTES {
-                        return Err(EngineAdapterRequestError::invalid_response(
+                        return Err(Failure::invalid_response(
                             &context.provider,
                             "Tool transcript exceeds its encoded-byte limit.",
                         )
@@ -280,7 +278,7 @@ async fn drive_tool_loop(
                         )?,
                     );
                     if retained_tool_bytes > super::payload::PROVIDER_PAYLOAD_BYTES {
-                        return Err(EngineAdapterRequestError::invalid_response(
+                        return Err(Failure::invalid_response(
                             &context.provider,
                             "Tool transcript exceeds its encoded-byte limit.",
                         )
@@ -299,7 +297,7 @@ async fn drive_tool_loop(
                 Err(error) => (
                     Value::Null,
                     Some(error.message.to_string()),
-                    Some(error.classification.to_string()),
+                    Some(error.kind.to_string()),
                     false,
                 ),
             };
@@ -340,7 +338,7 @@ async fn drive_tool_loop(
         json!({"max_tool_rounds": request.max_tool_rounds}),
     )
     .await;
-    Err(EngineAdapterRequestError::new(
+    Err(Failure::new(
         &context.provider,
         "Maximum local tool rounds exceeded.",
         "request",
@@ -353,12 +351,12 @@ pub fn validate_tool_calls(
     provider: &str,
     request: &EngineTextStreamRequest,
     calls: &[EngineLocalToolCall],
-) -> Result<(), EngineAdapterRequestError> {
+) -> Result<(), Failure> {
     if calls.is_empty() {
         return Ok(());
     }
     if request.shared.chat.tool_choice.mode == crate::engine::EngineChatToolChoiceMode::None {
-        return Err(EngineAdapterRequestError::invalid_response(
+        return Err(Failure::invalid_response(
             provider,
             "Provider requested tools when tool use was disabled.",
         )
@@ -375,7 +373,7 @@ pub fn validate_tool_calls(
     for call in calls {
         let validation = (|| {
             if call.id.is_empty() || !ids.insert(&call.id) {
-                return Err(EngineAdapterRequestError::invalid_response(
+                return Err(Failure::invalid_response(
                     provider,
                     "Provider returned missing or duplicate tool call identifiers.",
                 )
@@ -386,7 +384,7 @@ pub fn validate_tool_calls(
                 .iter()
                 .any(|tool| super::local_tool_name(&tool.name) == call.name)
             {
-                return Err(EngineAdapterRequestError::invalid_response(
+                return Err(Failure::invalid_response(
                     provider,
                     format!("Provider requested an unoffered tool: {}.", call.name),
                 )
@@ -403,14 +401,14 @@ pub fn validate_tool_calls(
                     .as_deref()
                     != Some(call.name.as_str())
             {
-                return Err(EngineAdapterRequestError::invalid_response(
+                return Err(Failure::invalid_response(
                     provider,
                     "Provider requested a tool outside the named tool choice.",
                 )
                 .with_tool_code(crate::ToolCode::ToolOutsideChoice));
             }
             if !call.arguments.is_object() {
-                return Err(EngineAdapterRequestError::invalid_response(
+                return Err(Failure::invalid_response(
                     provider,
                     format!("Tool arguments must be an object: {}.", call.name),
                 )
@@ -423,7 +421,7 @@ pub fn validate_tool_calls(
                 .expect("offered tool");
             let validator =
                 jsonschema::validator_for(&definition.input_schema).map_err(|error| {
-                    EngineAdapterRequestError::new(
+                    Failure::new(
                         provider,
                         error.to_string(),
                         super::error::ErrorKind::InvalidRequest,
@@ -431,12 +429,12 @@ pub fn validate_tool_calls(
                     .with_tool_code(crate::ToolCode::InvalidToolSchema)
                 })?;
             validator.validate(&call.arguments).map_err(|error| {
-                EngineAdapterRequestError::invalid_response(provider, error.to_string())
+                Failure::invalid_response(provider, error.to_string())
                     .with_tool_code(crate::ToolCode::InvalidToolArguments)
             })?;
             Ok(())
         })();
-        validation.map_err(|error: EngineAdapterRequestError| {
+        validation.map_err(|error: Failure| {
             after_provider_turn(error.with_tool_call(crate::ToolCallEvidence {
                 call_id: call.id.clone(),
                 tool_name: call.name.clone(),
@@ -466,7 +464,7 @@ mod tests {
             _: &EngineTextStreamRequest,
             results: Vec<ExecutedToolCall>,
             _: &ToolEventSender,
-        ) -> Result<Vec<EngineLocalToolCall>, EngineAdapterRequestError> {
+        ) -> Result<Vec<EngineLocalToolCall>, Failure> {
             self.received.lock().unwrap().extend(results);
             Ok(self.turns.remove(0))
         }
@@ -478,13 +476,10 @@ mod tests {
     }
     #[async_trait]
     impl EngineLocalToolExecutor for Executor {
-        async fn call(
-            &self,
-            call: EngineLocalToolCall,
-        ) -> Result<EngineLocalToolResult, EngineAdapterRequestError> {
+        async fn call(&self, call: EngineLocalToolCall) -> Result<EngineLocalToolResult, Failure> {
             self.calls.lock().unwrap().push(call.clone());
             if self.fail {
-                return Err(EngineAdapterRequestError::new(
+                return Err(Failure::new(
                     "engine",
                     "Rejected by domain validation",
                     "invalid_request",
@@ -542,7 +537,7 @@ mod tests {
         script: Script,
         request: EngineTextStreamRequest,
         executor: Arc<dyn EngineLocalToolExecutor>,
-    ) -> Vec<Result<EngineTextStreamEvent, EngineAdapterRequestError>> {
+    ) -> Vec<Result<EngineTextStreamEvent, Failure>> {
         let (tx, mut rx) = mpsc::channel(64);
         run_tool_loop(script, request, executor, None, context(), clock(), tx).await;
         let mut events = Vec::new();
@@ -615,7 +610,7 @@ mod tests {
             let events = run(script, request(), executor.clone()).await;
             assert!(executor.calls.lock().unwrap().is_empty());
             assert!(
-                matches!(&events[..], [Err(error)] if error.classification.as_str() == "invalid_response" && error.tool_code == Some(code)),
+                matches!(&events[..], [Err(error)] if error.kind.as_str() == "invalid_response" && error.tool_code == Some(code)),
                 "{code}: {events:?}"
             );
         }
@@ -643,7 +638,7 @@ mod tests {
             let events = run(script, request, executor.clone()).await;
             assert!(executor.calls.lock().unwrap().is_empty());
             assert!(
-                matches!(&events[..], [Err(error)] if error.classification.as_str() == "invalid_response" && error.tool_code == Some(code)),
+                matches!(&events[..], [Err(error)] if error.kind.as_str() == "invalid_response" && error.tool_code == Some(code)),
                 "{code}: {events:?}"
             );
         }
@@ -666,26 +661,23 @@ mod tests {
         assert!(
             matches!(&events[..], [Ok(EngineTextStreamEvent::ToolCallStarted { .. }),
             Ok(EngineTextStreamEvent::ToolCallCompleted { ok: false, error_classification: Some(kind), .. }), Err(error)]
-            if kind == error.classification.as_str())
+            if kind == error.kind.as_str())
         );
         // The provider answered the turn before the executor ran.
         let Some(Err(error)) = events.last() else {
             unreachable!("the run ends in the executor's failure")
         };
-        assert_ne!(error.dispatch, crate::DispatchState::NotSent);
+        assert_ne!(error.exchange.dispatch, crate::DispatchState::NotSent);
         assert_eq!(
             error.tool_call.as_ref().unwrap().outcome,
             crate::ToolCallOutcome::Uncertain
         );
     }
 
-    struct Answer(Mutex<Option<Result<EngineLocalToolResult, EngineAdapterRequestError>>>);
+    struct Answer(Mutex<Option<Result<EngineLocalToolResult, Failure>>>);
     #[async_trait]
     impl EngineLocalToolExecutor for Answer {
-        async fn call(
-            &self,
-            _: EngineLocalToolCall,
-        ) -> Result<EngineLocalToolResult, EngineAdapterRequestError> {
+        async fn call(&self, _: EngineLocalToolCall) -> Result<EngineLocalToolResult, Failure> {
             self.0.lock().unwrap().take().expect("executed once")
         }
     }
@@ -772,9 +764,8 @@ mod tests {
             outcome: crate::ToolCallOutcome::NotDispatched,
             request_id: Some("remote-request".into()),
         };
-        let error =
-            EngineAdapterRequestError::new("remote", "refused before sending", "invalid_request")
-                .with_tool_call(evidence.clone());
+        let error = Failure::new("remote", "refused before sending", "invalid_request")
+            .with_tool_call(evidence.clone());
         let events = run(
             Script {
                 turns: vec![vec![call("first")]],
@@ -785,23 +776,23 @@ mod tests {
         )
         .await;
         let error = events.last().unwrap().as_ref().unwrap_err();
-        assert_eq!(error.dispatch, crate::DispatchState::Unknown);
+        assert_eq!(error.exchange.dispatch, crate::DispatchState::Unknown);
         assert_eq!(error.tool_call.as_deref(), Some(&evidence));
         let wire = serde_json::to_value(error).unwrap();
-        let restored: EngineAdapterRequestError = serde_json::from_value(wire).unwrap();
+        let restored: Failure = serde_json::from_value(wire).unwrap();
         assert_eq!(restored.tool_call.as_deref(), Some(&evidence));
     }
 
     #[tokio::test]
     async fn completed_evidence_survives_provider_delivery_failures_and_deadlines() {
-        enum Failure {
+        enum Fault {
             Returned,
             Streamed,
             Deadline,
         }
         struct Delivery {
             calls_returned: bool,
-            failure: Failure,
+            failure: Fault,
         }
         #[async_trait]
         impl ToolConversation for Delivery {
@@ -810,27 +801,27 @@ mod tests {
                 _: &EngineTextStreamRequest,
                 results: Vec<ExecutedToolCall>,
                 events: &ToolEventSender,
-            ) -> Result<Vec<EngineLocalToolCall>, EngineAdapterRequestError> {
+            ) -> Result<Vec<EngineLocalToolCall>, Failure> {
                 if !self.calls_returned {
                     self.calls_returned = true;
                     return Ok(vec![call("first"), call("second")]);
                 }
                 assert_eq!(results.len(), 2);
                 assert_eq!(results[1].call.id, "second");
-                let error = EngineAdapterRequestError::transport("test", "delivery failed")
+                let error = Failure::transport("test", "delivery failed")
                     .with_request_id(Some("provider-request".into()));
                 match self.failure {
-                    Failure::Returned => Err(error),
-                    Failure::Streamed => {
+                    Fault::Returned => Err(error),
+                    Fault::Streamed => {
                         events.send(Err(error)).await.unwrap();
                         std::future::pending().await
                     }
-                    Failure::Deadline => std::future::pending().await,
+                    Fault::Deadline => std::future::pending().await,
                 }
             }
         }
-        for failure in [Failure::Returned, Failure::Streamed, Failure::Deadline] {
-            let deadline = matches!(failure, Failure::Deadline);
+        for failure in [Fault::Returned, Fault::Streamed, Fault::Deadline] {
+            let deadline = matches!(failure, Fault::Deadline);
             let executor = Arc::new(Executor::default());
             let mut context = context();
             context.timeout_ms = Some(200);
@@ -867,9 +858,9 @@ mod tests {
             assert_eq!(completed, ["first", "second"]);
             assert_eq!(executor.calls.lock().unwrap().len(), 2);
             let error = failure.expect("delivery failed");
-            assert_eq!(error.dispatch, DispatchState::Unknown);
+            assert_eq!(error.exchange.dispatch, DispatchState::Unknown);
             assert_eq!(
-                error.classification,
+                error.kind,
                 if deadline {
                     crate::ErrorKind::Timeout
                 } else {
@@ -877,9 +868,12 @@ mod tests {
                 }
             );
             if !deadline {
-                assert_eq!(error.request_id.as_deref(), Some("provider-request"));
+                assert_eq!(
+                    error.exchange.request_id.as_deref(),
+                    Some("provider-request")
+                );
             }
-            let evidence = error.tool_call.expect("retained completion");
+            let evidence = error.tool_call.clone().expect("retained completion");
             assert_eq!(evidence.call_id, "second");
             assert_eq!(evidence.outcome, crate::ToolCallOutcome::Completed);
         }
@@ -1041,7 +1035,7 @@ mod tests {
             _: &EngineTextStreamRequest,
             _: Vec<ExecutedToolCall>,
             _: &ToolEventSender,
-        ) -> Result<Vec<EngineLocalToolCall>, EngineAdapterRequestError> {
+        ) -> Result<Vec<EngineLocalToolCall>, Failure> {
             self.started.notify_one();
             std::future::pending().await
         }
@@ -1070,10 +1064,7 @@ mod tests {
     }
     #[async_trait]
     impl EngineLocalToolExecutor for PendingExecutor {
-        async fn call(
-            &self,
-            _: EngineLocalToolCall,
-        ) -> Result<EngineLocalToolResult, EngineAdapterRequestError> {
+        async fn call(&self, _: EngineLocalToolCall) -> Result<EngineLocalToolResult, Failure> {
             self.started.notify_one();
             std::future::pending().await
         }
@@ -1115,9 +1106,9 @@ mod tests {
         };
         let events = run(script, request, executor.clone()).await;
         assert!(executor.calls.lock().unwrap().is_empty());
-        assert!(events.iter().any(|event| matches!(event, Err(error) if error.classification == super::super::error::ErrorKind::InvalidResponse)));
+        assert!(events.iter().any(|event| matches!(event, Err(error) if error.kind == super::super::error::ErrorKind::InvalidResponse)));
         let error = events.last().unwrap().as_ref().unwrap_err();
-        assert_eq!(error.dispatch, crate::DispatchState::Unknown);
+        assert_eq!(error.exchange.dispatch, crate::DispatchState::Unknown);
         let evidence = error.tool_call.as_ref().unwrap();
         assert_eq!(evidence.call_id, "second");
         assert_eq!(evidence.outcome, crate::ToolCallOutcome::NotDispatched);
@@ -1127,10 +1118,7 @@ mod tests {
         struct Waiting;
         #[async_trait]
         impl EngineLocalToolExecutor for Waiting {
-            async fn call(
-                &self,
-                _: EngineLocalToolCall,
-            ) -> Result<EngineLocalToolResult, EngineAdapterRequestError> {
+            async fn call(&self, _: EngineLocalToolCall) -> Result<EngineLocalToolResult, Failure> {
                 std::future::pending().await
             }
         }
@@ -1163,7 +1151,7 @@ mod tests {
             events.push(event);
         }
         task.await.unwrap();
-        assert!(events.iter().any(|event| matches!(event, Err(error) if error.classification == super::super::error::ErrorKind::Timeout)));
+        assert!(events.iter().any(|event| matches!(event, Err(error) if error.kind == super::super::error::ErrorKind::Timeout)));
         let evidence = events
             .iter()
             .find_map(|event| event.as_ref().err())

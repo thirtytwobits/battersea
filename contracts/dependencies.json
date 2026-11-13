@@ -1,9 +1,14 @@
 {
-  "battersea-flow": [],
+  "battersea-failure": [],
+  "battersea-flow": [
+    "battersea-failure"
+  ],
   "battersea-runtime": [
     "battersea-flow"
   ],
-  "battersea-model": [],
+  "battersea-model": [
+    "battersea-failure"
+  ],
   "battersea-tools": [
     "battersea-model",
     "clapham"

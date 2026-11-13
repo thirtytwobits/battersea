@@ -28,11 +28,11 @@ fn durable_includes(request: &ConversationRequest) -> Vec<&'static str> {
     include
 }
 
-fn invalid(message: &str) -> EngineAdapterRequestError {
-    EngineAdapterRequestError::invalid_response("openai", message)
+fn invalid(message: &str) -> Failure {
+    Failure::invalid_response("openai", message)
 }
 
-fn decode(state: &Value) -> Result<Checkpoint, EngineAdapterRequestError> {
+fn decode(state: &Value) -> Result<Checkpoint, Failure> {
     check_payload(state, "openai")?;
     serde_json::from_value(state.clone()).map_err(|_| invalid("Invalid Responses checkpoint."))
 }
@@ -42,12 +42,12 @@ impl OpenAiEngineAdapter {
         &self,
         request: &ConversationRequest,
         state: Option<&Value>,
-    ) -> Result<ConversationBinding, EngineAdapterRequestError> {
+    ) -> Result<ConversationBinding, Failure> {
         super::super::validate_chat_request(&self.backend, &request.to_request())?;
         if (self.background && self.background_mode != "poll")
             || (!self.background && !request.shared.chat.stream)
         {
-            return Err(EngineAdapterRequestError::new(
+            return Err(Failure::new(
                 &self.backend.provider,
                 "Durable Responses continuation requires foreground streaming or background polling.",
                 ErrorKind::InvalidRequest,
@@ -55,7 +55,7 @@ impl OpenAiEngineAdapter {
             .with_tool_code(ToolCode::UnsupportedToolContinuation));
         }
         if request.shared.chat.context_overflow != EngineContextOverflow::Error {
-            return Err(EngineAdapterRequestError::new(
+            return Err(Failure::new(
                 &self.backend.provider,
                 "Durable Responses continuation requires contextOverflow=error.",
                 ErrorKind::InvalidRequest,
@@ -106,7 +106,7 @@ impl OpenAiEngineAdapter {
         request: &ConversationRequest,
         previous: Option<&Value>,
         results: &[ConversationToolResult],
-    ) -> Result<Vec<Value>, EngineAdapterRequestError> {
+    ) -> Result<Vec<Value>, Failure> {
         let (mut input, calls) = if let Some(state) = previous {
             self.validate_durable_request(request, Some(state))?;
             let checkpoint = decode(state)?;
@@ -160,7 +160,7 @@ impl OpenAiEngineAdapter {
         previous: Option<&Value>,
         results: &[ConversationToolResult],
         turn: &ConversationTurn,
-    ) -> Result<ConversationBinding, EngineAdapterRequestError> {
+    ) -> Result<ConversationBinding, Failure> {
         check_payload(turn, "openai")?;
         let binding = self.validate_durable_request(request, Some(&turn.state))?;
         let checkpoint = decode(&turn.state)?;
@@ -218,9 +218,9 @@ impl OpenAiEngineAdapter {
         request: ConversationRequest,
         state: Option<Value>,
         results: Vec<ConversationToolResult>,
-    ) -> Result<ConversationTurn, EngineAdapterRequestError> {
+    ) -> Result<ConversationTurn, Failure> {
         if self.background {
-            return Err(EngineAdapterRequestError::new(
+            return Err(Failure::new(
                 &self.backend.provider,
                 "Background Responses requires the durable step interface.",
                 ErrorKind::InvalidRequest,
@@ -278,7 +278,7 @@ impl OpenAiEngineAdapter {
         input: Vec<Value>,
         response: Value,
         streaming: bool,
-    ) -> Result<ConversationTurn, EngineAdapterRequestError> {
+    ) -> Result<ConversationTurn, Failure> {
         // The completed native response determines durable events; partial stream observations
         // remain diagnostics and cannot disagree with restored output.
         let events = response_events(&self.backend.provider, request, &response, false)?;
@@ -332,7 +332,7 @@ fn response_events(
     request: &ConversationRequest,
     response: &Value,
     structured: bool,
-) -> Result<Vec<EngineTextStreamEvent>, EngineAdapterRequestError> {
+) -> Result<Vec<EngineTextStreamEvent>, Failure> {
     // Recovery admits the same native schema as the live stream without reserialising it.
     serde_json::from_value::<async_openai::types::responses::Response>(response.clone())
         .map_err(|_| invalid("Invalid native Responses response."))?;

@@ -22,19 +22,16 @@ impl EngineAdapter for Remote {
         &self,
         request: &ConversationRequest,
         state: Option<&Value>,
-    ) -> Result<ConversationBinding, EngineAdapterRequestError> {
+    ) -> Result<ConversationBinding, Failure> {
         self.provider.validate_conversation(request, state)
     }
     async fn count_text_stream_input_tokens(
         &self,
         _: EngineTextStreamRequest,
-    ) -> Result<u64, EngineAdapterRequestError> {
+    ) -> Result<u64, Failure> {
         Ok(0)
     }
-    async fn stream_text(
-        &self,
-        _: EngineTextStreamRequest,
-    ) -> Result<EngineTextStream, EngineAdapterRequestError> {
+    async fn stream_text(&self, _: EngineTextStreamRequest) -> Result<EngineTextStream, Failure> {
         unreachable!()
     }
     fn validate_conversation_step(
@@ -44,9 +41,8 @@ impl EngineAdapter for Remote {
         results: &[ConversationToolResult],
         command: &ConversationCommand,
         step: &ConversationStep,
-    ) -> Result<ConversationBinding, EngineAdapterRequestError> {
-        let invalid =
-            || EngineAdapterRequestError::invalid_response("fixture", "Invalid remote evidence");
+    ) -> Result<ConversationBinding, Failure> {
+        let invalid = || Failure::invalid_response("fixture", "Invalid remote evidence");
         let validate = |state: &Value| {
             if state["version"] != 1
                 || !state["id"].is_u64()
@@ -92,7 +88,7 @@ impl EngineAdapter for Remote {
         previous: Option<Value>,
         results: Vec<ConversationToolResult>,
         command: ConversationCommand,
-    ) -> Result<ConversationStep, EngineAdapterRequestError> {
+    ) -> Result<ConversationStep, Failure> {
         Ok(match command {
             ConversationCommand::Start => {
                 let id = self.creates.fetch_add(1, Ordering::SeqCst) + 1;
@@ -454,7 +450,7 @@ async fn cancellation_conflicts_report_dispatch_certainty_at_the_publication_bou
         let error = d.cancel(3).await.unwrap_err();
         assert_eq!(error.tool_code, Some(ToolCode::ToolContinuationConflict));
         assert_eq!(
-            error.dispatch,
+            error.exchange.dispatch,
             if revision == 4 {
                 DispatchState::NotSent
             } else {

@@ -2,7 +2,7 @@
 //! The `battersea` contribution: one operation per host capability the application supplies.
 use crate::{codes, host::*};
 use battersea_flow::{FlowDocument, FlowValidationResult};
-use battersea_model::{EngineAdapterRequestError, EngineLocalToolResult, ToolCode};
+use battersea_model::{EngineLocalToolResult, Failure, ToolCode};
 use battersea_tools::{
     StoredToolCallState, ToolApprovalAction, ToolApprovalJournal, ToolApprovalReconciliation,
 };
@@ -166,7 +166,7 @@ fn descriptor<I: JsonSchema, O: JsonSchema>(
     operation
 }
 
-fn tool_refusal(error: EngineAdapterRequestError) -> Refusal {
+fn tool_refusal(error: Failure) -> Refusal {
     let code = error
         .tool_code
         .map_or(codes::HOST_FAILURE, ToolCode::as_str);

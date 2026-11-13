@@ -19,7 +19,7 @@
 //! `apiKeyEnv`; the adapter splices it into the URL per request.
 //!
 
-use super::error::EngineAdapterRequestError;
+use super::error::Failure;
 use super::tool_loop::{
     run_tool_loop, send_event, ExecutedToolCall, ToolConversation, ToolEventSender,
 };
@@ -59,7 +59,7 @@ pub(crate) fn create_google_adapter(
     backend: EngineBackendConfig,
     logger: Option<Arc<dyn EngineAdapterLogger>>,
     clock: Arc<dyn Clock>,
-) -> Result<Arc<dyn EngineAdapter>, EngineAdapterRequestError> {
+) -> Result<Arc<dyn EngineAdapter>, Failure> {
     let provider = "google";
     crate::retry::validate(&backend)?;
     let timeout_ms = backend
@@ -90,7 +90,7 @@ pub(crate) fn create_google_adapter(
         .retry(reqwest::retry::never())
         .redirect(reqwest::redirect::Policy::none())
         .build()
-        .map_err(|error| EngineAdapterRequestError::transport("google", error.to_string()))?;
+        .map_err(|error| Failure::transport("google", error.to_string()))?;
     Ok(Arc::new(GoogleEngineAdapter {
         client,
         logger,
@@ -128,7 +128,7 @@ impl EngineAdapter for GoogleEngineAdapter {
         &self,
         request: &battersea_model::ConversationRequest,
         state: Option<&Value>,
-    ) -> Result<battersea_model::ConversationBinding, EngineAdapterRequestError> {
+    ) -> Result<battersea_model::ConversationBinding, Failure> {
         self.validate_durable_request(request, state)
     }
 
@@ -138,7 +138,7 @@ impl EngineAdapter for GoogleEngineAdapter {
         previous: Option<&Value>,
         results: &[battersea_model::ConversationToolResult],
         turn: &battersea_model::ConversationTurn,
-    ) -> Result<battersea_model::ConversationBinding, EngineAdapterRequestError> {
+    ) -> Result<battersea_model::ConversationBinding, Failure> {
         self.validate_durable_turn(request, previous, results, turn)
     }
 
@@ -147,7 +147,7 @@ impl EngineAdapter for GoogleEngineAdapter {
         request: battersea_model::ConversationRequest,
         state: Option<Value>,
         results: Vec<battersea_model::ConversationToolResult>,
-    ) -> Result<battersea_model::ConversationTurn, EngineAdapterRequestError> {
+    ) -> Result<battersea_model::ConversationTurn, Failure> {
         self.durable_turn(request, state, results).await
     }
 
@@ -158,7 +158,7 @@ impl EngineAdapter for GoogleEngineAdapter {
     async fn count_text_stream_input_tokens(
         &self,
         request: EngineTextStreamRequest,
-    ) -> Result<u64, EngineAdapterRequestError> {
+    ) -> Result<u64, Failure> {
         super::validate_chat_request(&self.backend, &request)?;
         if request
             .shared
@@ -167,7 +167,7 @@ impl EngineAdapter for GoogleEngineAdapter {
             .as_ref()
             .is_some_and(|m| m.contains(&battersea_model::Modality::Audio) && m.len() != 1)
         {
-            return Err(EngineAdapterRequestError::new(
+            return Err(Failure::new(
                 "google",
                 "GenerateContent audio output must be requested alone.",
                 "invalid_request",
@@ -182,14 +182,15 @@ impl EngineAdapter for GoogleEngineAdapter {
             self.clock.as_ref(),
         )
         .await?;
-        let payload: Value = response.bounded_json().await.map_err(|error| {
-            EngineAdapterRequestError::invalid_response("google", error.to_string())
-        })?;
+        let payload: Value = response
+            .bounded_json()
+            .await
+            .map_err(|error| Failure::invalid_response("google", error.to_string()))?;
         payload
             .get("totalTokens")
             .and_then(Value::as_u64)
             .ok_or_else(|| {
-                EngineAdapterRequestError::invalid_response(
+                Failure::invalid_response(
                     "google",
                     "Gemini countTokens response missing totalTokens.".to_string(),
                 )
@@ -199,7 +200,7 @@ impl EngineAdapter for GoogleEngineAdapter {
     async fn stream_text(
         &self,
         request: EngineTextStreamRequest,
-    ) -> Result<EngineTextStream, EngineAdapterRequestError> {
+    ) -> Result<EngineTextStream, Failure> {
         super::validate_chat_request(&self.backend, &request)?;
         if request
             .shared
@@ -208,7 +209,7 @@ impl EngineAdapter for GoogleEngineAdapter {
             .as_ref()
             .is_some_and(|m| m.contains(&battersea_model::Modality::Audio) && m.len() != 1)
         {
-            return Err(EngineAdapterRequestError::new(
+            return Err(Failure::new(
                 "google",
                 "GenerateContent audio output must be requested alone.",
                 "invalid_request",
@@ -275,7 +276,7 @@ impl EngineAdapter for GoogleEngineAdapter {
                             }
                             let parsed: GeminiGenerateContentResponse =
                                 serde_json::from_str(&event.data).map_err(|error| {
-                                    EngineAdapterRequestError::invalid_response(
+                                    Failure::invalid_response(
                                         "google",
                                         format!("Gemini stream chunk was not valid JSON: {error}"),
                                     )
@@ -290,10 +291,7 @@ impl EngineAdapter for GoogleEngineAdapter {
                             .await;
                             parsed.into_text_stream_events()
                         }
-                        Err(error) => Err(EngineAdapterRequestError::transport(
-                            "google",
-                            error.to_string(),
-                        )),
+                        Err(error) => Err(Failure::transport("google", error.to_string())),
                     }
                 }
             })
@@ -346,17 +344,16 @@ impl GoogleEngineAdapter {
     async fn stream_text_with_local_tools(
         &self,
         request: EngineTextStreamRequest,
-    ) -> Result<EngineTextStream, EngineAdapterRequestError> {
+    ) -> Result<EngineTextStream, Failure> {
         let executor = request.local_tool_executor.clone().ok_or_else(|| {
-            EngineAdapterRequestError::new(
+            Failure::new(
                 "google",
                 "Local engine tool executor is unavailable.",
                 "request",
             )
         })?;
 
-        let (tx, rx) =
-            mpsc::channel::<Result<EngineTextStreamEvent, EngineAdapterRequestError>>(64);
+        let (tx, rx) = mpsc::channel::<Result<EngineTextStreamEvent, Failure>>(64);
         let client = self.client.clone();
         let backend = self.backend.clone();
         let logger = self.logger.clone();
@@ -413,7 +410,7 @@ impl ToolConversation for GoogleToolConversation {
         request: &EngineTextStreamRequest,
         results: Vec<ExecutedToolCall>,
         events: &ToolEventSender,
-    ) -> Result<Vec<EngineLocalToolCall>, EngineAdapterRequestError> {
+    ) -> Result<Vec<EngineLocalToolCall>, Failure> {
         if !results.is_empty() {
             let parts = results
                 .into_iter()
@@ -461,15 +458,14 @@ impl ToolConversation for GoogleToolConversation {
         )
         .await?;
         let status = response.status().as_u16();
-        let raw: Value = response.bounded_json().await.map_err(|error| {
-            EngineAdapterRequestError::invalid_response("google", error.to_string())
-        })?;
-        let payload: GeminiGenerateContentResponse =
-            serde_json::from_value(raw.clone()).map_err(|error| {
-                EngineAdapterRequestError::invalid_response("google", error.to_string())
-            })?;
+        let raw: Value = response
+            .bounded_json()
+            .await
+            .map_err(|error| Failure::invalid_response("google", error.to_string()))?;
+        let payload: GeminiGenerateContentResponse = serde_json::from_value(raw.clone())
+            .map_err(|error| Failure::invalid_response("google", error.to_string()))?;
         if payload.first_finish_reason().as_deref() != Some("STOP") {
-            return Err(EngineAdapterRequestError::invalid_response(
+            return Err(Failure::invalid_response(
                 "google",
                 format!(
                     "Gemini turn did not complete: {:?}.",
@@ -527,9 +523,7 @@ fn resolve_google_base_url(endpoint: &str) -> String {
 /// env var is empty. Returns a configuration-class error if neither
 /// source has a value; the engine surfaces this through the
 /// `live_ready` check rather than waiting for a 401 mid-activation.
-fn resolve_google_api_key(
-    backend: &EngineBackendConfig,
-) -> Result<String, EngineAdapterRequestError> {
+fn resolve_google_api_key(backend: &EngineBackendConfig) -> Result<String, Failure> {
     let env_var = backend.auth.api_key_env.as_str();
     if !env_var.is_empty() {
         if let Ok(value) = std::env::var(env_var) {
@@ -545,7 +539,7 @@ fn resolve_google_api_key(
             return Ok(trimmed.to_string());
         }
     }
-    Err(EngineAdapterRequestError::transport(
+    Err(Failure::transport(
         "google",
         format!(
             "Google Gemini backend \"{}\" has no API key. Set {} or configure auth.apiKey.",
@@ -567,7 +561,7 @@ fn resolve_google_api_key(
 fn build_stream_body(
     backend: &EngineBackendConfig,
     request: &EngineTextStreamRequest,
-) -> Result<Value, EngineAdapterRequestError> {
+) -> Result<Value, Failure> {
     let mut body = json!({
         "contents": crate::content::messages("google", &backend.provider, &request.shared.messages)?
     });
@@ -705,7 +699,7 @@ fn sanitize_schema_for_gemini(schema: &Value) -> Value {
 fn collect_google_function_calls(
     payload: &GeminiGenerateContentResponse,
     turn: usize,
-) -> Result<Vec<EngineLocalToolCall>, EngineAdapterRequestError> {
+) -> Result<Vec<EngineLocalToolCall>, Failure> {
     payload
         .candidates
         .first()
@@ -736,7 +730,7 @@ fn collect_google_function_calls(
 fn build_count_tokens_body(
     backend: &EngineBackendConfig,
     request: &EngineTextStreamRequest,
-) -> Result<Value, EngineAdapterRequestError> {
+) -> Result<Value, Failure> {
     let mut generation = if request.local_tools.is_empty() {
         build_stream_body(backend, request)?
     } else {
@@ -946,9 +940,7 @@ impl GeminiGenerateContentResponse {
     /// emit one `TextDelta` per text part and one `ReasoningDelta` per
     /// part flagged as `thought: true`. Token usage rides on the
     /// final chunk and is forwarded as a single `TokenUsage` event.
-    fn into_text_stream_events(
-        self,
-    ) -> Result<Vec<EngineTextStreamEvent>, EngineAdapterRequestError> {
+    fn into_text_stream_events(self) -> Result<Vec<EngineTextStreamEvent>, Failure> {
         let mut events = Vec::new();
         for candidate in &self.candidates {
             let Some(content) = &candidate.content else {
@@ -976,12 +968,10 @@ impl GeminiGenerateContentResponse {
                             data["fileUri"].as_str().unwrap_or_default().to_string()
                         };
                         crate::content::media_source("google", "google", &url, &mime).map_err(
-                            |error| {
-                                EngineAdapterRequestError::invalid_response("google", error.message)
-                            },
+                            |error| Failure::invalid_response("google", error.message.clone()),
                         )?;
                         if !mime.starts_with("image/") && !mime.starts_with("audio/") {
-                            return Err(EngineAdapterRequestError::invalid_response(
+                            return Err(Failure::invalid_response(
                                 "google",
                                 "Unsupported output MIME type.",
                             ));

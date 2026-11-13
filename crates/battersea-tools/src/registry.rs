@@ -2,9 +2,9 @@
 use crate::{Tool, PROFILES_META_KEY};
 use async_trait::async_trait;
 use battersea_model::{
-    local_tool_name, EngineAdapterRequestError, EngineLocalToolCall, EngineLocalToolDefinition,
-    EngineLocalToolExecutor, EngineLocalToolResult, ErrorKind, ToolCallEvidence, ToolCallOutcome,
-    ToolCode, ToolContentBlock, ToolContentResult, ToolResourceContents,
+    local_tool_name, EngineLocalToolCall, EngineLocalToolDefinition, EngineLocalToolExecutor,
+    EngineLocalToolResult, ErrorKind, Failure, ToolCallEvidence, ToolCallOutcome, ToolCode,
+    ToolContentBlock, ToolContentResult, ToolResourceContents,
 };
 use clapham::{
     Cancellation, ComposedSet, Evidence, OAuthContext, Outcome, RecordSink, Refusal, Selection,
@@ -43,8 +43,8 @@ pub struct ToolRegistry {
     tools: BTreeMap<String, Arc<OfferedTool>>,
 }
 
-pub(crate) fn refusal(message: impl Into<String>, code: ToolCode) -> EngineAdapterRequestError {
-    EngineAdapterRequestError::new("tools", message, ErrorKind::InvalidRequest).with_tool_code(code)
+pub(crate) fn refusal(message: impl Into<String>, code: ToolCode) -> Failure {
+    Failure::new("tools", message, ErrorKind::InvalidRequest).with_tool_code(code)
 }
 
 /// The tool runner's code for a refusal of Clapham's call runner or of an operation.
@@ -64,10 +64,7 @@ fn tool_code(code: &str) -> Option<ToolCode> {
 ///
 /// A code the tool runner names keeps the registry's `invalid_request` classification and sets
 /// `tool_code`; any other code is the classification, unchanged.
-pub(crate) fn refused(
-    refusal: Refusal,
-    mut evidence: ToolCallEvidence,
-) -> EngineAdapterRequestError {
+pub(crate) fn refused(refusal: Refusal, mut evidence: ToolCallEvidence) -> Failure {
     evidence.outcome = match refusal.evidence {
         Evidence::NotDispatched => ToolCallOutcome::NotDispatched,
         Evidence::Completed => ToolCallOutcome::Completed,
@@ -75,7 +72,7 @@ pub(crate) fn refused(
     };
     let error = match tool_code(&refusal.code) {
         Some(code) => crate::registry::refusal(refusal.message, code),
-        None => EngineAdapterRequestError::new("tools", refusal.message, refusal.code),
+        None => Failure::new("tools", refusal.message, refusal.code),
     };
     error.with_tool_call(evidence)
 }
@@ -91,7 +88,7 @@ impl ToolRegistry {
         set: ComposedSet,
         selection: Selection,
         auth: OAuthContext,
-    ) -> Result<Self, EngineAdapterRequestError> {
+    ) -> Result<Self, Failure> {
         let mut seen = BTreeSet::new();
         for operation in selection.operations() {
             if !seen.insert(local_tool_name(operation.name.as_str())) {
@@ -122,7 +119,7 @@ impl ToolRegistry {
         mut self,
         profile: impl Into<String>,
         names: I,
-    ) -> Result<Self, EngineAdapterRequestError>
+    ) -> Result<Self, Failure>
     where
         I: IntoIterator<Item = S>,
         S: Into<String>,
@@ -227,10 +224,7 @@ impl ToolRegistry {
         registry
     }
 
-    pub(crate) fn prepare(
-        &self,
-        mut call: EngineLocalToolCall,
-    ) -> Result<PreparedCall, EngineAdapterRequestError> {
+    pub(crate) fn prepare(&self, mut call: EngineLocalToolCall) -> Result<PreparedCall, Failure> {
         let mut evidence = ToolCallEvidence {
             call_id: call.id.clone(),
             tool_name: call.name.clone(),
@@ -273,10 +267,7 @@ impl EngineLocalToolExecutor for ToolRegistry {
     /// Runs `call` through the composed set, under either the tool's own name or its
     /// provider-facing one. Missing or invalid successful output is refused as
     /// [`ToolCode::InvalidToolResult`]. Tool-reported errors bypass the success schema.
-    async fn call(
-        &self,
-        call: EngineLocalToolCall,
-    ) -> Result<EngineLocalToolResult, EngineAdapterRequestError> {
+    async fn call(&self, call: EngineLocalToolCall) -> Result<EngineLocalToolResult, Failure> {
         self.prepare(call)?.execute().await
     }
 }
@@ -292,10 +283,7 @@ impl PreparedCall {
         &self.offered.tool
     }
 
-    pub fn validate_result(
-        &self,
-        result: &EngineLocalToolResult,
-    ) -> Result<(), EngineAdapterRequestError> {
+    pub fn validate_result(&self, result: &EngineLocalToolResult) -> Result<(), Failure> {
         let outcome = Outcome {
             result: result.structured_output().cloned(),
             content: None,
@@ -314,7 +302,7 @@ impl PreparedCall {
         }
     }
 
-    pub async fn execute(self) -> Result<EngineLocalToolResult, EngineAdapterRequestError> {
+    pub async fn execute(self) -> Result<EngineLocalToolResult, Failure> {
         let Self {
             dispatch,
             call,
@@ -342,7 +330,7 @@ impl PreparedCall {
 /// An outcome as the tool loop receives it. A completed JSON result with no content is
 /// ordinary application JSON; anything else is a content result whose blocks are MCP
 /// content blocks.
-fn result(outcome: Outcome) -> Result<EngineLocalToolResult, EngineAdapterRequestError> {
+fn result(outcome: Outcome) -> Result<EngineLocalToolResult, Failure> {
     if let (Some(content), None, false) = (&outcome.result, &outcome.content, outcome.is_error) {
         return Ok(EngineLocalToolResult::json(content.clone()));
     }
@@ -359,9 +347,9 @@ fn result(outcome: Outcome) -> Result<EngineLocalToolResult, EngineAdapterReques
     }))
 }
 
-fn block(raw: &Value) -> Result<ToolContentBlock, EngineAdapterRequestError> {
+fn block(raw: &Value) -> Result<ToolContentBlock, Failure> {
     let unsupported = || {
-        EngineAdapterRequestError::new(
+        Failure::new(
             "tools",
             "The tool returned a content block the tool loop cannot represent.",
             ErrorKind::InvalidResponse,

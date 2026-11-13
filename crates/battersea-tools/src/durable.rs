@@ -3,9 +3,9 @@
 use crate::{registry::PreparedCall, Tool, ToolRegistry};
 use async_trait::async_trait;
 use battersea_model::{
-    configuration_digest, Clock, EngineAdapterRequestError, EngineLocalToolCall,
-    EngineLocalToolDefinition, EngineLocalToolExecutor, EngineLocalToolResult, ErrorKind,
-    ToolCallEvidence, ToolCallOutcome, ToolCode,
+    configuration_digest, Clock, EngineLocalToolCall, EngineLocalToolDefinition,
+    EngineLocalToolExecutor, EngineLocalToolResult, ErrorKind, Failure, ToolCallEvidence,
+    ToolCallOutcome, ToolCode,
 };
 use serde::{Deserialize, Serialize};
 use serde_json::json;
@@ -61,7 +61,7 @@ pub enum StoredToolCallState {
     Cancelled,
     Intent,
     Completed { result: EngineLocalToolResult },
-    Failed { error: EngineAdapterRequestError },
+    Failed { error: Failure },
     Abandoned,
 }
 
@@ -142,22 +142,22 @@ pub trait ToolApprovalStore: Send + Sync {
     ) -> Result<(), ToolApprovalStoreError>;
 }
 
-fn failure(code: ToolCode, message: &str) -> EngineAdapterRequestError {
-    EngineAdapterRequestError::new("tools", message, ErrorKind::InvalidRequest).with_tool_code(code)
+fn failure(code: ToolCode, message: &str) -> Failure {
+    Failure::new("tools", message, ErrorKind::InvalidRequest).with_tool_code(code)
 }
-fn invalid() -> EngineAdapterRequestError {
+fn invalid() -> Failure {
     failure(
         ToolCode::InvalidToolApproval,
         "Invalid or incompatible tool approval journal.",
     )
 }
-fn conflict() -> EngineAdapterRequestError {
+fn conflict() -> Failure {
     failure(
         ToolCode::ToolApprovalConflict,
         "Tool approval revision changed.",
     )
 }
-fn measure(value: &impl Serialize, limit: usize) -> Result<(), EngineAdapterRequestError> {
+fn measure(value: &impl Serialize, limit: usize) -> Result<(), Failure> {
     struct Counter(usize);
     impl Write for Counter {
         fn write(&mut self, bytes: &[u8]) -> std::io::Result<usize> {
@@ -193,7 +193,7 @@ fn evidence(call: &EngineLocalToolCall, outcome: ToolCallOutcome) -> ToolCallEvi
         request_id: None,
     }
 }
-fn checked_limits(limits: ToolApprovalJournalLimits) -> Result<(), EngineAdapterRequestError> {
+fn checked_limits(limits: ToolApprovalJournalLimits) -> Result<(), Failure> {
     if !(1..=MAX_CALLS).contains(&limits.max_calls) || !(1..=MAX_BYTES).contains(&limits.max_bytes)
     {
         return Err(invalid());
@@ -218,7 +218,7 @@ impl ToolApprovalJournal {
     }
 
     /// Validate format, identities, state consistency and encoded retention bounds.
-    pub fn validate(&self) -> Result<(), EngineAdapterRequestError> {
+    pub fn validate(&self) -> Result<(), Failure> {
         checked_limits(self.limits)?;
         measure(self, self.limits.max_bytes)?;
         if self.version != TOOL_APPROVAL_JOURNAL_VERSION
@@ -341,7 +341,7 @@ impl DurableToolExecutor {
         max_bytes: usize,
         store_timeout: Duration,
         clock: Arc<dyn Clock>,
-    ) -> Result<Self, EngineAdapterRequestError> {
+    ) -> Result<Self, Failure> {
         if scope.run_id.trim().is_empty()
             || scope.binding_revision.trim().is_empty()
             || scope.expires_at_unix_ms == 0
@@ -378,7 +378,7 @@ impl DurableToolExecutor {
         limits: ToolApprovalJournalLimits,
         store_timeout: Duration,
         clock: Arc<dyn Clock>,
-    ) -> Result<Self, EngineAdapterRequestError> {
+    ) -> Result<Self, Failure> {
         checked_limits(limits)?;
         measure(&scope, limits.max_bytes)?;
         let executor = Self::build(
@@ -411,7 +411,7 @@ impl DurableToolExecutor {
         max_bytes: usize,
         store_timeout: Duration,
         clock: Arc<dyn Clock>,
-    ) -> Result<Self, EngineAdapterRequestError> {
+    ) -> Result<Self, Failure> {
         let executor = Self::build(store, registry, scope, max_bytes, store_timeout, clock)?;
         executor.inspect().await?;
         Ok(executor)
@@ -422,7 +422,7 @@ impl DurableToolExecutor {
     }
 
     /// Inspect durable state, including expired calls and unresolved intents, without mutation.
-    pub async fn inspect(&self) -> Result<ToolApprovalJournal, EngineAdapterRequestError> {
+    pub async fn inspect(&self) -> Result<ToolApprovalJournal, Failure> {
         let record = battersea_model::clock::timeout(
             self.clock.as_ref(),
             self.store_timeout,
@@ -439,10 +439,10 @@ impl DurableToolExecutor {
         }
         Ok(record)
     }
-    fn storage_error(error: ToolApprovalStoreError) -> EngineAdapterRequestError {
+    fn storage_error(error: ToolApprovalStoreError) -> Failure {
         match error {
             ToolApprovalStoreError::Conflict => conflict(),
-            ToolApprovalStoreError::Unavailable => EngineAdapterRequestError::new(
+            ToolApprovalStoreError::Unavailable => Failure::new(
                 "tools",
                 "Approval storage outcome requires inspection.",
                 ErrorKind::Transport,
@@ -454,7 +454,7 @@ impl DurableToolExecutor {
         &self,
         expected: Option<u64>,
         next: &ToolApprovalJournal,
-    ) -> Result<(), EngineAdapterRequestError> {
+    ) -> Result<(), Failure> {
         next.validate()?;
         measure(next, self.max_bytes)?;
         battersea_model::clock::timeout(
@@ -467,25 +467,23 @@ impl DurableToolExecutor {
         .map_err(|_| Self::storage_error(ToolApprovalStoreError::Unavailable))?
         .map_err(Self::storage_error)
     }
-    fn now(&self) -> Result<u64, EngineAdapterRequestError> {
+    fn now(&self) -> Result<u64, Failure> {
         self.clock.unix_ms().ok_or_else(invalid)
     }
-    fn live(&self, record: &ToolApprovalJournal) -> Result<(), EngineAdapterRequestError> {
+    fn live(&self, record: &ToolApprovalJournal) -> Result<(), Failure> {
         let now = self.now()?;
         if now < record.updated_at_unix_ms {
             return Err(invalid());
         }
         if now >= self.scope.expires_at_unix_ms || self.clock.instant() >= self.deadline {
-            return Err(EngineAdapterRequestError::new(
-                "tools",
-                "Tool approval expired.",
-                ErrorKind::Expired,
-            )
-            .with_tool_code(ToolCode::ToolApprovalExpired));
+            return Err(
+                Failure::new("tools", "Tool approval expired.", ErrorKind::Expired)
+                    .with_tool_code(ToolCode::ToolApprovalExpired),
+            );
         }
         Ok(())
     }
-    fn idle(record: &ToolApprovalJournal) -> Result<(), EngineAdapterRequestError> {
+    fn idle(record: &ToolApprovalJournal) -> Result<(), Failure> {
         if let Some(entry) = record
             .calls
             .values()
@@ -499,17 +497,14 @@ impl DurableToolExecutor {
         }
         Ok(())
     }
-    async fn expected(
-        &self,
-        revision: u64,
-    ) -> Result<ToolApprovalJournal, EngineAdapterRequestError> {
+    async fn expected(&self, revision: u64) -> Result<ToolApprovalJournal, Failure> {
         let record = self.inspect().await?;
         if record.revision != revision {
             return Err(conflict());
         }
         Ok(record)
     }
-    fn advance(&self, record: &mut ToolApprovalJournal) -> Result<(), EngineAdapterRequestError> {
+    fn advance(&self, record: &mut ToolApprovalJournal) -> Result<(), Failure> {
         let now = self.now()?;
         if now < record.updated_at_unix_ms {
             return Err(invalid());
@@ -524,7 +519,7 @@ impl DurableToolExecutor {
         &self,
         call: EngineLocalToolCall,
         expected_revision: u64,
-    ) -> Result<ToolApprovalJournal, EngineAdapterRequestError> {
+    ) -> Result<ToolApprovalJournal, Failure> {
         let prepared = self.registry.prepare(call)?;
         let refusal = evidence(&prepared.call, ToolCallOutcome::NotDispatched);
         let work = async {
@@ -557,7 +552,7 @@ impl DurableToolExecutor {
             self.write(Some(expected_revision), &record).await?;
             Ok(record)
         };
-        work.await.map_err(|e: EngineAdapterRequestError| {
+        work.await.map_err(|e: Failure| {
             if e.tool_call.is_some() {
                 e
             } else {
@@ -574,7 +569,7 @@ impl DurableToolExecutor {
         expected_revision: u64,
         action: ToolApprovalAction,
         actor: &str,
-    ) -> Result<ToolApprovalJournal, EngineAdapterRequestError> {
+    ) -> Result<ToolApprovalJournal, Failure> {
         let mut record = self.expected(expected_revision).await?;
         Self::idle(&record)?;
         self.live(&record)?;
@@ -615,7 +610,7 @@ impl DurableToolExecutor {
         Ok(record)
     }
 
-    fn prepare(&self, entry: &StoredToolCall) -> Result<PreparedCall, EngineAdapterRequestError> {
+    fn prepare(&self, entry: &StoredToolCall) -> Result<PreparedCall, Failure> {
         let prepared = self.registry.prepare(entry.call.clone())?;
         if prepared.tool() != &entry.tool
             || request_revision(&self.scope, prepared.tool(), &prepared.call)
@@ -636,7 +631,7 @@ impl DurableToolExecutor {
         &self,
         call_id: &str,
         expected_revision: u64,
-    ) -> Result<EngineLocalToolResult, EngineAdapterRequestError> {
+    ) -> Result<EngineLocalToolResult, Failure> {
         let mut record = self.expected(expected_revision).await?;
         let entry = record.calls.get(call_id).ok_or_else(invalid)?;
         let refused = |code, message| {
@@ -694,7 +689,7 @@ impl DurableToolExecutor {
             battersea_model::clock::timeout(self.clock.as_ref(), remaining, prepared.execute())
                 .await
                 .unwrap_or_else(|_| {
-                    Err(EngineAdapterRequestError::new(
+                    Err(Failure::new(
                         "tools",
                         "Tool execution deadline expired.",
                         ErrorKind::Timeout,
@@ -741,7 +736,7 @@ impl DurableToolExecutor {
         resolution: ToolApprovalReconciliation,
         actor: &str,
         proof: &str,
-    ) -> Result<ToolApprovalJournal, EngineAdapterRequestError> {
+    ) -> Result<ToolApprovalJournal, Failure> {
         let mut record = self.expected(expected_revision).await?;
         measure(&(&resolution, actor, proof), record.limits.max_bytes)?;
         if actor.trim().is_empty() || proof.trim().is_empty() {
@@ -782,10 +777,7 @@ impl DurableToolExecutor {
 #[allow(clippy::double_must_use)]
 #[async_trait]
 impl EngineLocalToolExecutor for DurableToolExecutor {
-    async fn call(
-        &self,
-        call: EngineLocalToolCall,
-    ) -> Result<EngineLocalToolResult, EngineAdapterRequestError> {
+    async fn call(&self, call: EngineLocalToolCall) -> Result<EngineLocalToolResult, Failure> {
         let revision = self
             .inspect()
             .await

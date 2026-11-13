@@ -3,9 +3,8 @@
 use crate::{registry::refusal, Tool, ToolRegistry};
 use async_trait::async_trait;
 use battersea_model::{
-    configuration_digest, Clock, EngineAdapterRequestError, EngineLocalToolCall,
-    EngineLocalToolDefinition, EngineLocalToolExecutor, EngineLocalToolResult, ErrorKind,
-    ToolCallOutcome, ToolCode,
+    configuration_digest, Clock, EngineLocalToolCall, EngineLocalToolDefinition,
+    EngineLocalToolExecutor, EngineLocalToolResult, ErrorKind, Failure, ToolCallOutcome, ToolCode,
 };
 use serde_json::json;
 use std::{
@@ -82,7 +81,7 @@ impl ApprovedToolExecutor {
         policy: Arc<dyn ToolApprovalPolicy>,
         max_calls: usize,
         clock: Arc<dyn Clock>,
-    ) -> Result<Self, EngineAdapterRequestError> {
+    ) -> Result<Self, Failure> {
         if scope.run_id.trim().is_empty()
             || scope.binding_revision.trim().is_empty()
             || !(1..=65536).contains(&max_calls)
@@ -111,13 +110,10 @@ impl ApprovedToolExecutor {
 #[allow(clippy::double_must_use)]
 #[async_trait]
 impl EngineLocalToolExecutor for ApprovedToolExecutor {
-    async fn call(
-        &self,
-        call: EngineLocalToolCall,
-    ) -> Result<EngineLocalToolResult, EngineAdapterRequestError> {
+    async fn call(&self, call: EngineLocalToolCall) -> Result<EngineLocalToolResult, Failure> {
         let prepared = self.registry.prepare(call)?;
         let refused = |code, message: &str, kind| {
-            EngineAdapterRequestError::new("tools", message, kind)
+            Failure::new("tools", message, kind)
                 .with_tool_code(code)
                 .with_tool_call(prepared.evidence.clone())
         };
@@ -211,7 +207,7 @@ impl EngineLocalToolExecutor for ApprovedToolExecutor {
         )
         .await
         .map_err(|_| {
-            EngineAdapterRequestError::new(
+            Failure::new(
                 "tools",
                 "Tool execution deadline expired.",
                 ErrorKind::Timeout,

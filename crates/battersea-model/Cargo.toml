@@ -11,6 +11,7 @@ publish = false
 include = ["src/**", "Cargo.toml", "LICENSE", "NOTICE"]
 
 [dependencies]
+battersea-failure = { path = "../battersea-failure", version = "0.26.0" }
 async-trait.workspace = true
 chrono.workspace = true
 futures-util.workspace = true

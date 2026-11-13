@@ -56,7 +56,8 @@ offer as `unregistered_tool`, and arguments outside the operation's input schema
 registry's grant: the grant's binding and scopes, the gate and the resource policies are checked
 before the handler receives the call under the operation's own name.
 
-A refusal reaches the tool loop with its message and evidence. Clapham's `invalid_input`,
+A refusal reaches the tool loop as a [failure](failures.md) reported by the tool, with the
+tool's error as native detail and its evidence. Clapham's `invalid_input`,
 `invalid_result` and `unknown_operation`, and any code spelled as a `ToolCode`, set `tool_code`
 with the classification `invalid_request`. Any other code, such as `insufficient_scope` or a
 remote server's `mcp_busy`, is the classification, unchanged.

@@ -24,7 +24,7 @@ fn create(
     backend: EngineBackendConfig,
     logger: Option<Arc<dyn EngineAdapterLogger>>,
     clock: Arc<dyn Clock>,
-) -> Result<Arc<dyn EngineAdapter>, EngineAdapterRequestError> {
+) -> Result<Arc<dyn EngineAdapter>, Failure> {
     crate::retry::validate(&backend)?;
     let binding = backend
         .binding
@@ -32,7 +32,7 @@ fn create(
         .ok_or_else(|| missing_backend_option(&backend.provider, "binding"))?;
     crate::connection::headers(binding, &backend.auth)?;
     if backend.chat.context_overflow != EngineContextOverflow::Error {
-        return Err(EngineAdapterRequestError::new(
+        return Err(Failure::new(
             &backend.provider,
             "Chat Completions requires contextOverflow=error.",
             ErrorKind::InvalidRequest,
@@ -47,7 +47,7 @@ fn create(
         .redirect(reqwest::redirect::Policy::none())
         .build()
         .map_err(|_| {
-            EngineAdapterRequestError::new(
+            Failure::new(
                 &backend.provider,
                 "Could not construct HTTP client.",
                 ErrorKind::InvalidRequest,
@@ -72,7 +72,7 @@ impl EngineAdapter for Completions {
         &self,
         request: &ConversationRequest,
         state: Option<&Value>,
-    ) -> Result<ConversationBinding, EngineAdapterRequestError> {
+    ) -> Result<ConversationBinding, Failure> {
         validate_chat_request(&self.backend, &request.to_request())?;
         if request.shared.chat.context_overflow != EngineContextOverflow::Error {
             return Err(invalid(
@@ -165,7 +165,7 @@ impl EngineAdapter for Completions {
         previous: Option<&Value>,
         results: &[ConversationToolResult],
         turn: &ConversationTurn,
-    ) -> Result<ConversationBinding, EngineAdapterRequestError> {
+    ) -> Result<ConversationBinding, Failure> {
         let binding = self.validate_conversation(request, Some(&turn.state))?;
         let checkpoint: CompletionCheckpoint = serde_json::from_value(turn.state.clone())
             .map_err(|_| invalid(&self.backend.provider, "Invalid completion checkpoint."))?;
@@ -230,7 +230,7 @@ impl EngineAdapter for Completions {
         request: ConversationRequest,
         state: Option<Value>,
         results: Vec<ConversationToolResult>,
-    ) -> Result<ConversationTurn, EngineAdapterRequestError> {
+    ) -> Result<ConversationTurn, Failure> {
         let binding = self.validate_conversation(&request, state.as_ref())?;
         let messages = match state {
             Some(state) => {
@@ -267,7 +267,7 @@ impl EngineAdapter for Completions {
                     provider_content,
                 })
             })
-            .collect::<Result<Vec<_>, EngineAdapterRequestError>>()?;
+            .collect::<Result<Vec<_>, Failure>>()?;
         let context = self.describe_debug_context();
         let mut conversation = Conversation {
             backend: self.backend.clone(),
@@ -307,7 +307,7 @@ impl EngineAdapter for Completions {
                             .map(|deadline| self.clock.sleep_until(deadline))
                             .unwrap_or_else(|| Box::pin(std::future::pending()));
                     },
-                    _=&mut timer=>return Err(EngineAdapterRequestError::new(&self.backend.provider,"Durable provider turn exceeded its idle timeout.",ErrorKind::Timeout)),
+                    _=&mut timer=>return Err(Failure::new(&self.backend.provider,"Durable provider turn exceeded its idle timeout.",ErrorKind::Timeout)),
                 }
             }
         };
@@ -351,8 +351,8 @@ impl EngineAdapter for Completions {
     async fn count_text_stream_input_tokens(
         &self,
         _request: EngineTextStreamRequest,
-    ) -> Result<u64, EngineAdapterRequestError> {
-        Err(EngineAdapterRequestError::new(
+    ) -> Result<u64, Failure> {
+        Err(Failure::new(
             &self.backend.provider,
             "Chat Completions does not implement preflight input counting.",
             ErrorKind::InvalidRequest,
@@ -361,10 +361,10 @@ impl EngineAdapter for Completions {
     async fn stream_text(
         &self,
         request: EngineTextStreamRequest,
-    ) -> Result<EngineTextStream, EngineAdapterRequestError> {
+    ) -> Result<EngineTextStream, Failure> {
         validate_chat_request(&self.backend, &request)?;
         if request.shared.chat.context_overflow != EngineContextOverflow::Error {
-            return Err(EngineAdapterRequestError::new(
+            return Err(Failure::new(
                 &self.backend.provider,
                 "Chat Completions requires contextOverflow=error.",
                 ErrorKind::InvalidRequest,
@@ -398,7 +398,7 @@ impl EngineAdapter for Completions {
         Ok(Box::pin(ReceiverStream::new(rx)))
     }
 }
-fn messages(provider: &str, messages: &[Message]) -> Result<Vec<Value>, EngineAdapterRequestError> {
+fn messages(provider: &str, messages: &[Message]) -> Result<Vec<Value>, Failure> {
     let mut result = Vec::new();
     for message in messages {
         let role = match message.role {
@@ -415,7 +415,7 @@ fn messages(provider: &str, messages: &[Message]) -> Result<Vec<Value>, EngineAd
                 ContentBlock::Text { text } => content.push(json!({"type":"text","text":text})),
                 ContentBlock::Image { url,mime_type } => {
                     if !crate::content::OPENAI_IMAGE_MIME_TYPES.contains(&mime_type.as_str()) {
-                        return Err(EngineAdapterRequestError::new(provider,"Chat Completions does not support the requested image type.",ErrorKind::InvalidRequest));
+                        return Err(Failure::new(provider,"Chat Completions does not support the requested image type.",ErrorKind::InvalidRequest));
                     }
                     crate::content::media_source("openai",provider,url,mime_type)?;
                     content.push(json!({"type":"image_url","image_url":{"url":url}}));
@@ -423,11 +423,11 @@ fn messages(provider: &str, messages: &[Message]) -> Result<Vec<Value>, EngineAd
                 ContentBlock::ToolCall { id,name,arguments } => calls.push(json!({"id":id,"type":"function","function":{"name":local_tool_name(name),"arguments":arguments.to_string()}})),
                 ContentBlock::ToolResult { id,content } => { special=true;result.push(json!({"role":"tool","tool_call_id":id,"content":content.to_string()})); },
                 ContentBlock::Native { provider:owner,payload } if owner == provider && payload["role"] == "assistant" => { special=true;result.push(payload.clone()); },
-                _ => return Err(EngineAdapterRequestError::new(provider,"Unsupported Chat Completions content.",ErrorKind::InvalidRequest)),
+                _ => return Err(Failure::new(provider,"Unsupported Chat Completions content.",ErrorKind::InvalidRequest)),
             }
         }
         if special && (!content.is_empty() || !calls.is_empty()) {
-            return Err(EngineAdapterRequestError::new(
+            return Err(Failure::new(
                 provider,
                 "Native or tool-result messages must retain their own envelope.",
                 ErrorKind::InvalidRequest,
@@ -459,7 +459,7 @@ impl ToolConversation for Conversation {
         request: &EngineTextStreamRequest,
         results: Vec<ExecutedToolCall>,
         events: &ToolEventSender,
-    ) -> Result<Vec<EngineLocalToolCall>, EngineAdapterRequestError> {
+    ) -> Result<Vec<EngineLocalToolCall>, Failure> {
         let provider = &self.backend.provider;
         for result in results {
             self.messages.push(json!({"role":"tool","tool_call_id":result.call.id,"content":result.provider_content.to_string()}));
@@ -620,8 +620,8 @@ impl ToolConversation for Conversation {
         Ok(calls)
     }
 }
-fn invalid(provider: &str, message: &str) -> EngineAdapterRequestError {
-    EngineAdapterRequestError::invalid_response(provider, message)
+fn invalid(provider: &str, message: &str) -> Failure {
+    Failure::invalid_response(provider, message)
 }
 
 struct CompletionBuffer {
@@ -634,7 +634,7 @@ struct CompletionBudget {
     limit: usize,
 }
 impl CompletionBudget {
-    fn reserve(&mut self, bytes: usize, provider: &str) -> Result<(), EngineAdapterRequestError> {
+    fn reserve(&mut self, bytes: usize, provider: &str) -> Result<(), Failure> {
         if bytes > self.limit.saturating_sub(self.encoded_bytes) {
             return Err(invalid(
                 provider,
@@ -644,11 +644,7 @@ impl CompletionBudget {
         self.encoded_bytes += bytes;
         Ok(())
     }
-    fn reserve_string(
-        &mut self,
-        part: &str,
-        provider: &str,
-    ) -> Result<(), EngineAdapterRequestError> {
+    fn reserve_string(&mut self, part: &str, provider: &str) -> Result<(), Failure> {
         // Fragment quotes already belong to the retained string's envelope.
         self.reserve(payload::check_payload(part, provider)? - 2, provider)
     }
@@ -664,12 +660,12 @@ impl CompletionBuffer {
             },
         }
     }
-    fn push_text(&mut self, part: &str, provider: &str) -> Result<(), EngineAdapterRequestError> {
+    fn push_text(&mut self, part: &str, provider: &str) -> Result<(), Failure> {
         self.budget.reserve_string(part, provider)?;
         self.text.push_str(part);
         Ok(())
     }
-    fn push_tool(&mut self, call: &Value, provider: &str) -> Result<(), EngineAdapterRequestError> {
+    fn push_tool(&mut self, call: &Value, provider: &str) -> Result<(), Failure> {
         if !call["type"].is_null() && call["type"] != "function" {
             return Err(invalid(provider, "Unsupported streamed tool type."));
         }
@@ -715,7 +711,7 @@ async fn decode_stream(
     provider: &str,
     response: reqwest::Response,
     events: &ToolEventSender,
-) -> Result<(Value, String, Value), EngineAdapterRequestError> {
+) -> Result<(Value, String, Value), Failure> {
     let stream = crate::http_payload::bounded_stream(response).eventsource();
     futures_util::pin_mut!(stream);
     let mut buffer = CompletionBuffer::new(payload::PROVIDER_PAYLOAD_BYTES);
@@ -825,7 +821,7 @@ fn validate_completion_events(
     request: &ConversationRequest,
     checkpoint: &CompletionCheckpoint,
     events: &[EngineTextStreamEvent],
-) -> Result<(), EngineAdapterRequestError> {
+) -> Result<(), Failure> {
     let message = checkpoint.messages.last().expect("validated transcript");
     let mut text = String::new();
     let mut native = 0;
@@ -894,10 +890,7 @@ fn validate_completion_events(
     }
     Ok(())
 }
-fn completion_calls(
-    provider: &str,
-    message: &Value,
-) -> Result<Vec<EngineLocalToolCall>, EngineAdapterRequestError> {
+fn completion_calls(provider: &str, message: &Value) -> Result<Vec<EngineLocalToolCall>, Failure> {
     let mut calls = Vec::new();
     if !message["tool_calls"].is_null() && !message["tool_calls"].is_array() {
         return Err(invalid(provider, "Malformed completion tool calls."));
@@ -925,7 +918,7 @@ fn retain_event(
     events: &mut Vec<EngineTextStreamEvent>,
     retained: &mut usize,
     event: EngineTextStreamEvent,
-) -> Result<(), EngineAdapterRequestError> {
+) -> Result<(), Failure> {
     *retained = retained.saturating_add(payload::check_payload(&event, provider)?);
     if *retained > payload::PROVIDER_PAYLOAD_BYTES {
         return Err(invalid(
