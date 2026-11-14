@@ -171,11 +171,12 @@ impl EngineAdapter for Provider {
                     },
                 },
                 EngineTextStreamEvent::MessageStop {
-                    reason: if first {
-                        StopReason::ToolUse
+                    class: if first {
+                        StopClass::ToolUse
                     } else {
-                        StopReason::Complete
+                        StopClass::Complete
                     },
+                    native: serde_json::Value::Null,
                 },
             ],
         };

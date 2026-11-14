@@ -44,13 +44,12 @@ fn retry_after(headers: &reqwest::header::HeaderMap, clock: &dyn Clock) -> Optio
     Some(date.timestamp_millis().saturating_sub(now).max(0) as u64)
 }
 
-/// The provider's own message for a refused request: the `error.message` field of its JSON
-/// error body. A rejection's body may contain credentials or prompt material, so nothing else
-/// from it reaches the failure.
-fn provider_reason(body: &str) -> Option<String> {
-    let value: serde_json::Value = serde_json::from_str(body).ok()?;
-    let message = value.get("error")?.get("message")?.as_str()?.trim();
-    (!message.is_empty()).then(|| message.to_owned())
+/// A rejection's body as the provider sent it: its JSON value, else its text.
+fn rejection_body(body: String) -> Option<serde_json::Value> {
+    if body.is_empty() {
+        return None;
+    }
+    Some(serde_json::from_str(&body).unwrap_or(serde_json::Value::String(body)))
 }
 
 /// The identifier a provider issued for a request, from its response headers.
@@ -118,20 +117,11 @@ pub(crate) async fn send(
                     .headers()
                     .contains_key(reqwest::header::RETRY_AFTER);
                 let retry_after_ms = retry_after(response.headers(), clock);
-                let reason = response
-                    .bounded_text()
-                    .await
-                    .ok()
-                    .as_deref()
-                    .and_then(provider_reason);
+                // An unreadable body leaves the status as the whole account of the rejection.
+                let body = response.bounded_text().await.map(rejection_body);
                 let mut error = Failure::new(
                     &backend.provider,
-                    match reason {
-                        Some(reason) => {
-                            format!("Provider HTTP request failed with status {status}: {reason}")
-                        }
-                        None => format!("Provider HTTP request failed with status {status}."),
-                    },
+                    "Provider rejected the HTTP request.",
                     classification,
                 )
                 .with_status_code(status)
@@ -140,6 +130,12 @@ pub(crate) async fn send(
                 } else {
                     DispatchState::Unknown
                 });
+                error.reporter = battersea_model::Reporter::Provider;
+                match body {
+                    Ok(Some(body)) => error.native = battersea_model::Detail::Present(body),
+                    Ok(None) => {}
+                    Err(unreadable) => error = error.with_cause(unreadable),
+                }
                 error.exchange.request_id = request_id;
                 error.exchange.retry_after_ms = retry_after_ms;
                 if delay_named && error.exchange.retry_after_ms.is_none() {
@@ -203,34 +199,19 @@ pub(crate) async fn send(
 mod tests {
     use super::*;
 
+    /// contracts/failures.md: native detail is the body the provider sent, whole.
     #[test]
-    fn provider_reason_reads_only_the_error_message() {
-        for (body, reason) in [
-            (
-                r#"{"type":"error","error":{"type":"authentication_error","message":"invalid x-api-key"}}"#,
-                "invalid x-api-key",
-            ),
-            (
-                r#"{"error":{"message":"Incorrect API key provided.","type":"invalid_request_error","code":"invalid_api_key"}}"#,
-                "Incorrect API key provided.",
-            ),
-            (
-                r#"{"error":{"code":403,"message":" API key not valid. ","status":"PERMISSION_DENIED"}}"#,
-                "API key not valid.",
-            ),
-        ] {
-            assert_eq!(provider_reason(body).as_deref(), Some(reason), "{body}");
-        }
-        for body in [
-            "",
-            "not json",
-            "{}",
-            r#"{"error":"bare"}"#,
-            r#"{"error":{"message":"  "}}"#,
-            r#"{"message":"top level"}"#,
-        ] {
-            assert_eq!(provider_reason(body), None, "{body:?}");
-        }
+    fn a_rejection_body_is_kept_whole_as_json_or_as_text() {
+        let json = r#"{"type":"error","error":{"type":"authentication_error","message":"invalid x-api-key"},"request_id":"req_1"}"#;
+        assert_eq!(
+            rejection_body(json.into()),
+            Some(serde_json::from_str(json).unwrap())
+        );
+        assert_eq!(
+            rejection_body("upstream unavailable".into()),
+            Some(serde_json::Value::String("upstream unavailable".into()))
+        );
+        assert_eq!(rejection_body(String::new()), None);
     }
     #[test]
     fn retry_after_is_a_lower_bound_including_http_dates() {

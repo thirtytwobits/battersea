@@ -188,7 +188,15 @@ impl EngineAdapter for AnthropicEngineAdapter {
                     match event {
                         Ok(event) => {
                             let invalid = |error: serde_json::Error| {
-                                Failure::invalid_response("anthropic", error.to_string())
+                                Failure::invalid_response(
+                                    "anthropic",
+                                    "Malformed provider stream event.",
+                                )
+                                .with_native(
+                                    battersea_model::Reporter::Provider,
+                                    Value::String(event.data.clone()),
+                                )
+                                .caused_by(&error)
                             };
                             let raw: Value = serde_json::from_str(&event.data).map_err(invalid)?;
                             let parsed: AnthropicStreamEvent =
@@ -223,9 +231,13 @@ impl EngineAdapter for AnthropicEngineAdapter {
                                         "Stream decoder lock poisoned.",
                                     )
                                 })?
-                                .decode(parsed)
+                                .decode(parsed, &raw)
                         }
-                        Err(error) => Err(Failure::transport("anthropic", error.to_string())),
+                        Err(error) => Err(Failure::transport(
+                            "anthropic",
+                            "Provider event stream failed.",
+                        )
+                        .caused_by(&error)),
                     }
                 }
             })
@@ -379,18 +391,23 @@ impl ToolConversation for AnthropicToolConversation {
             .get("request-id")
             .and_then(|value| value.to_str().ok())
             .map(ToOwned::to_owned);
-        let payload: AnthropicMessagesResponse =
+        let native: Value =
             read_anthropic_json(response, request_id.clone(), &self.context).await?;
+        let payload: AnthropicMessagesResponse =
+            serde_json::from_value(native.clone()).map_err(|error| {
+                Failure::invalid_response("anthropic", "Malformed Anthropic message.")
+                    .with_native(battersea_model::Reporter::Provider, native.clone())
+                    .caused_by(&error)
+            })?;
         if !matches!(
             payload.stop_reason.as_deref(),
             Some("end_turn" | "tool_use" | "stop_sequence")
         ) {
-            return Err(Failure::invalid_response(
+            return Err(battersea_model::terminal_failure(
                 "anthropic",
-                format!(
-                    "Anthropic turn did not complete: {:?}.",
-                    payload.stop_reason
-                ),
+                stop_class(payload.stop_reason.as_deref().unwrap_or_default()),
+                native,
+                String::new(),
             ));
         }
         let calls = collect_anthropic_tool_calls(&payload.content)?;
@@ -979,12 +996,13 @@ enum AnthropicStreamEvent {
 struct AnthropicStreamDecoder {
     blocks: std::collections::BTreeMap<u32, Value>,
     arguments: std::collections::BTreeMap<u32, String>,
-    stop: Option<super::StopReason>,
+    stop: Option<(super::StopClass, Value)>,
 }
 impl AnthropicStreamDecoder {
     fn decode(
         &mut self,
         event: AnthropicStreamEvent,
+        raw: &Value,
     ) -> Result<Vec<EngineTextStreamEvent>, Failure> {
         let mut events = event
             .token_usage()
@@ -1042,34 +1060,34 @@ impl AnthropicStreamDecoder {
             }
             AnthropicStreamEvent::MessageDelta { delta, .. } => {
                 if let Some(reason) = delta["stop_reason"].as_str() {
-                    self.stop = Some(match reason {
-                        "end_turn" | "stop_sequence" => super::StopReason::Complete,
-                        "tool_use" => super::StopReason::ToolUse,
-                        "max_tokens" => super::StopReason::Length,
-                        "refusal" => super::StopReason::Refusal,
-                        other => super::StopReason::Other(other.into()),
-                    });
+                    // The whole `message_delta` event travels with the class: it holds the stop
+                    // reason and whatever detail the provider attached to it.
+                    self.stop = Some((stop_class(reason), raw.clone()));
                 }
             }
             AnthropicStreamEvent::MessageStop {} => {
-                let reason = self.stop.take().ok_or_else(|| {
+                let (class, native) = self.stop.take().ok_or_else(|| {
                     Failure::invalid_response("anthropic", "Message stopped without a reason.")
                 })?;
                 if !self.blocks.is_empty() {
                     return Err(Failure::invalid_response(
                         "anthropic",
                         "Message stopped with incomplete content blocks.",
-                    ));
+                    )
+                    .with_partial(battersea_model::Partial {
+                        text: String::new(),
+                        blocks: std::mem::take(&mut self.blocks).into_values().collect(),
+                    }));
                 }
-                events.push(EngineTextStreamEvent::MessageStop { reason });
+                events.push(EngineTextStreamEvent::MessageStop { class, native });
             }
             AnthropicStreamEvent::Error { error } => {
-                return Err(Failure::invalid_response(
+                return Err(Failure::new(
                     "anthropic",
-                    error
-                        .message
-                        .unwrap_or_else(|| "Provider stream failed.".into()),
-                ))
+                    "Provider reported a stream error.",
+                    error_kind(error.r#type.as_deref()),
+                )
+                .with_native(battersea_model::Reporter::Provider, raw.clone()))
             }
             _ => {}
         }
@@ -1157,7 +1175,36 @@ struct AnthropicTextDelta {
 #[derive(Debug, Default, Deserialize, serde::Serialize)]
 struct AnthropicStreamErrorBody {
     #[serde(default)]
+    r#type: Option<String>,
+    #[serde(default)]
     message: Option<String>,
+}
+
+/// The control-flow class of an Anthropic `stop_reason`.
+fn stop_class(reason: &str) -> super::StopClass {
+    match reason {
+        "end_turn" | "stop_sequence" => super::StopClass::Complete,
+        "tool_use" => super::StopClass::ToolUse,
+        "max_tokens" => super::StopClass::Length,
+        "refusal" => super::StopClass::Refusal,
+        _ => super::StopClass::Other,
+    }
+}
+
+/// The kind of an Anthropic error `type`. The type itself stays in the failure's native detail.
+fn error_kind(error_type: Option<&str>) -> battersea_model::ErrorKind {
+    match error_type {
+        Some("authentication_error") => battersea_model::ErrorKind::Authentication,
+        Some("permission_error") => battersea_model::ErrorKind::Permission,
+        Some("rate_limit_error") => battersea_model::ErrorKind::RateLimit,
+        Some("overloaded_error" | "api_error" | "timeout_error") => {
+            battersea_model::ErrorKind::Server
+        }
+        Some("invalid_request_error" | "not_found_error" | "request_too_large") => {
+            battersea_model::ErrorKind::Request
+        }
+        _ => battersea_model::ErrorKind::Provider,
+    }
 }
 
 #[cfg(test)]
@@ -1953,10 +2000,13 @@ mod tests {
         assert_eq!(error.kind, ErrorKind::Authentication);
         assert_eq!(error.exchange.status, Some(401));
         assert_eq!(error.exchange.request_id.as_deref(), Some("req-refused"));
-        assert!(
-            error.message.contains("invalid x-api-key"),
-            "{}",
-            error.message
+        assert_eq!(error.reporter, battersea_model::Reporter::Provider);
+        assert_eq!(
+            error.native.present(),
+            Some(&json!({
+                "type": "error",
+                "error": {"type": "authentication_error", "message": "invalid x-api-key"}
+            }))
         );
         handle.join().expect("join server");
     }

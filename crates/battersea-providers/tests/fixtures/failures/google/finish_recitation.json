@@ -1,0 +1,57 @@
+{
+  "status": 200,
+  "content_type": "text/event-stream",
+  "sse_data": [
+    {
+      "candidates": [
+        {
+          "finishReason": "RECITATION",
+          "index": 0,
+          "safetyRatings": [
+            {
+              "category": "HARM_CATEGORY_HARASSMENT",
+              "probability": "MEDIUM"
+            }
+          ],
+          "citationMetadata": {
+            "citationSources": [
+              {
+                "uri": "https://example.test/recitation"
+              }
+            ]
+          }
+        }
+      ],
+      "usageMetadata": {
+        "promptTokenCount": 7,
+        "totalTokenCount": 7
+      }
+    }
+  ],
+  "kind": "refusal",
+  "payload": {
+    "candidates": [
+      {
+        "finishReason": "RECITATION",
+        "index": 0,
+        "safetyRatings": [
+          {
+            "category": "HARM_CATEGORY_HARASSMENT",
+            "probability": "MEDIUM"
+          }
+        ],
+        "citationMetadata": {
+          "citationSources": [
+            {
+              "uri": "https://example.test/recitation"
+            }
+          ]
+        }
+      }
+    ],
+    "usageMetadata": {
+      "promptTokenCount": 7,
+      "totalTokenCount": 7
+    }
+  }
+}

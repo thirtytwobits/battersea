@@ -207,7 +207,8 @@ async fn drive_tool_loop(
             send_event(
                 events,
                 EngineTextStreamEvent::MessageStop {
-                    reason: super::StopReason::Complete,
+                    class: super::StopClass::Complete,
+                    native: Value::Null,
                 },
             )
             .await?;

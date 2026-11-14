@@ -3,7 +3,7 @@
 use super::*;
 use battersea_model::{
     adapter::payload::check_payload, configuration_digest, ContentBlock, ConversationBinding,
-    ConversationRequest, ConversationToolResult, ConversationTurn, ErrorKind, StopReason, ToolCode,
+    ConversationRequest, ConversationToolResult, ConversationTurn, ErrorKind, StopClass, ToolCode,
 };
 use serde::{Deserialize, Serialize};
 
@@ -426,11 +426,12 @@ fn response_events(
         }
     }
     events.push(EngineTextStreamEvent::MessageStop {
-        reason: if calls.is_empty() {
-            StopReason::Complete
+        class: if calls.is_empty() {
+            StopClass::Complete
         } else {
-            StopReason::ToolUse
+            StopClass::ToolUse
         },
+        native: serde_json::Value::Null,
     });
     Ok(events)
 }

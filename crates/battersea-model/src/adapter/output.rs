@@ -5,15 +5,58 @@ use super::{
 use crate::ResponseFormat;
 use futures_util::StreamExt;
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+/// How a turn ended, as far as control flow is concerned. The provider's own terminal payload
+/// travels beside the class.
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
-pub enum StopReason {
+pub enum StopClass {
     Complete,
     ToolUse,
     Length,
     Refusal,
-    Other(String),
+    /// A native reason Battersea does not recognise.
+    Other,
+}
+impl StopClass {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Complete => "complete",
+            Self::ToolUse => "tool_use",
+            Self::Length => "length",
+            Self::Refusal => "refusal",
+            Self::Other => "other",
+        }
+    }
+}
+
+/// The failure of a final turn that ended in any class but `complete`. `native` is the
+/// provider's terminal payload and `partial` the text Battersea held undelivered.
+pub fn terminal_failure(
+    provider: &str,
+    class: StopClass,
+    native: Value,
+    partial: String,
+) -> Failure {
+    let (kind, message) = match class {
+        StopClass::Refusal => (crate::ErrorKind::Refusal, "Provider refused the request."),
+        StopClass::Complete | StopClass::ToolUse | StopClass::Length | StopClass::Other => (
+            crate::ErrorKind::Incomplete,
+            "Provider stopped before completing its result.",
+        ),
+    };
+    let mut failure = Failure::new(provider, message, kind);
+    if !native.is_null() {
+        failure = failure.with_native(crate::Reporter::Provider, native);
+    }
+    if !partial.is_empty() {
+        failure = failure.with_partial(crate::Partial {
+            text: partial,
+            blocks: vec![],
+        });
+    }
+    failure
 }
 
 pub fn validate_output(
@@ -28,7 +71,7 @@ pub fn validate_output(
         format: Option<ResponseFormat>,
         modalities: Vec<crate::Modality>,
         text: String,
-        stop: Option<StopReason>,
+        stop: Option<StopClass>,
         done: bool,
         pending: std::collections::VecDeque<EngineTextStreamEvent>,
     }
@@ -115,15 +158,22 @@ pub fn validate_output(
                                 continue;
                             }
                             EngineTextStreamEvent::MessageStop {
-                                reason: StopReason::ToolUse,
+                                class: StopClass::ToolUse,
+                                ..
                             } => {
                                 state.text.clear();
-                                state.stop = Some(StopReason::ToolUse);
+                                state.stop = Some(StopClass::ToolUse);
                             }
-                            EngineTextStreamEvent::MessageStop { reason } => {
+                            EngineTextStreamEvent::MessageStop { class, native } => {
                                 state.done = true;
-                                if *reason != StopReason::Complete {
-                                    return Some((Err(Failure::invalid_response(&state.provider, format!("Provider stopped without a complete result: {reason:?}."))), state));
+                                if *class != StopClass::Complete {
+                                    let failure = terminal_failure(
+                                        &state.provider,
+                                        *class,
+                                        native.clone(),
+                                        std::mem::take(&mut state.text),
+                                    );
+                                    return Some((Err(failure), state));
                                 }
                                 if let Some(format) = &state.format {
                                     match format.parse(&state.provider, &state.text) {
@@ -183,14 +233,16 @@ mod tests {
                 text: "intermediate tool reasoning".into(),
             },
             EngineTextStreamEvent::MessageStop {
-                reason: StopReason::ToolUse,
+                class: StopClass::ToolUse,
+                native: Value::Null,
             },
             EngineTextStreamEvent::MessageStart { turn_index: 1 },
             EngineTextStreamEvent::TextDelta {
                 text: expected.to_string(),
             },
             EngineTextStreamEvent::MessageStop {
-                reason: StopReason::Complete,
+                class: StopClass::Complete,
+                native: Value::Null,
             },
         ];
         let stream = Box::pin(futures_util::stream::iter(input.into_iter().map(Ok)));
@@ -217,14 +269,17 @@ mod tests {
     async fn refusal_truncation_malformed_json_and_schema_mismatch_never_publish_a_value() {
         for (text, reason) in [
             ("{\"ok\":true}", None),
-            ("{\"ok\":true}", Some(StopReason::Refusal)),
-            ("{\"ok\":true}", Some(StopReason::Length)),
-            ("{", Some(StopReason::Complete)),
-            ("{\"ok\":3}", Some(StopReason::Complete)),
+            ("{\"ok\":true}", Some(StopClass::Refusal)),
+            ("{\"ok\":true}", Some(StopClass::Length)),
+            ("{", Some(StopClass::Complete)),
+            ("{\"ok\":3}", Some(StopClass::Complete)),
         ] {
             let mut input = vec![Ok(EngineTextStreamEvent::TextDelta { text: text.into() })];
-            if let Some(reason) = reason {
-                input.push(Ok(EngineTextStreamEvent::MessageStop { reason }));
+            if let Some(class) = reason {
+                input.push(Ok(EngineTextStreamEvent::MessageStop {
+                    class,
+                    native: json!({"stop_reason": "fixture"}),
+                }));
             }
             let output = validate_output(
                 Box::pin(futures_util::stream::iter(input)),
@@ -234,10 +289,30 @@ mod tests {
             )
             .collect::<Vec<_>>()
             .await;
-            assert!(output.last().unwrap().is_err());
+            let failure = output.last().unwrap().as_ref().unwrap_err();
             assert!(!output
                 .iter()
                 .any(|event| matches!(event, Ok(EngineTextStreamEvent::StructuredOutput { .. }))));
+            // contracts/failures.md: a turn that does not complete fails with the provider's
+            // terminal payload as native detail and the buffered text as partial output.
+            let kind = match reason {
+                Some(StopClass::Refusal) => crate::ErrorKind::Refusal,
+                Some(StopClass::Length) => crate::ErrorKind::Incomplete,
+                _ => continue,
+            };
+            assert_eq!(failure.kind, kind);
+            assert_eq!(failure.reporter, crate::Reporter::Provider);
+            assert_eq!(
+                failure.native.present(),
+                Some(&json!({"stop_reason": "fixture"}))
+            );
+            assert_eq!(
+                failure
+                    .partial
+                    .present()
+                    .map(|partial| partial.text.as_str()),
+                Some(text)
+            );
         }
     }
     #[test]

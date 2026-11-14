@@ -607,9 +607,10 @@ async fn truncation_and_malformed_calls_never_reach_the_executor() {
             .unwrap()
             .collect()
             .await;
-        assert!(
-            matches!(events.last(), Some(Err(error)) if error.kind.as_str() == "invalid_response")
-        );
+        assert!(matches!(
+            events.last(),
+            Some(Err(error)) if matches!(error.kind.as_str(), "invalid_response" | "incomplete")
+        ));
         assert!(!events.iter().any(|event| matches!(
             event,
             Ok(EngineTextStreamEvent::ToolCallStarted { .. }
@@ -1479,6 +1480,142 @@ async fn content_results_and_tool_errors_reach_each_provider_without_host_metada
                 meta: serde_json::Map::from_iter([("host".into(), json!("private-host-value"))]),
             });
             round_trip_result(provider, "stream", Some(result)).await;
+        }
+    }
+}
+
+/// Adapters that reach no provider over HTTP and so report no provider payload.
+const LOCAL_ADAPTERS: &[&str] = &["mock"];
+
+/// Whether `payload` survives in `native`: at some depth `native` holds a value with every
+/// leaf of `payload`.
+fn carries(native: &Value, payload: &Value) -> bool {
+    fn covers(native: &Value, payload: &Value) -> bool {
+        match (native, payload) {
+            (Value::Object(native), Value::Object(payload)) => payload
+                .iter()
+                .all(|(key, value)| native.get(key).is_some_and(|held| covers(held, value))),
+            (Value::Array(native), Value::Array(payload)) => {
+                native.len() == payload.len()
+                    && native
+                        .iter()
+                        .zip(payload)
+                        .all(|(held, value)| covers(held, value))
+            }
+            (native, payload) => native == payload,
+        }
+    }
+    covers(native, payload)
+        || match native {
+            Value::Object(map) => map.values().any(|held| carries(held, payload)),
+            Value::Array(items) => items.iter().any(|held| carries(held, payload)),
+            _ => false,
+        }
+}
+
+async fn fixture_server(
+    status: u16,
+    content_type: String,
+    body: String,
+) -> (String, tokio::task::JoinHandle<()>) {
+    let listener = tokio::net::TcpListener::bind(test_endpoints::TEST_BIND_ADDRESS)
+        .await
+        .unwrap();
+    let url = format!("http://{}", listener.local_addr().unwrap());
+    let app = Router::new().fallback(post(move || {
+        let (content_type, body) = (content_type.clone(), body.clone());
+        async move {
+            (
+                axum::http::StatusCode::from_u16(status).unwrap(),
+                [
+                    ("content-type".to_string(), content_type),
+                    ("request-id".to_string(), REQUEST_ID.to_string()),
+                ],
+                body,
+            )
+        }
+    }));
+    let handle = tokio::spawn(async move {
+        axum::serve(listener, app).await.unwrap();
+    });
+    (url, handle)
+}
+
+/// contracts/failures.md, Adapters: for each registered adapter and each recorded failure of
+/// that adapter, every leaf of the provider's payload is present in the failure. An adapter
+/// without recorded failures fails this test.
+#[tokio::test]
+async fn every_adapter_carries_each_recorded_provider_failure_whole() {
+    let fixtures = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/failures");
+    for provider in battersea_providers::builtin_registry().chat_provider_ids() {
+        if LOCAL_ADAPTERS.contains(&provider) {
+            continue;
+        }
+        let mut cases: Vec<_> = std::fs::read_dir(fixtures.join(provider))
+            .unwrap_or_else(|_| panic!("{provider} has no recorded failures"))
+            .map(|entry| entry.unwrap().path())
+            .collect();
+        cases.sort();
+        assert!(!cases.is_empty(), "{provider} has no recorded failures");
+        for case in cases {
+            let name = format!("{provider}/{}", case.file_name().unwrap().to_string_lossy());
+            let fixture: Value =
+                serde_json::from_str(&std::fs::read_to_string(&case).unwrap()).unwrap();
+            let body = if let Some(raw) = fixture["raw"].as_str() {
+                raw.to_owned()
+            } else if let Some(events) = fixture["sse"].as_array() {
+                stream_body(events)
+            } else if let Some(events) = fixture["sse_data"].as_array() {
+                events
+                    .iter()
+                    .map(|event| format!("data: {event}\n\n"))
+                    .collect()
+            } else {
+                fixture["body"].to_string()
+            };
+            let (url, server) = fixture_server(
+                fixture["status"].as_u64().unwrap() as u16,
+                fixture["content_type"].as_str().unwrap().to_owned(),
+                body,
+            )
+            .await;
+            let backend = backend(provider, &url, "stream");
+            let mut request = request(&backend, Arc::new(RecordingExecutor::default()));
+            request.local_tools.clear();
+            let failure = match observed_adapter(backend, None).stream_text(request).await {
+                Err(failure) => failure,
+                Ok(stream) => stream
+                    .collect::<Vec<_>>()
+                    .await
+                    .pop()
+                    .unwrap_or_else(|| panic!("{name} produced no events"))
+                    .expect_err(&name),
+            };
+            server.abort();
+            assert_eq!(
+                failure.kind.as_str(),
+                fixture["kind"],
+                "{name}: {failure:?}"
+            );
+            assert_eq!(
+                failure.exchange.request_id.as_deref(),
+                Some(REQUEST_ID),
+                "{name}"
+            );
+            assert_eq!(failure.origin.provider.as_deref(), Some(provider), "{name}");
+            assert_eq!(
+                failure.reporter,
+                battersea_model::Reporter::Provider,
+                "{name}"
+            );
+            let native = failure
+                .native
+                .present()
+                .unwrap_or_else(|| panic!("{name} has no native detail: {failure:?}"));
+            assert!(
+                carries(native, &fixture["payload"]),
+                "{name} lost part of the provider's payload: {native}"
+            );
         }
     }
 }

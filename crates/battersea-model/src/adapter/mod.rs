@@ -7,7 +7,7 @@
 pub mod error;
 pub mod output;
 pub mod payload;
-pub use output::StopReason;
+pub use output::{terminal_failure, StopClass};
 mod continuation;
 pub mod tool_loop;
 pub use continuation::*;
@@ -480,7 +480,10 @@ pub enum EngineTextStreamEvent {
         turn_index: u32,
     },
     MessageStop {
-        reason: StopReason,
+        class: StopClass,
+        /// The provider's terminal payload; null where Battersea composed the event.
+        #[serde(default, skip_serializing_if = "Value::is_null")]
+        native: Value,
     },
     /// A provider response opened. An adapter built by the registry consumes this event and
     /// carries the identifiers on any later failure of the stream.

@@ -189,7 +189,7 @@ struct OpenAiEngineAdapter {
     context: EngineAdapterDebugContext,
 }
 
-fn completed_stop_reason(response: &Value) -> super::StopReason {
+fn completed_stop_reason(response: &Value) -> super::StopClass {
     if response["output"].as_array().is_some_and(|items| {
         items.iter().any(|item| {
             item["content"]
@@ -197,9 +197,9 @@ fn completed_stop_reason(response: &Value) -> super::StopReason {
                 .is_some_and(|blocks| blocks.iter().any(|block| block["type"] == "refusal"))
         })
     }) {
-        super::StopReason::Refusal
+        super::StopClass::Refusal
     } else {
-        super::StopReason::Complete
+        super::StopClass::Complete
     }
 }
 
@@ -218,7 +218,8 @@ fn openai_events(event: &ResponseStreamEvent, raw: &Value) -> Vec<EngineTextStre
             })
             .collect::<Vec<_>>();
         events.push(EngineTextStreamEvent::MessageStop {
-            reason: completed_stop_reason(response),
+            class: completed_stop_reason(response),
+            native: response.clone(),
         });
         events
     } else {
@@ -398,15 +399,23 @@ impl EngineAdapter for OpenAiEngineAdapter {
                                         .unwrap_or_else(|| {
                                             "OpenAI streaming response failed.".to_string()
                                         });
-                                    return Err(Failure::invalid_response("openai", message));
+                                    return Err(Failure::invalid_response("openai", message)
+                                        .with_native(
+                                            battersea_model::Reporter::Provider,
+                                            event_value.clone(),
+                                        ));
                                 }
-                                ResponseStreamEvent::ResponseIncomplete(item) => {
-                                    let response = serde_json::to_value(&item.response)
-                                        .unwrap_or_else(|_| json!({}));
-                                    return Err(openai_missing_output_text_error(&response));
+                                ResponseStreamEvent::ResponseIncomplete(_) => {
+                                    return Err(openai_missing_output_text_error(
+                                        &event_value["response"],
+                                    ));
                                 }
                                 ResponseStreamEvent::ResponseError(item) => {
-                                    return Err(Failure::transport("openai", item.message.clone()));
+                                    return Err(Failure::transport("openai", item.message.clone())
+                                        .with_native(
+                                            battersea_model::Reporter::Provider,
+                                            event_value.clone(),
+                                        ));
                                 }
                                 _ => {}
                             }
@@ -849,9 +858,11 @@ impl ToolConversation for OpenAiToolConversation {
                     .is_some_and(|blocks| blocks.iter().any(|block| block["type"] == "refusal"))
             })
         }) {
-            return Err(Failure::invalid_response(
+            return Err(battersea_model::terminal_failure(
                 "openai",
-                "Provider refused the tool conversation.",
+                super::StopClass::Refusal,
+                response,
+                String::new(),
             ));
         }
         let calls = collect_openai_function_calls(&response)?;
@@ -954,15 +965,15 @@ impl OpenAiToolConversation {
                             .as_ref()
                             .map(|error| error.message.to_string())
                             .unwrap_or_else(|| "OpenAI response failed.".to_string()),
-                    ))
+                    )
+                    .with_native(battersea_model::Reporter::Provider, value.clone()))
                 }
-                ResponseStreamEvent::ResponseIncomplete(item) => {
-                    return Err(openai_missing_output_text_error(
-                        &serde_json::to_value(&item.response).expect("response serializes"),
-                    ))
+                ResponseStreamEvent::ResponseIncomplete(_) => {
+                    return Err(openai_missing_output_text_error(&value["response"]))
                 }
                 ResponseStreamEvent::ResponseError(item) => {
-                    return Err(Failure::transport("openai", item.message.clone()))
+                    return Err(Failure::transport("openai", item.message.clone())
+                        .with_native(battersea_model::Reporter::Provider, value.clone()))
                 }
                 _ => {}
             }
@@ -1308,11 +1319,12 @@ async fn emit_background_terminal_response(
     }
     let _ = tx
         .send(Ok(EngineTextStreamEvent::MessageStop {
-            reason: if response["status"] == "completed" {
+            class: if response["status"] == "completed" {
                 completed_stop_reason(response)
             } else {
-                super::StopReason::Length
+                super::StopClass::Length
             },
+            native: serde_json::Value::Null,
         }))
         .await;
 }
@@ -1489,7 +1501,8 @@ async fn drive_background_stream(
                             send_event(
                                 tx,
                                 EngineTextStreamEvent::MessageStop {
-                                    reason: completed_stop_reason(&response),
+                                    class: completed_stop_reason(&response),
+                                    native: serde_json::Value::Null,
                                 },
                             )
                             .await?;
@@ -1505,16 +1518,16 @@ async fn drive_background_stream(
                                 .unwrap_or_else(|| {
                                     "OpenAI background response failed.".to_string()
                                 });
-                            return Err(Failure::invalid_response("openai", message));
+                            return Err(Failure::invalid_response("openai", message)
+                                .with_native(battersea_model::Reporter::Provider, value.clone()));
                         }
-                        ResponseStreamEvent::ResponseIncomplete(item) => {
+                        ResponseStreamEvent::ResponseIncomplete(_) => {
                             guard.id = None;
-                            let response =
-                                serde_json::to_value(&item.response).unwrap_or_else(|_| json!({}));
-                            return Err(openai_missing_output_text_error(&response));
+                            return Err(openai_missing_output_text_error(&value["response"]));
                         }
                         ResponseStreamEvent::ResponseError(item) => {
-                            return Err(Failure::transport("openai", item.message.clone()));
+                            return Err(Failure::transport("openai", item.message.clone())
+                                .with_native(battersea_model::Reporter::Provider, value.clone()));
                         }
                         _ => {}
                     }
@@ -1899,7 +1912,17 @@ fn read_openai_output_text(value: &Value) -> String {
         .to_string()
 }
 
+/// The failure of a response that ended without output text. The response travels whole as
+/// native detail.
 fn openai_missing_output_text_error(response: &Value) -> Failure {
+    let mut failure = describe_missing_output_text(response);
+    if response.get("status").and_then(Value::as_str) == Some("incomplete") {
+        failure.kind = battersea_model::ErrorKind::Incomplete;
+    }
+    failure.with_native(battersea_model::Reporter::Provider, response.clone())
+}
+
+fn describe_missing_output_text(response: &Value) -> Failure {
     if let Some(message) = response
         .get("error")
         .and_then(|error| error.get("message"))
@@ -1975,7 +1998,7 @@ fn normalize_openai_error(error: OpenAIError) -> Failure {
             inner.message,
             classify_openai_message(inner.r#type.as_deref(), inner.code.as_deref()),
         ),
-        OpenAIError::JSONDeserialize(_, content) => {
+        OpenAIError::JSONDeserialize(error, content) => {
             // Before treating as a generic parse failure, check for a provider error envelope.
             // The Responses API streams errors as:
             //   {"type":"error","error":{"type":...,"code":...,"message":...},"sequence_number":N}
@@ -1994,13 +2017,16 @@ fn normalize_openai_error(error: OpenAIError) -> Failure {
                         "openai",
                         message,
                         classify_openai_message(error_type, error_code),
-                    );
+                    )
+                    .with_native(battersea_model::Reporter::Provider, body.clone());
                 }
             }
-            Failure::invalid_response(
-                "openai",
-                format!("Failed to deserialize OpenAI response: {content}"),
-            )
+            Failure::invalid_response("openai", "Failed to deserialize OpenAI response.")
+                .with_native(
+                    battersea_model::Reporter::Provider,
+                    serde_json::from_str(&content).unwrap_or(Value::String(content)),
+                )
+                .caused_by(&error)
         }
         OpenAIError::StreamError(inner) => Failure::transport("openai", inner.to_string()),
         OpenAIError::InvalidArgument(message) => Failure::new("openai", message, "request"),
@@ -2570,7 +2596,11 @@ mod tests {
                 "type": "reasoning"
             }]
         }));
-        assert_eq!(incomplete.kind.as_str(), "invalid_response");
+        assert_eq!(incomplete.kind.as_str(), "incomplete");
+        assert_eq!(
+            incomplete.native.present().unwrap()["incomplete_details"]["reason"],
+            "max_output_tokens"
+        );
         assert_eq!(
             &*incomplete.message,
             "OpenAI response ended incomplete before producing text: max_output_tokens."
@@ -2859,7 +2889,7 @@ mod tests {
         let response = json!({"status":"completed", "output":[{"type":"message","content":[{"type":"refusal","refusal":"denied"}]}]});
         assert_eq!(
             super::completed_stop_reason(&response),
-            super::super::StopReason::Refusal
+            super::super::StopClass::Refusal
         );
     }
 

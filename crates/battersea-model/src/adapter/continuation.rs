@@ -225,14 +225,14 @@ fn validate_turn_events(
     turn: &ConversationTurn,
 ) -> Result<(), Failure> {
     let reason = if turn.calls.is_empty() {
-        StopReason::Complete
+        StopClass::Complete
     } else {
-        StopReason::ToolUse
+        StopClass::ToolUse
     };
     if !matches!(
         turn.events.first(),
         Some(EngineTextStreamEvent::MessageStart { .. })
-    ) || !matches!(turn.events.last(),Some(EngineTextStreamEvent::MessageStop { reason:r }) if *r==reason)
+    ) || !matches!(turn.events.last(),Some(EngineTextStreamEvent::MessageStop { class:r, .. }) if *r==reason)
         || turn
             .events
             .iter()

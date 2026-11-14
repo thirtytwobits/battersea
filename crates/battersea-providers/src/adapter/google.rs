@@ -275,13 +275,21 @@ impl EngineAdapter for GoogleEngineAdapter {
                             if event.data.trim().is_empty() {
                                 return Ok(Vec::new());
                             }
+                            let malformed = |error: serde_json::Error| {
+                                Failure::invalid_response(
+                                    "google",
+                                    "Gemini stream chunk is malformed.",
+                                )
+                                .with_native(
+                                    battersea_model::Reporter::Provider,
+                                    Value::String(event.data.clone()),
+                                )
+                                .caused_by(&error)
+                            };
+                            let raw: Value =
+                                serde_json::from_str(&event.data).map_err(malformed)?;
                             let parsed: GeminiGenerateContentResponse =
-                                serde_json::from_str(&event.data).map_err(|error| {
-                                    Failure::invalid_response(
-                                        "google",
-                                        format!("Gemini stream chunk was not valid JSON: {error}"),
-                                    )
-                                })?;
+                                serde_json::from_value(raw.clone()).map_err(malformed)?;
                             emit_stream_event(
                                 logger.as_ref(),
                                 &context,
@@ -290,9 +298,13 @@ impl EngineAdapter for GoogleEngineAdapter {
                                 serde_json::to_value(&parsed).unwrap_or_else(|_| json!({})),
                             )
                             .await;
-                            parsed.into_text_stream_events()
+                            parsed.into_text_stream_events(&raw)
                         }
-                        Err(error) => Err(Failure::transport("google", error.to_string())),
+                        Err(error) => Err(Failure::transport(
+                            "google",
+                            "Provider event stream failed.",
+                        )
+                        .caused_by(&error)),
                     }
                 }
             })
@@ -467,12 +479,18 @@ impl ToolConversation for GoogleToolConversation {
         let payload: GeminiGenerateContentResponse = serde_json::from_value(raw.clone())
             .map_err(|error| Failure::invalid_response("google", error.to_string()))?;
         if payload.first_finish_reason().as_deref() != Some("STOP") {
-            return Err(Failure::invalid_response(
+            let class = match payload.first_finish_reason() {
+                Some(reason) => finish_class(&reason),
+                None if raw.pointer("/promptFeedback/blockReason").is_some() => {
+                    super::StopClass::Refusal
+                }
+                None => super::StopClass::Other,
+            };
+            return Err(battersea_model::terminal_failure(
                 "google",
-                format!(
-                    "Gemini turn did not complete: {:?}.",
-                    payload.first_finish_reason()
-                ),
+                class,
+                raw,
+                String::new(),
             ));
         }
         let turn = self
@@ -501,7 +519,7 @@ impl ToolConversation for GoogleToolConversation {
         if let Some(content) = raw.pointer("/candidates/0/content") {
             self.contents.push(content.clone());
         }
-        for event in payload.into_text_stream_events()? {
+        for event in payload.into_text_stream_events(&raw)? {
             send_event(events, event).await?;
         }
         Ok(calls)
@@ -891,6 +909,16 @@ struct GeminiUsageMetadata {
     total_token_count: Option<u64>,
 }
 
+/// The control-flow class of a Gemini `finishReason`.
+fn finish_class(reason: &str) -> super::StopClass {
+    match reason {
+        "STOP" => super::StopClass::Complete,
+        "MAX_TOKENS" => super::StopClass::Length,
+        "SAFETY" | "RECITATION" | "BLOCKLIST" | "PROHIBITED_CONTENT" => super::StopClass::Refusal,
+        _ => super::StopClass::Other,
+    }
+}
+
 impl GeminiGenerateContentResponse {
     fn first_text(&self) -> Option<String> {
         let mut joined = String::new();
@@ -942,7 +970,8 @@ impl GeminiGenerateContentResponse {
     /// emit one `TextDelta` per text part and one `ReasoningDelta` per
     /// part flagged as `thought: true`. Token usage rides on the
     /// final chunk and is forwarded as a single `TokenUsage` event.
-    fn into_text_stream_events(self) -> Result<Vec<EngineTextStreamEvent>, Failure> {
+    /// `raw` is the chunk as the provider sent it; a terminal event carries it whole.
+    fn into_text_stream_events(self, raw: &Value) -> Result<Vec<EngineTextStreamEvent>, Failure> {
         let mut events = Vec::new();
         for candidate in &self.candidates {
             let Some(content) = &candidate.content else {
@@ -1018,14 +1047,14 @@ impl GeminiGenerateContentResponse {
         }
         if let Some(reason) = self.first_finish_reason() {
             events.push(EngineTextStreamEvent::MessageStop {
-                reason: match reason.as_str() {
-                    "STOP" => super::StopReason::Complete,
-                    "MAX_TOKENS" => super::StopReason::Length,
-                    "SAFETY" | "RECITATION" | "BLOCKLIST" | "PROHIBITED_CONTENT" => {
-                        super::StopReason::Refusal
-                    }
-                    _ => super::StopReason::Other(reason),
-                },
+                class: finish_class(&reason),
+                native: raw.clone(),
+            });
+        } else if raw.pointer("/promptFeedback/blockReason").is_some() {
+            // A blocked prompt has no candidate; the chunk holds the block reason.
+            events.push(EngineTextStreamEvent::MessageStop {
+                class: super::StopClass::Refusal,
+                native: raw.clone(),
             });
         }
         Ok(events)
@@ -1429,7 +1458,7 @@ mod tests {
             response_id: None,
         };
 
-        let events = chunk.into_text_stream_events().unwrap();
+        let events = chunk.into_text_stream_events(&Value::Null).unwrap();
         assert_eq!(events.len(), 4);
         assert!(matches!(
             &events[0],
@@ -1479,7 +1508,7 @@ mod tests {
             usage_metadata: None,
             response_id: None,
         };
-        let events = chunk.into_text_stream_events().unwrap();
+        let events = chunk.into_text_stream_events(&Value::Null).unwrap();
         assert!(events.is_empty());
     }
 

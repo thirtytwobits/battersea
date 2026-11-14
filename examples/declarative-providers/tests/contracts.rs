@@ -1103,9 +1103,10 @@ async fn encoded_credentials_are_masked_in_returned_errors_and_request_and_error
             let error = events(configured.chat("office-chat").unwrap(), req)
                 .await
                 .unwrap_err();
+            // The provider's body is native detail, whole, with the credential masked.
             assert_eq!(
-                &*error.message,
-                "Provider HTTP request failed with status 401: rejected [REDACTED]"
+                error.native.present(),
+                Some(&json!({"error":{"message":"rejected [REDACTED]"}}))
             );
             assert_eq!(error.kind, ErrorKind::Authentication);
             assert_eq!(error.exchange.status, Some(401));
@@ -1114,7 +1115,10 @@ async fn encoded_credentials_are_masked_in_returned_errors_and_request_and_error
                 .iter()
                 .find(|entry| entry["detail"]["message"].is_string())
                 .unwrap();
-            assert_eq!(logged_error["detail"]["message"], &*error.message);
+            assert_eq!(
+                logged_error["detail"],
+                serde_json::to_value(&error).unwrap()
+            );
             let logged_request = entries
                 .iter()
                 .find(|entry| entry["detail"]["body"].is_object())

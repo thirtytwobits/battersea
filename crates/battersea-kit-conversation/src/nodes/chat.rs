@@ -16,7 +16,7 @@ use async_trait::async_trait;
 use battersea_flow::{FlowNode, FlowNodeDefinition};
 use battersea_model::{
     engine::EngineChatParameters, EngineTextStream, EngineTextStreamEvent, EngineTokenUsage,
-    ErrorKind, Failure, Message, Role, StopReason, ToolCallEvidence, ToolCode,
+    ErrorKind, Failure, Message, Role, ToolCallEvidence, ToolCode,
 };
 use battersea_runtime::{ExecutionError, NodeHandler, ProviderEvent, Token};
 use futures_util::{stream, Stream, StreamExt};
@@ -159,17 +159,6 @@ fn total<'a>(turns: impl Iterator<Item = &'a EngineTokenUsage>) -> EngineTokenUs
     all
 }
 
-/// The stop reason as the model crate spells it.
-fn spelled(reason: StopReason) -> String {
-    match reason {
-        StopReason::Other(other) => other,
-        reason => serde_json::to_value(reason)
-            .ok()
-            .and_then(|value| value.as_str().map(str::to_owned))
-            .unwrap_or_default(),
-    }
-}
-
 fn raw(port: &str, text: String) -> ProviderEvent {
     ProviderEvent::Token {
         port: port.into(),
@@ -247,9 +236,9 @@ fn provider_events(
                                 evidence: tool_call,
                             }),
                         },
-                        EngineTextStreamEvent::MessageStop { reason } => {
+                        EngineTextStreamEvent::MessageStop { class, .. } => {
                             progress.flush_round();
-                            progress.stop_reason = Some(spelled(reason));
+                            progress.stop_reason = Some(class.as_str().into());
                         }
                         EngineTextStreamEvent::MessageStart { .. } => progress.flush_round(),
                         EngineTextStreamEvent::TokenUsage { usage } => progress.observe(usage),
@@ -554,7 +543,8 @@ mod tests {
             Ok(EngineTextStreamEvent::MessageStart { turn_index: 1 }),
             Ok(usage(1, Some(4), Some(2))),
             Ok(EngineTextStreamEvent::MessageStop {
-                reason: StopReason::Complete,
+                class: battersea_model::StopClass::Complete,
+                native: Value::Null,
             }),
         ])
         .await;

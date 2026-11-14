@@ -1,0 +1,41 @@
+{
+  "status": 400,
+  "content_type": "application/json",
+  "body": {
+    "error": {
+      "code": 400,
+      "message": "Invalid JSON payload received.",
+      "status": "INVALID_ARGUMENT",
+      "details": [
+        {
+          "@type": "type.googleapis.com/google.rpc.BadRequest",
+          "fieldViolations": [
+            {
+              "field": "contents",
+              "description": "required"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "kind": "request",
+  "payload": {
+    "error": {
+      "code": 400,
+      "message": "Invalid JSON payload received.",
+      "status": "INVALID_ARGUMENT",
+      "details": [
+        {
+          "@type": "type.googleapis.com/google.rpc.BadRequest",
+          "fieldViolations": [
+            {
+              "field": "contents",
+              "description": "required"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

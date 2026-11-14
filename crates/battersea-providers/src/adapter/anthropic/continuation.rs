@@ -4,7 +4,7 @@ use super::*;
 use battersea_model::{
     adapter::payload::check_payload, configuration_digest, engine::EngineContextOverflow,
     ContentBlock, ConversationBinding, ConversationRequest, ConversationToolResult,
-    ConversationTurn, ErrorKind, StopReason,
+    ConversationTurn, ErrorKind, StopClass,
 };
 
 #[derive(serde::Serialize, Deserialize)]
@@ -348,12 +348,12 @@ fn response_events(
         return Err(invalid("Anthropic turn lacks its message identity."));
     }
     let stop = match response["stop_reason"].as_str() {
-        Some("end_turn" | "stop_sequence") => StopReason::Complete,
-        Some("tool_use") => StopReason::ToolUse,
+        Some("end_turn" | "stop_sequence") => StopClass::Complete,
+        Some("tool_use") => StopClass::ToolUse,
         _ => return Err(invalid("Anthropic turn is not successfully completed.")),
     };
     let calls = assistant_calls(request, &response["content"])?;
-    if calls.is_empty() == matches!(stop, StopReason::ToolUse) {
+    if calls.is_empty() == matches!(stop, StopClass::ToolUse) {
         return Err(invalid(
             "Anthropic stop reason disagrees with its tool calls.",
         ));
@@ -410,6 +410,9 @@ fn response_events(
             }
         }
     }
-    events.push(EngineTextStreamEvent::MessageStop { reason: stop });
+    events.push(EngineTextStreamEvent::MessageStop {
+        class: stop,
+        native: serde_json::Value::Null,
+    });
     Ok(events)
 }

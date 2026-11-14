@@ -81,6 +81,10 @@ impl ProviderRegistry {
         self.media.insert(id, provider);
         Ok(())
     }
+    /// The identifier of every registered chat provider, in order.
+    pub fn chat_provider_ids(&self) -> impl Iterator<Item = &str> {
+        self.chat.keys().map(String::as_str)
+    }
     pub fn chat_provider(&self, id: &str) -> Result<&ChatProvider, Failure> {
         self.chat
             .get(id)

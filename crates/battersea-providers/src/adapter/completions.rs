@@ -312,11 +312,12 @@ impl EngineAdapter for Completions {
             }
         };
         events.push(EngineTextStreamEvent::MessageStop {
-            reason: if calls.is_empty() {
-                StopReason::Complete
+            class: if calls.is_empty() {
+                StopClass::Complete
             } else {
-                StopReason::ToolUse
+                StopClass::ToolUse
             },
+            native: serde_json::Value::Null,
         });
         let state = serde_json::to_value(CompletionCheckpoint {
             version: 2,
@@ -558,9 +559,18 @@ impl ToolConversation for Conversation {
             || message["role"] != "assistant"
             || !message["refusal"].is_null()
         {
-            return Err(invalid(
+            let class = if !message["refusal"].is_null() || finish == "content_filter" {
+                StopClass::Refusal
+            } else if finish == "length" {
+                StopClass::Length
+            } else {
+                StopClass::Other
+            };
+            return Err(terminal_failure(
                 provider,
-                "Completion was refused, incomplete or malformed.",
+                class,
+                json!({"message": message, "finish_reason": finish}),
+                String::new(),
             ));
         }
         let calls = completion_calls(provider, &message)?;

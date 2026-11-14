@@ -14,7 +14,7 @@ use battersea_kit::{ManualClock, ReferenceError, ReferenceHost, ReferenceState};
 use battersea_model::{
     sleep, utc_now, Clock, EngineAdapter, EngineAdapterDebugContext, EngineLocalToolCall,
     EngineTextStream, EngineTextStreamEvent, EngineTextStreamRequest, EngineTokenUsage, ErrorKind,
-    Failure, StopReason, ToolCallEvidence, ToolCallOutcome, ToolCode,
+    Failure, StopClass, ToolCallEvidence, ToolCallOutcome, ToolCode,
 };
 use battersea_runtime::{ExecutionError, HandlerRegistry};
 use futures_util::stream;
@@ -492,7 +492,8 @@ impl EngineAdapter for ScriptedEngine {
                     let output = text.split_whitespace().count() as u64;
                     items.push(event(Ok(EngineTextStreamEvent::TextDelta { text })));
                     items.push(event(Ok(EngineTextStreamEvent::MessageStop {
-                        reason: StopReason::Complete,
+                        class: StopClass::Complete,
+                        native: Value::Null,
                     })));
                     items.push(event(Ok(EngineTextStreamEvent::TokenUsage {
                         usage: EngineTokenUsage {
@@ -585,7 +586,8 @@ impl EngineAdapter for ScriptedEngine {
                         })));
                     }
                     items.push(event(Ok(EngineTextStreamEvent::MessageStop {
-                        reason: StopReason::ToolUse,
+                        class: StopClass::ToolUse,
+                        native: Value::Null,
                     })));
                     open = false;
                     round += 1;

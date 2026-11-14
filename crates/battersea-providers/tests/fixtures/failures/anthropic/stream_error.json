@@ -1,0 +1,41 @@
+{
+  "status": 200,
+  "content_type": "text/event-stream",
+  "sse": [
+    {
+      "type": "message_start",
+      "message": {
+        "id": "msg_fixture",
+        "type": "message",
+        "role": "assistant",
+        "content": [],
+        "model": "fixture-model",
+        "usage": {
+          "input_tokens": 4,
+          "output_tokens": 0
+        }
+      }
+    },
+    {
+      "type": "error",
+      "error": {
+        "type": "overloaded_error",
+        "message": "Overloaded",
+        "details": {
+          "retry": "later"
+        }
+      }
+    }
+  ],
+  "kind": "server",
+  "payload": {
+    "type": "error",
+    "error": {
+      "type": "overloaded_error",
+      "message": "Overloaded",
+      "details": {
+        "retry": "later"
+      }
+    }
+  }
+}

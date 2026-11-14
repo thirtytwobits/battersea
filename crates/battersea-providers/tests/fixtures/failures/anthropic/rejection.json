@@ -1,0 +1,21 @@
+{
+  "status": 400,
+  "content_type": "application/json",
+  "body": {
+    "type": "error",
+    "error": {
+      "type": "invalid_request_error",
+      "message": "messages: at least one message is required"
+    },
+    "request_id": "req_fixture_body"
+  },
+  "kind": "request",
+  "payload": {
+    "type": "error",
+    "error": {
+      "type": "invalid_request_error",
+      "message": "messages: at least one message is required"
+    },
+    "request_id": "req_fixture_body"
+  }
+}
