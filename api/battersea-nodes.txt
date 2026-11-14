@@ -140,7 +140,7 @@ pub const battersea_nodes::conformance::PROBE_MANIFEST: &str
 pub fn battersea_nodes::conformance::cases() -> alloc::vec::Vec<battersea_kit::conformance::Case>
 pub fn battersea_nodes::conformance::reference_host(alloc::rcs::arc::Arc<battersea_model::clock::ManualClock>) -> battersea_kit::reference::ReferenceHost<()>
 pub fn battersea_nodes::conformance::register_probe_handlers<H: battersea_runtime::host::ExecutionHost>(&mut battersea_runtime::registry::RegistryBuilder<H>) -> core::result::Result<(), alloc::string::String>
-pub async fn battersea_nodes::conformance::run<F: battersea_kit::conformance::Fixture>(&F) -> core::result::Result<(), battersea_kit::conformance::Failure>
+pub async fn battersea_nodes::conformance::run<F: battersea_kit::conformance::Fixture>(&F) -> core::result::Result<(), battersea_kit::conformance::CaseFailure>
 pub fn battersea_nodes::conformance::suite() -> battersea_kit::conformance::Suite
 pub mod battersea_nodes::logic
 pub struct battersea_nodes::logic::AndGateHandler

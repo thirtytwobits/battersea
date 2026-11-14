@@ -360,8 +360,8 @@ pub type battersea_kit_conversation::compaction::Runner<H>::Output = T
 impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_kit_conversation::compaction::Runner<H> where T: ?core::marker::Sized
 pub fn battersea_kit_conversation::compaction::evaluate<X>(&battersea_kit_conversation::compaction::Policy, battersea_kit_conversation::compaction::Trigger, &battersea_kit_conversation::Memory<X>, u64) -> battersea_kit_conversation::compaction::PolicyEvaluation
 pub mod battersea_kit_conversation::conformance
+pub use battersea_kit_conversation::conformance::CaseFailure
 pub use battersea_kit_conversation::conformance::Divergence
-pub use battersea_kit_conversation::conformance::Failure
 pub use battersea_kit_conversation::conformance::Fixture
 pub use battersea_kit_conversation::conformance::Outcome
 pub use battersea_kit_conversation::conformance::Played
@@ -502,7 +502,7 @@ pub type battersea_kit_conversation::conformance::Access::Output = T
 impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_kit_conversation::conformance::Access where T: ?core::marker::Sized
 pub struct battersea_kit_conversation::conformance::Echo
 impl battersea_model::adapter::EngineLocalToolExecutor for battersea_kit_conversation::conformance::Echo
-pub fn battersea_kit_conversation::conformance::Echo::call<'life0, 'async_trait>(&'life0 self, battersea_model::adapter::EngineLocalToolCall) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<battersea_model::adapter::tool_result::EngineLocalToolResult, battersea_model::adapter::error::EngineAdapterRequestError>> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait
+pub fn battersea_kit_conversation::conformance::Echo::call<'life0, 'async_trait>(&'life0 self, battersea_model::adapter::EngineLocalToolCall) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<battersea_model::adapter::tool_result::EngineLocalToolResult, battersea_failure::Failure>> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait
 impl core::marker::Freeze for battersea_kit_conversation::conformance::Echo
 impl core::marker::Send for battersea_kit_conversation::conformance::Echo
 impl core::marker::Sync for battersea_kit_conversation::conformance::Echo
@@ -686,7 +686,7 @@ pub fn battersea_kit_conversation::conformance::cases() -> alloc::vec::Vec<batte
 pub fn battersea_kit_conversation::conformance::comparable_events(&[serde_json::value::Value]) -> alloc::vec::Vec<serde_json::value::Value>
 pub fn battersea_kit_conversation::conformance::reference_host(alloc::rcs::arc::Arc<battersea_model::clock::ManualClock>) -> battersea_kit::reference::ReferenceHost<battersea_kit_conversation::reference::State>
 pub fn battersea_kit_conversation::conformance::register_for_suite(&mut battersea_flow::registry::Registry) -> core::result::Result<(), alloc::string::String>
-pub async fn battersea_kit_conversation::conformance::run<F: battersea_kit::conformance::Fixture>(&F) -> core::result::Result<(), battersea_kit::conformance::Failure> where <F as battersea_kit::conformance::Fixture>::Host: battersea_kit_conversation::conformance::Probe
+pub async fn battersea_kit_conversation::conformance::run<F: battersea_kit::conformance::Fixture>(&F) -> core::result::Result<(), battersea_kit::conformance::CaseFailure> where <F as battersea_kit::conformance::Fixture>::Host: battersea_kit_conversation::conformance::Probe
 pub fn battersea_kit_conversation::conformance::suite() -> battersea_kit::conformance::Suite<battersea_kit_conversation::conformance::Op>
 pub mod battersea_kit_conversation::nodes
 pub mod battersea_kit_conversation::nodes::chat
@@ -1175,7 +1175,7 @@ pub fn battersea_kit_conversation::nodes::sources::TranscriptHandler::from(T) ->
 impl<T> typenum::type_operators::Same for battersea_kit_conversation::nodes::sources::TranscriptHandler
 pub type battersea_kit_conversation::nodes::sources::TranscriptHandler::Output = T
 impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_kit_conversation::nodes::sources::TranscriptHandler where T: ?core::marker::Sized
-pub async fn battersea_kit_conversation::nodes::sources::fit<X: core::clone::Clone>(&dyn battersea_model::adapter::EngineAdapter, &[battersea_kit_conversation::Turn<X>], u64) -> core::result::Result<(alloc::vec::Vec<battersea_kit_conversation::Turn<X>>, u64), battersea_model::adapter::error::EngineAdapterRequestError>
+pub async fn battersea_kit_conversation::nodes::sources::fit<X: core::clone::Clone>(&dyn battersea_model::adapter::EngineAdapter, &[battersea_kit_conversation::Turn<X>], u64) -> core::result::Result<(alloc::vec::Vec<battersea_kit_conversation::Turn<X>>, u64), battersea_failure::Failure>
 pub struct battersea_kit_conversation::nodes::BufferHandler
 impl<H: battersea_kit_conversation::port::Port> battersea_runtime::handler::NodeHandler<H> for battersea_kit_conversation::nodes::inline::BufferHandler
 pub fn battersea_kit_conversation::nodes::inline::BufferHandler::execute_node<'life0, 'life1, 'life2, 'life3, 'life4, 'life5, 'life6, 'async_trait>(&'life0 self, &'life1 H, &'life2 mut <H as battersea_runtime::host::ExecutionHost>::State, &'life3 battersea_flow::types::FlowNode, &'life4 battersea_flow::types::FlowNodeDefinition, core::option::Option<&'life5 std::collections::hash::map::HashMap<alloc::string::String, serde_json::value::Value>>, &'life6 tokio_util::sync::cancellation_token::CancellationToken) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<(), <H as battersea_runtime::host::ExecutionHost>::Error>> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait, 'life1: 'async_trait, 'life2: 'async_trait, 'life3: 'async_trait, 'life4: 'async_trait, 'life5: 'async_trait, 'life6: 'async_trait
@@ -1752,9 +1752,9 @@ pub fn battersea_kit_conversation::reference::ScriptedEngine::new(alloc::rcs::ar
 pub fn battersea_kit_conversation::reference::ScriptedEngine::remaining(&self) -> usize
 pub fn battersea_kit_conversation::reference::ScriptedEngine::words(&battersea_model::adapter::EngineTextStreamRequest) -> u64
 impl battersea_model::adapter::EngineAdapter for battersea_kit_conversation::reference::ScriptedEngine
-pub fn battersea_kit_conversation::reference::ScriptedEngine::count_text_stream_input_tokens<'life0, 'async_trait>(&'life0 self, battersea_model::adapter::EngineTextStreamRequest) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<u64, battersea_model::adapter::error::EngineAdapterRequestError>> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait
+pub fn battersea_kit_conversation::reference::ScriptedEngine::count_text_stream_input_tokens<'life0, 'async_trait>(&'life0 self, battersea_model::adapter::EngineTextStreamRequest) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<u64, battersea_failure::Failure>> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait
 pub fn battersea_kit_conversation::reference::ScriptedEngine::describe_debug_context(&self) -> battersea_model::adapter::EngineAdapterDebugContext
-pub fn battersea_kit_conversation::reference::ScriptedEngine::stream_text<'life0, 'async_trait>(&'life0 self, battersea_model::adapter::EngineTextStreamRequest) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<battersea_model::adapter::EngineTextStream, battersea_model::adapter::error::EngineAdapterRequestError>> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait
+pub fn battersea_kit_conversation::reference::ScriptedEngine::stream_text<'life0, 'async_trait>(&'life0 self, battersea_model::adapter::EngineTextStreamRequest) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<battersea_model::adapter::EngineTextStream, battersea_failure::Failure>> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait
 impl !core::marker::Freeze for battersea_kit_conversation::reference::ScriptedEngine
 impl core::marker::Send for battersea_kit_conversation::reference::ScriptedEngine
 impl core::marker::Sync for battersea_kit_conversation::reference::ScriptedEngine
@@ -2640,7 +2640,7 @@ pub type battersea_kit_conversation::Summary<X>::Output = T
 impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_kit_conversation::Summary<X> where T: ?core::marker::Sized
 pub struct battersea_kit_conversation::types::ToolCall
 pub battersea_kit_conversation::types::ToolCall::arguments: serde_json::value::Value
-pub battersea_kit_conversation::types::ToolCall::evidence: core::option::Option<battersea_model::adapter::error::ToolCallEvidence>
+pub battersea_kit_conversation::types::ToolCall::evidence: core::option::Option<battersea_failure::codes::ToolCallEvidence>
 pub battersea_kit_conversation::types::ToolCall::id: alloc::string::String
 pub battersea_kit_conversation::types::ToolCall::name: alloc::string::String
 pub battersea_kit_conversation::types::ToolCall::ok: bool
@@ -4142,7 +4142,7 @@ pub type battersea_kit_conversation::Summary<X>::Output = T
 impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_kit_conversation::Summary<X> where T: ?core::marker::Sized
 pub struct battersea_kit_conversation::ToolCall
 pub battersea_kit_conversation::ToolCall::arguments: serde_json::value::Value
-pub battersea_kit_conversation::ToolCall::evidence: core::option::Option<battersea_model::adapter::error::ToolCallEvidence>
+pub battersea_kit_conversation::ToolCall::evidence: core::option::Option<battersea_failure::codes::ToolCallEvidence>
 pub battersea_kit_conversation::ToolCall::id: alloc::string::String
 pub battersea_kit_conversation::ToolCall::name: alloc::string::String
 pub battersea_kit_conversation::ToolCall::ok: bool

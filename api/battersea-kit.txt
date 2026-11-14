@@ -223,54 +223,54 @@ pub fn battersea_kit::conformance::Case<Op>::__clone_box(&self, dyn_clone::seale
 impl<T> typenum::type_operators::Same for battersea_kit::conformance::Case<Op>
 pub type battersea_kit::conformance::Case<Op>::Output = T
 impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_kit::conformance::Case<Op> where T: ?core::marker::Sized
-pub struct battersea_kit::conformance::Failure
-pub battersea_kit::conformance::Failure::case: alloc::string::String
-pub battersea_kit::conformance::Failure::divergence: alloc::boxed::Box<battersea_kit::conformance::Divergence>
-impl core::clone::Clone for battersea_kit::conformance::Failure
-pub fn battersea_kit::conformance::Failure::clone(&self) -> Self
-impl core::error::Error for battersea_kit::conformance::Failure
-impl core::fmt::Debug for battersea_kit::conformance::Failure
-pub fn battersea_kit::conformance::Failure::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
-impl core::fmt::Display for battersea_kit::conformance::Failure
-pub fn battersea_kit::conformance::Failure::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
-impl core::marker::Freeze for battersea_kit::conformance::Failure
-impl core::marker::Send for battersea_kit::conformance::Failure
-impl core::marker::Sync for battersea_kit::conformance::Failure
-impl core::marker::Unpin for battersea_kit::conformance::Failure
-impl core::marker::UnsafeUnpin for battersea_kit::conformance::Failure
-impl core::panic::unwind_safe::RefUnwindSafe for battersea_kit::conformance::Failure
-impl core::panic::unwind_safe::UnwindSafe for battersea_kit::conformance::Failure
-impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_kit::conformance::Failure where ST: ?core::marker::Sized, DT: ?core::marker::Sized
-impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_kit::conformance::Failure where ST: ?core::marker::Sized, DT: ?core::marker::Sized
-impl<T, U> core::convert::Into<U> for battersea_kit::conformance::Failure where U: core::convert::From<T>
-pub fn battersea_kit::conformance::Failure::into(self) -> U
-impl<T, U> core::convert::TryFrom<U> for battersea_kit::conformance::Failure where U: core::convert::Into<T>
-pub type battersea_kit::conformance::Failure::Error = never
-pub fn battersea_kit::conformance::Failure::try_from(U) -> core::result::Result<T, never>
-impl<T, U> core::convert::TryInto<U> for battersea_kit::conformance::Failure where U: core::convert::TryFrom<T>
-pub type battersea_kit::conformance::Failure::Error = <U as core::convert::TryFrom<T>>::Error
-pub fn battersea_kit::conformance::Failure::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
-impl<T> alloc::borrow::ToOwned for battersea_kit::conformance::Failure where T: core::clone::Clone
-pub type battersea_kit::conformance::Failure::Owned = T
-pub fn battersea_kit::conformance::Failure::clone_into(&self, &mut T)
-pub fn battersea_kit::conformance::Failure::to_owned(&self) -> T
-impl<T> alloc::string::ToString for battersea_kit::conformance::Failure where T: core::fmt::Display + ?core::marker::Sized
-pub fn battersea_kit::conformance::Failure::to_string(&self) -> alloc::string::String
-impl<T> core::any::Any for battersea_kit::conformance::Failure where T: 'static + ?core::marker::Sized
-pub fn battersea_kit::conformance::Failure::type_id(&self) -> core::any::TypeId
-impl<T> core::borrow::Borrow<T> for battersea_kit::conformance::Failure where T: ?core::marker::Sized
-pub fn battersea_kit::conformance::Failure::borrow(&self) -> &T
-impl<T> core::borrow::BorrowMut<T> for battersea_kit::conformance::Failure where T: ?core::marker::Sized
-pub fn battersea_kit::conformance::Failure::borrow_mut(&mut self) -> &mut T
-impl<T> core::clone::CloneToUninit for battersea_kit::conformance::Failure where T: core::clone::Clone
-pub unsafe fn battersea_kit::conformance::Failure::clone_to_uninit(&self, *mut u8)
-impl<T> core::convert::From<T> for battersea_kit::conformance::Failure
-pub fn battersea_kit::conformance::Failure::from(T) -> T
-impl<T> dyn_clone::DynClone for battersea_kit::conformance::Failure where T: core::clone::Clone
-pub fn battersea_kit::conformance::Failure::__clone_box(&self, dyn_clone::sealed::Private) -> *mut ()
-impl<T> typenum::type_operators::Same for battersea_kit::conformance::Failure
-pub type battersea_kit::conformance::Failure::Output = T
-impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_kit::conformance::Failure where T: ?core::marker::Sized
+pub struct battersea_kit::conformance::CaseFailure
+pub battersea_kit::conformance::CaseFailure::case: alloc::string::String
+pub battersea_kit::conformance::CaseFailure::divergence: alloc::boxed::Box<battersea_kit::conformance::Divergence>
+impl core::clone::Clone for battersea_kit::conformance::CaseFailure
+pub fn battersea_kit::conformance::CaseFailure::clone(&self) -> Self
+impl core::error::Error for battersea_kit::conformance::CaseFailure
+impl core::fmt::Debug for battersea_kit::conformance::CaseFailure
+pub fn battersea_kit::conformance::CaseFailure::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for battersea_kit::conformance::CaseFailure
+pub fn battersea_kit::conformance::CaseFailure::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Freeze for battersea_kit::conformance::CaseFailure
+impl core::marker::Send for battersea_kit::conformance::CaseFailure
+impl core::marker::Sync for battersea_kit::conformance::CaseFailure
+impl core::marker::Unpin for battersea_kit::conformance::CaseFailure
+impl core::marker::UnsafeUnpin for battersea_kit::conformance::CaseFailure
+impl core::panic::unwind_safe::RefUnwindSafe for battersea_kit::conformance::CaseFailure
+impl core::panic::unwind_safe::UnwindSafe for battersea_kit::conformance::CaseFailure
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Initialized, zerocopy::pointer::invariant::Initialized> for battersea_kit::conformance::CaseFailure where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<ST, DT> zerocopy::pointer::invariant::CastableFrom<ST, zerocopy::pointer::invariant::Uninit, zerocopy::pointer::invariant::Uninit> for battersea_kit::conformance::CaseFailure where ST: ?core::marker::Sized, DT: ?core::marker::Sized
+impl<T, U> core::convert::Into<U> for battersea_kit::conformance::CaseFailure where U: core::convert::From<T>
+pub fn battersea_kit::conformance::CaseFailure::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_kit::conformance::CaseFailure where U: core::convert::Into<T>
+pub type battersea_kit::conformance::CaseFailure::Error = never
+pub fn battersea_kit::conformance::CaseFailure::try_from(U) -> core::result::Result<T, never>
+impl<T, U> core::convert::TryInto<U> for battersea_kit::conformance::CaseFailure where U: core::convert::TryFrom<T>
+pub type battersea_kit::conformance::CaseFailure::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_kit::conformance::CaseFailure::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for battersea_kit::conformance::CaseFailure where T: core::clone::Clone
+pub type battersea_kit::conformance::CaseFailure::Owned = T
+pub fn battersea_kit::conformance::CaseFailure::clone_into(&self, &mut T)
+pub fn battersea_kit::conformance::CaseFailure::to_owned(&self) -> T
+impl<T> alloc::string::ToString for battersea_kit::conformance::CaseFailure where T: core::fmt::Display + ?core::marker::Sized
+pub fn battersea_kit::conformance::CaseFailure::to_string(&self) -> alloc::string::String
+impl<T> core::any::Any for battersea_kit::conformance::CaseFailure where T: 'static + ?core::marker::Sized
+pub fn battersea_kit::conformance::CaseFailure::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_kit::conformance::CaseFailure where T: ?core::marker::Sized
+pub fn battersea_kit::conformance::CaseFailure::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_kit::conformance::CaseFailure where T: ?core::marker::Sized
+pub fn battersea_kit::conformance::CaseFailure::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for battersea_kit::conformance::CaseFailure where T: core::clone::Clone
+pub unsafe fn battersea_kit::conformance::CaseFailure::clone_to_uninit(&self, *mut u8)
+impl<T> core::convert::From<T> for battersea_kit::conformance::CaseFailure
+pub fn battersea_kit::conformance::CaseFailure::from(T) -> T
+impl<T> dyn_clone::DynClone for battersea_kit::conformance::CaseFailure where T: core::clone::Clone
+pub fn battersea_kit::conformance::CaseFailure::__clone_box(&self, dyn_clone::sealed::Private) -> *mut ()
+impl<T> typenum::type_operators::Same for battersea_kit::conformance::CaseFailure
+pub type battersea_kit::conformance::CaseFailure::Output = T
+impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_kit::conformance::CaseFailure where T: ?core::marker::Sized
 pub struct battersea_kit::conformance::NoPort
 impl<H: battersea_runtime::host::ExecutionHost> battersea_kit::conformance::PortAccess<H, ()> for battersea_kit::conformance::NoPort
 pub async fn battersea_kit::conformance::NoPort::observe(&self, &H, &<H as battersea_runtime::host::ExecutionHost>::State) -> core::result::Result<serde_json::value::Value, alloc::string::String>
@@ -396,18 +396,18 @@ pub async fn battersea_kit::conformance::NoPort::observe(&self, &H, &<H as batte
 pub async fn battersea_kit::conformance::NoPort::prepare(&self, &H, &mut <H as battersea_runtime::host::ExecutionHost>::State, &()) -> core::result::Result<(), alloc::string::String>
 pub fn battersea_kit::conformance::comparable(&serde_json::value::Value) -> serde_json::value::Value
 pub async fn battersea_kit::conformance::play<Op, F: battersea_kit::conformance::Fixture, A: battersea_kit::conformance::PortAccess<<F as battersea_kit::conformance::Fixture>::Host, Op>>(&battersea_kit::conformance::Suite<Op>, &F, &battersea_kit::conformance::Case<Op>, &A) -> core::result::Result<battersea_kit::conformance::Played, alloc::string::String>
-pub async fn battersea_kit::conformance::run<Op, R, C, A>(&battersea_kit::conformance::Suite<Op>, &R, &C, &A) -> core::result::Result<(), battersea_kit::conformance::Failure> where R: battersea_kit::conformance::Fixture, C: battersea_kit::conformance::Fixture, A: battersea_kit::conformance::PortAccess<<R as battersea_kit::conformance::Fixture>::Host, Op> + battersea_kit::conformance::PortAccess<<C as battersea_kit::conformance::Fixture>::Host, Op>
+pub async fn battersea_kit::conformance::run<Op, R, C, A>(&battersea_kit::conformance::Suite<Op>, &R, &C, &A) -> core::result::Result<(), battersea_kit::conformance::CaseFailure> where R: battersea_kit::conformance::Fixture, C: battersea_kit::conformance::Fixture, A: battersea_kit::conformance::PortAccess<<R as battersea_kit::conformance::Fixture>::Host, Op> + battersea_kit::conformance::PortAccess<<C as battersea_kit::conformance::Fixture>::Host, Op>
 pub fn battersea_kit::conformance::same_events(&[serde_json::value::Value]) -> alloc::vec::Vec<serde_json::value::Value>
 pub mod battersea_kit::error
 pub enum battersea_kit::error::NodeError
-pub battersea_kit::error::NodeError::Internal(alloc::string::String)
+pub battersea_kit::error::NodeError::Internal(battersea_failure::Failure)
 pub battersea_kit::error::NodeError::InvalidRequest
-pub battersea_kit::error::NodeError::InvalidRequest::message: alloc::string::String
+pub battersea_kit::error::NodeError::InvalidRequest::failure: battersea_failure::Failure
 pub battersea_kit::error::NodeError::InvalidRequest::reason: &'static str
 impl battersea_kit::error::NodeError
-pub fn battersea_kit::error::NodeError::internal(impl core::convert::Into<alloc::string::String>) -> Self
+pub fn battersea_kit::error::NodeError::internal(impl core::convert::Into<battersea_failure::Failure>) -> Self
 pub fn battersea_kit::error::NodeError::into_host<E: battersea_runtime::ExecutionError>(self) -> E
-pub fn battersea_kit::error::NodeError::invalid_request(&'static str, impl core::convert::Into<alloc::string::String>) -> Self
+pub fn battersea_kit::error::NodeError::invalid_request(&'static str, impl core::convert::Into<battersea_failure::Failure>) -> Self
 pub fn battersea_kit::error::NodeError::reason_code(&self) -> core::option::Option<&'static str>
 impl core::error::Error for battersea_kit::error::NodeError
 impl core::fmt::Debug for battersea_kit::error::NodeError
@@ -587,12 +587,12 @@ pub const battersea_kit::reference::codes::INVALID_PARAMETER_WRITE: &str
 pub const battersea_kit::reference::codes::NO_LOGIC_EVALUATOR: &str
 pub struct battersea_kit::reference::ReferenceError
 impl battersea_runtime::ExecutionError for battersea_kit::reference::ReferenceError
-pub fn battersea_kit::reference::ReferenceError::cancelled(&'static str, impl core::convert::Into<alloc::string::String>) -> Self
+pub fn battersea_kit::reference::ReferenceError::cancelled(&'static str, impl core::convert::Into<battersea_failure::Failure>) -> Self
 pub fn battersea_kit::reference::ReferenceError::code(&self) -> &str
-pub fn battersea_kit::reference::ReferenceError::internal(impl core::convert::Into<alloc::string::String>) -> Self
-pub fn battersea_kit::reference::ReferenceError::interrupted(&'static str, impl core::convert::Into<alloc::string::String>) -> Self
-pub fn battersea_kit::reference::ReferenceError::invalid_request(&'static str, impl core::convert::Into<alloc::string::String>) -> Self
-pub fn battersea_kit::reference::ReferenceError::message(&self) -> &str
+pub fn battersea_kit::reference::ReferenceError::failure(&self) -> &battersea_failure::Failure
+pub fn battersea_kit::reference::ReferenceError::internal(impl core::convert::Into<battersea_failure::Failure>) -> Self
+pub fn battersea_kit::reference::ReferenceError::interrupted(&'static str, impl core::convert::Into<battersea_failure::Failure>) -> Self
+pub fn battersea_kit::reference::ReferenceError::invalid_request(&'static str, impl core::convert::Into<battersea_failure::Failure>) -> Self
 pub fn battersea_kit::reference::ReferenceError::reason_code(&self) -> core::option::Option<&str>
 pub fn battersea_kit::reference::ReferenceError::recoverable_node_failure(&self) -> core::option::Option<battersea_runtime::failure::RecoverableNodeFailure>
 impl core::clone::Clone for battersea_kit::reference::ReferenceError
@@ -868,14 +868,14 @@ impl<T> typenum::type_operators::Same for battersea_kit::kit::KitError
 pub type battersea_kit::kit::KitError::Output = T
 impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_kit::kit::KitError where T: ?core::marker::Sized
 pub enum battersea_kit::NodeError
-pub battersea_kit::NodeError::Internal(alloc::string::String)
+pub battersea_kit::NodeError::Internal(battersea_failure::Failure)
 pub battersea_kit::NodeError::InvalidRequest
-pub battersea_kit::NodeError::InvalidRequest::message: alloc::string::String
+pub battersea_kit::NodeError::InvalidRequest::failure: battersea_failure::Failure
 pub battersea_kit::NodeError::InvalidRequest::reason: &'static str
 impl battersea_kit::error::NodeError
-pub fn battersea_kit::error::NodeError::internal(impl core::convert::Into<alloc::string::String>) -> Self
+pub fn battersea_kit::error::NodeError::internal(impl core::convert::Into<battersea_failure::Failure>) -> Self
 pub fn battersea_kit::error::NodeError::into_host<E: battersea_runtime::ExecutionError>(self) -> E
-pub fn battersea_kit::error::NodeError::invalid_request(&'static str, impl core::convert::Into<alloc::string::String>) -> Self
+pub fn battersea_kit::error::NodeError::invalid_request(&'static str, impl core::convert::Into<battersea_failure::Failure>) -> Self
 pub fn battersea_kit::error::NodeError::reason_code(&self) -> core::option::Option<&'static str>
 impl core::error::Error for battersea_kit::error::NodeError
 impl core::fmt::Debug for battersea_kit::error::NodeError
@@ -969,12 +969,12 @@ pub type battersea_kit::kit::Kit::Output = T
 impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_kit::kit::Kit where T: ?core::marker::Sized
 pub struct battersea_kit::ReferenceError
 impl battersea_runtime::ExecutionError for battersea_kit::reference::ReferenceError
-pub fn battersea_kit::reference::ReferenceError::cancelled(&'static str, impl core::convert::Into<alloc::string::String>) -> Self
+pub fn battersea_kit::reference::ReferenceError::cancelled(&'static str, impl core::convert::Into<battersea_failure::Failure>) -> Self
 pub fn battersea_kit::reference::ReferenceError::code(&self) -> &str
-pub fn battersea_kit::reference::ReferenceError::internal(impl core::convert::Into<alloc::string::String>) -> Self
-pub fn battersea_kit::reference::ReferenceError::interrupted(&'static str, impl core::convert::Into<alloc::string::String>) -> Self
-pub fn battersea_kit::reference::ReferenceError::invalid_request(&'static str, impl core::convert::Into<alloc::string::String>) -> Self
-pub fn battersea_kit::reference::ReferenceError::message(&self) -> &str
+pub fn battersea_kit::reference::ReferenceError::failure(&self) -> &battersea_failure::Failure
+pub fn battersea_kit::reference::ReferenceError::internal(impl core::convert::Into<battersea_failure::Failure>) -> Self
+pub fn battersea_kit::reference::ReferenceError::interrupted(&'static str, impl core::convert::Into<battersea_failure::Failure>) -> Self
+pub fn battersea_kit::reference::ReferenceError::invalid_request(&'static str, impl core::convert::Into<battersea_failure::Failure>) -> Self
 pub fn battersea_kit::reference::ReferenceError::reason_code(&self) -> core::option::Option<&str>
 pub fn battersea_kit::reference::ReferenceError::recoverable_node_failure(&self) -> core::option::Option<battersea_runtime::failure::RecoverableNodeFailure>
 impl core::clone::Clone for battersea_kit::reference::ReferenceError
