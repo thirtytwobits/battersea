@@ -60,8 +60,9 @@ pub(crate) fn media_source<'a>(
         }
         Ok(Some(data))
     } else if url.starts_with("https://") || (protocol == "google" && url.starts_with("gs://")) {
-        let parsed = reqwest::Url::parse(url)
-            .map_err(|_| invalid(provider, "Invalid remote media reference."))?;
+        let parsed = reqwest::Url::parse(url).map_err(|cause| {
+            invalid(provider, "Invalid remote media reference.").caused_by(&cause)
+        })?;
         if parsed.host_str().is_none()
             || !parsed.username().is_empty()
             || parsed.password().is_some()

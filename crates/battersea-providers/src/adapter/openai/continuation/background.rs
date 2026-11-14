@@ -6,7 +6,7 @@ use battersea_model::{ConversationCommand, ConversationStep};
 fn native_response(response: &Value) -> Result<(), Failure> {
     check_payload(response, "openai")?;
     serde_json::from_value::<async_openai::types::responses::Response>(response.clone())
-        .map_err(|_| invalid("Invalid background Responses response."))?;
+        .map_err(|cause| invalid("Invalid background Responses response.").caused_by(&cause))?;
     if response["background"] != true
         || response["id"]
             .as_str()
@@ -199,10 +199,9 @@ impl OpenAiEngineAdapter {
         )
         .await;
         let response: Value = match sent {
-            Ok(response) => response
-                .bounded_json()
-                .await
-                .map_err(|_| invalid("Invalid background response payload."))?,
+            Ok(response) => response.bounded_json().await.map_err(|cause| {
+                invalid("Invalid background response payload.").with_cause(cause)
+            })?,
             Err(error)
                 if matches!(command, ConversationCommand::Cancel { .. })
                     && matches!(error.exchange.status, Some(400 | 409)) =>
@@ -223,12 +222,14 @@ impl OpenAiEngineAdapter {
                 .await?
                 .bounded_json()
                 .await
-                .map_err(|_| invalid("Invalid background response payload."))?;
+                .map_err(|cause| {
+                    invalid("Invalid background response payload.").with_cause(cause)
+                })?;
                 let step = ConversationStep::Cancelled {
                     state: response.clone(),
                 };
                 self.validate_durable_step(&request, previous.as_ref(), &results, &command, &step)
-                    .map_err(|_| error)?;
+                    .map_err(|_invalid_step| error)?;
                 response
             }
             Err(error) => return Err(error),

@@ -356,7 +356,7 @@ impl NodeHandler<ReferenceHost<Vec<String>>> for SleepySink {
         match self.timeout {
             Some(limit) => battersea_kit::clock::timeout(clock, limit, work)
                 .await
-                .map_err(|_| battersea_kit::ReferenceError::internal("the work timed out")),
+                .map_err(|_elapsed| battersea_kit::ReferenceError::internal("the work timed out")),
             None => {
                 work.await;
                 Ok(())

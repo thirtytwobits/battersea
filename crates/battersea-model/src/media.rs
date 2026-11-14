@@ -377,7 +377,7 @@ pub trait MediaGenerationAdapter: Send + Sync {
             Ok::<_, Failure>(match deadline {
                 Some(deadline) => crate::clock::timeout_at(clock.as_ref(), deadline, submit)
                     .await
-                    .map_err(|_| {
+                    .map_err(|_elapsed| {
                         Failure::new(
                             &self.backend().provider,
                             "Media submission deadline exceeded.",
@@ -531,7 +531,7 @@ impl MediaSubmission {
                         match deadline {
                             Some(deadline) if deadline <= clock.instant() => Err(Failure::new(job.provider(), "Media job deadline exceeded.", crate::ErrorKind::Timeout)),
                             Some(deadline) => crate::clock::timeout_at(clock.as_ref(), deadline, job.wait(cancellation.clone())).await
-                                .map_err(|_| Failure::new(job.provider(), "Media job deadline exceeded.", crate::ErrorKind::Timeout))?,
+                                .map_err(|_elapsed| Failure::new(job.provider(), "Media job deadline exceeded.", crate::ErrorKind::Timeout))?,
                             None => job.wait(cancellation.clone()).await,
                         }
                     } => result,

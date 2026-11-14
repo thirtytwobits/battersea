@@ -9,6 +9,9 @@ rust-version = "1.95"
 license = "MIT"
 repository = "https://github.com/thirtytwobits/battersea"
 
+[workspace.lints.clippy]
+map_err_ignore = "deny"
+
 [workspace.dependencies]
 clapham = { git = "https://github.com/thirtytwobits/clapham", tag = "v0.6.0", version = "0.6.0" }
 clapham-mcp-client = { git = "https://github.com/thirtytwobits/clapham", tag = "v0.6.0", version = "0.6.0", default-features = false }

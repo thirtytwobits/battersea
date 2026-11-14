@@ -314,7 +314,7 @@ pub(crate) fn build_submit_body(
         ));
     }
     let max_prompt_chars = usize::try_from(require_u64_option(backend, "maxPromptChars")?)
-        .map_err(|_| missing_runway_option("maxPromptChars"))?;
+        .map_err(|_overflow| missing_runway_option("maxPromptChars"))?;
     if prompt_text.len() > max_prompt_chars {
         return Err(Failure::new(
             "runway",
@@ -401,7 +401,7 @@ pub(crate) fn build_submit_body(
             let duration = match request.options.duration_seconds {
                 Some(duration) => duration,
                 None => u32::try_from(require_u64_option(backend, "defaultVideoDurationSeconds")?)
-                    .map_err(|_| missing_runway_option("defaultVideoDurationSeconds"))?,
+                    .map_err(|_overflow| missing_runway_option("defaultVideoDurationSeconds"))?,
             };
             let ratio = match request.options.aspect_ratio.clone() {
                 Some(ratio) => ratio,
@@ -659,7 +659,8 @@ fn decode_task(
             let url = output
                 .as_str()
                 .ok_or_else(|| bad("Task output must be a URL."))?;
-            reqwest::Url::parse(url).map_err(|_| bad("Invalid task output URL."))?;
+            reqwest::Url::parse(url)
+                .map_err(|cause| bad("Invalid task output URL.").caused_by(&cause))?;
             assets.push(MediaAsset {
                 url: url.into(),
                 mime_type: None,

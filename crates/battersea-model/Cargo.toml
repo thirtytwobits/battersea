@@ -10,6 +10,9 @@ readme = "../../README.md"
 publish = false
 include = ["src/**", "Cargo.toml", "LICENSE", "NOTICE"]
 
+[lints]
+workspace = true
+
 [dependencies]
 battersea-failure = { path = "../battersea-failure", version = "0.26.0" }
 async-trait.workspace = true

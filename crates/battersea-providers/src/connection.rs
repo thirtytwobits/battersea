@@ -29,8 +29,8 @@ pub(crate) fn headers(
     let mut headers = HeaderMap::new();
     for (key, value) in &binding.connection.headers {
         headers.insert(
-            HeaderName::from_bytes(key.as_bytes()).map_err(|_| invalid())?,
-            HeaderValue::from_str(value).map_err(|_| invalid())?,
+            HeaderName::from_bytes(key.as_bytes()).map_err(|cause| invalid().caused_by(&cause))?,
+            HeaderValue::from_str(value).map_err(|cause| invalid().caused_by(&cause))?,
         );
     }
     let header = match &binding.connection.auth {
@@ -45,10 +45,10 @@ pub(crate) fn headers(
         )),
     };
     if let Some((name, value)) = header {
-        let mut value = HeaderValue::from_str(&value).map_err(|_| invalid())?;
+        let mut value = HeaderValue::from_str(&value).map_err(|_credential| invalid())?;
         value.set_sensitive(true);
         headers.insert(
-            HeaderName::from_bytes(name.as_bytes()).map_err(|_| invalid())?,
+            HeaderName::from_bytes(name.as_bytes()).map_err(|cause| invalid().caused_by(&cause))?,
             value,
         );
     }

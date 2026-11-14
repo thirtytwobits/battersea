@@ -34,7 +34,7 @@ impl ToolApprovalStore for Store {
                 if b.len() > max {
                     return Err(ToolApprovalStoreError::Unavailable);
                 }
-                serde_json::from_slice(b).map_err(|_| ToolApprovalStoreError::Unavailable)
+                serde_json::from_slice(b).map_err(|_corrupt| ToolApprovalStoreError::Unavailable)
             })
             .transpose()
     }

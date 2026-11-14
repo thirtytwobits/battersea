@@ -1508,10 +1508,9 @@ fn missing_credentials_and_unsupported_modes_fail_during_binding_or_validation()
         .as_mut()
         .unwrap()
         .top_k = Some(3);
-    assert_eq!(
-        config.validate(&protocols()).err().unwrap().code,
-        ProviderCode::UnsupportedCapability
-    );
+    let error = config.validate(&protocols()).err().unwrap();
+    assert_eq!(error.code, ProviderCode::UnsupportedCapability);
+    assert!(error.cause.is_some_and(|cause| !cause.is_empty()));
     config
         .backends
         .get_mut("office-chat")

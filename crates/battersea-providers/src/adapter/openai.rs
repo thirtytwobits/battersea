@@ -936,7 +936,7 @@ impl OpenAiToolConversation {
                 stream.next(),
             )
             .await
-            .map_err(|_| {
+            .map_err(|_elapsed| {
                 Failure::transport("openai", format!("OpenAI stream stalled for {idle_ms}ms."))
             })?
             .ok_or_else(|| {

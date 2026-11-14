@@ -46,12 +46,13 @@ fn create(
         .retry(reqwest::retry::never())
         .redirect(reqwest::redirect::Policy::none())
         .build()
-        .map_err(|_| {
+        .map_err(|cause| {
             Failure::new(
                 &backend.provider,
                 "Could not construct HTTP client.",
                 ErrorKind::InvalidRequest,
             )
+            .caused_by(&cause)
         })?;
     Ok(Arc::new(Completions {
         backend,
@@ -98,8 +99,11 @@ impl EngineAdapter for Completions {
         };
         let original = messages(&self.backend.provider, &request.shared.messages)?;
         if let Some(state) = state {
-            let checkpoint: CompletionCheckpoint = serde_json::from_value(state.clone())
-                .map_err(|_| invalid(&self.backend.provider, "Invalid completion checkpoint."))?;
+            let checkpoint: CompletionCheckpoint =
+                serde_json::from_value(state.clone()).map_err(|cause| {
+                    invalid(&self.backend.provider, "Invalid completion checkpoint.")
+                        .caused_by(&cause)
+                })?;
             if checkpoint.version != 2
                 || checkpoint.binding != binding
                 || checkpoint.request_revision
@@ -167,8 +171,10 @@ impl EngineAdapter for Completions {
         turn: &ConversationTurn,
     ) -> Result<ConversationBinding, Failure> {
         let binding = self.validate_conversation(request, Some(&turn.state))?;
-        let checkpoint: CompletionCheckpoint = serde_json::from_value(turn.state.clone())
-            .map_err(|_| invalid(&self.backend.provider, "Invalid completion checkpoint."))?;
+        let checkpoint: CompletionCheckpoint =
+            serde_json::from_value(turn.state.clone()).map_err(|cause| {
+                invalid(&self.backend.provider, "Invalid completion checkpoint.").caused_by(&cause)
+            })?;
         let calls = completion_calls(
             &self.backend.provider,
             checkpoint.messages.last().expect("validated transcript"),
@@ -186,7 +192,10 @@ impl EngineAdapter for Completions {
         let mut prefix = if let Some(previous) = previous {
             self.validate_conversation(request, Some(previous))?;
             serde_json::from_value::<CompletionCheckpoint>(previous.clone())
-                .map_err(|_| invalid(&self.backend.provider, "Invalid predecessor checkpoint."))?
+                .map_err(|cause| {
+                    invalid(&self.backend.provider, "Invalid predecessor checkpoint.")
+                        .caused_by(&cause)
+                })?
                 .messages
         } else {
             messages(&self.backend.provider, &request.shared.messages)?
@@ -235,7 +244,10 @@ impl EngineAdapter for Completions {
         let messages = match state {
             Some(state) => {
                 serde_json::from_value::<CompletionCheckpoint>(state)
-                    .map_err(|_| invalid(&self.backend.provider, "Invalid completion checkpoint."))?
+                    .map_err(|cause| {
+                        invalid(&self.backend.provider, "Invalid completion checkpoint.")
+                            .caused_by(&cause)
+                    })?
                     .messages
             }
             None => messages(&self.backend.provider, &request.shared.messages)?,
@@ -730,13 +742,15 @@ async fn decode_stream(
     let mut usage = Value::Null;
     let mut done = false;
     while let Some(event) = stream.next().await {
-        let event = event.map_err(|_| invalid(provider, "Interrupted completion stream."))?;
+        let event = event.map_err(|cause| {
+            invalid(provider, "Interrupted completion stream.").caused_by(&cause)
+        })?;
         if event.data == "[DONE]" {
             done = true;
             break;
         }
         let value: Value = serde_json::from_str(&event.data)
-            .map_err(|_| invalid(provider, "Malformed completion event."))?;
+            .map_err(|cause| invalid(provider, "Malformed completion event.").caused_by(&cause))?;
         if value["usage"].is_object() {
             usage = value["usage"].clone();
         }

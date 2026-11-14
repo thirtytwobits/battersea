@@ -308,7 +308,7 @@ impl ConversationCheckpoint {
     }
 
     fn digest(&self) -> Result<String, Failure> {
-        let mut value = serde_json::to_value(self).map_err(|_| invalid())?;
+        let mut value = serde_json::to_value(self).map_err(|cause| invalid().caused_by(&cause))?;
         value
             .as_object_mut()
             .ok_or_else(invalid)?
@@ -563,7 +563,7 @@ impl DurableConversation {
             self.store.load(&self.scope.run_id, self.max_bytes),
         )
         .await
-        .map_err(|_| Self::storage(ConversationStoreError::Unavailable))?
+        .map_err(|_elapsed| Self::storage(ConversationStoreError::Unavailable))?
         .map_err(Self::storage)?
         .ok_or_else(invalid)?;
         bounded(&record, self.max_bytes)?;
@@ -686,7 +686,7 @@ impl DurableConversation {
             self.store.compare_exchange(&self.scope.run_id, expected, r),
         )
         .await
-        .map_err(|_| Self::storage(ConversationStoreError::Unavailable))?
+        .map_err(|_elapsed| Self::storage(ConversationStoreError::Unavailable))?
         .map_err(Self::storage)
     }
     /// Copy an exact, completed tool result from host-owned durable execution state.
@@ -829,7 +829,7 @@ impl DurableConversation {
             ),
         )
         .await
-        .map_err(|_| {
+        .map_err(|_elapsed| {
             Failure::new(
                 "conversation",
                 "Provider cancellation deadline exceeded; inspect retained state.",
@@ -939,7 +939,7 @@ impl DurableConversation {
                 .conversation_step(r.request.clone(), state, results, command.clone()),
         )
         .await
-        .map_err(|_| {
+        .map_err(|_elapsed| {
             Failure::new(
                 "conversation",
                 "Provider operation deadline expired; inspect retained state.",

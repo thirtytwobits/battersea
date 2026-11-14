@@ -34,7 +34,8 @@ fn invalid(message: &str) -> Failure {
 
 fn decode(state: &Value) -> Result<Checkpoint, Failure> {
     check_payload(state, "openai")?;
-    serde_json::from_value(state.clone()).map_err(|_| invalid("Invalid Responses checkpoint."))
+    serde_json::from_value(state.clone())
+        .map_err(|cause| invalid("Invalid Responses checkpoint.").caused_by(&cause))
 }
 
 impl OpenAiEngineAdapter {
@@ -335,7 +336,7 @@ fn response_events(
 ) -> Result<Vec<EngineTextStreamEvent>, Failure> {
     // Recovery admits the same native schema as the live stream without reserialising it.
     serde_json::from_value::<async_openai::types::responses::Response>(response.clone())
-        .map_err(|_| invalid("Invalid native Responses response."))?;
+        .map_err(|cause| invalid("Invalid native Responses response.").caused_by(&cause))?;
     if response["status"] != "completed"
         || !response["error"].is_null()
         || !response["incomplete_details"].is_null()

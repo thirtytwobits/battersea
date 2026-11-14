@@ -166,12 +166,12 @@ impl<T: Serialize + Send + 'static> EventPump<T> {
                         .clone()
                         .acquire_owned()
                         .await
-                        .map_err(|_| PumpError::ProducerStopped)?;
+                        .map_err(|_closed| PumpError::ProducerStopped)?;
                     let mut reservation = bytes
                         .clone()
                         .acquire_many_owned(limits.max_event_bytes)
                         .await
-                        .map_err(|_| PumpError::ProducerStopped)?;
+                        .map_err(|_closed| PumpError::ProducerStopped)?;
                     let Some(value) = source.next().await else {
                         return Ok(());
                     };

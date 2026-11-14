@@ -7,7 +7,8 @@
 bindings. Backends select a service, model, explicit capabilities and adapter options.
 Validation checks every declaration before credential resolution or adapter construction.
 Unknown IDs, duplicate registrations, incompatible operations, unsupported parameters and
-invalid options fail with `ProviderCode` and a declaration path.
+invalid options fail with `ProviderCode`, a declaration path and, where a lower check refused the
+declaration, that check's explanation as `cause`.
 
 Binding resolves each used service operation's credential once and constructs immutable adapters.
 The validated configuration retains its adapter registrations. The host retains the configured

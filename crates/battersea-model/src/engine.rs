@@ -363,7 +363,8 @@ impl EngineBackendCapabilities {
         chat: &EngineChatParameters,
     ) -> Result<(), String> {
         self.validate_chat_parameters(chat)?;
-        let properties = serde_json::to_value(chat).map_err(|_| "Invalid chat parameters.")?;
+        let properties =
+            serde_json::to_value(chat).map_err(|_serialisation| "Invalid chat parameters.")?;
         for (name, value) in properties.as_object().expect("chat properties") {
             if (name == "stopSequences" && value.as_array().is_some_and(Vec::is_empty))
                 || (name == "temperature"

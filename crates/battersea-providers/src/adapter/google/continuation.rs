@@ -38,7 +38,8 @@ fn invalid(message: &str) -> Failure {
 
 fn decode(state: &Value) -> Result<Checkpoint, Failure> {
     check_payload(state, "google")?;
-    serde_json::from_value(state.clone()).map_err(|_| invalid("Invalid Gemini checkpoint."))
+    serde_json::from_value(state.clone())
+        .map_err(|cause| invalid("Invalid Gemini checkpoint.").caused_by(&cause))
 }
 
 fn request_revision(request: &ConversationRequest) -> String {
@@ -112,7 +113,7 @@ fn model_calls(
         candidates: vec![GeminiCandidate {
             content: Some(
                 serde_json::from_value(content.clone())
-                    .map_err(|_| invalid("Malformed Gemini content."))?,
+                    .map_err(|cause| invalid("Malformed Gemini content.").caused_by(&cause))?,
             ),
             finish_reason: None,
         }],
@@ -421,7 +422,7 @@ fn response_events(
     structured: bool,
 ) -> Result<Vec<EngineTextStreamEvent>, Failure> {
     let parsed: GeminiGenerateContentResponse = serde_json::from_value(response.clone())
-        .map_err(|_| invalid("Invalid native Gemini response."))?;
+        .map_err(|cause| invalid("Invalid native Gemini response.").caused_by(&cause))?;
     if !response["promptFeedback"]["blockReason"].is_null() {
         return Err(invalid("Gemini blocked the request."));
     }

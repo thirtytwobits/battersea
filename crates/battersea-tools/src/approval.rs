@@ -206,7 +206,7 @@ impl EngineLocalToolExecutor for ApprovedToolExecutor {
             prepared.execute(),
         )
         .await
-        .map_err(|_| {
+        .map_err(|_elapsed| {
             Failure::new(
                 "tools",
                 "Tool execution deadline expired.",

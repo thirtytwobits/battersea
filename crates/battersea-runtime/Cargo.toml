@@ -8,6 +8,9 @@ repository.workspace = true
 publish = false
 include = ["src/**", "Cargo.toml", "README.md", "LICENSE", "NOTICE"]
 
+[lints]
+workspace = true
+
 [dependencies]
 battersea-flow = { path = "../battersea-flow", version = "0.26.0" }
 async-trait = "0.1"

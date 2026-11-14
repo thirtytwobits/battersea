@@ -504,7 +504,7 @@ fn require_openai_partial_images(backend: &MediaBackendConfig) -> Result<u8, Fai
         .ok_or_else(|| missing_openai_media_option("partialImages"))?;
     u8::try_from(value)
         .map(|value| value.clamp(0, 3))
-        .map_err(|_| missing_openai_media_option("partialImages"))
+        .map_err(|_overflow| missing_openai_media_option("partialImages"))
 }
 
 fn should_stream_openai_partial_images(
@@ -680,7 +680,7 @@ pub(crate) fn prepare_body(
             read_u64_option_opt(&backend.options.extra, "defaultCount")
                 .ok_or_else(|| missing_openai_media_option("defaultCount"))?,
         )
-        .map_err(|_| missing_openai_media_option("defaultCount"))?
+        .map_err(|_overflow| missing_openai_media_option("defaultCount"))?
         .max(1),
     };
     let partial_images = require_openai_partial_images(backend)?;

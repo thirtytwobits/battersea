@@ -10,6 +10,9 @@ readme = "../../README.md"
 publish = false
 include = ["src/**", "fixtures/**", "schemas/**", "Cargo.toml", "LICENSE", "NOTICE"]
 
+[lints]
+workspace = true
+
 [dependencies]
 battersea-failure = { path = "../battersea-failure", version = "0.26.0" }
 anyhow = "1"

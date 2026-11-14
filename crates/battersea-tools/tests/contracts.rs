@@ -82,6 +82,23 @@ async fn a_call_is_checked_against_its_operation_before_its_handler_runs() {
     assert!(recorder.calls().is_empty());
 }
 
+#[tokio::test]
+async fn a_refusal_carries_the_tools_error_as_native_detail() {
+    let recorder = Arc::new(Recorder::default());
+    let registry = recorded(&recorder, [lookup("example.lookup")]);
+    let error = registry
+        .call(call("example.lookup", json!({"key": false})))
+        .await
+        .unwrap_err();
+    assert_eq!(error.reporter, Reporter::Tool);
+    let Detail::Present(native) = &error.native else {
+        panic!("the refusal is absent: {error:?}");
+    };
+    assert_eq!(native["code"], "invalid_input");
+    assert_eq!(native["evidence"], "not_dispatched");
+    assert!(native["message"].is_string());
+}
+
 #[test]
 fn operations_whose_provider_names_collide_are_refused() {
     let recorder = Arc::new(Recorder::default());

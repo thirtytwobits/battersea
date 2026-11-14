@@ -70,11 +70,14 @@ pub(crate) fn refused(refusal: Refusal, mut evidence: ToolCallEvidence) -> Failu
         Evidence::Completed => ToolCallOutcome::Completed,
         Evidence::Uncertain => ToolCallOutcome::Uncertain,
     };
+    let native = serde_json::to_value(&refusal).expect("a refusal serialises");
     let error = match tool_code(&refusal.code) {
         Some(code) => crate::registry::refusal(refusal.message, code),
         None => Failure::new("tools", refusal.message, refusal.code),
     };
-    error.with_tool_call(evidence)
+    error
+        .with_native(battersea_model::Reporter::Tool, native)
+        .with_tool_call(evidence)
 }
 
 impl ToolRegistry {

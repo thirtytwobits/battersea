@@ -10,6 +10,9 @@ readme = "../../README.md"
 publish = false
 include = ["src/**", "Cargo.toml", "LICENSE", "NOTICE"]
 
+[lints]
+workspace = true
+
 [features]
 default = ["openai", "anthropic", "google", "runway", "replicate", "mock"]
 openai = ["dep:async-openai"]

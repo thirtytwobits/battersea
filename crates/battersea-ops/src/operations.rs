@@ -170,7 +170,14 @@ fn tool_refusal(error: Failure) -> Refusal {
     let code = error
         .tool_code
         .map_or(codes::HOST_FAILURE, ToolCode::as_str);
-    let refusal = codes::refusal(code, error.message.to_string());
+    let mut refusal = codes::refusal(code, error.message.to_string());
+    let failure = serde_json::to_value(&error).expect("a failure serialises");
+    match &mut refusal.details {
+        Some(serde_json::Value::Object(details)) => {
+            details.insert("failure".into(), failure);
+        }
+        details => *details = Some(serde_json::json!({ "failure": failure })),
+    }
     if error.tool_code == Some(ToolCode::ToolApprovalStorage) {
         refusal.with_evidence(Evidence::Uncertain)
     } else {
@@ -561,4 +568,23 @@ fn mcp_operations(contribution: Contribution, mcp: Arc<dyn McpHost>) -> Contribu
                 mcp.refresh(&input.server_id).await
             }),
         )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn a_tool_failure_is_carried_whole_in_the_refusal_details() {
+        let failure = Failure::new("tools", "The journal is unavailable.", "internal")
+            .with_tool_code(ToolCode::ToolApprovalStorage)
+            .caused_by_text("disk quota exceeded");
+        let refusal = tool_refusal(failure.clone());
+        assert_eq!(refusal.code, ToolCode::ToolApprovalStorage.as_str());
+        assert_eq!(refusal.evidence, Evidence::Uncertain);
+        assert_eq!(
+            refusal.details.unwrap()["failure"],
+            serde_json::to_value(&failure).unwrap()
+        );
+    }
 }

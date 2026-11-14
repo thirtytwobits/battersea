@@ -31,7 +31,7 @@ impl ConversationStore for Store {
                 if b.len() > max {
                     return Err(ConversationStoreError::Unavailable);
                 }
-                serde_json::from_slice(b).map_err(|_| ConversationStoreError::Unavailable)
+                serde_json::from_slice(b).map_err(|_corrupt| ConversationStoreError::Unavailable)
             })
             .transpose()
     }

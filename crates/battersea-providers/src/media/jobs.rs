@@ -69,7 +69,7 @@ pub(crate) fn poll_policy(backend: &MediaBackendConfig) -> Result<MediaPollPolic
         max_retries: u32::try_from(
             option("maxPollRetryCount").ok_or_else(|| missing("maxPollRetryCount"))?,
         )
-        .map_err(|_| missing("maxPollRetryCount"))?,
+        .map_err(|_overflow| missing("maxPollRetryCount"))?,
     };
     policy.validate()?;
     if let Some(value) = backend.options.extra.get("maxOutputBytes") {
@@ -280,8 +280,9 @@ impl RemoteJob {
             }
             let clock = self.transport.clock();
             let download = async {
-                let mut url = Url::parse(&asset.url).map_err(|_| {
+                let mut url = Url::parse(&asset.url).map_err(|cause| {
                     self.error(ErrorKind::InvalidResponse, "Invalid media output URL.")
+                        .caused_by(&cause)
                 })?;
                 let mut redirects = 0;
                 let response = loop {
@@ -330,8 +331,9 @@ impl RemoteJob {
                             .ok_or_else(|| {
                                 self.error(ErrorKind::Retrieval, "Output redirect has no location.")
                             })?;
-                        let next = url.join(location).map_err(|_| {
+                        let next = url.join(location).map_err(|cause| {
                             self.error(ErrorKind::Retrieval, "Invalid output redirect.")
+                                .caused_by(&cause)
                         })?;
                         if url.scheme() == "https" && next.scheme() != "https" {
                             return Err(

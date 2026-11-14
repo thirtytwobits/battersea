@@ -25,7 +25,7 @@ pub(crate) fn create(
 ) -> Result<Arc<dyn MediaGenerationAdapter>, Failure> {
     poll_policy(&backend)?;
     let base = reqwest::Url::parse(&backend.endpoint)
-        .map_err(|_| invalid("Invalid Replicate endpoint."))?;
+        .map_err(|cause| invalid("Invalid Replicate endpoint.").caused_by(&cause))?;
     if !matches!(base.scheme(), "http" | "https")
         || !base.username().is_empty()
         || base.password().is_some()
@@ -231,7 +231,7 @@ impl Replicate {
         let expires_at = match raw["completed_at"].as_str() {
             Some(value) => Some(
                 DateTime::parse_from_rfc3339(value)
-                    .map_err(|_| bad("Invalid completion timestamp."))?
+                    .map_err(|cause| bad("Invalid completion timestamp.").caused_by(&cause))?
                     .with_timezone(&Utc)
                     + chrono::Duration::hours(1),
             ),
@@ -268,7 +268,8 @@ impl Replicate {
                 let url = value
                     .as_str()
                     .ok_or_else(|| bad("Media output is not a URL."))?;
-                reqwest::Url::parse(url).map_err(|_| bad("Invalid media output URL."))?;
+                reqwest::Url::parse(url)
+                    .map_err(|cause| bad("Invalid media output URL.").caused_by(&cause))?;
                 assets.push(MediaAsset {
                     url: url.into(),
                     mime_type: None,
@@ -453,17 +454,20 @@ fn verify_webhook(
     {
         return Err(fail());
     }
-    let timestamp: i64 = webhook.timestamp.parse().map_err(|_| fail())?;
+    let timestamp: i64 = webhook
+        .timestamp
+        .parse()
+        .map_err(|cause| fail().caused_by(&cause))?;
     if now.timestamp().abs_diff(timestamp) > 300 {
         return Err(fail());
     }
     let key = base64::engine::general_purpose::STANDARD
         .decode(secret.strip_prefix("whsec_").ok_or_else(fail)?)
-        .map_err(|_| fail())?;
+        .map_err(|_secret| fail())?;
     if key.is_empty() {
         return Err(fail());
     }
-    let mut mac = Hmac::<Sha256>::new_from_slice(&key).map_err(|_| fail())?;
+    let mut mac = Hmac::<Sha256>::new_from_slice(&key).map_err(|_secret| fail())?;
     mac.update(webhook.id.as_bytes());
     mac.update(b".");
     mac.update(webhook.timestamp.as_bytes());

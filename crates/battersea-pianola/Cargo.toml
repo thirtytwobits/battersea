@@ -9,6 +9,10 @@ repository.workspace = true
 publish = false
 readme = "README.md"
 include = ["src/**", "schemas/**", "fixtures/**", "README.md", "LICENSE", "NOTICE"]
+
+[lints]
+workspace = true
+
 [dependencies]
 battersea-model = { path = "../battersea-model", version = "0.26.0" }
 serde.workspace = true

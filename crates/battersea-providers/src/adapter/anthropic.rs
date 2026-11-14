@@ -225,7 +225,7 @@ impl EngineAdapter for AnthropicEngineAdapter {
                             .await;
                             decoder
                                 .lock()
-                                .map_err(|_| {
+                                .map_err(|_poisoned| {
                                     Failure::invalid_response(
                                         "anthropic",
                                         "Stream decoder lock poisoned.",

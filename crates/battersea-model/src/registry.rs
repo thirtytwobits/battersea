@@ -495,7 +495,7 @@ impl AdmittedAdapter {
                 call,
             )
             .await
-            .map_err(|_| {
+            .map_err(|_elapsed| {
                 Failure::new(
                     &self.backend.provider,
                     "Provider operation deadline exceeded.",
@@ -527,7 +527,7 @@ impl AdmittedAdapter {
                 call,
             )
             .await
-            .map_err(|_| {
+            .map_err(|_elapsed| {
                 Failure::new(
                     &self.backend.provider,
                     "Provider turn deadline exceeded.",
@@ -551,7 +551,7 @@ impl AdmittedAdapter {
                 call,
             )
             .await
-            .map_err(|_| {
+            .map_err(|_elapsed| {
                 Failure::new(
                     &self.backend.provider,
                     "Token counting deadline exceeded.",
@@ -577,7 +577,7 @@ impl AdmittedAdapter {
         let stream = match deadline {
             Some(deadline) => crate::clock::timeout_at(self.clock.as_ref(), deadline, call)
                 .await
-                .map_err(|_| {
+                .map_err(|_elapsed| {
                     Failure::new(
                         &self.backend.provider,
                         "Request deadline exceeded.",

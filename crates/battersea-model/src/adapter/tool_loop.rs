@@ -65,10 +65,9 @@ pub async fn send_event(
     event: EngineTextStreamEvent,
 ) -> Result<(), Failure> {
     super::payload::check_payload(&event, "tools")?;
-    events
-        .send(Ok(event))
-        .await
-        .map_err(|_| Failure::new("engine", "Tool stream consumer disconnected.", "cancelled"))
+    events.send(Ok(event)).await.map_err(|_closed| {
+        Failure::new("engine", "Tool stream consumer disconnected.", "cancelled")
+    })
 }
 
 pub async fn run_tool_loop(
@@ -90,7 +89,7 @@ pub async fn run_tool_loop(
             let run = drive_tool_loop(&mut conversation, &request, executor.as_ref(), &logger, &context, clock.as_ref(), &events, &mut active_tool);
             match context.timeout_ms {
                 Some(ms) => crate::clock::timeout(clock.as_ref(), std::time::Duration::from_millis(ms), run).await
-                    .map_err(|_| {
+                    .map_err(|_elapsed| {
                         let mut error = Failure::new(&context.provider, "Request deadline exceeded during tool orchestration.", super::error::ErrorKind::Timeout);
                         error.tool_call = active_tool.clone().map(Box::new);
                         error
@@ -158,7 +157,7 @@ async fn drive_tool_loop(
     let mut results = Vec::new();
     let mut retained_tool_bytes = 0usize;
     for turn in 0..request.max_tool_rounds {
-        let turn = u32::try_from(turn).map_err(|_| {
+        let turn = u32::try_from(turn).map_err(|_overflow| {
             Failure::invalid_response(&context.provider, "Tool turn index overflow.")
         })?;
         send_event(

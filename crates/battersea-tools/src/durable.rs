@@ -171,7 +171,7 @@ fn measure(value: &impl Serialize, limit: usize) -> Result<(), Failure> {
             Ok(())
         }
     }
-    serde_json::to_writer(Counter(limit), value).map_err(|_| {
+    serde_json::to_writer(Counter(limit), value).map_err(|_exceeded| {
         failure(
             ToolCode::ToolApprovalCapacity,
             "Tool approval journal capacity exceeded.",
@@ -429,7 +429,7 @@ impl DurableToolExecutor {
             self.store.load(&self.scope.run_id, self.max_bytes),
         )
         .await
-        .map_err(|_| Self::storage_error(ToolApprovalStoreError::Unavailable))?
+        .map_err(|_elapsed| Self::storage_error(ToolApprovalStoreError::Unavailable))?
         .map_err(Self::storage_error)?
         .ok_or_else(invalid)?;
         measure(&record, self.max_bytes)?;
@@ -464,7 +464,7 @@ impl DurableToolExecutor {
                 .compare_exchange(&self.scope.run_id, expected, next),
         )
         .await
-        .map_err(|_| Self::storage_error(ToolApprovalStoreError::Unavailable))?
+        .map_err(|_elapsed| Self::storage_error(ToolApprovalStoreError::Unavailable))?
         .map_err(Self::storage_error)
     }
     fn now(&self) -> Result<u64, Failure> {

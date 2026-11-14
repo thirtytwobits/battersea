@@ -27,7 +27,8 @@ fn invalid(message: &str) -> Failure {
 
 fn decode(state: &Value) -> Result<Checkpoint, Failure> {
     check_payload(state, "anthropic")?;
-    serde_json::from_value(state.clone()).map_err(|_| invalid("Invalid Anthropic checkpoint."))
+    serde_json::from_value(state.clone())
+        .map_err(|cause| invalid("Invalid Anthropic checkpoint.").caused_by(&cause))
 }
 
 fn request_revision(request: &ConversationRequest) -> String {

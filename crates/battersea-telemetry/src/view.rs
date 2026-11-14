@@ -18,7 +18,10 @@ impl Cursor {
         }
     }
     fn number(&self) -> Result<u64> {
-        let number: u64 = self.revision.parse().map_err(|_| Error::ResyncRequired)?;
+        let number: u64 = self
+            .revision
+            .parse()
+            .map_err(|_unparsable| Error::ResyncRequired)?;
         if self.revision != number.to_string() {
             return Err(Error::ResyncRequired);
         }

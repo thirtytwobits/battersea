@@ -172,7 +172,7 @@ impl Price {
     fn amount(&self, numerator: u128) -> Result<Money> {
         let rounded = numerator.checked_add(999_999).ok_or(Error::Overflow)? / 1_000_000;
         let micros = u64::try_from(rounded)
-            .map_err(|_| Error::Overflow)?
+            .map_err(|_overflow| Error::Overflow)?
             .checked_add(self.request_micros)
             .ok_or(Error::Overflow)?;
         let amount = Money {
