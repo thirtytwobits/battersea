@@ -289,8 +289,7 @@ impl EngineAdapter for AnthropicEngineAdapter {
             .get("request-id")
             .and_then(|value| value.to_str().ok())
             .map(ToOwned::to_owned);
-        let payload: Value =
-            read_anthropic_json(response, request_id.clone(), &self.context).await?;
+        let payload: Value = read_anthropic_json(response, request_id.clone()).await?;
         payload
             .get("input_tokens")
             .and_then(Value::as_u64)
@@ -391,8 +390,7 @@ impl ToolConversation for AnthropicToolConversation {
             .get("request-id")
             .and_then(|value| value.to_str().ok())
             .map(ToOwned::to_owned);
-        let native: Value =
-            read_anthropic_json(response, request_id.clone(), &self.context).await?;
+        let native: Value = read_anthropic_json(response, request_id.clone()).await?;
         let payload: AnthropicMessagesResponse =
             serde_json::from_value(native.clone()).map_err(|error| {
                 Failure::invalid_response("anthropic", "Malformed Anthropic message.")
@@ -744,73 +742,31 @@ fn anthropic_extended_thinking_budget(
 async fn read_anthropic_json<T: DeserializeOwned>(
     response: reqwest::Response,
     request_id: Option<String>,
-    context: &EngineAdapterDebugContext,
 ) -> Result<T, Failure> {
     let status = response.status().as_u16();
     let body = response.bounded_text().await.map_err(|error| {
-        Failure::transport(
-            "anthropic",
-            format!(
-                "Anthropic response body read failed for backend `{}` model `{}`{}: {}",
-                context.backend,
-                context.model,
-                format_request_id_suffix(request_id.as_deref()),
-                error
-            ),
-        )
-        .with_status_code(status)
-        .with_request_id(request_id.clone())
+        Failure::transport("anthropic", "Anthropic response body read failed.")
+            .with_cause(error)
+            .with_status_code(status)
+            .with_request_id(request_id.clone())
     })?;
 
     serde_json::from_str::<T>(&body)
-        .map_err(|error| anthropic_decode_error(error, &body, request_id, context, status))
+        .map_err(|error| anthropic_decode_error(error, &body, request_id, status))
 }
 
 fn anthropic_decode_error(
     error: serde_json::Error,
     body: &str,
     request_id: Option<String>,
-    context: &EngineAdapterDebugContext,
     status: u16,
 ) -> Failure {
-    Failure::invalid_response(
-        "anthropic",
-        format!(
-            "Anthropic response decode failed for backend `{}` model `{}`{}: {}. Body: {}",
-            context.backend,
-            context.model,
-            format_request_id_suffix(request_id.as_deref()),
-            error,
-            summarise_response_body(body)
-        ),
-    )
-    .with_status_code(status)
-    .with_request_id(request_id)
-}
-
-fn format_request_id_suffix(request_id: Option<&str>) -> String {
-    request_id
-        .filter(|value| !value.trim().is_empty())
-        .map(|value| format!(" request `{}`", value.trim()))
-        .unwrap_or_default()
-}
-
-fn summarise_response_body(body: &str) -> String {
-    let trimmed = body.trim();
-    if trimmed.is_empty() {
-        return "empty body".to_string();
-    }
-    let preview = trimmed
-        .chars()
-        .take(300)
-        .collect::<String>()
-        .replace(char::is_control, " ");
-    let suffix = if trimmed.chars().count() > 300 {
-        "..."
-    } else {
-        ""
-    };
-    format!("{} bytes, preview `{preview}{suffix}`", body.len())
+    let native = serde_json::from_str(body).unwrap_or_else(|_text| Value::String(body.into()));
+    Failure::invalid_response("anthropic", "Anthropic response decode failed.")
+        .caused_by(&error)
+        .with_native(battersea_model::Reporter::Provider, native)
+        .with_status_code(status)
+        .with_request_id(request_id)
 }
 
 fn apply_anthropic_tool_choice(
@@ -1046,8 +1002,9 @@ impl AnthropicStreamDecoder {
                         payload["input"] = serde_json::from_str(&arguments).map_err(|e| {
                             Failure::invalid_response(
                                 "anthropic",
-                                format!("Malformed streamed tool arguments: {e}"),
+                                "Malformed streamed tool arguments.",
                             )
+                            .caused_by(&e)
                         })?;
                     }
                     events.push(EngineTextStreamEvent::ContentBlock {
@@ -1477,34 +1434,32 @@ mod tests {
     }
 
     #[test]
-    fn anthropic_decode_error_names_backend_model_request_and_body_preview() {
-        let context = EngineAdapterDebugContext {
-            provider: "anthropic".to_string(),
-            backend: "anthropic-debug-backend".to_string(),
-            model: "anthropic-debug-model".to_string(),
-            sdk: "reqwest".to_string(),
-            base_url: Some("https://api.anthropic.com".to_string()),
-            timeout_ms: Some(600_000),
-            max_retries: Some(2),
-        };
+    fn an_undecodable_response_is_carried_whole_with_the_decoder_error_as_cause() {
         let parse_error = serde_json::from_str::<serde_json::Value>("<html>nope</html>")
             .expect_err("invalid json");
+        let cause = parse_error.to_string();
 
         let error = anthropic_decode_error(
             parse_error,
             "<html>nope</html>",
             Some("req_123".to_string()),
-            &context,
             200,
         );
 
         assert_eq!(error.kind.as_str(), "invalid_response");
+        assert_eq!(error.message, "Anthropic response decode failed.");
         assert_eq!(error.exchange.status, Some(200));
         assert_eq!(error.exchange.request_id.as_deref(), Some("req_123"));
-        assert!(error.message.contains("backend `anthropic-debug-backend`"));
-        assert!(error.message.contains("model `anthropic-debug-model`"));
-        assert!(error.message.contains("request `req_123`"));
-        assert!(error.message.contains("preview `<html>nope</html>`"));
+        assert_eq!(
+            error.native,
+            battersea_model::Detail::Present(json!("<html>nope</html>"))
+        );
+        assert_eq!(
+            error.cause,
+            Some(battersea_model::Cause::Foreign(
+                battersea_model::Detail::Present(vec![cause])
+            ))
+        );
     }
 
     #[test]

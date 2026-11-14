@@ -730,23 +730,19 @@ fn finalize_background_response(response: Value, status: &str) -> Result<Value, 
     match status {
         "completed" => Ok(response),
         "incomplete" => Err(openai_missing_output_text_error(&response)),
-        "failed" => {
-            let message = response
-                .get("error")
-                .and_then(|error| error.get("message"))
-                .and_then(Value::as_str)
-                .unwrap_or("OpenAI background response failed.")
-                .to_string();
-            Err(Failure::invalid_response("openai", message))
-        }
+        "failed" => Err(
+            Failure::invalid_response("openai", "OpenAI background response failed.")
+                .with_native(battersea_model::Reporter::Provider, response),
+        ),
         "cancelled" => Err(Failure::transport(
             "openai",
             "OpenAI background response was cancelled.".to_string(),
         )),
-        other => Err(Failure::invalid_response(
+        _ => Err(Failure::invalid_response(
             "openai",
-            format!("OpenAI background response ended in unexpected status \"{other}\"."),
-        )),
+            "OpenAI background response ended in an unexpected status.",
+        )
+        .with_native(battersea_model::Reporter::Provider, response)),
     }
 }
 
@@ -1782,7 +1778,7 @@ fn collect_openai_function_calls(response: &Value) -> Result<Vec<EngineLocalTool
         .map(|item| {
             let arguments = match item.get("arguments") {
                 Some(Value::String(text)) => Some(serde_json::from_str(text).map_err(|error| {
-                    Failure::invalid_response("openai", format!("Invalid tool arguments: {error}"))
+                    Failure::invalid_response("openai", "Invalid tool arguments.").caused_by(&error)
                 })?),
                 value => value.cloned(),
             };
@@ -1923,16 +1919,15 @@ fn openai_missing_output_text_error(response: &Value) -> Failure {
 }
 
 fn describe_missing_output_text(response: &Value) -> Failure {
-    if let Some(message) = response
+    if response
         .get("error")
         .and_then(|error| error.get("message"))
         .and_then(Value::as_str)
-        .map(str::trim)
-        .filter(|message| !message.is_empty())
+        .is_some_and(|message| !message.trim().is_empty())
     {
         return Failure::invalid_response(
             "openai",
-            format!("OpenAI response failed before producing text: {message}"),
+            "OpenAI response failed before producing text.",
         );
     }
 
@@ -2626,7 +2621,13 @@ mod tests {
         }));
         assert_eq!(
             &*errored.message,
-            "OpenAI response failed before producing text: provider-side failure"
+            "OpenAI response failed before producing text."
+        );
+        assert_eq!(
+            errored.native,
+            battersea_model::Detail::Present(json!({
+                "error": {"message": "provider-side failure"}
+            }))
         );
     }
 
@@ -2832,15 +2833,22 @@ mod tests {
             finalize_background_response(json!({ "error": { "message": "boom" } }), "failed")
                 .expect_err("failed status is an error");
         assert_eq!(failed.kind.as_str(), "invalid_response");
-        assert!(failed.message.contains("boom"));
+        assert_eq!(&*failed.message, "OpenAI background response failed.");
+        assert_eq!(
+            failed.native,
+            battersea_model::Detail::Present(json!({ "error": { "message": "boom" } }))
+        );
 
         let cancelled = finalize_background_response(json!({}), "cancelled")
             .expect_err("cancelled status is an error");
         assert!(cancelled.message.contains("cancelled"));
 
-        let unexpected = finalize_background_response(json!({}), "banana")
+        let unexpected = finalize_background_response(json!({ "status": "banana" }), "banana")
             .expect_err("unknown status is an error");
-        assert!(unexpected.message.contains("banana"));
+        assert_eq!(
+            unexpected.native,
+            battersea_model::Detail::Present(json!({ "status": "banana" }))
+        );
     }
 
     #[test]

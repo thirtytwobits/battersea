@@ -289,8 +289,7 @@ impl AnthropicEngineAdapter {
             .get("request-id")
             .and_then(|value| value.to_str().ok())
             .map(ToOwned::to_owned);
-        let native: Value =
-            read_anthropic_json(response, request_id.clone(), &self.context).await?;
+        let native: Value = read_anthropic_json(response, request_id.clone()).await?;
         // The completed native message determines durable events and calls.
         let events = response_events(&request, &native, false)
             .map_err(|error| error.with_request_id(request_id.clone()))?;

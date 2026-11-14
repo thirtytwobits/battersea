@@ -520,20 +520,22 @@ fn load_mock_prompt_font(backend: &MediaBackendConfig) -> Result<FontArc, Failur
         Failure::transport(
             "mock",
             format!(
-                "Mock image backend \"{}\" could not read font at \"{}\": {}",
-                backend.id, font_path, error
+                "Mock image backend \"{}\" could not read font at \"{}\".",
+                backend.id, font_path
             ),
         )
+        .caused_by(&error)
     })?;
 
     FontArc::try_from_vec(bytes).map_err(|error| {
         Failure::invalid_response(
             "mock",
             format!(
-                "Mock image backend \"{}\" could not load font at \"{}\": {}",
-                backend.id, font_path, error
+                "Mock image backend \"{}\" could not load font at \"{}\".",
+                backend.id, font_path
             ),
         )
+        .caused_by(&error)
     })
 }
 

@@ -11,10 +11,9 @@ pub fn check_payload<T: Serialize + ?Sized>(value: &T, provider: &str) -> Result
     check_limit(value, PROVIDER_PAYLOAD_BYTES).map_err(|error| {
         Failure::invalid_response(
             provider,
-            format!(
-                "Provider payload exceeds its encoded-byte limit or cannot be encoded: {error}"
-            ),
+            "Provider payload exceeds its encoded-byte limit or cannot be encoded.",
         )
+        .caused_by(&error)
     })
 }
 

@@ -699,9 +699,10 @@ pub fn validate_chat_request(
         jsonschema::validator_for(&tool.input_schema).map_err(|error| {
             Failure::new(
                 &backend.provider,
-                format!("Invalid tool schema: {error}"),
+                "Invalid tool schema.",
                 error::ErrorKind::InvalidRequest,
             )
+            .caused_by_text(error.to_string())
             .with_tool_code(crate::ToolCode::InvalidToolSchema)
         })?;
     }
