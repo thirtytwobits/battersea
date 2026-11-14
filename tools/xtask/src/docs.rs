@@ -198,7 +198,7 @@ pub fn build(root: &Path) -> Result<()> {
     for name in crates.keys() {
         args.extend(["-p".into(), name.clone()]);
     }
-    if !Command::new("cargo")
+    if !crate::command("cargo")
         .args(&args)
         .current_dir(root)
         .env("RUSTDOCFLAGS", "-D warnings")
