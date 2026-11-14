@@ -6,7 +6,6 @@ use serde::{Deserialize, Serialize};
 
 pub const NODE_FAILURE_TOKEN_TYPE: &str = "node_failure";
 pub const FAILURE_CODE_BYTES: usize = 128;
-pub const FAILURE_MESSAGE_BYTES: usize = 4096;
 
 #[derive(
     Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize, schemars::JsonSchema,
@@ -48,7 +47,7 @@ impl FlowFailurePort {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, schemars::JsonSchema)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct FlowNodeFailure {
     pub id: String,
@@ -56,7 +55,8 @@ pub struct FlowNodeFailure {
     pub phase: FlowPortPhase,
     pub operation: String,
     pub code: String,
-    pub message: String,
+    /// What the node reported, as the host's `FailureDisclosure` lets the flow receive it.
+    pub failure: battersea_failure::Failure,
 }
 
 /// Every phase that can invoke a node callback, including authored actions.

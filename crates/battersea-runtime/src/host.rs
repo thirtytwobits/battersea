@@ -68,6 +68,22 @@ pub trait ExecutionHost: Sized + Send + Sync {
         self.execution_event(runtime, event).await;
     }
     fn observe_token(&self, _runtime: &Self::State, _node: &str, _port: &str, _token: &Token) {}
+    /// What the flow receives of a failure: the `node_failure` token, the checkpoint and the
+    /// execution records hold the failure as this disclosure leaves it.
+    fn failure_disclosure(&self) -> FailureDisclosure {
+        FailureDisclosure::Full
+    }
+    /// Receives every node failure, complete, before the node's failure policy applies. `id`
+    /// is the `node_failure` identity. An error fails the activation.
+    async fn observe_failure(
+        &self,
+        _runtime: &Self::State,
+        _id: &str,
+        _node_id: &str,
+        _failure: &Failure,
+    ) -> Result<(), Self::Error> {
+        Ok(())
+    }
     async fn resolve_parameter_write(
         &self,
         runtime: &Self::State,
@@ -1577,10 +1593,13 @@ pub trait ExecutionHost: Sized + Send + Sync {
                 if runtime.unhandled_node.is_none() {
                     runtime.unhandled_node = Some(delivery.edge.target_node_id.clone());
                     let policy = runtime.nodes_by_id.get(&delivery.edge.target_node_id).map(|node| node.failure_policy).unwrap_or_default();
-                    self.publish_execution_record(runtime, &delivery.edge.target_node_id,
+                    let target = delivery.edge.target_node_id.clone();
+                    let id = crate::failure::observe(self, runtime, &target, error.failure()).await?;
+                    let detail = crate::failure::error_detail(self, error.reason_code().unwrap_or(error.code()), error.failure());
+                    self.publish_execution_record(runtime, &target,
                         EventKind::NodeError, error.message().into(),
                         Some(json!({"policy":policy,"handled":false,"operation":"delivery",
-                            "error":{"code":error.reason_code().unwrap_or(error.code()),"message":error.message()}}))).await;
+                            "failureId":id,"error":detail}))).await;
                 }
                 return Err(error);
             }

@@ -328,6 +328,7 @@ name = "battersea-flow"
 version = "0.26.0"
 dependencies = [
  "anyhow",
+ "battersea-failure",
  "jsonschema",
  "regex-lite",
  "schemars",

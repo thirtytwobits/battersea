@@ -18,20 +18,24 @@ use tokio_util::sync::CancellationToken;
 struct Error {
     class: &'static str,
     reason: Option<&'static str>,
-    message: String,
+    failure: battersea_runtime::Failure,
 }
 impl Error {
-    fn new(class: &'static str, reason: Option<&'static str>, message: impl Into<String>) -> Self {
+    fn new(
+        class: &'static str,
+        reason: Option<&'static str>,
+        failure: impl Into<battersea_runtime::Failure>,
+    ) -> Self {
         Self {
             class,
             reason,
-            message: message.into(),
+            failure: failure.into(),
         }
     }
 }
 impl std::fmt::Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}: {}", self.class, self.message)
+        write!(f, "{}: {}", self.class, self.failure.message)
     }
 }
 impl std::error::Error for Error {}
@@ -40,21 +44,21 @@ impl ExecutionError for Error {
         (self.class == "invalid_request" && self.reason == Some("fixture_recoverable")).then(|| {
             RecoverableNodeFailure {
                 code: "fixture_recoverable".into(),
-                message: self.message.clone(),
+                failure: self.failure.clone(),
             }
         })
     }
 
-    fn invalid_request(reason: &'static str, s: impl Into<String>) -> Self {
+    fn invalid_request(reason: &'static str, s: impl Into<battersea_runtime::Failure>) -> Self {
         Self::new("invalid_request", Some(reason), s)
     }
-    fn internal(s: impl Into<String>) -> Self {
+    fn internal(s: impl Into<battersea_runtime::Failure>) -> Self {
         Self::new("internal", None, s)
     }
-    fn cancelled(reason: &'static str, s: impl Into<String>) -> Self {
+    fn cancelled(reason: &'static str, s: impl Into<battersea_runtime::Failure>) -> Self {
         Self::new("cancelled", Some(reason), s)
     }
-    fn interrupted(reason: &'static str, s: impl Into<String>) -> Self {
+    fn interrupted(reason: &'static str, s: impl Into<battersea_runtime::Failure>) -> Self {
         Self::new("interrupted", Some(reason), s)
     }
     fn code(&self) -> &str {
@@ -63,8 +67,8 @@ impl ExecutionError for Error {
     fn reason_code(&self) -> Option<&str> {
         self.reason
     }
-    fn message(&self) -> &str {
-        &self.message
+    fn failure(&self) -> &battersea_runtime::Failure {
+        &self.failure
     }
 }
 /// The fixture host's own refusal codes.
@@ -95,6 +99,10 @@ struct Host {
     polled: Arc<AtomicUsize>,
     entered: Arc<tokio::sync::Notify>,
     recovery_store: Option<Arc<RecoveryStore>>,
+    disclosure: battersea_runtime::FailureDisclosure,
+    /// Each failure the driver passed to the observer: its identity, its node and the failure.
+    observed: Mutex<Vec<(String, String, battersea_runtime::Failure)>>,
+    observer_fails: bool,
 }
 
 #[derive(Default)]
@@ -159,6 +167,24 @@ impl battersea_runtime::recovery::JournalStore for RecoveryStore {
         Ok(())
     }
 }
+const NATIVE_TEXT: &str = "fixture-native-category";
+const PARTIAL_TEXT: &str = "fixture-partial-output";
+const FOREIGN_TEXT: &str = "fixture-foreign-error";
+/// A provider's refusal with native detail, partial output and a foreign cause.
+fn provider_refusal() -> battersea_runtime::Failure {
+    use battersea_flow::{ErrorKind, PartialOutput, Reporter};
+    battersea_runtime::Failure::new(
+        "fixture",
+        "Provider refused the request.",
+        ErrorKind::Refusal,
+    )
+    .with_native(Reporter::Provider, json!({"category": NATIVE_TEXT}))
+    .with_partial(PartialOutput {
+        text: PARTIAL_TEXT.into(),
+        blocks: vec![],
+    })
+    .caused_by_text(FOREIGN_TEXT)
+}
 fn injected_failure(node: &FlowNode, operation: &str) -> Result<(), Error> {
     if node
         .parameter_values
@@ -175,6 +201,7 @@ fn injected_failure(node: &FlowNode, operation: &str) -> Result<(), Error> {
             Some("cancel") => Error::cancelled(error_codes::ACTIVATION_CANCELLED, "cancelled"),
             Some("effect") => Error::interrupted(error_codes::UNRESOLVED_EFFECTS, "uncertain"),
             Some("unclassified") => Error::internal("unclassified"),
+            Some("provider") => Error::invalid_request("fixture_recoverable", provider_refusal()),
             _ => Error::invalid_request("fixture_recoverable", "recoverable failure"),
         });
     }
@@ -238,7 +265,7 @@ impl NodeHandler<Host> for Handler {
                 events.push(ProviderEvent::RecoverableFailure {
                     failure: RecoverableNodeFailure {
                         code: "fixture_recoverable".into(),
-                        message: "provider failed".into(),
+                        failure: "provider failed".into(),
                     },
                 });
             }
@@ -470,6 +497,25 @@ impl NodeHandler<Host> for Handler {
 impl ExecutionHost for Host {
     type State = Run;
     type Error = Error;
+    fn failure_disclosure(&self) -> battersea_runtime::FailureDisclosure {
+        self.disclosure
+    }
+    async fn observe_failure(
+        &self,
+        _run: &Run,
+        id: &str,
+        node_id: &str,
+        failure: &battersea_runtime::Failure,
+    ) -> Result<(), Error> {
+        if self.observer_fails {
+            return Err(Error::internal("observer failed"));
+        }
+        self.observed
+            .lock()
+            .unwrap()
+            .push((id.into(), node_id.into(), failure.clone()));
+        Ok(())
+    }
     fn checkpoint_host_state(
         &self,
         run: &Run,
@@ -643,6 +689,9 @@ fn fixture(nodes: Vec<Value>, edges: Vec<Value>, mode: &str) -> (Host, Run) {
             polled: Arc::default(),
             entered: Arc::default(),
             recovery_store: None,
+            disclosure: Default::default(),
+            observed: Mutex::default(),
+            observer_fails: false,
         },
         Run {
             scheduler,
@@ -804,6 +853,98 @@ fn policy_node(id: &str, kind: &str, policy: &str, params: Value) -> Value {
 fn error_edge(source: &str, phase: &str) -> Value {
     json!({"id":"failure","source_node_id":source,"source_port":phase,
         "target_node_id":"errors","target_port":"in"})
+}
+
+/// contracts/failures.md, Disclosure: the observer receives the complete failure under the
+/// `node_failure` identity; the token, the checkpoint and the records hold native detail,
+/// partial output and foreign error text only under `full`.
+#[tokio::test]
+async fn the_observer_receives_every_failure_complete_and_disclosure_decides_what_the_flow_holds() {
+    use battersea_runtime::{checkpoint::SchedulerCheckpoint, FailureDisclosure};
+    for disclosure in [FailureDisclosure::Full, FailureDisclosure::Withheld] {
+        let (mut host, mut state) = fixture(
+            vec![
+                policy_node(
+                    "source",
+                    "Source",
+                    "emit",
+                    json!({"failure_at":"execute","failure_reason":"provider"}),
+                ),
+                node("errors", "ErrorSink", json!({})),
+            ],
+            vec![error_edge("source", "error")],
+            "final_value",
+        );
+        host.disclosure = disclosure;
+        host.execute_flow_node(&mut state, "source", None, &CancellationToken::new())
+            .await
+            .unwrap();
+        let checkpoint =
+            serde_json::to_string(&SchedulerCheckpoint::capture(&state).unwrap()).unwrap();
+        for _ in 0..2 {
+            host.drain_flow_work(&mut state, &CancellationToken::new())
+                .await
+                .unwrap();
+        }
+        let observed = host.observed.lock().unwrap().clone();
+        assert_eq!(observed.len(), 1, "{disclosure:?}");
+        let (id, node_id, complete) = &observed[0];
+        assert_eq!(node_id, "source");
+        assert_eq!(complete, &provider_refusal());
+        let token = &state.seen[0].1;
+        assert_eq!(token["id"], json!(id));
+        assert_eq!(token["failure"]["message"], "Provider refused the request.");
+        let records = format!("{:?}", host.events.lock().unwrap());
+        let full = disclosure == FailureDisclosure::Full;
+        for (holder, text) in [
+            ("token", token.to_string()),
+            ("checkpoint", checkpoint),
+            ("records", records),
+        ] {
+            for part in [NATIVE_TEXT, PARTIAL_TEXT, FOREIGN_TEXT] {
+                assert_eq!(text.contains(part), full, "{disclosure:?} {holder} {part}");
+            }
+        }
+        if !full {
+            assert_eq!(token["failure"]["native"]["state"], "withheld");
+            assert_eq!(token["failure"]["partial"]["state"], "withheld");
+            assert_eq!(token["failure"]["cause"]["foreign"]["state"], "withheld");
+        }
+    }
+}
+
+/// contracts/failures.md, Observer: the observer is called before the policy applies and its
+/// failure fails the activation.
+#[tokio::test]
+async fn a_failed_observer_fails_the_activation_before_the_policy_applies() {
+    for policy in ["emit", "skip", "fail"] {
+        let (mut host, mut state) = fixture(
+            vec![
+                policy_node("source", "Source", policy, json!({"failure_at":"execute"})),
+                node("errors", "ErrorSink", json!({})),
+            ],
+            if policy == "emit" {
+                vec![error_edge("source", "error")]
+            } else {
+                vec![]
+            },
+            "final_value",
+        );
+        host.observer_fails = true;
+        let error = host
+            .execute_flow_node(&mut state, "source", None, &CancellationToken::new())
+            .await
+            .unwrap_err();
+        assert_eq!(error.message(), "observer failed", "{policy}");
+        assert!(state.seen.is_empty(), "{policy}");
+        assert!(
+            !host.events.lock().unwrap().iter().any(|event| matches!(
+                event.kind,
+                EventKind::NodeError | EventKind::NodeFailureHandled
+            )),
+            "{policy}"
+        );
+    }
 }
 
 #[tokio::test]

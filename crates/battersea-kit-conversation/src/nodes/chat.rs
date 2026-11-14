@@ -476,7 +476,7 @@ impl<H: Port> NodeHandler<H> for ChatHandler {
         )
         .await?;
         match (failure, completion.failure) {
-            (Some(code), Some(error)) => Err(refuse(code, error.message.to_string())),
+            (Some(code), Some(error)) => Err(refuse(code, error)),
             _ => host.emit_flow_signal(runtime, node, "completed").await,
         }
     }

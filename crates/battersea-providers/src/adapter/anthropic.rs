@@ -1074,7 +1074,7 @@ impl AnthropicStreamDecoder {
                         "anthropic",
                         "Message stopped with incomplete content blocks.",
                     )
-                    .with_partial(battersea_model::Partial {
+                    .with_partial(battersea_model::PartialOutput {
                         text: String::new(),
                         blocks: std::mem::take(&mut self.blocks).into_values().collect(),
                     }));

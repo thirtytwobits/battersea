@@ -162,7 +162,7 @@ pub(crate) async fn count(
 
 /// A provider's refusal as the kit's `conversation.provider_failed`.
 pub(crate) fn provider_failed<E: ExecutionError>(error: &Failure) -> E {
-    E::invalid_request(codes::PROVIDER_FAILED, error.message.to_string())
+    E::invalid_request(codes::PROVIDER_FAILED, error.clone())
 }
 
 /// What the formatter blocks bind for one turn.
@@ -203,8 +203,11 @@ pub(crate) fn now<H: Port>(host: &H) -> Result<u64, H::Error> {
 }
 
 /// A refusal with one of the kit's codes.
-pub(crate) fn refuse<E: ExecutionError>(code: &'static str, message: impl Into<String>) -> E {
-    E::invalid_request(code, message)
+pub(crate) fn refuse<E: ExecutionError>(
+    code: &'static str,
+    failure: impl Into<battersea_model::Failure>,
+) -> E {
+    E::invalid_request(code, failure)
 }
 
 #[cfg(test)]
@@ -215,6 +218,33 @@ mod tests {
         engine::EngineBackendCapabilities, EngineAdapterDebugContext, EngineAuthConfig,
         EngineBackendConfig, EngineTextStream, Role,
     };
+
+    /// contracts/failures.md, Kits: a kit's provider failure carries the adapter's failure
+    /// unchanged, so the host holds the provider's refusal detail and its request identifier.
+    #[test]
+    fn a_provider_failure_reaches_the_host_unchanged() {
+        use battersea_kit::reference::ReferenceError;
+        use battersea_model::{ErrorKind, Reporter};
+        let mut failure = Failure::new(
+            "anthropic",
+            "Provider refused the request.",
+            ErrorKind::Refusal,
+        )
+        .with_native(
+            Reporter::Provider,
+            json!({"delta": {"stop_reason": "refusal", "stop_details": {
+                    "category": "fixture_category", "explanation": "A fixture policy applies."}}}),
+        );
+        failure.exchange.request_id = Some("req-fixture".into());
+        let error: ReferenceError = provider_failed(&failure);
+        assert_eq!(error.failure(), &failure);
+        assert_eq!(error.reason_code(), Some(codes::PROVIDER_FAILED));
+        let classified = error
+            .recoverable_node_failure()
+            .expect("a recoverable failure");
+        assert_eq!(classified.code, codes::PROVIDER_FAILED);
+        assert_eq!(classified.failure, failure);
+    }
 
     /// Counts as the built-in adapters do: the request is validated first.
     struct Validating;

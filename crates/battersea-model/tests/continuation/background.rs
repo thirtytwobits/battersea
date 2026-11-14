@@ -307,22 +307,33 @@ async fn expired_remote_work_can_be_cancelled_but_cannot_be_polled() {
     assert_eq!(provider.cancels.load(Ordering::SeqCst), 1);
 }
 
+/// contracts/providers.md: the shared checkpoint has one version and other versions are refused.
 #[tokio::test]
-async fn version_one_records_remain_unchanged_on_inspection_and_keep_their_version_on_resume() {
-    let store = Arc::new(Store::default());
-    let provider = Arc::new(Provider::default());
-    let scope = scope();
-    let d = create(store.clone(), provider.clone(), scope.clone()).await;
-    let mut value = serde_json::to_value(d.inspect().await.unwrap()).unwrap();
-    value["version"] = json!(1);
-    value.as_object_mut().unwrap().remove("checksum");
-    value["checksum"] = json!(configuration_digest(&value));
-    let bytes = serde_json::to_vec(&value).unwrap();
-    *store.bytes.lock().unwrap() = Some(bytes.clone());
-    let d = open(store.clone(), provider, scope).await;
-    assert_eq!(d.inspect().await.unwrap().version, 1);
-    assert_eq!(*store.bytes.lock().unwrap(), Some(bytes));
-    assert_eq!(d.resume(1).await.unwrap().version, 1);
+async fn a_record_of_another_version_is_refused_and_left_unchanged() {
+    for version in [1, 2, CONVERSATION_CHECKPOINT_VERSION + 1] {
+        let store = Arc::new(Store::default());
+        let provider = Arc::new(Provider::default());
+        let scope = scope();
+        let d = create(store.clone(), provider.clone(), scope.clone()).await;
+        let mut value = serde_json::to_value(d.inspect().await.unwrap()).unwrap();
+        value["version"] = json!(version);
+        value.as_object_mut().unwrap().remove("checksum");
+        value["checksum"] = json!(configuration_digest(&value));
+        let bytes = serde_json::to_vec(&value).unwrap();
+        *store.bytes.lock().unwrap() = Some(bytes.clone());
+        let refused = DurableConversation::open(
+            store.clone(),
+            provider,
+            scope,
+            request(),
+            65536,
+            Duration::from_secs(1),
+            clock(),
+        )
+        .await;
+        assert!(refused.is_err(), "version {version}");
+        assert_eq!(*store.bytes.lock().unwrap(), Some(bytes));
+    }
 }
 
 #[tokio::test]

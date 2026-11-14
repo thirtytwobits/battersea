@@ -170,6 +170,8 @@ pub enum ErrorKind {
     Expired,
     Retrieval,
     Mock,
+    /// Raised by the flow runtime or a host; the host error's code is its class.
+    Runtime,
     Other(Box<str>),
 }
 impl ErrorKind {
@@ -191,6 +193,7 @@ impl ErrorKind {
             Self::Retrieval => "retrieval",
             Self::Provider => "provider",
             Self::Mock => "mock",
+            Self::Runtime => "runtime",
             Self::Other(value) => value,
         }
     }
@@ -214,6 +217,7 @@ impl From<&str> for ErrorKind {
             "retrieval" => Self::Retrieval,
             "provider" => Self::Provider,
             "mock" => Self::Mock,
+            "runtime" => Self::Runtime,
             value => Self::Other(value.into()),
         }
     }

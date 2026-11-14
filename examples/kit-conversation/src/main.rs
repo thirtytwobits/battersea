@@ -37,14 +37,18 @@ mod app_codes {
 struct Error {
     code: &'static str,
     reason: Option<&'static str>,
-    message: String,
+    failure: battersea_runtime::Failure,
 }
 impl Error {
-    fn new(code: &'static str, reason: Option<&'static str>, message: impl Into<String>) -> Self {
+    fn new(
+        code: &'static str,
+        reason: Option<&'static str>,
+        failure: impl Into<battersea_runtime::Failure>,
+    ) -> Self {
         Self {
             code,
             reason,
-            message: message.into(),
+            failure: failure.into(),
         }
     }
     fn storage(error: impl std::fmt::Display) -> Self {
@@ -53,7 +57,7 @@ impl Error {
 }
 impl std::fmt::Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}: {}", self.code, self.message)
+        write!(f, "{}: {}", self.code, self.failure.message)
     }
 }
 impl std::error::Error for Error {}
@@ -64,21 +68,24 @@ impl ExecutionError for Error {
         (self.code == "invalid_request" && reason.starts_with("conversation.")).then(|| {
             RecoverableNodeFailure {
                 code: reason.into(),
-                message: self.message.clone(),
+                failure: self.failure.clone(),
             }
         })
     }
-    fn invalid_request(reason: &'static str, message: impl Into<String>) -> Self {
-        Self::new("invalid_request", Some(reason), message)
+    fn invalid_request(
+        reason: &'static str,
+        failure: impl Into<battersea_runtime::Failure>,
+    ) -> Self {
+        Self::new("invalid_request", Some(reason), failure)
     }
-    fn internal(message: impl Into<String>) -> Self {
-        Self::new("internal", None, message)
+    fn internal(failure: impl Into<battersea_runtime::Failure>) -> Self {
+        Self::new("internal", None, failure)
     }
-    fn cancelled(reason: &'static str, message: impl Into<String>) -> Self {
-        Self::new("cancelled", Some(reason), message)
+    fn cancelled(reason: &'static str, failure: impl Into<battersea_runtime::Failure>) -> Self {
+        Self::new("cancelled", Some(reason), failure)
     }
-    fn interrupted(reason: &'static str, message: impl Into<String>) -> Self {
-        Self::new("interrupted", Some(reason), message)
+    fn interrupted(reason: &'static str, failure: impl Into<battersea_runtime::Failure>) -> Self {
+        Self::new("interrupted", Some(reason), failure)
     }
     fn code(&self) -> &str {
         self.code
@@ -86,8 +93,8 @@ impl ExecutionError for Error {
     fn reason_code(&self) -> Option<&str> {
         self.reason
     }
-    fn message(&self) -> &str {
-        &self.message
+    fn failure(&self) -> &battersea_runtime::Failure {
+        &self.failure
     }
 }
 

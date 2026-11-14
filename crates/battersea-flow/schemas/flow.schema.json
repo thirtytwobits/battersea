@@ -1,5 +1,327 @@
 {
   "$defs": {
+    "Cause": {
+      "description": "What a failure wraps.",
+      "oneOf": [
+        {
+          "additionalProperties": false,
+          "properties": {
+            "failure": {
+              "$ref": "#/$defs/Failure"
+            }
+          },
+          "required": [
+            "failure"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "description": "The text of an error of another type, then of each of its sources in order.",
+          "properties": {
+            "foreign": {
+              "$ref": "#/$defs/Detail3"
+            }
+          },
+          "required": [
+            "foreign"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    "Detail": {
+      "description": "A part of a failure that the host may withhold from a flow.",
+      "oneOf": [
+        {
+          "description": "The reporter supplied nothing.",
+          "properties": {
+            "state": {
+              "const": "absent",
+              "type": "string"
+            }
+          },
+          "required": [
+            "state"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "state": {
+              "const": "present",
+              "type": "string"
+            },
+            "value": true
+          },
+          "required": [
+            "state",
+            "value"
+          ],
+          "type": "object"
+        },
+        {
+          "description": "The reporter supplied a value and the host's disclosure removed it.",
+          "properties": {
+            "state": {
+              "const": "withheld",
+              "type": "string"
+            }
+          },
+          "required": [
+            "state"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    "Detail2": {
+      "description": "A part of a failure that the host may withhold from a flow.",
+      "oneOf": [
+        {
+          "description": "The reporter supplied nothing.",
+          "properties": {
+            "state": {
+              "const": "absent",
+              "type": "string"
+            }
+          },
+          "required": [
+            "state"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "state": {
+              "const": "present",
+              "type": "string"
+            },
+            "value": {
+              "$ref": "#/$defs/PartialOutput"
+            }
+          },
+          "required": [
+            "state",
+            "value"
+          ],
+          "type": "object"
+        },
+        {
+          "description": "The reporter supplied a value and the host's disclosure removed it.",
+          "properties": {
+            "state": {
+              "const": "withheld",
+              "type": "string"
+            }
+          },
+          "required": [
+            "state"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    "Detail3": {
+      "description": "A part of a failure that the host may withhold from a flow.",
+      "oneOf": [
+        {
+          "description": "The reporter supplied nothing.",
+          "properties": {
+            "state": {
+              "const": "absent",
+              "type": "string"
+            }
+          },
+          "required": [
+            "state"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "state": {
+              "const": "present",
+              "type": "string"
+            },
+            "value": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            }
+          },
+          "required": [
+            "state",
+            "value"
+          ],
+          "type": "object"
+        },
+        {
+          "description": "The reporter supplied a value and the host's disclosure removed it.",
+          "properties": {
+            "state": {
+              "const": "withheld",
+              "type": "string"
+            }
+          },
+          "required": [
+            "state"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    "DispatchState": {
+      "description": "What is known about the remote effect, independently of the failure category.",
+      "enum": [
+        "not_sent",
+        "rejected",
+        "accepted",
+        "unknown"
+      ],
+      "type": "string"
+    },
+    "Exchange": {
+      "description": "What is known of the remote exchange a failure belongs to.",
+      "properties": {
+        "attempts": {
+          "default": 0,
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "dispatch": {
+          "$ref": "#/$defs/DispatchState",
+          "default": "unknown"
+        },
+        "request_id": {
+          "description": "The identifier the provider issued for the request.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "response_id": {
+          "description": "The identifier the provider issued for the response.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "retry_after_ms": {
+          "format": "uint64",
+          "minimum": 0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "status": {
+          "format": "uint16",
+          "maximum": 65535,
+          "minimum": 0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "dispatch",
+        "attempts"
+      ],
+      "type": "object"
+    },
+    "Failure": {
+      "$ref": "#/$defs/FailureParts",
+      "description": "One failed or incomplete operation. The parts are boxed so a `Result` that carries a\nfailure stays small."
+    },
+    "FailureParts": {
+      "description": "The parts of a [`Failure`].",
+      "properties": {
+        "cause": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Cause"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "exchange": {
+          "$ref": "#/$defs/Exchange",
+          "default": {
+            "attempts": 0,
+            "dispatch": "unknown"
+          }
+        },
+        "kind": {
+          "type": "string"
+        },
+        "message": {
+          "description": "Battersea's description, in fixed wording.",
+          "type": "string"
+        },
+        "native": {
+          "$ref": "#/$defs/Detail",
+          "description": "The reporter's own account, whole."
+        },
+        "origin": {
+          "$ref": "#/$defs/Origin",
+          "default": {}
+        },
+        "partial": {
+          "$ref": "#/$defs/Detail2"
+        },
+        "reporter": {
+          "$ref": "#/$defs/Reporter",
+          "default": "battersea"
+        },
+        "tool_call": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ToolCallEvidence"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Evidence about a nested tool call, independent from provider dispatch."
+        },
+        "tool_code": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ToolCode"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "The tool runner's name for this refusal; `kind` is its class."
+        },
+        "watchdog": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/WatchdogFailure"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "The limit an idle watchdog enforced."
+        }
+      },
+      "required": [
+        "kind",
+        "message",
+        "reporter",
+        "origin",
+        "exchange"
+      ],
+      "type": "object"
+    },
     "FlowActionPortDefinition": {
       "additionalProperties": false,
       "properties": {
@@ -561,10 +883,11 @@
         "code": {
           "type": "string"
         },
-        "id": {
-          "type": "string"
+        "failure": {
+          "$ref": "#/$defs/Failure",
+          "description": "What the node reported, as the host's `FailureDisclosure` lets the flow receive it."
         },
-        "message": {
+        "id": {
           "type": "string"
         },
         "node_id": {
@@ -583,7 +906,7 @@
         "phase",
         "operation",
         "code",
-        "message"
+        "failure"
       ],
       "type": "object"
     },
@@ -1177,6 +1500,254 @@
       "required": [
         "valid",
         "issues"
+      ],
+      "type": "object"
+    },
+    "Origin": {
+      "description": "The operation a failure belongs to.",
+      "properties": {
+        "backend": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "model": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "operation": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "provider": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "type": "object"
+    },
+    "PartialOutput": {
+      "description": "Output Battersea held when its operation failed.",
+      "properties": {
+        "blocks": {
+          "items": true,
+          "type": "array"
+        },
+        "text": {
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "Reporter": {
+      "description": "Who reported a failure.",
+      "enum": [
+        "battersea",
+        "provider",
+        "tool"
+      ],
+      "type": "string"
+    },
+    "ToolCallEvidence": {
+      "description": "Host evidence about one tool call. Completion does not establish durable publication.",
+      "properties": {
+        "call_id": {
+          "type": "string"
+        },
+        "outcome": {
+          "$ref": "#/$defs/ToolCallOutcome"
+        },
+        "request_id": {
+          "description": "The remote transport's request identity, when available.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "tool_name": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "call_id",
+        "tool_name",
+        "outcome"
+      ],
+      "type": "object"
+    },
+    "ToolCallOutcome": {
+      "description": "What is known about a tool invocation, independently from result delivery and durability.",
+      "oneOf": [
+        {
+          "const": "not_dispatched",
+          "description": "The executor or transport confirms the call was not dispatched.",
+          "type": "string"
+        },
+        {
+          "const": "completed",
+          "description": "The executor returned a complete result, including a tool-reported execution error.",
+          "type": "string"
+        },
+        {
+          "const": "uncertain",
+          "description": "The call may have run; cancellation and connection loss do not resolve its effects.",
+          "type": "string"
+        }
+      ]
+    },
+    "ToolCode": {
+      "description": "The refusals with which tool admission, the tool registry and the shared tool loop refuse\na request or a provider's tool call. Each serialises as its stable snake_case code.",
+      "oneOf": [
+        {
+          "enum": [
+            "invalid_tool_continuation",
+            "tool_continuation_conflict",
+            "tool_continuation_storage",
+            "tool_continuation_unresolved",
+            "tool_continuation_expired",
+            "unsupported_tool_continuation"
+          ],
+          "type": "string"
+        },
+        {
+          "const": "tool_approval_conflict",
+          "description": "The durable approval journal or request revision changed.",
+          "type": "string"
+        },
+        {
+          "const": "tool_approval_storage",
+          "description": "An approval storage operation requires inspection before continuing.",
+          "type": "string"
+        },
+        {
+          "const": "tool_approval_unresolved",
+          "description": "A durable tool dispatch intent requires reconciliation.",
+          "type": "string"
+        },
+        {
+          "const": "invalid_tool_approval",
+          "description": "The host supplied an invalid approval scope, capacity or journal.",
+          "type": "string"
+        },
+        {
+          "const": "tool_approval_denied",
+          "description": "The host denied the validated tool call.",
+          "type": "string"
+        },
+        {
+          "const": "tool_approval_pending",
+          "description": "The validated tool call requires a host decision before dispatch.",
+          "type": "string"
+        },
+        {
+          "const": "tool_approval_expired",
+          "description": "The approval scope expired before dispatch.",
+          "type": "string"
+        },
+        {
+          "const": "tool_approval_capacity",
+          "description": "The approval executor exhausted its call or payload capacity.",
+          "type": "string"
+        },
+        {
+          "const": "invalid_tool_rounds",
+          "description": "A request's tool round limit is outside the supported range.",
+          "type": "string"
+        },
+        {
+          "const": "duplicate_tool",
+          "description": "Two tools share a name, or a tool's name is blank, once names are normalised.",
+          "type": "string"
+        },
+        {
+          "const": "invalid_tool_schema",
+          "description": "A tool's input schema is not a valid JSON Schema.",
+          "type": "string"
+        },
+        {
+          "const": "invalid_tool_definition",
+          "description": "A tool's record cannot be offered: its name is outside the tool-name alphabet, it has\nno description, its input schema is not an object schema, or its profiles are not\ndistinct names.",
+          "type": "string"
+        },
+        {
+          "const": "unoffered_tool_choice",
+          "description": "The request's tool choice names a tool the request does not offer.",
+          "type": "string"
+        },
+        {
+          "const": "malformed_tool_call",
+          "description": "The provider returned a tool call without an id, name or object arguments.",
+          "type": "string"
+        },
+        {
+          "const": "tool_use_disabled",
+          "description": "The provider requested tools although tool use was disabled.",
+          "type": "string"
+        },
+        {
+          "const": "invalid_tool_call_id",
+          "description": "The provider returned a missing or duplicate tool call id.",
+          "type": "string"
+        },
+        {
+          "const": "unoffered_tool",
+          "description": "The provider called a tool the model was not offered.",
+          "type": "string"
+        },
+        {
+          "const": "tool_outside_choice",
+          "description": "The provider called a tool other than the one the tool choice names.",
+          "type": "string"
+        },
+        {
+          "const": "invalid_tool_arguments",
+          "description": "A tool call's arguments do not satisfy the tool's input schema.",
+          "type": "string"
+        },
+        {
+          "const": "invalid_tool_result",
+          "description": "A tool's result does not satisfy the output schema the tool declares.",
+          "type": "string"
+        },
+        {
+          "const": "unsupported_tool_content",
+          "description": "The provider conversation cannot represent the tool's returned content.",
+          "type": "string"
+        },
+        {
+          "const": "unregistered_tool",
+          "description": "The registry holds no tool with the called name.",
+          "type": "string"
+        },
+        {
+          "const": "tool_transcript_too_large",
+          "description": "The tool calls and results of a run exceed their encoded-byte limit.",
+          "type": "string"
+        },
+        {
+          "const": "tool_rounds_exceeded",
+          "description": "The provider was still calling tools after the request's last tool round.",
+          "type": "string"
+        }
+      ]
+    },
+    "WatchdogFailure": {
+      "properties": {
+        "limit_ms": {
+          "format": "uint64",
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "limit_ms"
       ],
       "type": "object"
     }

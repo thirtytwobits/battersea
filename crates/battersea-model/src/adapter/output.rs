@@ -51,7 +51,7 @@ pub fn terminal_failure(
         failure = failure.with_native(crate::Reporter::Provider, native);
     }
     if !partial.is_empty() {
-        failure = failure.with_partial(crate::Partial {
+        failure = failure.with_partial(crate::PartialOutput {
             text: partial,
             blocks: vec![],
         });

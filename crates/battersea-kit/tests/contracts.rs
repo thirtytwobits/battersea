@@ -655,6 +655,7 @@ async fn the_harness_ignores_the_hosts_own_error_wording() {
     let stripped = conformance::comparable(error);
     assert_eq!(stripped["summary"], "");
     assert_eq!(stripped["detail"]["error"]["message"], "");
+    assert_eq!(stripped["detail"]["error"]["failure"]["message"], "");
     assert_eq!(
         stripped["detail"]["error"]["code"],
         error["detail"]["error"]["code"]

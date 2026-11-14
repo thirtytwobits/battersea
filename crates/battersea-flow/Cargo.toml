@@ -11,6 +11,7 @@ publish = false
 include = ["src/**", "fixtures/**", "schemas/**", "Cargo.toml", "LICENSE", "NOTICE"]
 
 [dependencies]
+battersea-failure = { path = "../battersea-failure", version = "0.26.0" }
 anyhow = "1"
 regex-lite = "0.1"
 schemars = { version = "1", features = ["derive"] }

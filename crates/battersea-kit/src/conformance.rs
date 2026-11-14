@@ -257,8 +257,10 @@ pub fn comparable(event: &Value) -> Value {
     match event["kind"].as_str() {
         Some("node_error" | "node_failure_handled") => {
             event["summary"] = json!("");
-            if let Some(message) = event.pointer_mut("/detail/error/message") {
-                *message = json!("");
+            for wording in ["/detail/error/message", "/detail/error/failure/message"] {
+                if let Some(message) = event.pointer_mut(wording) {
+                    *message = json!("");
+                }
             }
         }
         Some("activation_execution_finished") => {

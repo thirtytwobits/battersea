@@ -90,7 +90,7 @@ pub struct Exchange {
 
 /// Output Battersea held when its operation failed.
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize, JsonSchema)]
-pub struct Partial {
+pub struct PartialOutput {
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub text: String,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
@@ -150,7 +150,7 @@ pub struct FailureParts {
     #[serde(default, skip_serializing_if = "Detail::is_absent")]
     pub native: Detail<Value>,
     #[serde(default, skip_serializing_if = "Detail::is_absent")]
-    pub partial: Detail<Partial>,
+    pub partial: Detail<PartialOutput>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub cause: Option<Cause>,
 }
@@ -240,7 +240,7 @@ impl Failure {
         self
     }
 
-    pub fn with_partial(mut self, partial: Partial) -> Self {
+    pub fn with_partial(mut self, partial: PartialOutput) -> Self {
         self.partial = Detail::Present(partial);
         self
     }
@@ -335,6 +335,18 @@ impl Failure {
     }
 }
 
+/// A failure the flow runtime or a host describes in its own words.
+impl From<String> for Failure {
+    fn from(message: String) -> Self {
+        Self::local(message, ErrorKind::Runtime)
+    }
+}
+impl From<&str> for Failure {
+    fn from(message: &str) -> Self {
+        Self::local(message, ErrorKind::Runtime)
+    }
+}
+
 /// Applies `visit` to every string in `value`, object keys included.
 fn visit_value(value: &mut Value, visit: &mut dyn FnMut(&mut String)) {
     match value {
@@ -367,7 +379,7 @@ mod tests {
     fn nested() -> Failure {
         Failure::new("fixture", "Provider refused.", ErrorKind::Refusal)
             .with_native(Reporter::Provider, json!({"category": "secret-key"}))
-            .with_partial(Partial {
+            .with_partial(PartialOutput {
                 text: "partial secret-key".into(),
                 blocks: vec![],
             })

@@ -12,7 +12,7 @@ use std::{
 };
 use tokio::time::Instant;
 
-pub const CONVERSATION_CHECKPOINT_VERSION: u32 = 2;
+pub const CONVERSATION_CHECKPOINT_VERSION: u32 = 3;
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -317,15 +317,7 @@ impl ConversationCheckpoint {
     }
     /// Check format, integrity, bounds and shared batch invariants without changing storage.
     pub fn validate(&self) -> Result<(), Failure> {
-        if ![1, CONVERSATION_CHECKPOINT_VERSION].contains(&self.version)
-            || (self.version == 1
-                && (self.pending.is_some()
-                    || self.cancellation.is_some()
-                    || self.turns.iter().any(|t| t.pending.is_some())
-                    || self
-                        .resolutions
-                        .iter()
-                        .any(|r| matches!(r.resolution, ConversationResolution::Pending { .. }))))
+        if self.version != CONVERSATION_CHECKPOINT_VERSION
             || self.revision == 0
             || !(1..=payload::PROVIDER_PAYLOAD_BYTES).contains(&self.max_bytes)
             || self.scope.run_id.trim().is_empty()
@@ -789,9 +781,7 @@ impl DurableConversation {
                 ConversationCommand::Start | ConversationCommand::Poll { .. },
                 ConversationStep::Pending { state },
             ) => {
-                if record.version < 2
-                    || record.pending.as_ref().is_some_and(|known| known != &state)
-                {
+                if record.pending.as_ref().is_some_and(|known| known != &state) {
                     return Err(invalid());
                 }
                 record.pending = Some(state);
