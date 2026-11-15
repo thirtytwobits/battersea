@@ -96,8 +96,15 @@ impl Context {
                 }
             }
             serde_json::Value::Object(map) => {
-                for v in map.values_mut() {
-                    self.redact(v);
+                // A provider can echo a credential as an object key.
+                for (key, mut v) in std::mem::take(map) {
+                    let mut key = serde_json::Value::String(key);
+                    self.redact(&mut key);
+                    self.redact(&mut v);
+                    let serde_json::Value::String(key) = key else {
+                        unreachable!("a redacted string is a string")
+                    };
+                    map.insert(key, v);
                 }
             }
             _ => (),

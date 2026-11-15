@@ -649,8 +649,13 @@ impl AdmittedAdapter {
                             request_id,
                             response_id,
                         }) => {
-                            open.request_id = request_id;
-                            open.response_id = response_id;
+                            // An event names the identifiers it knows; the others stand.
+                            if request_id.is_some() {
+                                open.request_id = request_id;
+                            }
+                            if response_id.is_some() {
+                                open.response_id = response_id;
+                            }
                         }
                         Ok(event) => {
                             super::adapter::retain_tool_evidence(&mut open.tool_call, &event);

@@ -45,7 +45,7 @@ fn retry_after(headers: &reqwest::header::HeaderMap, clock: &dyn Clock) -> Optio
 }
 
 /// A rejection's body as the provider sent it: its JSON value, else its text.
-fn rejection_body(body: String) -> Option<serde_json::Value> {
+pub(crate) fn rejection_body(body: String) -> Option<serde_json::Value> {
     if body.is_empty() {
         return None;
     }
@@ -69,6 +69,17 @@ pub(crate) fn opened(response: &Response) -> battersea_model::EngineTextStreamEv
         request_id: request_id(response.headers()),
         response_id: None,
     }
+}
+
+/// The event that announces the response identifier a provider payload holds at `id`.
+pub(crate) fn identified(
+    id: Option<&serde_json::Value>,
+) -> Option<battersea_model::EngineTextStreamEvent> {
+    let id = id?.as_str()?;
+    Some(battersea_model::EngineTextStreamEvent::ResponseOpened {
+        request_id: None,
+        response_id: Some(id.to_owned()),
+    })
 }
 
 /// Sends `request`, retrying safe failures with backoff timed by `clock`. The caller's operation

@@ -371,85 +371,96 @@ impl EngineAdapter for OpenAiEngineAdapter {
                 let logger = logger.clone();
                 let context = context.clone();
                 async move {
-                    match event {
-                        Ok((event, event_value)) => {
-                            let Some(event) = event else {
+                    let mut events: Vec<_> = event
+                        .as_ref()
+                        .ok()
+                        .and_then(|(_, value)| {
+                            crate::retry::identified(value.pointer("/response/id"))
+                        })
+                        .into_iter()
+                        .collect();
+                    let decoded: Result<Vec<_>, Failure> = async {
+                        match event {
+                            Ok((event, event_value)) => {
+                                let Some(event) = event else {
+                                    emit_stream_event(
+                                        logger.as_ref(),
+                                        &context,
+                                        operation,
+                                        stream_event_type(&event_value),
+                                        event_value.clone(),
+                                    )
+                                    .await;
+                                    return Ok(Vec::new());
+                                };
+                                // Per-event scratch: each ResponseStreamEvent variant maps to
+                                // zero or more neutral text-stream events. Usage frames (which
+                                // share variants with text frames at the protocol level) are
+                                // appended below.
+                                let text_events = openai_events(&event, &event_value);
+                                match &event {
+                                    ResponseStreamEvent::ResponseFailed(_) => {
+                                        return Err(Failure::invalid_response(
+                                            "openai",
+                                            "OpenAI response failed.",
+                                        )
+                                        .with_native(
+                                            battersea_model::Reporter::Provider,
+                                            event_value.clone(),
+                                        ));
+                                    }
+                                    ResponseStreamEvent::ResponseIncomplete(_) => {
+                                        return Err(openai_missing_output_text_error(
+                                            &event_value["response"],
+                                        ));
+                                    }
+                                    ResponseStreamEvent::ResponseError(_) => {
+                                        return Err(Failure::transport(
+                                            "openai",
+                                            "OpenAI reported a stream error.",
+                                        )
+                                        .with_native(
+                                            battersea_model::Reporter::Provider,
+                                            event_value.clone(),
+                                        ));
+                                    }
+                                    _ => {}
+                                }
+
                                 emit_stream_event(
                                     logger.as_ref(),
                                     &context,
                                     operation,
-                                    stream_event_type(&event_value),
+                                    event.event_type(),
                                     event_value.clone(),
                                 )
                                 .await;
-                                return Ok(Vec::new());
-                            };
-                            // Per-event scratch: each ResponseStreamEvent variant maps to
-                            // zero or more neutral text-stream events. Usage frames (which
-                            // share variants with text frames at the protocol level) are
-                            // appended below.
-                            let text_events = openai_events(&event, &event_value);
-                            match &event {
-                                ResponseStreamEvent::ResponseFailed(item) => {
-                                    let message = item
-                                        .response
-                                        .error
-                                        .as_ref()
-                                        .map(|error| error.message.to_string())
-                                        .unwrap_or_else(|| {
-                                            "OpenAI streaming response failed.".to_string()
-                                        });
-                                    return Err(Failure::invalid_response("openai", message)
-                                        .with_native(
-                                            battersea_model::Reporter::Provider,
-                                            event_value.clone(),
-                                        ));
-                                }
-                                ResponseStreamEvent::ResponseIncomplete(_) => {
-                                    return Err(openai_missing_output_text_error(
-                                        &event_value["response"],
-                                    ));
-                                }
-                                ResponseStreamEvent::ResponseError(item) => {
-                                    return Err(Failure::transport("openai", item.message.clone())
-                                        .with_native(
-                                            battersea_model::Reporter::Provider,
-                                            event_value.clone(),
-                                        ));
-                                }
-                                _ => {}
-                            }
 
-                            emit_stream_event(
-                                logger.as_ref(),
-                                &context,
-                                operation,
-                                event.event_type(),
-                                event_value.clone(),
-                            )
-                            .await;
-
-                            let mut events = Vec::new();
-                            if let Some(usage) = extract_token_usage(&event_value) {
-                                events.push(EngineTextStreamEvent::TokenUsage { usage });
-                            }
-                            for text_event in text_events {
-                                let is_empty = match &text_event {
-                                    EngineTextStreamEvent::TextDelta { text }
-                                    | EngineTextStreamEvent::ReasoningDelta { text } => {
-                                        text.is_empty()
+                                let mut events = Vec::new();
+                                if let Some(usage) = extract_token_usage(&event_value) {
+                                    events.push(EngineTextStreamEvent::TokenUsage { usage });
+                                }
+                                for text_event in text_events {
+                                    let is_empty = match &text_event {
+                                        EngineTextStreamEvent::TextDelta { text }
+                                        | EngineTextStreamEvent::ReasoningDelta { text } => {
+                                            text.is_empty()
+                                        }
+                                        _ => false,
+                                    };
+                                    if !is_empty {
+                                        events.push(text_event);
                                     }
-                                    _ => false,
-                                };
-                                if !is_empty {
-                                    events.push(text_event);
                                 }
-                            }
 
-                            Ok(events)
+                                Ok(events)
+                            }
+                            Err(error) => Err(error),
                         }
-                        Err(error) => Err(error),
                     }
+                    .await;
+                    events.extend(decoded?);
+                    Ok(events)
                 }
             })
             .flat_map(|result| {
@@ -486,10 +497,7 @@ impl EngineAdapter for OpenAiEngineAdapter {
             self.clock.as_ref(),
         )
         .await?;
-        let payload: Value = response
-            .bounded_json()
-            .await
-            .map_err(|error| Failure::invalid_response("openai", error.to_string()))?;
+        let payload: Value = response.bounded_json().await?;
         payload
             .get("input_tokens")
             .and_then(Value::as_u64)
@@ -941,6 +949,9 @@ impl OpenAiToolConversation {
                     "OpenAI tool stream ended without ResponseCompleted.",
                 )
             })??;
+            if let Some(identified) = crate::retry::identified(value.pointer("/response/id")) {
+                send_event(events, identified).await?;
+            }
             emit_stream_event(
                 self.logger.as_ref(),
                 &self.context,
@@ -953,23 +964,20 @@ impl OpenAiToolConversation {
                 continue;
             };
             match &event {
-                ResponseStreamEvent::ResponseFailed(item) => {
-                    return Err(Failure::invalid_response(
-                        "openai",
-                        item.response
-                            .error
-                            .as_ref()
-                            .map(|error| error.message.to_string())
-                            .unwrap_or_else(|| "OpenAI response failed.".to_string()),
+                ResponseStreamEvent::ResponseFailed(_) => {
+                    return Err(
+                        Failure::invalid_response("openai", "OpenAI response failed.")
+                            .with_native(battersea_model::Reporter::Provider, value.clone()),
                     )
-                    .with_native(battersea_model::Reporter::Provider, value.clone()))
                 }
                 ResponseStreamEvent::ResponseIncomplete(_) => {
                     return Err(openai_missing_output_text_error(&value["response"]))
                 }
-                ResponseStreamEvent::ResponseError(item) => {
-                    return Err(Failure::transport("openai", item.message.clone())
-                        .with_native(battersea_model::Reporter::Provider, value.clone()))
+                ResponseStreamEvent::ResponseError(_) => {
+                    return Err(
+                        Failure::transport("openai", "OpenAI reported a stream error.")
+                            .with_native(battersea_model::Reporter::Provider, value.clone()),
+                    )
                 }
                 _ => {}
             }
@@ -1163,10 +1171,10 @@ async fn create_and_poll_background(
     )
     .await?;
     let _ = tx.send(Ok(crate::retry::opened(&created))).await;
-    let response: Value = created
-        .bounded_json()
-        .await
-        .map_err(|error| Failure::invalid_response("openai", error.to_string()))?;
+    let response: Value = created.bounded_json().await?;
+    if let Some(identified) = crate::retry::identified(response.get("id")) {
+        let _ = tx.send(Ok(identified)).await;
+    }
     let id = response
         .get("id")
         .and_then(Value::as_str)
@@ -1233,10 +1241,7 @@ async fn create_and_poll_background(
         )
         .await?;
         let _ = tx.send(Ok(crate::retry::opened(&polled))).await;
-        let response: Value = polled
-            .bounded_json()
-            .await
-            .map_err(|error| Failure::invalid_response("openai", error.to_string()))?;
+        let response: Value = polled.bounded_json().await?;
         let status = response
             .get("status")
             .and_then(Value::as_str)
@@ -1450,6 +1455,14 @@ async fn drive_background_stream(
                                 "Resumed stream changed response identity.",
                             ));
                         }
+                        if guard.id.is_none() {
+                            let _ = tx
+                                .send(Ok(EngineTextStreamEvent::ResponseOpened {
+                                    request_id: None,
+                                    response_id: Some(id.to_string()),
+                                }))
+                                .await;
+                        }
                         guard.id = Some(id.to_string());
                     }
                     emit_stream_event(
@@ -1504,26 +1517,24 @@ async fn drive_background_stream(
                             .await?;
                             return Ok(response);
                         }
-                        ResponseStreamEvent::ResponseFailed(item) => {
+                        ResponseStreamEvent::ResponseFailed(_) => {
                             guard.id = None;
-                            let message = item
-                                .response
-                                .error
-                                .as_ref()
-                                .map(|error| error.message.to_string())
-                                .unwrap_or_else(|| {
-                                    "OpenAI background response failed.".to_string()
-                                });
-                            return Err(Failure::invalid_response("openai", message)
-                                .with_native(battersea_model::Reporter::Provider, value.clone()));
+                            return Err(Failure::invalid_response(
+                                "openai",
+                                "OpenAI response failed.",
+                            )
+                            .with_native(battersea_model::Reporter::Provider, value.clone()));
                         }
                         ResponseStreamEvent::ResponseIncomplete(_) => {
                             guard.id = None;
                             return Err(openai_missing_output_text_error(&value["response"]));
                         }
-                        ResponseStreamEvent::ResponseError(item) => {
-                            return Err(Failure::transport("openai", item.message.clone())
-                                .with_native(battersea_model::Reporter::Provider, value.clone()));
+                        ResponseStreamEvent::ResponseError(_) => {
+                            return Err(Failure::transport(
+                                "openai",
+                                "OpenAI reported a stream error.",
+                            )
+                            .with_native(battersea_model::Reporter::Provider, value.clone()));
                         }
                         _ => {}
                     }

@@ -153,13 +153,10 @@ impl GoogleMediaGenerator {
                 if !response.status().is_success() {
                     return Err(normalize_google_http_error(
                         response.status().as_u16(),
-                        response.bounded_text().await.ok(),
+                        response.bounded_text().await?,
                     ));
                 }
-                response
-                    .bounded_json()
-                    .await
-                    .map_err(|error| Failure::invalid_response(PROVIDER, error.to_string()))
+                response.bounded_json().await
             }),
         )
         .await?;
@@ -299,22 +296,14 @@ fn resolve_google_api_key(backend: &MediaBackendConfig) -> Result<String, Failur
     ))
 }
 
-fn normalize_google_http_error(status: u16, body: Option<String>) -> Failure {
-    let message = body
-        .as_deref()
-        .and_then(|raw| serde_json::from_str::<Value>(raw).ok())
-        .and_then(|value| {
-            value
-                .get("error")?
-                .get("message")?
-                .as_str()
-                .map(ToOwned::to_owned)
-        })
-        .or(body)
-        .unwrap_or_else(|| format!("Gemini image request failed with HTTP {status}."));
-    let mut error = Failure::transport(PROVIDER, message);
+/// An image request the provider rejected, with the provider's body as native detail.
+fn normalize_google_http_error(status: u16, body: String) -> Failure {
+    let mut error = Failure::transport(PROVIDER, "Gemini rejected the image request.");
     error.exchange.status = Some(status);
-    error
+    match crate::retry::rejection_body(body) {
+        Some(native) => error.with_native(battersea_model::Reporter::Provider, native),
+        None => error,
+    }
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]

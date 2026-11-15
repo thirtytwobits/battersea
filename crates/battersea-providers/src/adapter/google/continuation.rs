@@ -364,10 +364,7 @@ impl GoogleEngineAdapter {
         )
         .await?;
         let status = response.status().as_u16();
-        let native: Value = response
-            .bounded_json()
-            .await
-            .map_err(|error| invalid(&error.to_string()))?;
+        let native: Value = response.bounded_json().await?;
         // The completed native response determines durable events and calls.
         let events = response_events(&request, &native, false)?;
         let index = (contents.len() - original_len(&self.backend, &request)?) / 2;

@@ -182,10 +182,7 @@ impl EngineAdapter for GoogleEngineAdapter {
             self.clock.as_ref(),
         )
         .await?;
-        let payload: Value = response
-            .bounded_json()
-            .await
-            .map_err(|error| Failure::invalid_response("google", error.to_string()))?;
+        let payload: Value = response.bounded_json().await?;
         payload
             .get("totalTokens")
             .and_then(Value::as_u64)
@@ -298,7 +295,12 @@ impl EngineAdapter for GoogleEngineAdapter {
                                 serde_json::to_value(&parsed).unwrap_or_else(|_| json!({})),
                             )
                             .await;
-                            parsed.into_text_stream_events(&raw)
+                            let mut events: Vec<_> =
+                                crate::retry::identified(raw.get("responseId"))
+                                    .into_iter()
+                                    .collect();
+                            events.extend(parsed.into_text_stream_events(&raw)?);
+                            Ok(events)
                         }
                         Err(error) => Err(Failure::transport(
                             "google",
@@ -472,10 +474,10 @@ impl ToolConversation for GoogleToolConversation {
         .await?;
         send_event(events, crate::retry::opened(&response)).await?;
         let status = response.status().as_u16();
-        let raw: Value = response
-            .bounded_json()
-            .await
-            .map_err(|error| Failure::invalid_response("google", error.to_string()))?;
+        let raw: Value = response.bounded_json().await?;
+        if let Some(identified) = crate::retry::identified(raw.get("responseId")) {
+            send_event(events, identified).await?;
+        }
         let payload: GeminiGenerateContentResponse = serde_json::from_value(raw.clone())
             .map_err(|error| Failure::invalid_response("google", error.to_string()))?;
         if payload.first_finish_reason().as_deref() != Some("STOP") {
@@ -999,7 +1001,13 @@ impl GeminiGenerateContentResponse {
                             data["fileUri"].as_str().unwrap_or_default().to_string()
                         };
                         crate::content::media_source("google", "google", &url, &mime).map_err(
-                            |error| Failure::invalid_response("google", error.message.clone()),
+                            |cause| {
+                                Failure::invalid_response(
+                                    "google",
+                                    "Gemini returned an invalid media reference.",
+                                )
+                                .with_cause(cause)
+                            },
                         )?;
                         if !mime.starts_with("image/") && !mime.starts_with("audio/") {
                             return Err(Failure::invalid_response(

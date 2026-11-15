@@ -485,8 +485,9 @@ pub enum EngineTextStreamEvent {
         #[serde(default, skip_serializing_if = "Value::is_null")]
         native: Value,
     },
-    /// A provider response opened. An adapter built by the registry consumes this event and
-    /// carries the identifiers on any later failure of the stream.
+    /// A provider response opened, or named an identifier. An adapter built by the registry
+    /// consumes this event and carries the identifiers on any later failure of the stream. An
+    /// absent identifier leaves the one already known in place.
     ResponseOpened {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         request_id: Option<String>,

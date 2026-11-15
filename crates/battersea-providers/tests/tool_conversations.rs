@@ -1602,6 +1602,13 @@ async fn every_adapter_carries_each_recorded_provider_failure_whole() {
                 Some(REQUEST_ID),
                 "{name}"
             );
+            if let Some(response_id) = fixture["response_id"].as_str() {
+                assert_eq!(
+                    failure.exchange.response_id.as_deref(),
+                    Some(response_id),
+                    "{name}"
+                );
+            }
             assert_eq!(failure.origin.provider.as_deref(), Some(provider), "{name}");
             assert_eq!(
                 failure.reporter,

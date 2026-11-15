@@ -1077,7 +1077,8 @@ async fn encoded_credentials_are_masked_in_returned_errors_and_request_and_error
                 (
                     401,
                     "application/json".into(),
-                    json!({"error":{"message":format!("rejected {alias}")}}).to_string(),
+                    json!({"error":{"message":format!("rejected {alias}"), *alias: "echoed"}})
+                        .to_string(),
                 )
             })
             .collect();
@@ -1106,7 +1107,7 @@ async fn encoded_credentials_are_masked_in_returned_errors_and_request_and_error
             // The provider's body is native detail, whole, with the credential masked.
             assert_eq!(
                 error.native.present(),
-                Some(&json!({"error":{"message":"rejected [REDACTED]"}}))
+                Some(&json!({"error":{"message":"rejected [REDACTED]","[REDACTED]":"echoed"}}))
             );
             assert_eq!(error.kind, ErrorKind::Authentication);
             assert_eq!(error.exchange.status, Some(401));

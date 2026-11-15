@@ -557,6 +557,9 @@ impl ToolConversation for Conversation {
             decode_stream(provider, response, events).await?
         } else {
             let value: Value = response.bounded_json().await?;
+            if let Some(identified) = crate::retry::identified(value.get("id")) {
+                send_event(events, identified).await?;
+            }
             if value["choices"].as_array().is_none_or(|v| v.len() != 1) {
                 return Err(invalid(provider, "Expected one completion choice."));
             }
@@ -741,6 +744,7 @@ async fn decode_stream(
     let mut finish = String::new();
     let mut usage = Value::Null;
     let mut done = false;
+    let mut identified = false;
     while let Some(event) = stream.next().await {
         let event = event.map_err(|cause| {
             invalid(provider, "Interrupted completion stream.").caused_by(&cause)
@@ -751,6 +755,13 @@ async fn decode_stream(
         }
         let value: Value = serde_json::from_str(&event.data)
             .map_err(|cause| invalid(provider, "Malformed completion event.").caused_by(&cause))?;
+        // Every chunk of a completion repeats its identifier.
+        if !identified {
+            if let Some(event) = crate::retry::identified(value.get("id")) {
+                identified = true;
+                send_event(events, event).await?;
+            }
+        }
         if value["usage"].is_object() {
             usage = value["usage"].clone();
         }

@@ -152,10 +152,7 @@ impl MediaGenerationAdapter for RunwayMediaGenerator {
                 )
                 .with_status_code(submit_status));
             }
-            submit_response
-                .bounded_json::<Value>()
-                .await
-                .map_err(|error| Failure::invalid_response("runway", error.to_string()))
+            submit_response.bounded_json::<Value>().await
         });
         let raw = tokio::select! {
             _ = cancellation.cancelled() => {

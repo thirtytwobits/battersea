@@ -60,6 +60,8 @@ fn tool_code(code: &str) -> Option<ToolCode> {
     }
 }
 
+const REFUSED: &str = "The tool refused the call.";
+
 /// A Clapham refusal as the tool loop reports it, with its evidence.
 ///
 /// A code the tool runner names keeps the registry's `invalid_request` classification and sets
@@ -72,8 +74,8 @@ pub(crate) fn refused(refusal: Refusal, mut evidence: ToolCallEvidence) -> Failu
     };
     let native = serde_json::to_value(&refusal).expect("a refusal serialises");
     let error = match tool_code(&refusal.code) {
-        Some(code) => crate::registry::refusal(refusal.message, code),
-        None => Failure::new("tools", refusal.message, refusal.code),
+        Some(code) => crate::registry::refusal(REFUSED, code),
+        None => Failure::new("tools", REFUSED, refusal.code),
     };
     error
         .with_native(battersea_model::Reporter::Tool, native)

@@ -28,6 +28,7 @@
     }
   ],
   "kind": "server",
+  "response_id": "msg_fixture",
   "payload": {
     "type": "error",
     "error": {

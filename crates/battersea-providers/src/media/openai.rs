@@ -297,23 +297,11 @@ async fn send_image_generation_json_request(
         .map_err(|error| Failure::transport("openai", error.to_string()))?;
     let status = response.status();
     if !status.is_success() {
-        let body = response
-            .bounded_text()
-            .await
-            .map_err(|error| Failure::transport("openai", error.to_string()))?;
-        return Err(parse_openai_error_body(&body).unwrap_or_else(|| {
-            Failure::new(
-                "openai",
-                format!("OpenAI image generation failed with HTTP status {status}."),
-                "request",
-            )
-        }));
+        let body = response.bounded_text().await?;
+        return Err(rejected(status.as_u16(), body));
     }
 
-    response
-        .bounded_json::<OpenAiImagesResponse>()
-        .await
-        .map_err(|error| Failure::invalid_response("openai", error.to_string()))
+    response.bounded_json::<OpenAiImagesResponse>().await
 }
 
 async fn send_image_generation_stream_request(
@@ -332,17 +320,8 @@ async fn send_image_generation_stream_request(
         .map_err(|error| Failure::transport("openai", error.to_string()))?;
     let status = response.status();
     if !status.is_success() {
-        let body = response
-            .bounded_text()
-            .await
-            .map_err(|error| Failure::transport("openai", error.to_string()))?;
-        return Err(parse_openai_error_body(&body).unwrap_or_else(|| {
-            Failure::new(
-                "openai",
-                format!("OpenAI image generation failed with HTTP status {status}."),
-                "request",
-            )
-        }));
+        let body = response.bounded_text().await?;
+        return Err(rejected(status.as_u16(), body));
     }
 
     let mut stream = crate::http_payload::bounded_stream(response).eventsource();
@@ -529,20 +508,14 @@ fn parse_openai_images_response_body(body: &str) -> Result<OpenAiImagesResponse,
     })
 }
 
-fn parse_openai_error_body(body: &str) -> Option<Failure> {
-    #[derive(Deserialize)]
-    struct ErrorEnvelope {
-        error: OpenAiErrorBody,
+/// An image request the provider rejected, with the provider's body as native detail.
+fn rejected(status: u16, body: String) -> Failure {
+    let mut failure = Failure::new("openai", "OpenAI rejected the image request.", "request")
+        .with_status_code(status);
+    if let Some(native) = crate::retry::rejection_body(body) {
+        failure = failure.with_native(battersea_model::Reporter::Provider, native);
     }
-
-    #[derive(Deserialize)]
-    struct OpenAiErrorBody {
-        message: String,
-    }
-
-    serde_json::from_str::<ErrorEnvelope>(body)
-        .ok()
-        .map(|envelope| Failure::new("openai", envelope.error.message, "request"))
+    failure
 }
 
 #[cfg(test)]

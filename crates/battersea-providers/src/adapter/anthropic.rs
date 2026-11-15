@@ -223,15 +223,22 @@ impl EngineAdapter for AnthropicEngineAdapter {
                                 detail,
                             )
                             .await;
-                            decoder
-                                .lock()
-                                .map_err(|_poisoned| {
-                                    Failure::invalid_response(
-                                        "anthropic",
-                                        "Stream decoder lock poisoned.",
-                                    )
-                                })?
-                                .decode(parsed, &raw)
+                            let mut events: Vec<_> =
+                                crate::retry::identified(raw.pointer("/message/id"))
+                                    .into_iter()
+                                    .collect();
+                            events.extend(
+                                decoder
+                                    .lock()
+                                    .map_err(|_poisoned| {
+                                        Failure::invalid_response(
+                                            "anthropic",
+                                            "Stream decoder lock poisoned.",
+                                        )
+                                    })?
+                                    .decode(parsed, &raw)?,
+                            );
+                            Ok(events)
                         }
                         Err(error) => Err(Failure::transport(
                             "anthropic",
@@ -391,6 +398,9 @@ impl ToolConversation for AnthropicToolConversation {
             .and_then(|value| value.to_str().ok())
             .map(ToOwned::to_owned);
         let native: Value = read_anthropic_json(response, request_id.clone()).await?;
+        if let Some(identified) = crate::retry::identified(native.get("id")) {
+            send_event(events, identified).await?;
+        }
         let payload: AnthropicMessagesResponse =
             serde_json::from_value(native.clone()).map_err(|error| {
                 Failure::invalid_response("anthropic", "Malformed Anthropic message.")
