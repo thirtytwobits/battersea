@@ -300,7 +300,7 @@ fn resolve_google_api_key(backend: &MediaBackendConfig) -> Result<String, Failur
 fn normalize_google_http_error(status: u16, body: String) -> Failure {
     let mut error = Failure::transport(PROVIDER, "Gemini rejected the image request.");
     error.exchange.status = Some(status);
-    match crate::retry::rejection_body(body) {
+    match crate::http_payload::rejection_body(body) {
         Some(native) => error.with_native(battersea_model::Reporter::Provider, native),
         None => error,
     }

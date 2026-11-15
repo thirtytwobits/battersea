@@ -60,6 +60,16 @@ struct RunwayMediaGenerator {
 /// Error for a Runway backend option that configuration must supply. There
 /// are no hardcoded defaults: if config does not provide the value, the
 /// request cannot proceed.
+/// A request Runway rejected, with Runway's body as native detail.
+fn rejected(message: &str, status: u16, body: String) -> Failure {
+    let failure =
+        Failure::new("runway", message, classify_http_status(status)).with_status_code(status);
+    match crate::http_payload::rejection_body(body) {
+        Some(native) => failure.with_native(battersea_model::Reporter::Provider, native),
+        None => failure,
+    }
+}
+
 fn missing_runway_option(key: &str) -> Failure {
     Failure::new(
         "runway",
@@ -140,17 +150,11 @@ impl MediaGenerationAdapter for RunwayMediaGenerator {
                 .map_err(|error| Failure::transport("runway", error.to_string()))?;
             let submit_status = submit_response.status().as_u16();
             if !submit_response.status().is_success() {
-                let error_body = submit_response.bounded_text().await.unwrap_or_default();
-                return Err(Failure::new(
-                    "runway",
-                    if error_body.trim().is_empty() {
-                        format!("Runway task submission failed with HTTP {submit_status}.")
-                    } else {
-                        error_body
-                    },
-                    classify_http_status(submit_status),
-                )
-                .with_status_code(submit_status));
+                return Err(rejected(
+                    "Runway rejected the task submission.",
+                    submit_status,
+                    submit_response.bounded_text().await?,
+                ));
             }
             submit_response.bounded_json::<Value>().await
         });
@@ -198,15 +202,11 @@ impl MediaGenerationAdapter for RunwayMediaGenerator {
         })
         .await?;
         if !response.status().is_success() {
-            return Err(Failure::new(
-                "runway",
-                format!(
-                    "Runway task cancellation failed with HTTP {}.",
-                    response.status().as_u16()
-                ),
-                classify_http_status(response.status().as_u16()),
-            )
-            .with_status_code(response.status().as_u16()));
+            return Err(rejected(
+                "Runway rejected the task cancellation.",
+                response.status().as_u16(),
+                response.bounded_text().await?,
+            ));
         }
         Ok(())
     }

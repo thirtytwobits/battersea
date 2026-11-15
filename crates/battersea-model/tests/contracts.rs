@@ -163,6 +163,71 @@ fn registry_rejects_unknown_or_inconsistent_backend_before_factory() {
         ));
     }
 }
+struct Scripted(Vec<Result<EngineTextStreamEvent, Failure>>);
+#[async_trait]
+impl EngineAdapter for Scripted {
+    fn describe_debug_context(&self) -> EngineAdapterDebugContext {
+        Transport(Default::default()).describe_debug_context()
+    }
+    async fn count_text_stream_input_tokens(
+        &self,
+        _: EngineTextStreamRequest,
+    ) -> Result<u64, Failure> {
+        Ok(0)
+    }
+    async fn stream_text(&self, _: EngineTextStreamRequest) -> Result<EngineTextStream, Failure> {
+        Ok(Box::pin(stream::iter(self.0.clone())))
+    }
+}
+/// contracts/failures.md, Identity: a failure carries the identifiers of its own exchange.
+#[tokio::test]
+async fn a_later_turns_failure_does_not_carry_an_earlier_turns_identifiers() {
+    let opened = |request: &str, response: Option<&str>| {
+        Ok(EngineTextStreamEvent::ResponseOpened {
+            request_id: Some(request.into()),
+            response_id: response.map(Into::into),
+        })
+    };
+    let rejected = || Err(Failure::new("external", "Rejected.", ErrorKind::Server));
+    let first = vec![
+        Ok(EngineTextStreamEvent::MessageStart { turn_index: 0 }),
+        opened("request-1", Some("response-1")),
+    ];
+    for (second, request_id) in [
+        (vec![rejected()], None),
+        (
+            vec![opened("request-2", None), rejected()],
+            Some("request-2"),
+        ),
+    ] {
+        let mut script = first.clone();
+        script.push(Ok(EngineTextStreamEvent::MessageStart { turn_index: 1 }));
+        script.extend(second);
+        let mut registry = ProviderRegistry::default();
+        registry
+            .register_chat(
+                "external",
+                ChatProvider {
+                    content: crate::ContentCapabilities::text(),
+                    background_modes: vec![],
+                    parameters: backend().capabilities.supported_chat_parameters,
+                    factory: Arc::new(move |_, _, _| Ok(Arc::new(Scripted(script.clone())))),
+                },
+            )
+            .unwrap();
+        let events: Vec<_> = registry
+            .create_chat(backend(), None, clock())
+            .unwrap()
+            .stream_text(request(&backend()))
+            .await
+            .unwrap()
+            .collect()
+            .await;
+        let failure = events.last().unwrap().as_ref().unwrap_err();
+        assert_eq!(failure.exchange.request_id.as_deref(), request_id);
+        assert_eq!(failure.exchange.response_id, None);
+    }
+}
 #[tokio::test]
 async fn request_deadline_covers_token_count_and_consumption_of_a_stalled_stream() {
     let clock = ManualClock::new(0);

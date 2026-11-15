@@ -44,14 +44,6 @@ fn retry_after(headers: &reqwest::header::HeaderMap, clock: &dyn Clock) -> Optio
     Some(date.timestamp_millis().saturating_sub(now).max(0) as u64)
 }
 
-/// A rejection's body as the provider sent it: its JSON value, else its text.
-pub(crate) fn rejection_body(body: String) -> Option<serde_json::Value> {
-    if body.is_empty() {
-        return None;
-    }
-    Some(serde_json::from_str(&body).unwrap_or(serde_json::Value::String(body)))
-}
-
 /// The identifier a provider issued for a request, from its response headers.
 fn request_id(headers: &reqwest::header::HeaderMap) -> Option<String> {
     ["request-id", "x-request-id"].iter().find_map(|name| {
@@ -129,7 +121,10 @@ pub(crate) async fn send(
                     .contains_key(reqwest::header::RETRY_AFTER);
                 let retry_after_ms = retry_after(response.headers(), clock);
                 // An unreadable body leaves the status as the whole account of the rejection.
-                let body = response.bounded_text().await.map(rejection_body);
+                let body = response
+                    .bounded_text()
+                    .await
+                    .map(crate::http_payload::rejection_body);
                 let mut error = Failure::new(
                     &backend.provider,
                     "Provider rejected the HTTP request.",
@@ -215,14 +210,14 @@ mod tests {
     fn a_rejection_body_is_kept_whole_as_json_or_as_text() {
         let json = r#"{"type":"error","error":{"type":"authentication_error","message":"invalid x-api-key"},"request_id":"req_1"}"#;
         assert_eq!(
-            rejection_body(json.into()),
+            crate::http_payload::rejection_body(json.into()),
             Some(serde_json::from_str(json).unwrap())
         );
         assert_eq!(
-            rejection_body("upstream unavailable".into()),
+            crate::http_payload::rejection_body("upstream unavailable".into()),
             Some(serde_json::Value::String("upstream unavailable".into()))
         );
-        assert_eq!(rejection_body(String::new()), None);
+        assert_eq!(crate::http_payload::rejection_body(String::new()), None);
     }
     #[test]
     fn retry_after_is_a_lower_bound_including_http_dates() {

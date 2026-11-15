@@ -555,7 +555,7 @@ pub(crate) async fn json_response(
     if !status.is_success() {
         let mut error = Failure::new(
             provider,
-            format!("Media job operation failed with HTTP {}.", status.as_u16()),
+            "The provider rejected the media job operation.",
             match status.as_u16() {
                 401 => ErrorKind::Authentication,
                 403 => ErrorKind::Permission,
@@ -587,6 +587,9 @@ pub(crate) async fn json_response(
                     Failure::invalid_response(provider, "Invalid Retry-After header.")
                 })?;
             error.exchange.retry_after_ms = Some(delay);
+        }
+        if let Some(native) = crate::http_payload::rejection_body(response.bounded_text().await?) {
+            error = error.with_native(battersea_model::Reporter::Provider, native);
         }
         return Err(error);
     }

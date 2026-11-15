@@ -1178,8 +1178,10 @@ async fn runway_error_bodies_mask_uri_and_json_escaped_credentials() {
             .err()
             .unwrap();
         assert_eq!(error.exchange.status, Some(401));
-        let body: Value = serde_json::from_str(&error.message).unwrap();
-        assert_eq!(body["error"], "rejected [REDACTED]");
+        assert_eq!(
+            error.native.present(),
+            Some(&json!({"error":"rejected [REDACTED]"}))
+        );
     }
     assert_eq!(wire.requests.lock().unwrap().len(), aliases.len());
     task.abort();

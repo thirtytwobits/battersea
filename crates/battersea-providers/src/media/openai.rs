@@ -512,7 +512,7 @@ fn parse_openai_images_response_body(body: &str) -> Result<OpenAiImagesResponse,
 fn rejected(status: u16, body: String) -> Failure {
     let mut failure = Failure::new("openai", "OpenAI rejected the image request.", "request")
         .with_status_code(status);
-    if let Some(native) = crate::retry::rejection_body(body) {
+    if let Some(native) = crate::http_payload::rejection_body(body) {
         failure = failure.with_native(battersea_model::Reporter::Provider, native);
     }
     failure

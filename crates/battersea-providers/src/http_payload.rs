@@ -47,6 +47,14 @@ fn limit_stream<T: AsRef<[u8]>, E: std::fmt::Display>(
     })
 }
 
+/// A rejection's body as the provider sent it: its JSON value, else its text.
+pub(crate) fn rejection_body(body: String) -> Option<serde_json::Value> {
+    if body.is_empty() {
+        return None;
+    }
+    Some(serde_json::from_str(&body).unwrap_or(serde_json::Value::String(body)))
+}
+
 #[allow(clippy::double_must_use)] // async_trait marks its boxed Future must_use.
 #[async_trait::async_trait]
 pub(crate) trait BoundedResponse {

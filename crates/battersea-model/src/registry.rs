@@ -658,6 +658,15 @@ impl AdmittedAdapter {
                             }
                         }
                         Ok(event) => {
+                            // A later provider turn is another exchange; the identifiers of
+                            // the turn before it do not describe its failures.
+                            if matches!(
+                                event,
+                                EngineTextStreamEvent::MessageStart { turn_index } if turn_index > 0
+                            ) {
+                                open.request_id = None;
+                                open.response_id = None;
+                            }
                             super::adapter::retain_tool_evidence(&mut open.tool_call, &event);
                             return Some((Ok(event), Some(open)));
                         }
