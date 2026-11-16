@@ -588,10 +588,40 @@ pub(crate) async fn json_response(
                 })?;
             error.exchange.retry_after_ms = Some(delay);
         }
-        if let Some(native) = crate::http_payload::rejection_body(response.bounded_text().await?) {
-            error = error.with_native(battersea_model::Reporter::Provider, native);
+        error.reporter = battersea_model::Reporter::Provider;
+        match response.bounded_text().await {
+            Ok(body) => {
+                if let Some(native) = crate::http_payload::rejection_body(body) {
+                    error.native = battersea_model::Detail::Present(native);
+                }
+            }
+            Err(unreadable) => error = error.with_cause(unreadable),
         }
         return Err(error);
     }
     response.bounded_json().await
+}
+
+#[cfg(test)]
+mod response_tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn a_rejection_with_an_unreadable_body_keeps_its_status_and_delay() {
+        let response = axum::http::Response::builder()
+            .status(429)
+            .header("retry-after", "7")
+            .body(vec![0xff])
+            .unwrap();
+        let clock = battersea_model::ManualClock::new(0);
+        let error = json_response("fixture", response.into(), &clock)
+            .await
+            .unwrap_err();
+        assert_eq!(error.kind, ErrorKind::RateLimit);
+        assert_eq!(error.exchange.status, Some(429));
+        assert_eq!(error.exchange.retry_after_ms, Some(7000));
+        assert!(
+            matches!(&error.cause, Some(battersea_model::Cause::Failure(cause)) if cause.message == "Provider response is not UTF-8.")
+        );
+    }
 }

@@ -146,13 +146,14 @@ pub fn validate_output(
                                     > PROVIDER_PAYLOAD_BYTES.saturating_sub(state.text.len())
                                 {
                                     state.done = true;
-                                    return Some((
-                                        Err(Failure::invalid_response(
+                                    let failure = held(
+                                        Failure::invalid_response(
                                             &state.provider,
                                             "Structured output exceeds its byte limit.",
-                                        )),
-                                        state,
-                                    ));
+                                        ),
+                                        &mut state.text,
+                                    );
+                                    return Some((Err(failure), state));
                                 }
                                 state.text.push_str(text);
                                 continue;
@@ -188,7 +189,10 @@ pub fn validate_output(
                                                 state,
                                             ));
                                         }
-                                        Err(error) => return Some((Err(error), state)),
+                                        Err(error) => {
+                                            let failure = held(error, &mut state.text);
+                                            return Some((Err(failure), state));
+                                        }
                                     }
                                 }
                             }
@@ -198,13 +202,16 @@ pub fn validate_output(
                     }
                     Some(Err(error)) => {
                         state.done = true;
-                        Err(error)
+                        Err(held(error, &mut state.text))
                     }
                     None => {
                         state.done = true;
-                        Err(Failure::invalid_response(
-                            &state.provider,
-                            "Provider stream ended without completing its final message.",
+                        Err(held(
+                            Failure::invalid_response(
+                                &state.provider,
+                                "Provider stream ended without completing its final message.",
+                            ),
+                            &mut state.text,
                         ))
                     }
                 };
@@ -212,6 +219,17 @@ pub fn validate_output(
             }
         },
     ))
+}
+
+/// Moves buffered structured text into a failure that carries no partial output.
+fn held(mut failure: Failure, text: &mut String) -> Failure {
+    if !text.is_empty() && failure.partial == crate::Detail::Absent {
+        failure = failure.with_partial(crate::PartialOutput {
+            text: std::mem::take(text),
+            blocks: vec![],
+        });
+    }
+    failure
 }
 
 #[cfg(test)]
@@ -296,16 +314,20 @@ mod tests {
             // contracts/failures.md: a turn that does not complete fails with the provider's
             // terminal payload as native detail and the buffered text as partial output.
             let kind = match reason {
-                Some(StopClass::Refusal) => crate::ErrorKind::Refusal,
-                Some(StopClass::Length) => crate::ErrorKind::Incomplete,
-                _ => continue,
+                Some(StopClass::Refusal) => Some(crate::ErrorKind::Refusal),
+                Some(StopClass::Length) => Some(crate::ErrorKind::Incomplete),
+                _ => None,
             };
-            assert_eq!(failure.kind, kind);
-            assert_eq!(failure.reporter, crate::Reporter::Provider);
-            assert_eq!(
-                failure.native.present(),
-                Some(&json!({"stop_reason": "fixture"}))
-            );
+            if let Some(kind) = kind {
+                assert_eq!(failure.kind, kind);
+                assert_eq!(failure.reporter, crate::Reporter::Provider);
+                assert_eq!(
+                    failure.native.present(),
+                    Some(&json!({"stop_reason": "fixture"}))
+                );
+            }
+            // Text that fails parsing or validation, or that its stream abandons, is held
+            // output too.
             assert_eq!(
                 failure
                     .partial
