@@ -385,7 +385,7 @@ pub fn validate_tool_calls(
             {
                 return Err(Failure::invalid_response(
                     provider,
-                    format!("Provider requested an unoffered tool: {}.", call.name),
+                    "Provider requested an unoffered tool.",
                 )
                 .with_tool_code(crate::ToolCode::UnofferedTool));
             }
@@ -409,7 +409,7 @@ pub fn validate_tool_calls(
             if !call.arguments.is_object() {
                 return Err(Failure::invalid_response(
                     provider,
-                    format!("Tool arguments must be an object: {}.", call.name),
+                    "Tool arguments must be an object.",
                 )
                 .with_tool_code(crate::ToolCode::InvalidToolArguments));
             }
@@ -422,13 +422,15 @@ pub fn validate_tool_calls(
                 jsonschema::validator_for(&definition.input_schema).map_err(|error| {
                     Failure::new(
                         provider,
-                        error.to_string(),
+                        "Invalid tool schema.",
                         super::error::ErrorKind::InvalidRequest,
                     )
+                    .caused_by_text(error.to_string())
                     .with_tool_code(crate::ToolCode::InvalidToolSchema)
                 })?;
             validator.validate(&call.arguments).map_err(|error| {
-                Failure::invalid_response(provider, error.to_string())
+                Failure::invalid_response(provider, "Tool arguments violate the tool's schema.")
+                    .caused_by_text(error.to_string())
                     .with_tool_code(crate::ToolCode::InvalidToolArguments)
             })?;
             Ok(())
@@ -613,6 +615,37 @@ mod tests {
                 "{code}: {events:?}"
             );
         }
+    }
+    #[tokio::test]
+    async fn a_schema_violation_keeps_the_rejected_argument_out_of_the_message() {
+        let mut request = request();
+        request.local_tools[0].input_schema = json!({
+            "type": "object",
+            "properties": {"key": {"type": "integer"}},
+        });
+        let executor = Arc::new(Executor::default());
+        let script = Script {
+            turns: vec![vec![EngineLocalToolCall {
+                arguments: json!({"key": "private-argument"}),
+                ..call("first")
+            }]],
+            received: Default::default(),
+        };
+        let events = run(script, request, executor.clone()).await;
+        assert!(executor.calls.lock().unwrap().is_empty());
+        let [Err(error)] = &events[..] else {
+            panic!("{events:?}");
+        };
+        assert_eq!(error.tool_code, Some(crate::ToolCode::InvalidToolArguments));
+        assert_eq!(error.message, "Tool arguments violate the tool's schema.");
+        let Some(crate::Cause::Foreign(crate::Detail::Present(texts))) = &error.cause else {
+            panic!("{:?}", error.cause);
+        };
+        assert!(texts[0].contains("private-argument"), "{texts:?}");
+        let withheld = error.disclose(crate::FailureDisclosure::Withheld);
+        assert!(!serde_json::to_string(&withheld)
+            .unwrap()
+            .contains("private-argument"));
     }
     #[tokio::test]
     async fn enforces_disabled_and_named_tool_policy_before_execution() {
