@@ -43,7 +43,7 @@ pub struct ToolRegistry {
     tools: BTreeMap<String, Arc<OfferedTool>>,
 }
 
-pub(crate) fn refusal(message: impl Into<String>, code: ToolCode) -> Failure {
+pub(crate) fn refusal(message: &'static str, code: ToolCode) -> Failure {
     Failure::new("tools", message, ErrorKind::InvalidRequest).with_tool_code(code)
 }
 
@@ -98,9 +98,10 @@ impl ToolRegistry {
         for operation in selection.operations() {
             if !seen.insert(local_tool_name(operation.name.as_str())) {
                 return Err(refusal(
-                    format!("Tool \"{}\" collides with a selected tool.", operation.name),
+                    "Tool collides with a selected tool.",
                     ToolCode::DuplicateTool,
-                ));
+                )
+                .with_context("tool", operation.name.as_str()));
             }
         }
         let mut registry = Self {
@@ -132,9 +133,10 @@ impl ToolRegistry {
         let profile = profile.into();
         if profile.trim().is_empty() || self.profiles.contains_key(&profile) {
             return Err(refusal(
-                format!("Profile \"{profile}\" is blank or already named."),
+                "Profile is blank or already named.",
                 ToolCode::InvalidToolDefinition,
-            ));
+            )
+            .with_context("profile", profile));
         }
         let names = names.into_iter().map(Into::into).collect::<BTreeSet<_>>();
         if let Some(name) = names
@@ -142,9 +144,11 @@ impl ToolRegistry {
             .find(|name| !self.dispatch.selection.contains(name))
         {
             return Err(refusal(
-                format!("Profile \"{profile}\" names \"{name}\", which is not selected."),
+                "Profile names a tool that is not selected.",
                 ToolCode::InvalidToolDefinition,
-            ));
+            )
+            .with_context("profile", profile)
+            .with_context("tool", name.as_str()));
         }
         Arc::make_mut(&mut self.profiles).insert(profile, names);
         self.offer();
@@ -237,11 +241,8 @@ impl ToolRegistry {
             request_id: None,
         };
         let unregistered = |evidence: &ToolCallEvidence| {
-            refusal(
-                format!("Tool \"{}\" is not registered.", call.name),
-                ToolCode::UnregisteredTool,
-            )
-            .with_tool_call(evidence.clone())
+            refusal("Tool is not registered.", ToolCode::UnregisteredTool)
+                .with_tool_call(evidence.clone())
         };
         let offered = self
             .tools
@@ -299,11 +300,10 @@ impl PreparedCall {
             Some(operation) => operation
                 .validate_output(&outcome)
                 .map_err(|error| refused(error, self.evidence.clone())),
-            None => Err(refusal(
-                format!("Tool \"{}\" is not registered.", self.call.name),
-                ToolCode::UnregisteredTool,
-            )
-            .with_tool_call(self.evidence.clone())),
+            None => Err(
+                refusal("Tool is not registered.", ToolCode::UnregisteredTool)
+                    .with_tool_call(self.evidence.clone()),
+            ),
         }
     }
 

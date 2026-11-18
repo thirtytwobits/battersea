@@ -36,7 +36,7 @@ pub(crate) fn create_google_media_generator(
         .retry(reqwest::retry::never())
         .redirect(reqwest::redirect::Policy::none())
         .build()
-        .map_err(|error| Failure::transport(PROVIDER, error.to_string()))?;
+        .map_err(|error| crate::http_payload::client_failure(PROVIDER, error))?;
     Ok(Arc::new(GoogleMediaGenerator {
         client,
         clock,
@@ -149,7 +149,7 @@ impl GoogleMediaGenerator {
                 let response = request
                     .send()
                     .await
-                    .map_err(|error| Failure::transport(PROVIDER, error.to_string()))?;
+                    .map_err(|error| crate::http_payload::send_failure(PROVIDER, error))?;
                 if !response.status().is_success() {
                     return Err(normalize_google_http_error(
                         response.status().as_u16(),
@@ -195,9 +195,10 @@ impl GoogleMediaGenerator {
 fn missing_google_media(field: &str) -> Failure {
     Failure::new(
         PROVIDER,
-        format!("Gemini media backend must configure {field}."),
+        "Gemini media backend lacks a required field.",
         "invalid_request",
     )
+    .with_context("field", field)
 }
 
 pub(crate) fn build_interaction_body(
@@ -284,15 +285,16 @@ fn resolve_google_api_key(backend: &MediaBackendConfig) -> Result<String, Failur
     }
     Err(Failure::transport(
         PROVIDER,
-        format!(
-            "Gemini media backend \"{}\" has no API key. Set {} or configure auth.apiKey.",
-            backend.id,
-            if env_var.is_empty() {
-                "GOOGLE_API_KEY"
-            } else {
-                env_var
-            }
-        ),
+        "Gemini media backend has no API key: set the named variable or configure auth.apiKey.",
+    )
+    .with_context("backend", backend.id.as_str())
+    .with_context(
+        "variable",
+        if env_var.is_empty() {
+            "GOOGLE_API_KEY"
+        } else {
+            env_var
+        },
     ))
 }
 

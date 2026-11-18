@@ -55,9 +55,10 @@ pub(crate) fn poll_policy(backend: &MediaBackendConfig) -> Result<MediaPollPolic
     let missing = |key| {
         Failure::new(
             &backend.provider,
-            format!("Media backend must configure options.{key}."),
+            "Media backend lacks a required option.",
             ErrorKind::InvalidRequest,
         )
+        .with_context("option", key)
     };
     let interval_ms = option("pollIntervalMs").ok_or_else(|| missing("pollIntervalMs"))?;
     let retry_delay_ms = option("pollRetryDelayMs").unwrap_or(interval_ms);
@@ -155,7 +156,7 @@ impl RemoteJob {
         let _ = job.accept(update);
         Ok(job)
     }
-    fn error(&self, kind: ErrorKind, message: impl Into<String>) -> Failure {
+    fn error(&self, kind: ErrorKind, message: &'static str) -> Failure {
         Failure::new(self.transport.provider(), message, kind)
             .with_request_id(Some(self.snapshot.id.clone()))
             .with_dispatch(DispatchState::Accepted)
@@ -189,13 +190,16 @@ impl RemoteJob {
     }
     fn checked_status(&self) -> Result<MediaJobStatus, Failure> {
         match self.snapshot.status {
-            MediaJobStatus::Failed => Err(self.error(
-                ErrorKind::Provider,
-                self.update
-                    .failure
-                    .as_deref()
-                    .unwrap_or("Media job failed."),
-            )),
+            MediaJobStatus::Failed => {
+                let failure = self.error(ErrorKind::Provider, "Media job failed.");
+                Err(match &self.update.failure {
+                    Some(reported) => failure.with_native(
+                        battersea_model::Reporter::Provider,
+                        Value::String(reported.clone()),
+                    ),
+                    None => failure,
+                })
+            }
             MediaJobStatus::Cancelled => {
                 Err(self.error(ErrorKind::Cancelled, "Provider cancelled media job."))
             }
@@ -256,7 +260,10 @@ impl RemoteJob {
         let client = reqwest::Client::builder()
             .redirect(reqwest::redirect::Policy::none())
             .build()
-            .map_err(|error| self.error(ErrorKind::Retrieval, error.to_string()))?;
+            .map_err(|error| {
+                self.error(ErrorKind::Retrieval, "HTTP client could not be built.")
+                    .caused_by(&error.without_url())
+            })?;
         let mut remaining = self
             .transport
             .backend()
@@ -314,10 +321,10 @@ impl RemoteJob {
                     } else if let Some(key) = self.transport.asset_auth(&url) {
                         request = request.bearer_auth(key);
                     }
-                    let response = request
-                        .send()
-                        .await
-                        .map_err(|error| self.error(ErrorKind::Retrieval, error.to_string()))?;
+                    let response = request.send().await.map_err(|error| {
+                        self.error(ErrorKind::Retrieval, "Media output request failed.")
+                            .caused_by(&error.without_url())
+                    })?;
                     if response.status().is_redirection() {
                         if redirects >= 5 {
                             return Err(
@@ -354,10 +361,7 @@ impl RemoteJob {
                             } else {
                                 ErrorKind::Retrieval
                             },
-                            format!(
-                                "Media output retrieval failed with HTTP {}.",
-                                response.status().as_u16()
-                            ),
+                            "Media output retrieval was rejected.",
                         )
                         .with_status_code(response.status().as_u16()));
                 }
@@ -385,8 +389,10 @@ impl RemoteJob {
                 let mut bytes = Vec::new();
                 let mut stream = response.bytes_stream();
                 while let Some(chunk) = stream.next().await {
-                    let chunk = chunk
-                        .map_err(|error| self.error(ErrorKind::Retrieval, error.to_string()))?;
+                    let chunk = chunk.map_err(|error| {
+                        self.error(ErrorKind::Retrieval, "Media output stream failed.")
+                            .caused_by(&error.without_url())
+                    })?;
                     // Reserve enough space for the returned base64 representation before retaining bytes.
                     if bytes.len().saturating_add(chunk.len()).saturating_add(2) / 3 * 4
                         > remaining.saturating_sub(mime.len() + 13)

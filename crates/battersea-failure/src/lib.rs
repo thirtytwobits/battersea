@@ -108,10 +108,23 @@ pub enum Cause {
 
 /// One failed or incomplete operation. The parts are boxed so a `Result` that carries a
 /// failure stays small.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema, thiserror::Error)]
-#[error("{}", .0.message)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(transparent)]
 pub struct Failure(Box<FailureParts>);
+impl std::error::Error for Failure {}
+/// The message, then the context as `name=value` pairs with each value in its JSON form.
+impl std::fmt::Display for Failure {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(&self.message)?;
+        for (index, (name, value)) in self.context.iter().enumerate() {
+            write!(f, "{}{name}={value}", if index == 0 { " (" } else { ", " })?;
+        }
+        if !self.context.is_empty() {
+            f.write_str(")")?;
+        }
+        Ok(())
+    }
+}
 impl std::ops::Deref for Failure {
     type Target = FailureParts;
     fn deref(&self) -> &FailureParts {
@@ -131,6 +144,10 @@ pub struct FailureParts {
     pub kind: ErrorKind,
     /// Battersea's description, in fixed wording.
     pub message: String,
+    /// The values Battersea names in its description. A flow receives the context under
+    /// either disclosure, so it holds no text a reporter wrote.
+    #[serde(default, skip_serializing_if = "std::collections::BTreeMap::is_empty")]
+    pub context: std::collections::BTreeMap<String, Value>,
     #[serde(default)]
     pub reporter: Reporter,
     #[serde(default)]
@@ -159,7 +176,7 @@ impl Failure {
     /// A failure Battersea reports about `provider`.
     pub fn new(
         provider: impl Into<String>,
-        message: impl Into<String>,
+        message: &'static str,
         kind: impl Into<ErrorKind>,
     ) -> Self {
         let mut failure = Self::local(message, kind);
@@ -168,7 +185,17 @@ impl Failure {
     }
 
     /// A failure Battersea reports outside any provider operation.
-    pub fn local(message: impl Into<String>, kind: impl Into<ErrorKind>) -> Self {
+    ///
+    /// The message is the same text for every failure raised at one site, so a message built
+    /// at run time does not compile. A value that distinguishes the failure is named with
+    /// [`with_context`](Self::with_context).
+    ///
+    /// ```compile_fail
+    /// # use battersea_failure::{ErrorKind, Failure};
+    /// let node = String::from("n7");
+    /// Failure::local(&format!("Unknown flow node {node}."), ErrorKind::Runtime);
+    /// ```
+    pub fn local(message: &'static str, kind: impl Into<ErrorKind>) -> Self {
         let kind = kind.into();
         let dispatch = if kind == ErrorKind::InvalidRequest {
             DispatchState::NotSent
@@ -177,7 +204,8 @@ impl Failure {
         };
         Self(Box::new(FailureParts {
             kind,
-            message: message.into(),
+            message: message.to_owned(),
+            context: Default::default(),
             reporter: Reporter::Battersea,
             origin: Origin::default(),
             exchange: Exchange {
@@ -193,12 +221,19 @@ impl Failure {
         }))
     }
 
-    pub fn invalid_response(provider: impl Into<String>, message: impl Into<String>) -> Self {
+    pub fn invalid_response(provider: impl Into<String>, message: &'static str) -> Self {
         Self::new(provider, message, ErrorKind::InvalidResponse)
     }
 
-    pub fn transport(provider: impl Into<String>, message: impl Into<String>) -> Self {
+    pub fn transport(provider: impl Into<String>, message: &'static str) -> Self {
         Self::new(provider, message, ErrorKind::Transport)
+    }
+
+    /// Names a value of Battersea's own that distinguishes this failure. Text a provider or
+    /// a tool wrote belongs in native detail or the cause.
+    pub fn with_context(mut self, name: &'static str, value: impl Into<Value>) -> Self {
+        self.context.insert(name.to_owned(), value.into());
+        self
     }
 
     /// Names a refusal of the tool runner.
@@ -311,6 +346,9 @@ impl Failure {
         {
             visit(text);
         }
+        for value in self.context.values_mut() {
+            visit_value(value, visit);
+        }
         if let Some(call) = self.tool_call.as_deref_mut() {
             visit(&mut call.call_id);
             visit(&mut call.tool_name);
@@ -336,13 +374,8 @@ impl Failure {
 }
 
 /// A failure the flow runtime or a host describes in its own words.
-impl From<String> for Failure {
-    fn from(message: String) -> Self {
-        Self::local(message, ErrorKind::Runtime)
-    }
-}
-impl From<&str> for Failure {
-    fn from(message: &str) -> Self {
+impl From<&'static str> for Failure {
+    fn from(message: &'static str) -> Self {
         Self::local(message, ErrorKind::Runtime)
     }
 }
@@ -400,6 +433,22 @@ mod tests {
                 "inner".into()
             ])))
         );
+    }
+
+    #[test]
+    fn context_is_displayed_masked_and_kept_under_withholding() {
+        let mut failure = Failure::from("Token exceeds the edge's event limit.")
+            .with_context("edge", "e1 secret-key")
+            .with_context("bytes", 4096);
+        assert_eq!(
+            failure.to_string(),
+            "Token exceeds the edge's event limit. (bytes=4096, edge=\"e1 secret-key\")"
+        );
+        failure.visit_text(&mut |text| *text = text.replace("secret-key", "[REDACTED]"));
+        let withheld = failure.disclose(FailureDisclosure::Withheld);
+        assert_eq!(withheld.context["edge"], "e1 [REDACTED]");
+        assert_eq!(withheld.context["bytes"], 4096);
+        assert_eq!(Failure::from("Plain.").to_string(), "Plain.");
     }
 
     #[test]

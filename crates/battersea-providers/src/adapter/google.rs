@@ -90,7 +90,10 @@ pub(crate) fn create_google_adapter(
         .retry(reqwest::retry::never())
         .redirect(reqwest::redirect::Policy::none())
         .build()
-        .map_err(|error| Failure::transport("google", error.to_string()))?;
+        .map_err(|error| {
+            Failure::transport("google", "Gemini HTTP client could not be built.")
+                .caused_by(&error.without_url())
+        })?;
     Ok(Arc::new(GoogleEngineAdapter {
         client,
         logger,
@@ -189,7 +192,7 @@ impl EngineAdapter for GoogleEngineAdapter {
             .ok_or_else(|| {
                 Failure::invalid_response(
                     "google",
-                    "Gemini countTokens response missing totalTokens.".to_string(),
+                    "Gemini countTokens response missing totalTokens.",
                 )
             })
     }
@@ -478,8 +481,12 @@ impl ToolConversation for GoogleToolConversation {
         if let Some(identified) = crate::retry::identified(raw.get("responseId")) {
             send_event(events, identified).await?;
         }
-        let payload: GeminiGenerateContentResponse = serde_json::from_value(raw.clone())
-            .map_err(|error| Failure::invalid_response("google", error.to_string()))?;
+        let payload: GeminiGenerateContentResponse =
+            serde_json::from_value(raw.clone()).map_err(|error| {
+                Failure::invalid_response("google", "Gemini response is not the expected JSON.")
+                    .with_native(battersea_model::Reporter::Provider, raw.clone())
+                    .caused_by(&error)
+            })?;
         if payload.first_finish_reason().as_deref() != Some("STOP") {
             let class = match payload.first_finish_reason() {
                 Some(reason) => finish_class(&reason),
@@ -563,15 +570,16 @@ fn resolve_google_api_key(backend: &EngineBackendConfig) -> Result<String, Failu
     }
     Err(Failure::transport(
         "google",
-        format!(
-            "Google Gemini backend \"{}\" has no API key. Set {} or configure auth.apiKey.",
-            backend.id,
-            if env_var.is_empty() {
-                "GOOGLE_API_KEY"
-            } else {
-                env_var
-            }
-        ),
+        "Gemini backend has no API key: set the named variable or configure auth.apiKey.",
+    )
+    .with_context("backend", backend.id.as_str())
+    .with_context(
+        "variable",
+        if env_var.is_empty() {
+            "GOOGLE_API_KEY"
+        } else {
+            env_var
+        },
     ))
 }
 

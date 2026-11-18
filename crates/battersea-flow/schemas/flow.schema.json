@@ -250,6 +250,11 @@
             }
           ]
         },
+        "context": {
+          "additionalProperties": true,
+          "description": "The values Battersea names in its description. A flow receives the context under\neither disclosure, so it holds no text a reporter wrote.",
+          "type": "object"
+        },
         "exchange": {
           "$ref": "#/$defs/Exchange",
           "default": {

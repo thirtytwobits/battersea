@@ -182,7 +182,12 @@ pub(crate) async fn handle_failure<H: ExecutionHost>(
     let retained = runtime
         .retention
         .retain(&node.id, record.clone())
-        .map_err(|message| H::Error::invalid_request(error_codes::CAPACITY_EXHAUSTED, message))?;
+        .map_err(|message| {
+            H::Error::invalid_request(
+                error_codes::CAPACITY_EXHAUSTED,
+                wrapping("Node retention capacity is exhausted.", message),
+            )
+        })?;
     runtime.handled_failures.insert(node.id.clone(), retained);
     runtime.handling_failures.insert(node.id.clone());
     let result = async {
@@ -290,7 +295,7 @@ async fn settle_outputs<H: ExecutionHost>(
     failed: bool,
 ) -> Result<(), H::Error> {
     for port in battersea_flow::ports::expanded_output_ports_for_node(&runtime.definitions, node)
-        .map_err(H::Error::internal)?
+        .map_err(unexpandable_ports::<H::Error>)?
     {
         let key = (node.id.clone(), port.name.clone());
         if failed && port.mode == FlowPortMode::Stream && !runtime.closed_outputs.contains(&key) {
@@ -350,4 +355,14 @@ async fn skip_input<H: ExecutionHost>(
     )
     .await;
     Ok(())
+}
+
+/// A failure in Battersea's wording that wraps the text of a lower layer's error.
+pub(crate) fn wrapping(message: &'static str, text: impl Into<String>) -> Failure {
+    Failure::from(message).caused_by_text(text)
+}
+
+/// The fault of a node whose ports cannot be expanded from its definition.
+pub(crate) fn unexpandable_ports<E: ExecutionError>(text: String) -> E {
+    E::internal(wrapping("Node ports cannot be expanded.", text))
 }

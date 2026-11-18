@@ -32,7 +32,7 @@ const DATA_FIELDS: &[&str] = &[
     "codeExecutionResult",
 ];
 
-fn invalid(message: &str) -> Failure {
+fn invalid(message: &'static str) -> Failure {
     Failure::invalid_response("google", message)
 }
 

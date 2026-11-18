@@ -40,6 +40,9 @@ export type Exchange = {
 export type Failure = FailureParts;
 export type FailureParts = {
     "cause"?: Cause | null;
+    "context"?: {
+        [key: string]: unknown;
+    };
     "exchange": Exchange;
     "kind": string;
     "message": string;

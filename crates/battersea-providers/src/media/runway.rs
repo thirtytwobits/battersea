@@ -38,7 +38,7 @@ pub(crate) fn create_runway_media_generator(
         .redirect(reqwest::redirect::Policy::none())
         .default_headers(build_headers(&backend)?)
         .build()
-        .map_err(|error| Failure::transport("runway", error.to_string()))?;
+        .map_err(|error| crate::http_payload::client_failure("runway", error))?;
     Ok(Arc::new(RunwayMediaGenerator {
         client,
         clock,
@@ -61,7 +61,7 @@ struct RunwayMediaGenerator {
 /// are no hardcoded defaults: if config does not provide the value, the
 /// request cannot proceed.
 /// A request Runway rejected, with Runway's body as native detail.
-fn rejected(message: &str, status: u16, body: String) -> Failure {
+fn rejected(message: &'static str, status: u16, body: String) -> Failure {
     let failure =
         Failure::new("runway", message, classify_http_status(status)).with_status_code(status);
     match crate::http_payload::rejection_body(body) {
@@ -73,9 +73,10 @@ fn rejected(message: &str, status: u16, body: String) -> Failure {
 fn missing_runway_option(key: &str) -> Failure {
     Failure::new(
         "runway",
-        format!("Runway backend must configure options.{key}."),
+        "Runway backend lacks a required option.",
         "invalid_request",
     )
+    .with_context("option", key)
 }
 
 fn require_timeout_ms(backend: &MediaBackendConfig) -> Result<u64, Failure> {
@@ -147,7 +148,7 @@ impl MediaGenerationAdapter for RunwayMediaGenerator {
             let submit_response = submit_request
                 .send()
                 .await
-                .map_err(|error| Failure::transport("runway", error.to_string()))?;
+                .map_err(|error| crate::http_payload::send_failure("runway", error))?;
             let submit_status = submit_response.status().as_u16();
             if !submit_response.status().is_success() {
                 return Err(rejected(
@@ -198,7 +199,7 @@ impl MediaGenerationAdapter for RunwayMediaGenerator {
             request
                 .send()
                 .await
-                .map_err(|error| Failure::transport("runway", error.to_string()))
+                .map_err(|error| crate::http_payload::send_failure("runway", error))
         })
         .await?;
         if !response.status().is_success() {
@@ -315,14 +316,11 @@ pub(crate) fn build_submit_body(
     if prompt_text.len() > max_prompt_chars {
         return Err(Failure::new(
             "runway",
-            format!(
-                "Runway prompt text is {} characters but the limit is {}. \
-                 Shorten the prompt in your flow before sending to Runway.",
-                prompt_text.len(),
-                max_prompt_chars
-            ),
+            "Runway prompt text exceeds its character limit.",
             "invalid_request",
-        ));
+        )
+        .with_context("characters", prompt_text.len())
+        .with_context("limit", max_prompt_chars));
     }
 
     match request.kind {
@@ -335,13 +333,15 @@ pub(crate) fn build_submit_body(
             if backend.options.transport.as_deref() == Some("model-router") {
                 let config_id = require_string_option(backend, "configId")?;
                 let requested_ratio = request.options.aspect_ratio.as_deref().unwrap_or("1:1");
-                let aspect_ratio = normalize_router_aspect_ratio(requested_ratio).ok_or_else(|| {
-                    Failure::new(
-                        "runway",
-                        format!("Runway Model Router does not support image aspect ratio \"{requested_ratio}\"."),
-                        "invalid_request",
-                    )
-                })?;
+                let aspect_ratio =
+                    normalize_router_aspect_ratio(requested_ratio).ok_or_else(|| {
+                        Failure::new(
+                            "runway",
+                            "Runway Model Router does not support the image aspect ratio.",
+                            "invalid_request",
+                        )
+                        .with_context("aspectRatio", requested_ratio)
+                    })?;
                 let mut input = json!({
                     "promptText": prompt_text,
                     "aspectRatio": aspect_ratio,
@@ -370,9 +370,10 @@ pub(crate) fn build_submit_body(
             let ratio = normalize_runway_image_ratio(&requested_ratio).ok_or_else(|| {
                 Failure::new(
                     "runway",
-                    format!("Runway does not support image aspect ratio \"{requested_ratio}\"."),
+                    "Runway does not support the image aspect ratio.",
                     "invalid_request",
                 )
+                .with_context("aspectRatio", requested_ratio.as_str())
             })?;
             let mut body = json!({
                 "model": backend.model,
@@ -530,8 +531,9 @@ fn build_headers(backend: &MediaBackendConfig) -> Result<HeaderMap, Failure> {
     let api_key = backend.auth.api_key.as_deref().unwrap_or("");
     headers.insert(
         AUTHORIZATION,
-        HeaderValue::from_str(&format!("Bearer {api_key}"))
-            .map_err(|error| Failure::transport("runway", error.to_string()))?,
+        HeaderValue::from_str(&format!("Bearer {api_key}")).map_err(|error| {
+            Failure::transport("runway", "Invalid authorisation header value.").caused_by(&error)
+        })?,
     );
 
     let version_header = backend.auth.version_header.clone().ok_or_else(|| {
@@ -549,10 +551,12 @@ fn build_headers(backend: &MediaBackendConfig) -> Result<HeaderMap, Failure> {
         )
     })?;
     headers.insert(
-        HeaderName::from_bytes(version_header.as_bytes())
-            .map_err(|error| Failure::transport("runway", error.to_string()))?,
-        HeaderValue::from_str(&version)
-            .map_err(|error| Failure::transport("runway", error.to_string()))?,
+        HeaderName::from_bytes(version_header.as_bytes()).map_err(|error| {
+            Failure::transport("runway", "Invalid header name.").caused_by(&error)
+        })?,
+        HeaderValue::from_str(&version).map_err(|error| {
+            Failure::transport("runway", "Invalid header value.").caused_by(&error)
+        })?,
     );
     headers.insert(CONTENT_TYPE, HeaderValue::from_static("application/json"));
     if read_bool_option(&backend.options.extra, "trace", false) {
@@ -607,7 +611,7 @@ impl super::jobs::JobTransport for RunwayTransport {
             let response = request
                 .send()
                 .await
-                .map_err(|e| Failure::transport("runway", e.to_string()))?;
+                .map_err(|e| crate::http_payload::send_failure("runway", e))?;
             super::jobs::json_response("runway", response, clock).await
         })
         .await?;
@@ -844,11 +848,8 @@ mod tests {
         request.prompt_text = "x".repeat(1001);
         let error = build_submit_body(&backend, &request).expect_err("over-long prompt");
         assert_eq!(error.kind.as_str(), "invalid_request");
-        assert!(
-            error.message.contains("1001"),
-            "should report actual length"
-        );
-        assert!(error.message.contains("1000"), "should report limit");
+        assert_eq!(error.context["characters"], 1001);
+        assert_eq!(error.context["limit"], 1000);
 
         // Exactly at the limit is accepted
         let mut at_limit = image_request();

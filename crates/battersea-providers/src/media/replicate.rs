@@ -16,7 +16,7 @@ pub(crate) struct Replicate {
     base: reqwest::Url,
     kind: MediaKind,
 }
-fn invalid(message: impl Into<String>) -> Failure {
+fn invalid(message: &'static str) -> Failure {
     Failure::new("replicate", message, ErrorKind::InvalidRequest)
 }
 pub(crate) fn create(
@@ -56,7 +56,9 @@ pub(crate) fn create(
         .retry(reqwest::retry::never())
         .redirect(reqwest::redirect::Policy::none())
         .build()
-        .map_err(|error| invalid(error.to_string()))?;
+        .map_err(|error| {
+            invalid("HTTP client could not be built.").caused_by(&error.without_url())
+        })?;
     Ok(Arc::new(Replicate {
         backend,
         clock,
@@ -108,14 +110,13 @@ pub(crate) fn prepare(
     }
     let mut put = |key: &str, value: Option<Value>| -> Result<(), Failure> {
         if let Some(value) = value {
-            let field = fields
-                .get(key)
-                .and_then(Value::as_str)
-                .ok_or_else(|| invalid(format!("Configure options.inputFields.{key}.")))?;
+            let field = fields.get(key).and_then(Value::as_str).ok_or_else(|| {
+                invalid("Replicate backend lacks an input field mapping.")
+                    .with_context("option", format!("options.inputFields.{key}"))
+            })?;
             if object.contains_key(field) {
-                return Err(invalid(format!(
-                    "Static input conflicts with mapped field {field}."
-                )));
+                return Err(invalid("Static input conflicts with a mapped field.")
+                    .with_context("field", field));
             }
             object.insert(field.into(), value);
         }
@@ -328,13 +329,13 @@ impl MediaGenerationAdapter for Replicate {
                     .send()
                     .await
                     .map_err(|error| {
-                        Failure::transport("replicate", error.to_string()).with_dispatch(
-                            if error.is_connect() {
-                                DispatchState::NotSent
-                            } else {
-                                DispatchState::Unknown
-                            },
-                        )
+                        let dispatch = if error.is_connect() {
+                            DispatchState::NotSent
+                        } else {
+                            DispatchState::Unknown
+                        };
+                        crate::http_payload::send_failure("replicate", error)
+                            .with_dispatch(dispatch)
                     })?;
                 json_response("replicate", response, self.clock.as_ref()).await
             })
@@ -386,7 +387,7 @@ impl JobTransport for Replicate {
                 .request(reqwest::Method::GET, &format!("predictions/{id}"))
                 .send()
                 .await
-                .map_err(|e| Failure::transport("replicate", e.to_string()))?;
+                .map_err(|e| crate::http_payload::send_failure("replicate", e))?;
             json_response("replicate", response, self.clock.as_ref()).await
         })
         .await?;
@@ -398,7 +399,7 @@ impl JobTransport for Replicate {
                 .request(reqwest::Method::POST, &format!("predictions/{id}/cancel"))
                 .send()
                 .await
-                .map_err(|e| Failure::transport("replicate", e.to_string()))?;
+                .map_err(|e| crate::http_payload::send_failure("replicate", e))?;
             json_response("replicate", response, self.clock.as_ref()).await
         })
         .await?;
@@ -429,10 +430,10 @@ impl JobTransport for Replicate {
         now: DateTime<Utc>,
     ) -> Result<RemoteUpdate, Failure> {
         verify_webhook(&webhook, secret, now)?;
-        self.decode(
-            serde_json::from_slice(webhook.body)
-                .map_err(|e| Failure::invalid_response("replicate", e.to_string()))?,
-        )
+        self.decode(serde_json::from_slice(webhook.body).map_err(|e| {
+            Failure::invalid_response("replicate", "Replicate webhook body is not JSON.")
+                .caused_by(&e)
+        })?)
     }
 }
 fn verify_webhook(

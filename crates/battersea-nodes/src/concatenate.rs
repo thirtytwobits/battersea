@@ -174,18 +174,22 @@ fn render_concatenate_output(
         .iter()
         .find(|port| port.name == "output")
         .ok_or_else(|| {
-            EngineError::internal(format!(
-                "Flow node \"{}\" definition \"{}\" does not declare output port \"output\".",
-                node.id, definition.class_name
-            ))
+            EngineError::internal(
+                battersea_runtime::Failure::from(
+                    "The definition declares no output port \"output\".",
+                )
+                .with_context("node", node.id.as_str())
+                .with_context("definition", definition.class_name.as_str()),
+            )
         })?;
 
     battersea_flow::template_engine::render_port_formatter(port, Some(&variant_key), &bindings)
         .map_err(|error| {
-            EngineError::internal(format!(
-                "Failed to render formatter for flow node \"{}\" output port \"output\": {}",
-                node.id, error
-            ))
+            EngineError::internal(
+                battersea_runtime::Failure::from("Rendering the output port failed.")
+                    .with_context("node", node.id.as_str())
+                    .caused_by_text(error.to_string()),
+            )
         })
 }
 
@@ -408,8 +412,13 @@ impl<H: ExecutionHost> FlowRuntimeHandler<H> for ConcatenateHandler {
                     .map(|value| (port, value))
             })
             .collect::<Result<HashMap<_, _>, H::Error>>()?;
-        let output = prepare_concatenate(&runtime.flow, node, definition, &inputs)
-            .map_err(|e| H::Error::internal(e.to_string()))?;
+        let output =
+            prepare_concatenate(&runtime.flow, node, definition, &inputs).map_err(|error| {
+                H::Error::internal(match error {
+                    EngineError::InvalidRequest { failure, .. }
+                    | EngineError::Internal(failure) => failure,
+                })
+            })?;
         runtime.executed_nodes.insert(node.id.clone());
         core.emit_flow_token(runtime, &node.id, "output", output, token)
             .await

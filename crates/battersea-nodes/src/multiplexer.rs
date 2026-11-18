@@ -30,8 +30,13 @@ impl<H: ExecutionHost> FlowRuntimeHandler<H> for MultiplexerHandler {
         token: &CancellationToken,
     ) -> Result<(), H::Error> {
         let input_token = core.take_flow_input_token(runtime, &node.id, "input")?;
-        let output_ports = expanded_output_ports_for_node(&runtime.definitions, node)
-            .map_err(H::Error::internal)?;
+        let output_ports =
+            expanded_output_ports_for_node(&runtime.definitions, node).map_err(|text| {
+                H::Error::internal(
+                    battersea_runtime::Failure::from("Node ports cannot be expanded.")
+                        .caused_by_text(text),
+                )
+            })?;
 
         runtime.executed_nodes.insert(node.id.clone());
         for output_port in output_ports {

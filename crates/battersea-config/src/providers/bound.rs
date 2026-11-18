@@ -15,7 +15,7 @@ impl Context {
     fn error(&self, error: Failure) -> Failure {
         self.binding.error(error, self.secret.as_deref())
     }
-    fn invalid(&self, message: &str) -> Failure {
+    fn invalid(&self, message: &'static str) -> Failure {
         Failure::new(&self.binding.provider, message, ErrorKind::InvalidRequest)
     }
     fn admit(&self, request: &mut EngineTextStreamRequest) -> Result<(), Failure> {

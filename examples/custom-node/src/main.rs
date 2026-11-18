@@ -41,7 +41,7 @@ impl Error {
 }
 impl std::fmt::Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}: {}", self.code, self.failure.message)
+        write!(f, "{}: {}", self.code, self.failure)
     }
 }
 impl std::error::Error for Error {}
@@ -175,7 +175,11 @@ impl NodeHandler<Application> for Sink {
             run.retention
                 .retain("output", token.value.clone())
                 .map_err(|message| {
-                    Error::invalid_request(error_codes::CAPACITY_EXHAUSTED, message)
+                    Error::invalid_request(
+                        error_codes::CAPACITY_EXHAUSTED,
+                        battersea_runtime::Failure::from("Output retention capacity is exhausted.")
+                            .caused_by_text(message),
+                    )
                 })?,
         );
         Ok(())
@@ -208,7 +212,13 @@ impl ExecutionHost for Application {
     ) -> Result<Value, Error> {
         Registry::default()
             .convert_automation_value(parameter, value)
-            .map_err(|e| Error::invalid_request(codes::INVALID_PARAMETER_WRITE, e.to_string()))
+            .map_err(|e| {
+                Error::invalid_request(
+                    codes::INVALID_PARAMETER_WRITE,
+                    battersea_runtime::Failure::from("Parameter value cannot be converted.")
+                        .caused_by_text(e.to_string()),
+                )
+            })
     }
     async fn commit_parameter_write(
         &self,
@@ -253,7 +263,8 @@ impl ActivationHost for Application {
         } else {
             Err(Error::invalid_request(
                 codes::INVALID_FLOW,
-                format!("{:?}", validation.issues),
+                battersea_runtime::Failure::from("Flow is invalid.")
+                    .caused_by_text(format!("{:?}", validation.issues)),
             ))
         }
     }

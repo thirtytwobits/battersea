@@ -21,7 +21,7 @@ struct Checkpoint {
 
 const CHECKPOINT_VERSION: u32 = 1;
 
-fn invalid(message: &str) -> Failure {
+fn invalid(message: &'static str) -> Failure {
     Failure::invalid_response("anthropic", message)
 }
 

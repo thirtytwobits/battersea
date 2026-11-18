@@ -179,7 +179,7 @@ pub trait ConversationStore: Send + Sync {
         next: &ConversationCheckpoint,
     ) -> Result<(), ConversationStoreError>;
 }
-fn error(code: ToolCode, message: &str) -> Failure {
+fn error(code: ToolCode, message: &'static str) -> Failure {
     Failure::new("conversation", message, ErrorKind::InvalidRequest).with_tool_code(code)
 }
 fn invalid() -> Failure {

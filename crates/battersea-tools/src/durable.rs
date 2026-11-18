@@ -142,7 +142,7 @@ pub trait ToolApprovalStore: Send + Sync {
     ) -> Result<(), ToolApprovalStoreError>;
 }
 
-fn failure(code: ToolCode, message: &str) -> Failure {
+fn failure(code: ToolCode, message: &'static str) -> Failure {
     Failure::new("tools", message, ErrorKind::InvalidRequest).with_tool_code(code)
 }
 fn invalid() -> Failure {

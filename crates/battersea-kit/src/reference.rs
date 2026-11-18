@@ -58,7 +58,7 @@ impl ReferenceError {
 }
 impl std::fmt::Display for ReferenceError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}: {}", self.class, self.failure.message)
+        write!(f, "{}: {}", self.class, self.failure)
     }
 }
 impl std::error::Error for ReferenceError {}
@@ -259,7 +259,11 @@ impl<X: Send + Sync + 'static> ExecutionHost for ReferenceHost<X> {
         self.registry
             .convert_automation_value(parameter, value)
             .map_err(|error| {
-                ReferenceError::invalid_request(codes::INVALID_PARAMETER_WRITE, error.to_string())
+                ReferenceError::invalid_request(
+                    codes::INVALID_PARAMETER_WRITE,
+                    battersea_runtime::Failure::from("Parameter value cannot be converted.")
+                        .caused_by_text(error.to_string()),
+                )
             })
     }
     async fn commit_parameter_write(
@@ -287,7 +291,11 @@ impl<X: Send + Sync + 'static> ExecutionHost for ReferenceHost<X> {
             ));
         };
         logic(node, definition, actions, signals, fired, enabled).map_err(|message| {
-            ReferenceError::invalid_request(error_codes::UNSUPPORTED_HANDLER_OPERATION, message)
+            ReferenceError::invalid_request(
+                error_codes::UNSUPPORTED_HANDLER_OPERATION,
+                battersea_runtime::Failure::from("Logic evaluation failed.")
+                    .caused_by_text(message),
+            )
         })
     }
     fn logic_gate_label(&self, _node: &FlowNode, definition: &FlowNodeDefinition) -> String {
@@ -299,7 +307,11 @@ impl<X: Send + Sync + 'static> ExecutionHost for ReferenceHost<X> {
 impl<X: Send + Sync + 'static> ActivationHost for ReferenceHost<X> {
     fn validate_activation(&self, runtime: &Self::State) -> Result<(), ReferenceError> {
         validate_execution_contract(&runtime.flow, &runtime.definitions).map_err(|issue| {
-            ReferenceError::invalid_request(error_codes::INVALID_EXECUTION_CONTRACT, issue.message)
+            ReferenceError::invalid_request(
+                error_codes::INVALID_EXECUTION_CONTRACT,
+                battersea_runtime::Failure::from("Flow violates the execution contract.")
+                    .caused_by_text(issue.message),
+            )
         })
     }
     async fn accept_activation(
@@ -311,7 +323,8 @@ impl<X: Send + Sync + 'static> ActivationHost for ReferenceHost<X> {
         if phases.contains_key(&runtime.run_id) {
             return Err(ReferenceError::invalid_request(
                 codes::ALREADY_ACCEPTED,
-                format!("Run {:?} was already accepted.", runtime.run_id),
+                battersea_runtime::Failure::from("Run was already accepted.")
+                    .with_context("run", runtime.run_id.as_str()),
             ));
         }
         phases.insert(runtime.run_id.clone(), RunPhase::Accepted);
@@ -322,7 +335,12 @@ impl<X: Send + Sync + 'static> ActivationHost for ReferenceHost<X> {
     }
     async fn complete_execution(&self, runtime: &mut Self::State) -> Result<(), ReferenceError> {
         match &self.completion {
-            Some(completion) => completion(runtime).map_err(ReferenceError::internal),
+            Some(completion) => completion(runtime).map_err(|message| {
+                ReferenceError::internal(
+                    battersea_runtime::Failure::from("Execution completion failed.")
+                        .caused_by_text(message),
+                )
+            }),
             None => Ok(()),
         }
     }

@@ -556,12 +556,13 @@ impl battersea_failure::Failure
 pub fn battersea_failure::Failure::caused_by(self, &(dyn core::error::Error + 'static)) -> Self
 pub fn battersea_failure::Failure::caused_by_text(self, impl core::convert::Into<alloc::string::String>) -> Self
 pub fn battersea_failure::Failure::disclose(&self, battersea_failure::FailureDisclosure) -> Self
-pub fn battersea_failure::Failure::invalid_response(impl core::convert::Into<alloc::string::String>, impl core::convert::Into<alloc::string::String>) -> Self
-pub fn battersea_failure::Failure::local(impl core::convert::Into<alloc::string::String>, impl core::convert::Into<battersea_failure::ErrorKind>) -> Self
-pub fn battersea_failure::Failure::new(impl core::convert::Into<alloc::string::String>, impl core::convert::Into<alloc::string::String>, impl core::convert::Into<battersea_failure::ErrorKind>) -> Self
-pub fn battersea_failure::Failure::transport(impl core::convert::Into<alloc::string::String>, impl core::convert::Into<alloc::string::String>) -> Self
+pub fn battersea_failure::Failure::invalid_response(impl core::convert::Into<alloc::string::String>, &'static str) -> Self
+pub fn battersea_failure::Failure::local(&'static str, impl core::convert::Into<battersea_failure::ErrorKind>) -> Self
+pub fn battersea_failure::Failure::new(impl core::convert::Into<alloc::string::String>, &'static str, impl core::convert::Into<battersea_failure::ErrorKind>) -> Self
+pub fn battersea_failure::Failure::transport(impl core::convert::Into<alloc::string::String>, &'static str) -> Self
 pub fn battersea_failure::Failure::visit_text(&mut self, &mut dyn core::ops::function::FnMut(&mut alloc::string::String))
 pub fn battersea_failure::Failure::with_cause(self, battersea_failure::Failure) -> Self
+pub fn battersea_failure::Failure::with_context(self, &'static str, impl core::convert::Into<serde_json::value::Value>) -> Self
 pub fn battersea_failure::Failure::with_dispatch(self, battersea_failure::DispatchState) -> Self
 pub fn battersea_failure::Failure::with_idle_watchdog(self, u64) -> Self
 pub fn battersea_failure::Failure::with_native(self, battersea_failure::Reporter, serde_json::value::Value) -> Self
@@ -574,10 +575,8 @@ impl core::clone::Clone for battersea_failure::Failure
 pub fn battersea_failure::Failure::clone(&self) -> Self
 impl core::cmp::PartialEq for battersea_failure::Failure
 pub fn battersea_failure::Failure::eq(&self, &Self) -> bool
-impl core::convert::From<&str> for battersea_failure::Failure
-pub fn battersea_failure::Failure::from(&str) -> Self
-impl core::convert::From<alloc::string::String> for battersea_failure::Failure
-pub fn battersea_failure::Failure::from(alloc::string::String) -> Self
+impl core::convert::From<&'static str> for battersea_failure::Failure
+pub fn battersea_failure::Failure::from(&'static str) -> Self
 impl core::error::Error for battersea_failure::Failure
 impl core::fmt::Debug for battersea_failure::Failure
 pub fn battersea_failure::Failure::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
@@ -636,6 +635,7 @@ pub fn battersea_failure::Failure::__clone_box(&self, dyn_clone::sealed::Private
 impl<T> serde_core::de::DeserializeOwned for battersea_failure::Failure where T: for<'de> serde_core::de::Deserialize<'de>
 pub struct battersea_failure::FailureParts
 pub battersea_failure::FailureParts::cause: core::option::Option<battersea_failure::Cause>
+pub battersea_failure::FailureParts::context: alloc::collections::btree::map::BTreeMap<alloc::string::String, serde_json::value::Value>
 pub battersea_failure::FailureParts::exchange: battersea_failure::Exchange
 pub battersea_failure::FailureParts::kind: battersea_failure::ErrorKind
 pub battersea_failure::FailureParts::message: alloc::string::String

@@ -132,7 +132,7 @@ impl DurableExecution {
 }
 
 pub(crate) fn recovery_error<H: ExecutionHost>(error: RecoveryError) -> H::Error {
-    H::Error::recovery_required(error.code(), error.to_string())
+    H::Error::recovery_required(error.code(), error.failure())
 }
 
 pub(crate) fn handler_versions<H: ExecutionHost>(

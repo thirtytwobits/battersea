@@ -224,7 +224,9 @@ impl<H: Port> NodeHandler<H> for RefinementSourceHandler {
             .ok_or_else(|| {
                 refuse::<H::Error>(
                     codes::UNKNOWN_TURN,
-                    format!("Transcript {transcript} does not hold turn {id:?}."),
+                    battersea_model::Failure::from("Transcript does not hold the turn.")
+                        .with_context("transcript", transcript.to_string())
+                        .with_context("turn", id.as_str()),
                 )
             })?;
         host.emit_flow_token(

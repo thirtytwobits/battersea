@@ -28,7 +28,7 @@ fn durable_includes(request: &ConversationRequest) -> Vec<&'static str> {
     include
 }
 
-fn invalid(message: &str) -> Failure {
+fn invalid(message: &'static str) -> Failure {
     Failure::invalid_response("openai", message)
 }
 

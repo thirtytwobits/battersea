@@ -646,7 +646,7 @@ impl ToolConversation for Conversation {
         Ok(calls)
     }
 }
-fn invalid(provider: &str, message: &str) -> Failure {
+fn invalid(provider: &str, message: &'static str) -> Failure {
     Failure::invalid_response(provider, message)
 }
 

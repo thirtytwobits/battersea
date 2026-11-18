@@ -75,7 +75,8 @@ pub(crate) fn text_of<E: ExecutionError>(token: &Token) -> Result<String, E> {
     prompt_fragment_text(&token.value).ok_or_else(|| {
         E::invalid_request(
             error_codes::INCOMPATIBLE_TOKEN_TYPE,
-            format!("A {} token carries no text.", token.token_type),
+            battersea_model::Failure::from("The token carries no text.")
+                .with_context("tokenType", token.token_type.as_str()),
         )
     })
 }
@@ -87,7 +88,12 @@ pub(crate) fn token<E: ExecutionError>(
 ) -> Result<Token, E> {
     Ok(Token {
         token_type: token_type.into(),
-        value: serde_json::to_value(record).map_err(|error| E::internal(error.to_string()))?,
+        value: serde_json::to_value(record).map_err(|error| {
+            E::internal(
+                battersea_model::Failure::from("The record cannot be serialised.")
+                    .caused_by(&error),
+            )
+        })?,
     })
 }
 
@@ -96,7 +102,9 @@ pub(crate) fn record<T: DeserializeOwned, E: ExecutionError>(token: &Token) -> R
     serde_json::from_value(token.value.clone()).map_err(|error| {
         E::invalid_request(
             error_codes::INCOMPATIBLE_TOKEN_TYPE,
-            format!("A {} token is malformed: {error}", token.token_type),
+            battersea_model::Failure::from("The token is malformed.")
+                .with_context("tokenType", token.token_type.as_str())
+                .caused_by(&error),
         )
     })
 }
@@ -182,16 +190,19 @@ pub(crate) fn render<E: ExecutionError>(
         .iter()
         .find(|candidate| candidate.name == port)
         .ok_or_else(|| {
-            E::internal(format!(
-                "{} declares no output port {port:?}.",
-                definition.class_name
-            ))
+            E::internal(
+                battersea_model::Failure::from("The definition declares no such output port.")
+                    .with_context("definition", definition.class_name.as_str())
+                    .with_context("port", port),
+            )
         })?;
     render_port_formatter(port, variant, &bindings).map_err(|error| {
-        E::internal(format!(
-            "Rendering {}.{} failed: {error}",
-            definition.class_name, port.name
-        ))
+        E::internal(
+            battersea_model::Failure::from("Rendering the output port failed.")
+                .with_context("definition", definition.class_name.as_str())
+                .with_context("port", port.name.as_str())
+                .caused_by_text(error.to_string()),
+        )
     })
 }
 

@@ -36,7 +36,7 @@ pub(crate) fn create_openai_media_generator(
         .retry(reqwest::retry::never())
         .redirect(reqwest::redirect::Policy::none())
         .build()
-        .map_err(|error| Failure::transport("openai", error.to_string()))?;
+        .map_err(|error| crate::http_payload::client_failure("openai", error))?;
     if let Some(binding) = &backend.binding {
         crate::connection::headers(binding, &backend.auth)?;
     }
@@ -52,9 +52,10 @@ pub(crate) fn create_openai_media_generator(
 fn missing_openai_media_option(key: &str) -> Failure {
     Failure::new(
         "openai",
-        format!("OpenAI media backend must configure options.{key}."),
+        "OpenAI media backend lacks a required option.",
         "invalid_request",
     )
+    .with_context("option", key)
 }
 
 struct OpenAiMediaGenerator {
@@ -294,7 +295,7 @@ async fn send_image_generation_json_request(
         .json(&request_body)
         .send()
         .await
-        .map_err(|error| Failure::transport("openai", error.to_string()))?;
+        .map_err(|error| crate::http_payload::send_failure("openai", error))?;
     let status = response.status();
     if !status.is_success() {
         let body = response.bounded_text().await?;
@@ -317,7 +318,7 @@ async fn send_image_generation_stream_request(
         .json(&request_body)
         .send()
         .await
-        .map_err(|error| Failure::transport("openai", error.to_string()))?;
+        .map_err(|error| crate::http_payload::send_failure("openai", error))?;
     let status = response.status();
     if !status.is_success() {
         let body = response.bounded_text().await?;
@@ -332,13 +333,22 @@ async fn send_image_generation_stream_request(
         }
         event_result = stream.next() => event_result
     } {
-        let event =
-            event_result.map_err(|error| Failure::transport("openai", error.to_string()))?;
+        let event = event_result.map_err(|error| {
+            Failure::transport("openai", "OpenAI image event stream failed.")
+                .caused_by_text(error.to_string())
+        })?;
         if event.data.trim() == "[DONE]" {
             break;
         }
-        let parsed: ImageGenStreamEvent = serde_json::from_str(&event.data)
-            .map_err(|error| Failure::invalid_response("openai", error.to_string()))?;
+        let parsed: ImageGenStreamEvent = serde_json::from_str(&event.data).map_err(|error| {
+            Failure::invalid_response("openai", "OpenAI image event is not the expected JSON.")
+                .with_native(
+                    battersea_model::Reporter::Provider,
+                    serde_json::from_str(&event.data)
+                        .unwrap_or_else(|_| Value::String(event.data.clone())),
+                )
+                .caused_by(&error)
+        })?;
         match parsed {
             ImageGenStreamEvent::PartialImage(partial) => {
                 emit_openai_partial_image_update(
@@ -497,14 +507,12 @@ fn should_stream_openai_partial_images(
 #[cfg(test)]
 fn parse_openai_images_response_body(body: &str) -> Result<OpenAiImagesResponse, Failure> {
     serde_json::from_str(body).map_err(|error| {
-        Failure::transport(
-            "openai",
-            format!(
-                "failed to deserialize api response: error:{} content:{}",
-                error,
-                truncate_for_error(body)
-            ),
-        )
+        Failure::transport("openai", "OpenAI image response is not the expected JSON.")
+            .with_native(
+                battersea_model::Reporter::Provider,
+                Value::String(body.to_owned()),
+            )
+            .caused_by(&error)
     })
 }
 
@@ -518,26 +526,18 @@ fn rejected(status: u16, body: String) -> Failure {
     failure
 }
 
-#[cfg(test)]
-fn truncate_for_error(body: &str) -> String {
-    const LIMIT: usize = 4096;
-    if body.len() <= LIMIT {
-        return body.to_string();
-    }
-    format!(
-        "{}… <truncated {} bytes>",
-        &body[..LIMIT],
-        body.len() - LIMIT
-    )
-}
-
 /// Normalises OpenAI media-generation failures into the shared provider-neutral error shape.
 #[cfg(test)]
 fn normalize_openai_error(error: OpenAIError) -> Failure {
     match error {
-        OpenAIError::ApiError(inner) => Failure::new("openai", inner.message.clone(), "request"),
-        OpenAIError::Reqwest(error) => Failure::transport("openai", error.to_string()),
-        other => Failure::transport("openai", other.to_string()),
+        OpenAIError::ApiError(inner) => {
+            Failure::new("openai", "OpenAI reported an error.", "request").with_native(
+                battersea_model::Reporter::Provider,
+                Value::String(inner.message.clone()),
+            )
+        }
+        OpenAIError::Reqwest(error) => crate::http_payload::send_failure("openai", error),
+        other => Failure::transport("openai", "OpenAI client failed.").caused_by(&other),
     }
 }
 
@@ -607,9 +607,10 @@ fn configured_openai_quality(value: Option<&str>) -> Result<String, Failure> {
     } else {
         Err(Failure::new(
             "openai",
-            format!("OpenAI media backend has unsupported options.quality \"{quality}\"."),
+            "OpenAI media backend has an unsupported options.quality.",
             "invalid_request",
-        ))
+        )
+        .with_context("quality", quality))
     }
 }
 
@@ -721,8 +722,14 @@ pub(crate) fn prepare_body(
     // Capture the request body before it's moved into the SDK
     // call so the provenance row can reproduce the exact image
     // request. Credentials ride in headers, not this body.
-    let mut provider_request = serde_json::to_value(&create_request)
-        .map_err(|error| Failure::invalid_response("openai", error.to_string()))?;
+    let mut provider_request = serde_json::to_value(&create_request).map_err(|error| {
+        Failure::new(
+            "openai",
+            "OpenAI image request cannot be serialised.",
+            "invalid_request",
+        )
+        .caused_by(&error)
+    })?;
     provider_request["quality"] = Value::String(configured_quality);
     Ok(provider_request)
 }
@@ -1204,7 +1211,7 @@ mod tests {
         }));
         assert_eq!(api.origin.provider.as_deref(), Some("openai"));
         assert_eq!(api.kind.as_str(), "request");
-        assert_eq!(&*api.message, "invalid prompt");
+        assert_eq!(api.native.present(), Some(&json!("invalid prompt")));
 
         let transport = normalize_openai_error(OpenAIError::StreamError(Box::new(
             async_openai::error::StreamError::EventStream("socket closed".to_string()),

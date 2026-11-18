@@ -92,7 +92,7 @@ impl ResponseFormat {
         Ok(())
     }
     pub fn parse(&self, provider: &str, text: &str) -> Result<Value, Failure> {
-        let invalid = |message: &str| Failure::invalid_response(provider, message);
+        let invalid = |message: &'static str| Failure::invalid_response(provider, message);
         let value: Value = serde_json::from_str(text)
             .map_err(|e| invalid("Malformed structured output.").caused_by(&e))?;
         match self {

@@ -450,7 +450,11 @@ pub trait MediaJob: Send + Sync {
                 Ok(status) => {
                     return Err(Failure::new(
                         "media",
-                        format!("Media job is {status:?}."),
+                        match status {
+                            MediaJobStatus::Cancelled => "Media job was cancelled.",
+                            MediaJobStatus::Expired => "Media job expired.",
+                            _ => "Media job failed.",
+                        },
                         match status {
                             MediaJobStatus::Cancelled => crate::ErrorKind::Cancelled,
                             MediaJobStatus::Expired => crate::ErrorKind::Expired,
@@ -551,17 +555,22 @@ impl MediaSubmission {
                     if let Err(error) = &mut result {
                         match cleanup {
                             Ok(Ok(())) => {}
+                            // The cancellation's failure is named in the context, which a flow
+                            // receives under either disclosure, so it is held as withheld.
                             Ok(Err(cleanup)) => {
-                                error.message = format!(
-                                    "{} Remote cancellation failed: {}",
-                                    error.message, cleanup.message
-                                )
+                                let cleanup = cleanup.disclose(crate::FailureDisclosure::Withheld);
+                                error
+                                    .context
+                                    .insert("remoteCancellation".into(), "failed".into());
+                                error.context.insert(
+                                    "remoteCancellationFailure".into(),
+                                    serde_json::to_value(cleanup).unwrap_or_default(),
+                                );
                             }
                             Err(_) => {
-                                error.message = format!(
-                                    "{} Remote cancellation timed out; remote outcome is unknown.",
-                                    error.message
-                                )
+                                error
+                                    .context
+                                    .insert("remoteCancellation".into(), "timed_out".into());
                             }
                         }
                     }

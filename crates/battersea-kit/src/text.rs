@@ -133,7 +133,10 @@ pub fn activation_text(
         .ok_or_else(|| {
             crate::NodeError::invalid_request(
                 battersea_runtime::error_codes::INVALID_ACTIVATION_VALUE,
-                format!("Flow activation requires a string {name} activation value."),
+                battersea_runtime::Failure::from(
+                    "Flow activation requires a string activation value.",
+                )
+                .with_context("name", name),
             )
         })
 }

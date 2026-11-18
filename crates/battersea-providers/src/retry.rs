@@ -90,9 +90,10 @@ pub(crate) async fn send(
     let prepared = prepared.map_err(|e| {
         Failure::new(
             &backend.provider,
-            e.without_url().to_string(),
+            "HTTP request could not be built.",
             ErrorKind::InvalidRequest,
         )
+        .caused_by(&e.without_url())
     })?;
     let retrieval = prepared.method() == reqwest::Method::GET;
     let retries = backend.options.max_retries.unwrap_or(0);
@@ -159,7 +160,8 @@ pub(crate) async fn send(
                 } else {
                     ErrorKind::Transport
                 };
-                Failure::new(&backend.provider, error.without_url().to_string(), kind)
+                Failure::new(&backend.provider, "HTTP request failed.", kind)
+                    .caused_by(&error.without_url())
                     .with_dispatch(if not_sent {
                         DispatchState::NotSent
                     } else {

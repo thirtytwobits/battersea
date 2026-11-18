@@ -508,34 +508,24 @@ fn load_mock_prompt_font(backend: &MediaBackendConfig) -> Result<FontArc, Failur
         .ok_or_else(|| {
             Failure::new(
                 "mock",
-                format!(
-                    "Mock image backend \"{}\" requires options.fontPath when options.mockUrl is not set.",
-                    backend.id
-                ),
+                "Mock image backend requires options.fontPath when options.mockUrl is not set.",
                 "invalid_request",
             )
+            .with_context("backend", backend.id.as_str())
         })?;
 
     let bytes = std::fs::read(font_path).map_err(|error| {
-        Failure::transport(
-            "mock",
-            format!(
-                "Mock image backend \"{}\" could not read font at \"{}\".",
-                backend.id, font_path
-            ),
-        )
-        .caused_by(&error)
+        Failure::transport("mock", "Mock image backend could not read its font.")
+            .with_context("backend", backend.id.as_str())
+            .with_context("fontPath", font_path)
+            .caused_by(&error)
     })?;
 
     FontArc::try_from_vec(bytes).map_err(|error| {
-        Failure::invalid_response(
-            "mock",
-            format!(
-                "Mock image backend \"{}\" could not load font at \"{}\".",
-                backend.id, font_path
-            ),
-        )
-        .caused_by(&error)
+        Failure::invalid_response("mock", "Mock image backend could not load its font.")
+            .with_context("backend", backend.id.as_str())
+            .with_context("fontPath", font_path)
+            .caused_by(&error)
     })
 }
 

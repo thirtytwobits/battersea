@@ -29,9 +29,10 @@ use self::error::Failure;
 pub fn missing_backend_option(provider: &str, field: &str) -> Failure {
     Failure::new(
         provider,
-        format!("Backend must configure {field}."),
+        "Backend configuration lacks a required field.",
         "invalid_request",
     )
+    .with_context("field", field)
 }
 
 /// Identifies the high-level engine operation a backend request is serving.
@@ -433,10 +434,10 @@ pub struct NoLocalTools;
 #[allow(clippy::double_must_use)]
 #[async_trait]
 impl EngineLocalToolExecutor for NoLocalTools {
-    async fn call(&self, call: EngineLocalToolCall) -> Result<EngineLocalToolResult, Failure> {
+    async fn call(&self, _call: EngineLocalToolCall) -> Result<EngineLocalToolResult, Failure> {
         Err(Failure::new(
             "tools",
-            format!("Tool \"{}\" is not registered.", call.name),
+            "Tool is not registered.",
             error::ErrorKind::InvalidRequest,
         )
         .with_tool_code(crate::ToolCode::UnregisteredTool))
@@ -618,10 +619,7 @@ pub fn with_stream_idle_watchdog(
                     Err(_) => {
                         let mut error = Failure::new(
                             provider,
-                            format!(
-                                "Provider stream idle deadline exceeded ({}ms).",
-                                idle.as_millis()
-                            ),
+                            "Provider stream idle deadline exceeded.",
                             error::ErrorKind::Timeout,
                         )
                         .with_idle_watchdog(idle.as_millis().min(u64::MAX as u128) as u64);
@@ -664,7 +662,12 @@ pub fn validate_chat_request(
             .capabilities
             .validate_declared_chat_parameters(&request.shared.chat)
             .map_err(|message| {
-                Failure::new(&backend.provider, message, error::ErrorKind::InvalidRequest)
+                Failure::new(
+                    &backend.provider,
+                    "Backend does not declare a requested chat parameter.",
+                    error::ErrorKind::InvalidRequest,
+                )
+                .caused_by_text(message)
             })?;
     }
     if !request.shared.chat.stream
@@ -710,7 +713,14 @@ pub fn validate_chat_request(
     backend
         .capabilities
         .validate_chat_parameters(&request.shared.chat)
-        .map_err(|message| Failure::new(&backend.provider, message, "invalid_request"))?;
+        .map_err(|message| {
+            Failure::new(
+                &backend.provider,
+                "Backend does not support a requested chat parameter.",
+                "invalid_request",
+            )
+            .caused_by_text(message)
+        })?;
     if let Some(name) = request.shared.chat.tool_choice.tool_name.as_deref() {
         if request.shared.chat.tool_choice.mode == crate::engine::EngineChatToolChoiceMode::Tool
             && !request
@@ -720,9 +730,10 @@ pub fn validate_chat_request(
         {
             return Err(Failure::new(
                 &backend.provider,
-                format!("Named tool is not offered: {name}."),
+                "Named tool is not offered.",
                 "invalid_request",
             )
+            .with_context("tool", name)
             .with_tool_code(crate::ToolCode::UnofferedToolChoice));
         }
     }

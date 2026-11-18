@@ -130,8 +130,8 @@ pub fn host(
     ReferenceHost::new(handlers, clock).with_completion(commit)
 }
 
-fn refuse(reason: &'static str, message: String) -> ReferenceError {
-    ReferenceError::invalid_request(reason, message)
+fn refuse(reason: &'static str, failure: Failure) -> ReferenceError {
+    ReferenceError::invalid_request(reason, failure)
 }
 
 #[async_trait]
@@ -157,7 +157,8 @@ impl Port for ReferenceHost<State> {
             .ok_or_else(|| {
                 refuse(
                     codes::UNKNOWN_TRANSCRIPT,
-                    format!("Transcript {transcript} is not held."),
+                    Failure::from("Transcript is not held.")
+                        .with_context("transcript", transcript.to_string()),
                 )
             })
     }
@@ -192,10 +193,9 @@ impl Port for ReferenceHost<State> {
             }
             None => Err(refuse(
                 codes::UNKNOWN_TURN,
-                format!(
-                    "Transcript {transcript} does not hold turn {}.",
-                    revision.turn
-                ),
+                Failure::from("Transcript does not hold the turn.")
+                    .with_context("transcript", transcript.to_string())
+                    .with_context("turn", revision.turn.to_string()),
             )),
         }
     }
@@ -208,7 +208,8 @@ impl Port for ReferenceHost<State> {
         let held = store.transcripts.get(transcript).ok_or_else(|| {
             refuse(
                 codes::UNKNOWN_TRANSCRIPT,
-                format!("Transcript {transcript} is not held."),
+                Failure::from("Transcript is not held.")
+                    .with_context("transcript", transcript.to_string()),
             )
         })?;
         let after = held
@@ -236,7 +237,8 @@ impl Port for ReferenceHost<State> {
         let held = store.transcripts.get_mut(&transcript).ok_or_else(|| {
             refuse(
                 codes::UNKNOWN_TRANSCRIPT,
-                format!("Transcript {transcript} is not held."),
+                Failure::from("Transcript is not held.")
+                    .with_context("transcript", transcript.to_string()),
             )
         })?;
         held.summary = Some(summary);
@@ -265,7 +267,9 @@ impl Port for ReferenceHost<State> {
                 if total > budget {
                     return Err(refuse(
                         codes::SPEND_REFUSED,
-                        format!("{total} tokens exceed the {budget} the host allows."),
+                        Failure::from("Tokens exceed the budget the host allows.")
+                            .with_context("tokens", total)
+                            .with_context("budget", budget),
                     ));
                 }
                 store.budget = Some(budget - total);
@@ -288,10 +292,10 @@ impl Port for ReferenceHost<State> {
     ) -> Result<(), ReferenceError> {
         let open = &mut state.kit.run.reservations;
         let Some(position) = open.iter().position(|held| held.id == reservation.id) else {
-            return Err(ReferenceError::internal(format!(
-                "Reservation {} is not open.",
-                reservation.id
-            )));
+            return Err(ReferenceError::internal(
+                Failure::from("Reservation is not open.")
+                    .with_context("reservation", reservation.id.to_string()),
+            ));
         };
         open.remove(position);
         state.kit.store().ledger.push((reservation, usage));
@@ -314,7 +318,8 @@ impl Port for ReferenceHost<State> {
         if !store.transcripts.contains_key(transcript) {
             return Err(refuse(
                 codes::UNKNOWN_TRANSCRIPT,
-                format!("Transcript {transcript} is not held."),
+                Failure::from("Transcript is not held.")
+                    .with_context("transcript", transcript.to_string()),
             ));
         }
         Ok(store.policy.clone())
@@ -351,7 +356,7 @@ impl Port for ReferenceHost<State> {
             }
             None => Err(refuse(
                 codes::UNKNOWN_JOB,
-                format!("Job {job} is not held."),
+                Failure::from("Job is not held.").with_context("job", job.to_string()),
             )),
         }
     }
@@ -532,7 +537,7 @@ impl EngineAdapter for ScriptedEngine {
                             Some(executor) => executor.call(call.clone()).await,
                             None => Err(Failure::new(
                                 "reference",
-                                format!("Tool {:?} has no executor.", call.name),
+                                "Tool has no executor.",
                                 ErrorKind::InvalidRequest,
                             )),
                         };

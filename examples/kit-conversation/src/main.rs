@@ -52,12 +52,16 @@ impl Error {
         }
     }
     fn storage(error: impl std::fmt::Display) -> Self {
-        Self::invalid_request(app_codes::STORAGE, error.to_string())
+        Self::invalid_request(
+            app_codes::STORAGE,
+            battersea_runtime::Failure::from("Transcript storage failed.")
+                .caused_by_text(error.to_string()),
+        )
     }
 }
 impl std::fmt::Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}: {}", self.code, self.failure.message)
+        write!(f, "{}: {}", self.code, self.failure)
     }
 }
 impl std::error::Error for Error {}
@@ -186,7 +190,8 @@ impl FileHost {
         if !path.is_file() {
             return Err(Error::invalid_request(
                 codes::UNKNOWN_TRANSCRIPT,
-                format!("Transcript {transcript} has no file."),
+                battersea_runtime::Failure::from("Transcript has no file.")
+                    .with_context("transcript", transcript.to_string()),
             ));
         }
         let text = std::fs::read_to_string(path).map_err(Error::storage)?;
@@ -258,7 +263,13 @@ impl ExecutionHost for FileHost {
     ) -> Result<Value, Error> {
         Self::registry()
             .convert_automation_value(parameter, value)
-            .map_err(|e| Error::invalid_request(app_codes::INVALID_PARAMETER_WRITE, e.to_string()))
+            .map_err(|e| {
+                Error::invalid_request(
+                    app_codes::INVALID_PARAMETER_WRITE,
+                    battersea_runtime::Failure::from("Parameter value cannot be converted.")
+                        .caused_by_text(e.to_string()),
+                )
+            })
     }
     async fn commit_parameter_write(
         &self,
@@ -302,7 +313,8 @@ impl ActivationHost for FileHost {
         } else {
             Err(Error::invalid_request(
                 app_codes::INVALID_FLOW,
-                format!("{:?}", validation.issues),
+                battersea_runtime::Failure::from("Flow is invalid.")
+                    .caused_by_text(format!("{:?}", validation.issues)),
             ))
         }
     }
@@ -384,10 +396,9 @@ impl Port for FileHost {
         }
         Err(Error::invalid_request(
             codes::UNKNOWN_TURN,
-            format!(
-                "Transcript {transcript} does not hold turn {}.",
-                revision.turn
-            ),
+            battersea_runtime::Failure::from("Transcript does not hold the turn.")
+                .with_context("transcript", transcript.to_string())
+                .with_context("turn", revision.turn.to_string()),
         ))
     }
     async fn memory(&self, _run: &Run, transcript: &TranscriptId) -> Result<Memory<Value>, Error> {
@@ -441,10 +452,10 @@ impl Port for FileHost {
     ) -> Result<(), Error> {
         let open = &mut run.kit.reservations;
         let Some(position) = open.iter().position(|held| held.id == reservation.id) else {
-            return Err(Error::internal(format!(
-                "Reservation {} is not open.",
-                reservation.id
-            )));
+            return Err(Error::internal(
+                battersea_runtime::Failure::from("Reservation is not open.")
+                    .with_context("reservation", reservation.id.to_string()),
+            ));
         };
         open.remove(position);
         self.ledger.lock().unwrap().push((reservation, usage));
@@ -484,7 +495,8 @@ impl Port for FileHost {
             }
             None => Err(Error::invalid_request(
                 codes::UNKNOWN_JOB,
-                format!("Job {job} is unknown."),
+                battersea_runtime::Failure::from("Job is unknown.")
+                    .with_context("job", job.to_string()),
             )),
         }
     }

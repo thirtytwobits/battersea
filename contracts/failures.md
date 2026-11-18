@@ -15,6 +15,7 @@ Every operation that fails or ends incomplete reports one `Failure`.
 |---|---|
 | Kind | Battersea's classification |
 | Message | Battersea's description, in fixed wording |
+| Context | The values Battersea names in its description, each under a fixed name |
 | Reporter | The provider, tool or Battersea component that reported the failure |
 | Origin | The operation, provider, backend and model |
 | Exchange | What is known of the remote exchange: dispatch certainty, attempt count, HTTP status, retry delay and the identifiers the provider issued |
@@ -35,8 +36,10 @@ Every failure of an operation carries that operation's origin, whichever compone
 failure. A failure raised after a provider's response headers arrive carries the identifiers the
 provider issued; this includes stream errors, decoding failures and completion validation.
 
-Battersea's message contains no text written by the reporter. Reporter text is in native detail
-or in the cause.
+Battersea's message is the same text for every failure raised at one site. A value that
+distinguishes one such failure from another, such as a node, an edge or a limit, is in the
+context. The message and the context contain no text written by the reporter. Reporter text is in
+native detail or in the cause.
 
 A failure that wraps another failure carries it as its cause. A wrapped error of another type is
 a foreign error, carried as its text and the text of each of its sources in order. No failure
@@ -70,7 +73,7 @@ identity, before applying the node's failure policy. A failed observer call fail
 The host chooses what the flow receives. `FailureDisclosure` is `full` or `withheld`; omission
 means `full`. Under `withheld`, native detail, partial output and foreign error text are marked
 withheld at every depth of the cause chain in the `node_failure` token, the checkpoint and the
-runtime records. A withheld part is distinct from an absent part. The `node_failure` identity
+runtime records. The context is not withheld. A withheld part is distinct from an absent part. The `node_failure` identity
 joins a withheld failure to the complete failure the observer received.
 
 Under `full`, the token and the checkpoint carry the complete failure. Runtime records treat
@@ -90,4 +93,5 @@ native detail, partial output and foreign error text as content under
 | Disclosure | Under `withheld`, the token, the checkpoint and the runtime records hold no native detail, partial output or foreign error text, and the observer received the complete failure under the same identity; under `full` the token holds them |
 | Observer | The observer is called before the policy applies; its failure fails the activation |
 | Kits | A kit's provider failure carries the adapter's failure unchanged |
+| Message | A failure constructor accepts no message built at run time |
 | Discarded errors | `cargo xtask check` refuses an error discarded without a stated reason |

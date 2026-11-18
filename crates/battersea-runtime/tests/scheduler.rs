@@ -35,7 +35,7 @@ impl Error {
 }
 impl std::fmt::Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}: {}", self.class, self.failure.message)
+        write!(f, "{}: {}", self.class, self.failure)
     }
 }
 impl std::error::Error for Error {}
@@ -599,17 +599,29 @@ impl ActivationHost for Host {
         }
         Ok(Run {
             scheduler,
-            seen: serde_json::from_value(state.value["seen"].clone())
-                .map_err(|error| Error::invalid_request(FIXTURE_STATE, error.to_string()))?,
-            calls: serde_json::from_value(state.value["calls"].clone())
-                .map_err(|error| Error::invalid_request(FIXTURE_STATE, error.to_string()))?,
+            seen: serde_json::from_value(state.value["seen"].clone()).map_err(|error| {
+                Error::invalid_request(
+                    FIXTURE_STATE,
+                    battersea_runtime::Failure::from("Invalid fixture state.").caused_by(&error),
+                )
+            })?,
+            calls: serde_json::from_value(state.value["calls"].clone()).map_err(|error| {
+                Error::invalid_request(
+                    FIXTURE_STATE,
+                    battersea_runtime::Failure::from("Invalid fixture state.").caused_by(&error),
+                )
+            })?,
             held: vec![],
             max_usage: Default::default(),
         })
     }
     fn validate_activation(&self, run: &Run) -> Result<(), Error> {
         validate_execution_contract(&run.flow, &run.definitions).map_err(|issue| {
-            Error::invalid_request(error_codes::INVALID_EXECUTION_CONTRACT, issue.message)
+            Error::invalid_request(
+                error_codes::INVALID_EXECUTION_CONTRACT,
+                battersea_runtime::Failure::from("Flow violates the execution contract.")
+                    .caused_by_text(issue.message),
+            )
         })
     }
     async fn accept_activation(&self, _: &Run, _: &str) -> Result<(), Error> {

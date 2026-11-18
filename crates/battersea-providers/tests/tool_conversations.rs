@@ -696,7 +696,10 @@ async fn unsupported_effort_fails_before_counting_or_generation_for_every_provid
             .await
             .unwrap_err();
         assert_eq!(error.kind.as_str(), "invalid_request");
-        assert!(error.message.contains("reasoning effort"));
+        assert!(
+            format!("{:?}", error.cause).contains("reasoning effort"),
+            "{error:?}"
+        );
         match adapter.stream_text(request).await {
             Err(error) => assert_eq!(error.kind.as_str(), "invalid_request"),
             Ok(_) => panic!("unsupported effort accepted by {provider}"),

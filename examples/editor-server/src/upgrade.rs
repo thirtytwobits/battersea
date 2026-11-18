@@ -45,7 +45,10 @@ fn prepare(app: &App, name: &str) -> Result<(Plan, Vec<u8>), Error> {
     .map_err(io)?;
     let limits = FlowExecutionLimits::default();
     let invalid = |error: &dyn std::fmt::Display| {
-        Error::invalid_request(codes::INVALID_DOCUMENT, error.to_string())
+        Error::invalid_request(
+            codes::INVALID_DOCUMENT,
+            crate::wrapping("Flow document is invalid.", error),
+        )
     };
     let source_text = std::str::from_utf8(&source).map_err(|error| invalid(&error))?;
     let version = serde_json::from_str::<serde_json::Value>(source_text)
@@ -60,7 +63,12 @@ fn prepare(app: &App, name: &str) -> Result<(Plan, Vec<u8>), Error> {
             limits.clone(),
         )
     }
-    .map_err(|message| Error::invalid_request(codes::UPGRADE_REFUSED, message))?;
+    .map_err(|message| {
+        Error::invalid_request(
+            codes::UPGRADE_REFUSED,
+            crate::wrapping("Flow document cannot be upgraded.", message),
+        )
+    })?;
     if document.flow_key != name {
         return Err(Error::invalid_request(
             codes::FLOW_KEY_MISMATCH,
@@ -72,7 +80,7 @@ fn prepare(app: &App, name: &str) -> Result<(Plan, Vec<u8>), Error> {
     if !validation.valid {
         return Err(Error::invalid_request(
             codes::INVALID_FLOW,
-            format!("{:?}", validation.issues),
+            crate::wrapping("Flow is invalid.", format!("{:?}", validation.issues)),
         ));
     }
     // The fence pins the bytes, catalogue and selected policy, not just the format number.

@@ -50,7 +50,7 @@ pub struct ProviderRegistry {
     chat: BTreeMap<String, ChatProvider>,
     media: BTreeMap<String, MediaProvider>,
 }
-fn invalid(provider: &str, message: impl Into<String>) -> Failure {
+fn invalid(provider: &str, message: &'static str) -> Failure {
     Failure::new(provider, message, ErrorKind::InvalidRequest)
 }
 impl ProviderRegistry {
@@ -101,7 +101,13 @@ impl ProviderRegistry {
             .capabilities
             .content
             .validate_subset(&provider.content)
-            .map_err(|message| invalid(&backend.provider, message))?;
+            .map_err(|message| {
+                invalid(
+                    &backend.provider,
+                    "Backend declares content the provider does not implement.",
+                )
+                .caused_by_text(message)
+            })?;
         if backend.options.background == Some(true)
             && !backend
                 .options
@@ -132,8 +138,9 @@ impl ProviderRegistry {
             if !provider.parameters.contains(parameter) {
                 return Err(invalid(
                     &backend.provider,
-                    format!("Provider does not implement advertised parameter {parameter}."),
-                ));
+                    "Provider does not implement an advertised parameter.",
+                )
+                .with_context("parameter", parameter.as_str()));
             }
         }
         if backend
@@ -150,7 +157,13 @@ impl ProviderRegistry {
         backend
             .capabilities
             .validate_chat_parameters(&backend.chat)
-            .map_err(|message| invalid(&backend.provider, message))?;
+            .map_err(|message| {
+                invalid(
+                    &backend.provider,
+                    "Backend does not support a configured chat parameter.",
+                )
+                .caused_by_text(message)
+            })?;
         if backend
             .capabilities
             .supported_chat_parameters
@@ -161,7 +174,13 @@ impl ProviderRegistry {
                 backend
                     .capabilities
                     .validate_reasoning_effort(Some(*effort))
-                    .map_err(|message| invalid(&backend.provider, message))?;
+                    .map_err(|message| {
+                        invalid(
+                            &backend.provider,
+                            "Backend declares an unsupported reasoning effort.",
+                        )
+                        .caused_by_text(message)
+                    })?;
             }
         }
         Ok(())
@@ -196,8 +215,9 @@ impl ProviderRegistry {
             if !provider.parameters.contains(parameter) {
                 return Err(invalid(
                     &backend.provider,
-                    format!("Provider does not implement advertised media parameter {parameter}."),
-                ));
+                    "Provider does not implement an advertised media parameter.",
+                )
+                .with_context("parameter", parameter.as_str()));
             }
         }
         let kind = match backend.capability {
@@ -292,8 +312,9 @@ impl ProviderRegistry {
             {
                 return Err(invalid(
                     &backend.provider,
-                    format!("Backend does not support media parameter {name}."),
-                ));
+                    "Backend does not support a media parameter.",
+                )
+                .with_context("parameter", name));
             }
         }
         if request.options.count == Some(0) || request.options.duration_seconds == Some(0) {

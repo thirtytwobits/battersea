@@ -59,8 +59,12 @@ impl EngineAdapter for MockAdapter {
         {
             return Err(Failure::new(
                 "mock",
-                failure.message.clone(),
+                "Mock provider reported its configured failure.",
                 failure.classification.clone(),
+            )
+            .with_native(
+                battersea_model::Reporter::Provider,
+                serde_json::json!({"message": failure.message}),
             ));
         }
         let context = self.describe_debug_context();
@@ -229,8 +233,12 @@ impl ToolConversation for MockConversation {
             {
                 return Err(Failure::new(
                     "mock",
-                    failure.message.clone(),
+                    "Mock provider reported its configured failure.",
                     failure.classification.clone(),
+                )
+                .with_native(
+                    battersea_model::Reporter::Provider,
+                    serde_json::json!({"message": failure.message}),
                 ));
             }
         }

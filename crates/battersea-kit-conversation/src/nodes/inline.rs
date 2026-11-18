@@ -45,7 +45,8 @@ impl<H: Port> NodeHandler<H> for BufferHandler {
         if total > retain {
             return Err(H::Error::invalid_request(
                 error_codes::CAPACITY_EXHAUSTED,
-                format!("The stream exceeds the {retain} bytes the buffer retains."),
+                battersea_model::Failure::from("The stream exceeds the bytes the buffer retains.")
+                    .with_context("limit", retain),
             ));
         }
         held.push_str(&delta);

@@ -112,7 +112,7 @@ impl ApprovedToolExecutor {
 impl EngineLocalToolExecutor for ApprovedToolExecutor {
     async fn call(&self, call: EngineLocalToolCall) -> Result<EngineLocalToolResult, Failure> {
         let prepared = self.registry.prepare(call)?;
-        let refused = |code, message: &str, kind| {
+        let refused = |code, message: &'static str, kind| {
             Failure::new("tools", message, kind)
                 .with_tool_code(code)
                 .with_tool_call(prepared.evidence.clone())

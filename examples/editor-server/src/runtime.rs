@@ -46,7 +46,7 @@ impl Error {
 }
 impl std::fmt::Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}: {}", self.code, self.failure.message)
+        write!(f, "{}: {}", self.code, self.failure)
     }
 }
 impl std::error::Error for Error {}
@@ -172,7 +172,10 @@ impl NodeHandler<Application> for Output {
             run.retention
                 .retain("output", token.value.clone())
                 .map_err(|message| {
-                    Error::invalid_request(error_codes::CAPACITY_EXHAUSTED, message)
+                    Error::invalid_request(
+                        error_codes::CAPACITY_EXHAUSTED,
+                        crate::wrapping("Output retention capacity is exhausted.", message),
+                    )
                 })?,
         );
         Ok(())
@@ -181,19 +184,16 @@ impl NodeHandler<Application> for Output {
 impl Application {
     pub fn new(root: PathBuf, clock: Arc<dyn battersea_model::Clock>) -> Result<Self, Error> {
         let mut builder = RegistryBuilder::default();
-        builder.register(TextSource).map_err(Error::internal)?;
-        builder.register(Output).map_err(Error::internal)?;
-        battersea_nodes::register_handlers(&mut builder).map_err(Error::internal)?;
+        builder.register(TextSource).map_err(crate::io)?;
+        builder.register(Output).map_err(crate::io)?;
+        battersea_nodes::register_handlers(&mut builder).map_err(crate::io)?;
         let handlers = builder.build();
         let mut registry = Registry::default();
-        battersea_nodes::register_token_types(&mut registry).map_err(Error::internal)?;
+        battersea_nodes::register_token_types(&mut registry).map_err(crate::io)?;
         for id in handlers.ids() {
-            registry
-                .register_handler(id)
-                .map_err(|e| Error::internal(e.to_string()))?;
+            registry.register_handler(id).map_err(crate::io)?;
         }
-        let manifest = std::fs::read_to_string(root.join("nodes.json"))
-            .map_err(|e| Error::internal(e.to_string()))?;
+        let manifest = std::fs::read_to_string(root.join("nodes.json")).map_err(crate::io)?;
         let catalog = Catalog::from_manifests(
             &[
                 ("generic", battersea_nodes::MANIFEST),
@@ -201,10 +201,10 @@ impl Application {
             ],
             registry,
         )
-        .map_err(|e| Error::internal(e.to_string()))?;
+        .map_err(crate::io)?;
         handlers
             .validate(catalog.definitions().values())
-            .map_err(Error::internal)?;
+            .map_err(crate::io)?;
         Ok(Self {
             handlers,
             catalog,
@@ -220,7 +220,7 @@ impl Application {
                         max_age_ms: 3_600_000,
                     },
                 )
-                .map_err(|e| Error::internal(e.to_string()))?,
+                .map_err(crate::io)?,
             ),
             observation_error: Mutex::default(),
             exporter: std::env::var("BATTERSEA_OTLP_ENDPOINT")
@@ -232,7 +232,12 @@ impl Application {
                         1024 * 1024,
                         clock.clone(),
                     )
-                    .map_err(|e| Error::invalid_request(codes::INVALID_EXPORTER, e.to_string()))
+                    .map_err(|e| {
+                        Error::invalid_request(
+                            codes::INVALID_EXPORTER,
+                            crate::wrapping("Telemetry exporter is invalid.", e),
+                        )
+                    })
                 })
                 .transpose()?,
             acceptance: Mutex::default(),
@@ -242,11 +247,9 @@ impl Application {
     }
     pub async fn publish_retained_outcome(&self, run: &Run) -> Result<(), Error> {
         let bytes = std::fs::read(self.root.join("runs").join(format!("{}.json", run.run_id)))
-            .map_err(|e| Error::internal(e.to_string()))?;
-        let value: Value =
-            serde_json::from_slice(&bytes).map_err(|e| Error::internal(e.to_string()))?;
-        let phase: RunPhase = serde_json::from_value(value["phase"].clone())
-            .map_err(|e| Error::internal(e.to_string()))?;
+            .map_err(crate::io)?;
+        let value: Value = serde_json::from_slice(&bytes).map_err(crate::io)?;
+        let phase: RunPhase = serde_json::from_value(value["phase"].clone()).map_err(crate::io)?;
         let event = ExecutionEvent {
             attempt: 0,
             run_id: run.run_id.clone(),
@@ -255,7 +258,7 @@ impl Application {
             sequence: 0,
             kind: EventKind::ActivationExecutionFinished,
             summary: String::new(),
-            detail: Some(serde_json::to_value(phase).map_err(|e| Error::internal(e.to_string()))?),
+            detail: Some(serde_json::to_value(phase).map_err(crate::io)?),
         };
         self.execution_event(run, event).await;
         {
@@ -327,7 +330,12 @@ impl Application {
     pub fn run(&self, id: String, flow: &FlowDocument) -> Result<Run, Error> {
         Ok(Run {
             scheduler: SchedulerState::new(id, flow, self.catalog.definitions().clone()).map_err(
-                |issues| Error::invalid_request(codes::INVALID_FLOW, format!("{issues:?}")),
+                |issues| {
+                    Error::invalid_request(
+                        codes::INVALID_FLOW,
+                        crate::wrapping("Flow is invalid.", format!("{issues:?}")),
+                    )
+                },
             )?,
             output: vec![],
             tap: Mutex::new(battersea_pianola::PianolaTap::new(
@@ -349,18 +357,17 @@ impl Application {
                 .write(true)
                 .create_new(true)
                 .open(path)
-                .map_err(|e| Error::internal(e.to_string()))?;
+                .map_err(crate::io)?;
             file.write_all(value.to_string().as_bytes())
                 .and_then(|_| file.sync_all())
-                .map_err(|e| Error::internal(e.to_string()))
+                .map_err(crate::io)
         } else {
             let temp = path.with_extension("tmp");
-            let mut file =
-                std::fs::File::create(&temp).map_err(|e| Error::internal(e.to_string()))?;
+            let mut file = std::fs::File::create(&temp).map_err(crate::io)?;
             file.write_all(value.to_string().as_bytes())
                 .and_then(|_| file.sync_all())
                 .and_then(|_| std::fs::rename(temp, path))
-                .map_err(|e| Error::internal(e.to_string()))
+                .map_err(crate::io)
         }
     }
 }
@@ -402,7 +409,12 @@ impl ExecutionHost for Application {
     ) -> Result<Value, Error> {
         Registry::default()
             .convert_automation_value(parameter, value)
-            .map_err(|e| Error::invalid_request(codes::INVALID_PARAMETER_WRITE, e.to_string()))
+            .map_err(|e| {
+                Error::invalid_request(
+                    codes::INVALID_PARAMETER_WRITE,
+                    crate::wrapping("Parameter value cannot be converted.", e),
+                )
+            })
     }
     async fn commit_parameter_write(
         &self,
@@ -425,10 +437,7 @@ impl ExecutionHost for Application {
         battersea_nodes::logic::prepare_logic_outputs(
             node, definition, actions, signals, fired, enabled,
         )
-        .map_err(|error| match error.reason_code() {
-            Some(reason) => Error::invalid_request(reason, error.to_string()),
-            None => Error::internal(error.to_string()),
-        })
+        .map_err(battersea_nodes::NodeError::into_host::<Error>)
     }
     fn logic_gate_label(&self, _: &FlowNode, definition: &FlowNodeDefinition) -> String {
         definition.class_name.clone()
@@ -443,7 +452,7 @@ impl ActivationHost for Application {
         } else {
             Err(Error::invalid_request(
                 codes::INVALID_FLOW,
-                format!("{:?}", result.issues),
+                crate::wrapping("Flow is invalid.", format!("{:?}", result.issues)),
             ))
         }
     }
@@ -473,7 +482,10 @@ impl ActivationHost for Application {
         };
         let tap = run.tap.lock().unwrap();
         if let Some(error) = tap.error() {
-            return Err(Error::invalid_request(codes::CAPTURE_FAILED, error));
+            return Err(Error::invalid_request(
+                codes::CAPTURE_FAILED,
+                crate::wrapping("Output capture failed.", error),
+            ));
         }
         let capture: Vec<_> = tap
             .emissions_from(0)

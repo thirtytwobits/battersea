@@ -375,7 +375,9 @@ impl<H: Port> NodeHandler<H> for ChatHandler {
             host.emit_flow_signal(runtime, node, "over_budget").await?;
             return Err(refuse(
                 codes::OVER_BUDGET,
-                format!("{input_tokens} input tokens exceed the budget of {budget}."),
+                battersea_model::Failure::from("Input tokens exceed the budget.")
+                    .with_context("inputTokens", input_tokens)
+                    .with_context("budget", budget),
             ));
         }
         host.reserve(
@@ -422,7 +424,10 @@ impl<H: Port> NodeHandler<H> for ChatHandler {
         cancel: &CancellationToken,
     ) -> Result<(), H::Error> {
         let completion: Completion = serde_json::from_value(value.clone()).map_err(|error| {
-            H::Error::internal(format!("The chat completion is malformed: {error}"))
+            H::Error::internal(
+                battersea_model::Failure::from("The chat completion is malformed.")
+                    .caused_by(&error),
+            )
         })?;
         let (outcome, failure) = match &completion.failure {
             None => (CallOutcome::Completed, None),

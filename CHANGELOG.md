@@ -16,8 +16,13 @@
   `StopReason` is removed. `EngineTextStreamEvent::ResponseOpened` is a new variant.
 - Scheduler, execution and conversation checkpoints are version 3. Records of other versions are
   refused.
-- Failure messages use fixed wording. A provider's message, a response body and a lower error's
-  text are in native detail or the cause.
+- Failure messages use fixed wording, and the `Failure` constructors take `&'static str`. A
+  provider's message, a response body and a lower error's text are in native detail or the cause.
+  A node, an edge, a limit or another value Battersea names is in the new `context` part, which
+  `Failure::with_context` sets and `Display` prints after the message. `From<String>` for `Failure`
+  is removed.
+- `ExecutionHost::request_activation_cancel` takes `&'static str`. `PumpError::failure` and
+  `RecoveryError::failure` give each error as a `Failure`.
 - `ProviderConfigurationError` has a `cause` field.
 - `battersea_kit::conformance::Failure` is renamed `CaseFailure`.
 

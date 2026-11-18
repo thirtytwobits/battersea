@@ -330,10 +330,10 @@ impl<H: ExecutionHost> NodeHandler<H> for Sink {
         value: Retained<Token>,
     ) -> Result<(), H::Error> {
         if self.fail_on.is_some_and(|run| runtime.run_id == run) {
-            return Err(H::Error::internal(format!(
-                "{} {:?}",
-                self.message, value.value
-            )));
+            return Err(H::Error::internal(
+                battersea_runtime::Failure::from(self.message)
+                    .with_context("value", format!("{:?}", value.value)),
+            ));
         }
         Ok(())
     }
@@ -528,7 +528,11 @@ async fn the_reference_host_converts_automation_writes_with_the_kits_registry() 
         refused.reason_code(),
         Some(battersea_kit::reference::codes::INVALID_PARAMETER_WRITE)
     );
-    assert!(refused.message().contains("Unknown datatype"), "{refused}");
+    assert!(
+        format!("{:?}", refused.failure().cause).contains("Unknown datatype"),
+        "{:?}",
+        refused.failure()
+    );
 }
 
 #[tokio::test]

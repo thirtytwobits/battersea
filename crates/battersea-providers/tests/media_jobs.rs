@@ -894,7 +894,8 @@ async fn failed_remote_cancellation_reports_uncertainty_and_does_not_double_canc
         .await
         .unwrap_err();
     assert_eq!(error.kind, ErrorKind::Cancelled);
-    assert!(error.message.contains("Remote cancellation failed"));
+    assert_eq!(error.context["remoteCancellation"], "failed");
+    assert!(error.context["remoteCancellationFailure"]["message"].is_string());
     assert_eq!(error.exchange.request_id.as_deref(), Some("accepted-job"));
     tokio::task::yield_now().await;
     assert_eq!(state.calls.lock().unwrap().len(), 2);

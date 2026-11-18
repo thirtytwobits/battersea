@@ -101,12 +101,21 @@ pub trait ActivationHost: ExecutionHost {
     ) -> Result<(), Self::Error> {
         battersea_flow::execution::validate_execution_contract(&runtime.flow, &runtime.definitions)
             .map_err(|issue| {
-                Self::Error::invalid_request(error_codes::INVALID_EXECUTION_CONTRACT, issue.message)
+                Self::Error::invalid_request(
+                    error_codes::INVALID_EXECUTION_CONTRACT,
+                    crate::failure::wrapping(
+                        "Flow violates the execution contract.",
+                        issue.message,
+                    ),
+                )
             })?;
         self.handlers()
             .validate(runtime.definitions.values())
             .map_err(|message| {
-                Self::Error::invalid_request(error_codes::UNKNOWN_HANDLER, message)
+                Self::Error::invalid_request(
+                    error_codes::UNKNOWN_HANDLER,
+                    crate::failure::wrapping("Flow handler is not registered.", message),
+                )
             })?;
         self.validate_activation(runtime)?;
         let value_bytes = crate::pump::measure(
@@ -119,7 +128,13 @@ pub trait ActivationHost: ExecutionHost {
                 .retention
                 .reserve(0, value_bytes, Some(node))
                 .map_err(|message| {
-                    Self::Error::invalid_request(error_codes::CAPACITY_EXHAUSTED, message)
+                    Self::Error::invalid_request(
+                        error_codes::CAPACITY_EXHAUSTED,
+                        crate::failure::wrapping(
+                            "Activation values exceed retention capacity.",
+                            message,
+                        ),
+                    )
                 })?,
         );
         runtime.activated_node_id = Some(node.into());
@@ -310,12 +325,12 @@ pub trait ActivationHost: ExecutionHost {
             let (reason, message) = match result {
                 Ok(()) => (
                     error_codes::EXECUTION_INTERRUPTED,
-                    "Checkpoint publication failed.".to_string(),
+                    crate::Failure::from("Checkpoint publication failed."),
                 ),
                 Err(error) => (
                     error_codes::declared(error.reason_code())
                         .unwrap_or(error_codes::EXECUTION_INTERRUPTED),
-                    error.to_string(),
+                    error.failure().clone(),
                 ),
             };
             return Err(Self::Error::recovery_required(reason, message));

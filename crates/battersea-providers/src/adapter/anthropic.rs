@@ -62,7 +62,10 @@ pub(crate) fn create_anthropic_adapter(
         .redirect(reqwest::redirect::Policy::none())
         .default_headers(build_headers(&backend)?)
         .build()
-        .map_err(|error| Failure::transport("anthropic", error.to_string()))?;
+        .map_err(|error| {
+            Failure::transport("anthropic", "Anthropic HTTP client could not be built.")
+                .caused_by(&error.without_url())
+        })?;
     Ok(Arc::new(AnthropicEngineAdapter {
         client,
         logger,
@@ -493,10 +496,12 @@ fn build_headers(backend: &EngineBackendConfig) -> Result<HeaderMap, Failure> {
         .as_deref()
         .ok_or_else(|| missing_backend_option(provider, "auth.header"))?;
     headers.insert(
-        HeaderName::from_bytes(header_name.as_bytes())
-            .map_err(|error| Failure::transport("anthropic", error.to_string()))?,
-        HeaderValue::from_str(backend.auth.api_key.as_deref().unwrap_or(""))
-            .map_err(|error| Failure::transport("anthropic", error.to_string()))?,
+        HeaderName::from_bytes(header_name.as_bytes()).map_err(|error| {
+            Failure::transport("anthropic", "Invalid header name.").caused_by(&error)
+        })?,
+        HeaderValue::from_str(backend.auth.api_key.as_deref().unwrap_or("")).map_err(|error| {
+            Failure::transport("anthropic", "Invalid header value.").caused_by(&error)
+        })?,
     );
     let version_header = backend
         .auth
@@ -509,10 +514,12 @@ fn build_headers(backend: &EngineBackendConfig) -> Result<HeaderMap, Failure> {
         .as_deref()
         .ok_or_else(|| missing_backend_option(provider, "auth.version"))?;
     headers.insert(
-        HeaderName::from_bytes(version_header.as_bytes())
-            .map_err(|error| Failure::transport("anthropic", error.to_string()))?,
-        HeaderValue::from_str(version)
-            .map_err(|error| Failure::transport("anthropic", error.to_string()))?,
+        HeaderName::from_bytes(version_header.as_bytes()).map_err(|error| {
+            Failure::transport("anthropic", "Invalid header name.").caused_by(&error)
+        })?,
+        HeaderValue::from_str(version).map_err(|error| {
+            Failure::transport("anthropic", "Invalid header value.").caused_by(&error)
+        })?,
     );
     headers.insert("content-type", HeaderValue::from_static("application/json"));
     headers.insert("accept", HeaderValue::from_static("application/json"));

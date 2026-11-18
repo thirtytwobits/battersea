@@ -47,6 +47,17 @@ fn limit_stream<T: AsRef<[u8]>, E: std::fmt::Display>(
     })
 }
 
+/// An HTTP client that could not be built from its backend's configuration.
+pub(crate) fn client_failure(provider: &str, error: reqwest::Error) -> Failure {
+    Failure::transport(provider, "HTTP client could not be built.").caused_by(&error.without_url())
+}
+
+/// A request that failed before its response arrived. reqwest prints the request URL, which
+/// can hold a query credential.
+pub(crate) fn send_failure(provider: &str, error: reqwest::Error) -> Failure {
+    Failure::transport(provider, "HTTP request failed.").caused_by(&error.without_url())
+}
+
 /// A rejection's body as the provider sent it: its JSON value, else its text.
 pub(crate) fn rejection_body(body: String) -> Option<serde_json::Value> {
     if body.is_empty() {

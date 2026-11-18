@@ -96,13 +96,10 @@ pub(crate) fn create_openai_adapter(
                     })?,
                 ),
                 other => {
-                    return Err(Failure::new(
-                        "openai",
-                        format!(
-                            "Unknown backgroundMode \"{other}\"; expected \"stream\" or \"poll\"."
-                        ),
-                        "request",
-                    ))
+                    return Err(
+                        Failure::new("openai", "Unknown background mode.", "request")
+                            .with_context("backgroundMode", other),
+                    )
                 }
             }
         } else {
@@ -129,7 +126,10 @@ pub(crate) fn create_openai_adapter(
         .retry(reqwest::retry::never())
         .redirect(reqwest::redirect::Policy::none())
         .build()
-        .map_err(|error| Failure::transport("openai", error.to_string()))?;
+        .map_err(|error| {
+            Failure::transport("openai", "OpenAI HTTP client could not be built.")
+                .caused_by(&error.without_url())
+        })?;
 
     Ok(Arc::new(OpenAiEngineAdapter {
         http_client,
@@ -744,7 +744,7 @@ fn finalize_background_response(response: Value, status: &str) -> Result<Value, 
         ),
         "cancelled" => Err(Failure::transport(
             "openai",
-            "OpenAI background response was cancelled.".to_string(),
+            "OpenAI background response was cancelled.",
         )),
         _ => Err(Failure::invalid_response(
             "openai",
@@ -941,7 +941,7 @@ impl OpenAiToolConversation {
             )
             .await
             .map_err(|_elapsed| {
-                Failure::transport("openai", format!("OpenAI stream stalled for {idle_ms}ms."))
+                Failure::transport("openai", "OpenAI stream stalled.").with_idle_watchdog(idle_ms)
             })?
             .ok_or_else(|| {
                 Failure::invalid_response(
@@ -1040,7 +1040,11 @@ async fn open_response_stream(
                     })?;
                     Ok((decode_stream_event(&raw)?, raw))
                 })()),
-                Err(error) => Some(Err(Failure::transport("openai", error.to_string()))),
+                Err(error) => Some(Err(Failure::transport(
+                    "openai",
+                    "OpenAI event stream failed.",
+                )
+                .caused_by_text(error.to_string()))),
             }
         })
         .boxed();
@@ -1181,7 +1185,7 @@ async fn create_and_poll_background(
         .ok_or_else(|| {
             Failure::invalid_response(
                 "openai",
-                "OpenAI background create returned no response id.".to_string(),
+                "OpenAI background create returned no response id.",
             )
         })?
         .to_string();
@@ -1208,7 +1212,7 @@ async fn create_and_poll_background(
             guard.cancel().await;
             return Err(Failure::transport(
                 "openai",
-                "OpenAI background response cancelled — consumer dropped the stream.".to_string(),
+                "OpenAI background response cancelled: the consumer dropped the stream.",
             ));
         }
         if clock.instant().saturating_duration_since(started)
@@ -1217,11 +1221,9 @@ async fn create_and_poll_background(
             guard.cancel().await;
             return Err(Failure::transport(
                 "openai",
-                format!(
-                    "OpenAI background response exceeded backgroundMaxWaitMs ({max_wait_ms}ms); \
-                     aborted to bound cost."
-                ),
-            ));
+                "OpenAI background response exceeded its maximum wait.",
+            )
+            .with_context("backgroundMaxWaitMs", max_wait_ms));
         }
         battersea_model::clock::sleep(
             clock.as_ref(),
@@ -1405,18 +1407,16 @@ async fn drive_background_stream(
                 guard.cancel().await;
                 return Err(Failure::transport(
                     "openai",
-                    "OpenAI background stream cancelled — consumer dropped the stream.".to_string(),
+                    "OpenAI background stream cancelled: the consumer dropped the stream.",
                 ));
             }
             if clock.instant() >= deadline {
                 guard.cancel().await;
                 return Err(Failure::transport(
                     "openai",
-                    format!(
-                        "OpenAI background stream exceeded backgroundMaxWaitMs ({max_wait_ms}ms); \
-                         aborted to bound cost."
-                    ),
-                ));
+                    "OpenAI background stream exceeded its maximum wait.",
+                )
+                .with_context("backgroundMaxWaitMs", max_wait_ms));
             }
             match battersea_model::clock::timeout(
                 clock.as_ref(),
@@ -1493,8 +1493,7 @@ async fn drive_background_stream(
                             guard.cancel().await;
                             return Err(Failure::transport(
                                 "openai",
-                                "OpenAI background stream cancelled — consumer dropped the stream."
-                                    .to_string(),
+                                "OpenAI background stream cancelled: the consumer dropped the stream.",
                             ));
                         }
                     }
@@ -1548,8 +1547,7 @@ async fn drive_background_stream(
         let Some(id) = guard.id.clone() else {
             return Err(Failure::invalid_response(
                 "openai",
-                "OpenAI background stream ended before returning a response id; cannot resume."
-                    .to_string(),
+                "OpenAI background stream ended before returning a response id.",
             ));
         };
         reconnects += 1;
@@ -1557,21 +1555,18 @@ async fn drive_background_stream(
             guard.cancel().await;
             return Err(Failure::transport(
                 "openai",
-                format!(
-                    "OpenAI background stream exceeded backgroundMaxReconnects ({max_reconnects}) \
-                     after \"{reconnect_reason}\"; aborted."
-                ),
-            ));
+                "OpenAI background stream exceeded its reconnect limit.",
+            )
+            .with_context("backgroundMaxReconnects", max_reconnects)
+            .with_context("reason", reconnect_reason));
         }
         if clock.instant() >= deadline {
             guard.cancel().await;
             return Err(Failure::transport(
                 "openai",
-                format!(
-                    "OpenAI background stream exceeded backgroundMaxWaitMs ({max_wait_ms}ms); \
-                     aborted to bound cost."
-                ),
-            ));
+                "OpenAI background stream exceeded its maximum wait.",
+            )
+            .with_context("backgroundMaxWaitMs", max_wait_ms));
         }
         if let Some(logger) = logger {
             logger
@@ -1848,13 +1843,16 @@ fn build_openai_headers(backend: &EngineBackendConfig) -> Result<HeaderMap, Fail
         .as_deref()
         .ok_or_else(|| missing_backend_option("openai", "auth.header"))?;
     headers.insert(
-        HeaderName::from_bytes(header_name.as_bytes())
-            .map_err(|error| Failure::transport("openai", error.to_string()))?,
+        HeaderName::from_bytes(header_name.as_bytes()).map_err(|error| {
+            Failure::transport("openai", "Invalid authorisation header name.").caused_by(&error)
+        })?,
         HeaderValue::from_str(&format!(
             "Bearer {}",
             backend.auth.api_key.as_deref().unwrap_or("")
         ))
-        .map_err(|error| Failure::transport("openai", error.to_string()))?,
+        .map_err(|error| {
+            Failure::transport("openai", "Invalid authorisation header value.").caused_by(&error)
+        })?,
     );
     Ok(headers)
 }
@@ -1944,47 +1942,13 @@ fn describe_missing_output_text(response: &Value) -> Failure {
 
     let status = response.get("status").and_then(Value::as_str);
     if matches!(status, Some("incomplete")) {
-        let reason = response
-            .get("incomplete_details")
-            .and_then(Value::as_object)
-            .and_then(|details| details.get("reason"))
-            .and_then(Value::as_str)
-            .map(str::trim)
-            .filter(|reason| !reason.is_empty());
-        let message = match reason {
-            Some(reason) => {
-                format!("OpenAI response ended incomplete before producing text: {reason}.")
-            }
-            None => "OpenAI response ended incomplete before producing text.".to_string(),
-        };
-        return Failure::invalid_response("openai", message);
+        return Failure::invalid_response(
+            "openai",
+            "OpenAI response ended incomplete before producing text.",
+        );
     }
 
-    let output_types = collect_openai_output_item_types(response);
-    let message = if output_types.is_empty() {
-        "OpenAI response did not include output text.".to_string()
-    } else {
-        format!(
-            "OpenAI response did not include output text. Output item types: {}.",
-            output_types.join(", ")
-        )
-    };
-    Failure::invalid_response("openai", message)
-}
-
-fn collect_openai_output_item_types(response: &Value) -> Vec<String> {
-    let mut types = Vec::new();
-    if let Some(output) = response.get("output").and_then(Value::as_array) {
-        for item in output {
-            if let Some(kind) = item.get("type").and_then(Value::as_str) {
-                let kind = kind.trim();
-                if !kind.is_empty() && !types.iter().any(|existing| existing == kind) {
-                    types.push(kind.to_string());
-                }
-            }
-        }
-    }
-    types
+    Failure::invalid_response("openai", "OpenAI response did not include output text.")
 }
 
 /// Normalises OpenAI client, API, transport, and deserialisation failures into the shared
@@ -1992,8 +1956,10 @@ fn collect_openai_output_item_types(response: &Value) -> Vec<String> {
 fn normalize_openai_error(error: OpenAIError) -> Failure {
     match error {
         OpenAIError::Reqwest(inner) => {
-            let mut normalized = Failure::transport("openai", inner.to_string());
-            if let Some(status) = inner.status() {
+            let status = inner.status();
+            let mut normalized = Failure::transport("openai", "OpenAI HTTP request failed.")
+                .caused_by(&inner.without_url());
+            if let Some(status) = status {
                 normalized.exchange.status = Some(status.as_u16());
                 normalized.kind = classify_status(status.as_u16()).into();
             }
@@ -2001,8 +1967,12 @@ fn normalize_openai_error(error: OpenAIError) -> Failure {
         }
         OpenAIError::ApiError(inner) => Failure::new(
             "openai",
-            inner.message,
+            "OpenAI reported an error.",
             classify_openai_message(inner.r#type.as_deref(), inner.code.as_deref()),
+        )
+        .with_native(
+            battersea_model::Reporter::Provider,
+            serde_json::to_value(&inner).unwrap_or_else(|_| Value::String(inner.to_string())),
         ),
         OpenAIError::JSONDeserialize(error, content) => {
             // Before treating as a generic parse failure, check for a provider error envelope.
@@ -2015,13 +1985,9 @@ fn normalize_openai_error(error: OpenAIError) -> Failure {
                 if let Some(error_obj) = body.get("error") {
                     let error_type = error_obj.get("type").and_then(serde_json::Value::as_str);
                     let error_code = error_obj.get("code").and_then(serde_json::Value::as_str);
-                    let message = error_obj
-                        .get("message")
-                        .and_then(serde_json::Value::as_str)
-                        .unwrap_or("Provider returned an unspecified error");
                     return Failure::new(
                         "openai",
-                        message,
+                        "OpenAI reported an error.",
                         classify_openai_message(error_type, error_code),
                     )
                     .with_native(battersea_model::Reporter::Provider, body.clone());
@@ -2034,9 +2000,15 @@ fn normalize_openai_error(error: OpenAIError) -> Failure {
                 )
                 .caused_by(&error)
         }
-        OpenAIError::StreamError(inner) => Failure::transport("openai", inner.to_string()),
-        OpenAIError::InvalidArgument(message) => Failure::new("openai", message, "request"),
-        other => Failure::transport("openai", other.to_string()),
+        OpenAIError::StreamError(inner) => {
+            Failure::transport("openai", "OpenAI event stream failed.")
+                .caused_by_text(inner.to_string())
+        }
+        OpenAIError::InvalidArgument(message) => {
+            Failure::new("openai", "Invalid OpenAI request argument.", "request")
+                .caused_by_text(message)
+        }
+        other => Failure::transport("openai", "OpenAI client failed.").caused_by(&other),
     }
 }
 
@@ -2609,7 +2581,7 @@ mod tests {
         );
         assert_eq!(
             &*incomplete.message,
-            "OpenAI response ended incomplete before producing text: max_output_tokens."
+            "OpenAI response ended incomplete before producing text."
         );
 
         let shaped = openai_missing_output_text_error(&json!({
@@ -2622,7 +2594,11 @@ mod tests {
         }));
         assert_eq!(
             &*shaped.message,
-            "OpenAI response did not include output text. Output item types: reasoning, message."
+            "OpenAI response did not include output text."
+        );
+        assert_eq!(
+            shaped.native.present().unwrap()["output"][2]["type"],
+            "message"
         );
 
         let errored = openai_missing_output_text_error(&json!({
@@ -2662,7 +2638,7 @@ mod tests {
             code: None,
         }));
         assert_eq!(api_auth.kind.as_str(), "auth");
-        assert_eq!(&*api_auth.message, "bad key");
+        assert_eq!(api_auth.native.present().unwrap()["message"], "bad key");
 
         let api_rate_limit = normalize_openai_error(OpenAIError::ApiError(ApiError {
             message: "slow down".to_string(),
@@ -2730,7 +2706,10 @@ mod tests {
             r#"{"type":"error","error":{"type":"invalid_request_error","code":"rate_limit_exceeded","message":"You've exceeded the rate limit, please slow down and try again after 0.0 seconds.","param":null},"sequence_number":2}"#.to_string(),
         ));
         assert_eq!(responses_api.kind.as_str(), "rate_limit");
-        assert!(responses_api.message.contains("rate limit"));
+        assert!(responses_api.native.present().unwrap()["error"]["message"]
+            .as_str()
+            .unwrap()
+            .contains("rate limit"));
         assert_eq!(responses_api.origin.provider.as_deref(), Some("openai"));
 
         // OpenAI Chat Completions API error: {"error":{"type":"rate_limit_error",...}}
@@ -2873,7 +2852,7 @@ mod tests {
             Ok(_) => panic!("poll mode without poll interval should fail"),
             Err(error) => error,
         };
-        assert!(error.message.contains("backgroundPollIntervalMs"));
+        assert_eq!(error.context["field"], "options.backgroundPollIntervalMs");
 
         // background: true but no mode at all -> hard error naming backgroundMode.
         let mut no_mode = sample_backend();
@@ -2882,7 +2861,7 @@ mod tests {
             Ok(_) => panic!("background without a mode should fail"),
             Err(error) => error,
         };
-        assert!(error.message.contains("backgroundMode"));
+        assert_eq!(error.context["field"], "options.backgroundMode");
 
         // Fully configured background backend constructs fine.
         assert!(create_openai_adapter(background_backend(), None, crate::test_clock()).is_ok());
@@ -3004,7 +2983,8 @@ mod tests {
             Ok(_) => panic!("unknown backgroundMode should fail"),
             Err(error) => error,
         };
-        assert!(error.message.contains("Unknown backgroundMode"));
+        assert_eq!(&*error.message, "Unknown background mode.");
+        assert_eq!(error.context["backgroundMode"], "teleport");
 
         // Stream mode requires the reconnect knobs.
         let mut missing = background_backend();
@@ -3014,7 +2994,7 @@ mod tests {
             Ok(_) => panic!("stream mode without reconnect idle should fail"),
             Err(error) => error,
         };
-        assert!(error.message.contains("backgroundReconnectIdleMs"));
+        assert_eq!(error.context["field"], "options.backgroundReconnectIdleMs");
 
         // Fully configured stream-mode backend constructs.
         let mut stream_ok = background_backend();
@@ -3092,9 +3072,8 @@ mod tests {
             Err(error) => error,
         };
         assert!(
-            error.message.contains("backgroundMaxReconnects"),
-            "expected a max-reconnects error, got: {}",
-            error.message
+            error.context.contains_key("backgroundMaxReconnects"),
+            "expected a max-reconnects error, got: {error}"
         );
 
         // First connection is the create POST; the second is the cursor resume.

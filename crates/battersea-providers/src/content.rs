@@ -35,7 +35,7 @@ pub(crate) fn capabilities(provider: &str) -> ContentCapabilities {
         prompt_caching: provider != "mock",
     }
 }
-fn invalid(provider: &str, message: &str) -> Failure {
+fn invalid(provider: &str, message: &'static str) -> Failure {
     Failure::new(provider, message, "invalid_request")
 }
 pub(crate) fn media_source<'a>(
