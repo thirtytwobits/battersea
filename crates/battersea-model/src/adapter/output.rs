@@ -115,13 +115,14 @@ pub fn validate_output(
                                 };
                                 if modality.is_some_and(|mode| !state.modalities.contains(&mode)) {
                                     state.done = true;
-                                    return Some((
-                                        Err(Failure::invalid_response(
+                                    let failure = held(
+                                        Failure::invalid_response(
                                             &state.provider,
                                             "Provider returned an unrequested output modality.",
-                                        )),
-                                        state,
-                                    ));
+                                        ),
+                                        &mut state.text,
+                                    );
+                                    return Some((Err(failure), state));
                                 }
                             }
                             EngineTextStreamEvent::MessageStart { .. }

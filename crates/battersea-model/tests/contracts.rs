@@ -163,7 +163,11 @@ fn registry_rejects_unknown_or_inconsistent_backend_before_factory() {
         ));
     }
 }
-struct Scripted(Vec<Result<EngineTextStreamEvent, Failure>>);
+/// Replays its events, then ends the stream or, when `stall` is set, leaves it open.
+struct Scripted {
+    events: Vec<Result<EngineTextStreamEvent, Failure>>,
+    stall: bool,
+}
 #[async_trait]
 impl EngineAdapter for Scripted {
     fn describe_debug_context(&self) -> EngineAdapterDebugContext {
@@ -176,7 +180,12 @@ impl EngineAdapter for Scripted {
         Ok(0)
     }
     async fn stream_text(&self, _: EngineTextStreamRequest) -> Result<EngineTextStream, Failure> {
-        Ok(Box::pin(stream::iter(self.0.clone())))
+        let events = stream::iter(self.events.clone());
+        Ok(if self.stall {
+            Box::pin(events.chain(stream::pending()))
+        } else {
+            Box::pin(events)
+        })
     }
 }
 /// contracts/failures.md, Identity: a failure carries the identifiers of its own exchange.
@@ -211,7 +220,12 @@ async fn a_later_turns_failure_does_not_carry_an_earlier_turns_identifiers() {
                     content: crate::ContentCapabilities::text(),
                     background_modes: vec![],
                     parameters: backend().capabilities.supported_chat_parameters,
-                    factory: Arc::new(move |_, _, _| Ok(Arc::new(Scripted(script.clone())))),
+                    factory: Arc::new(move |_, _, _| {
+                        Ok(Arc::new(Scripted {
+                            events: script.clone(),
+                            stall: false,
+                        }))
+                    }),
                 },
             )
             .unwrap();
@@ -226,6 +240,257 @@ async fn a_later_turns_failure_does_not_carry_an_earlier_turns_identifiers() {
         let failure = events.last().unwrap().as_ref().unwrap_err();
         assert_eq!(failure.exchange.request_id.as_deref(), request_id);
         assert_eq!(failure.exchange.response_id, None);
+    }
+}
+#[derive(Default)]
+struct Reported(std::sync::Mutex<Vec<Failure>>);
+#[async_trait]
+impl EngineAdapterLogger for Reported {
+    async fn on_error(&self, entry: EngineAdapterErrorLog) {
+        self.0.lock().unwrap().push(entry.detail);
+    }
+}
+/// contracts/failures.md, Identity and Partial output: however a text stream fails after its
+/// response headers, the failure carries the origin, the issued identifiers and the structured
+/// text Battersea held, and the observer receives that failure once.
+#[tokio::test]
+async fn every_stream_failure_carries_origin_identifiers_and_held_text() {
+    enum Ends {
+        Script,
+        Deadline,
+        Idle,
+    }
+    struct Case {
+        name: &'static str,
+        format: Option<ResponseFormat>,
+        modalities: Option<Vec<Modality>>,
+        /// Text the stream delivers before `tail`; Battersea holds it under a format.
+        text: &'static str,
+        tail: Vec<Result<EngineTextStreamEvent, Failure>>,
+        ends: Ends,
+        kind: ErrorKind,
+    }
+    let schema = || {
+        Some(ResponseFormat::JsonSchema {
+            name: "result".into(),
+            schema: json!({"type":"object","properties":{"ok":{"type":"boolean"}},"required":["ok"]}),
+        })
+    };
+    let stop = |class| {
+        Ok(EngineTextStreamEvent::MessageStop {
+            class,
+            native: json!({"stop_reason": "fixture"}),
+        })
+    };
+    let case = |name, text, tail, kind| Case {
+        name,
+        format: schema(),
+        modalities: None,
+        text,
+        tail,
+        ends: Ends::Script,
+        kind,
+    };
+    let cases = vec![
+        case(
+            "provider error",
+            "{\"ok\":",
+            vec![Err(Failure::new(
+                "external",
+                "Rejected.",
+                ErrorKind::Server,
+            ))],
+            ErrorKind::Server,
+        ),
+        case(
+            "stream ends",
+            "{\"ok\":",
+            vec![],
+            ErrorKind::InvalidResponse,
+        ),
+        case(
+            "refusal",
+            "{\"ok\":",
+            vec![stop(StopClass::Refusal)],
+            ErrorKind::Refusal,
+        ),
+        case(
+            "truncation",
+            "{\"ok\":",
+            vec![stop(StopClass::Length)],
+            ErrorKind::Incomplete,
+        ),
+        case(
+            "unrecognised stop",
+            "{\"ok\":true}",
+            vec![stop(StopClass::Other)],
+            ErrorKind::Incomplete,
+        ),
+        case(
+            "malformed JSON",
+            "{\"ok\":",
+            vec![stop(StopClass::Complete)],
+            ErrorKind::InvalidResponse,
+        ),
+        case(
+            "schema violation",
+            "{\"ok\":3}",
+            vec![stop(StopClass::Complete)],
+            ErrorKind::InvalidResponse,
+        ),
+        Case {
+            format: Some(ResponseFormat::JsonObject),
+            ..case(
+                "not an object",
+                "[1]",
+                vec![stop(StopClass::Complete)],
+                ErrorKind::InvalidResponse,
+            )
+        },
+        case(
+            "byte limit",
+            "{\"ok\":",
+            vec![Ok(EngineTextStreamEvent::TextDelta {
+                text: " ".repeat(battersea_model::adapter::payload::PROVIDER_PAYLOAD_BYTES),
+            })],
+            ErrorKind::InvalidResponse,
+        ),
+        case(
+            "unrequested modality",
+            "{\"ok\":",
+            vec![Ok(EngineTextStreamEvent::ContentBlock {
+                block: ContentBlock::Image {
+                    url: "data:image/png;base64,AA==".into(),
+                    mime_type: "image/png".into(),
+                },
+            })],
+            ErrorKind::InvalidResponse,
+        ),
+        Case {
+            format: None,
+            modalities: Some(vec![Modality::Image]),
+            ..case(
+                "unrequested text",
+                "text",
+                vec![],
+                ErrorKind::InvalidResponse,
+            )
+        },
+        Case {
+            ends: Ends::Deadline,
+            ..case("request deadline", "{\"ok\":", vec![], ErrorKind::Timeout)
+        },
+        Case {
+            ends: Ends::Idle,
+            ..case("idle watchdog", "{\"ok\":", vec![], ErrorKind::Timeout)
+        },
+    ];
+    for case in cases {
+        let name = case.name;
+        let mut backend = backend();
+        let capabilities = &mut backend.capabilities;
+        capabilities.content.structured_output = vec![
+            StructuredOutputMode::JsonObject,
+            StructuredOutputMode::JsonSchema,
+        ];
+        capabilities.content.output_modalities = vec![Modality::Text, Modality::Image];
+        for parameter in ["responseFormat", "outputModalities"] {
+            if !capabilities
+                .supported_chat_parameters
+                .iter()
+                .any(|held| held == parameter)
+            {
+                capabilities
+                    .supported_chat_parameters
+                    .push(parameter.into());
+            }
+        }
+        if matches!(case.ends, Ends::Idle) {
+            backend.options.stream_idle_timeout_ms = Some(10);
+        }
+        let mut events = vec![
+            Ok(EngineTextStreamEvent::MessageStart { turn_index: 0 }),
+            Ok(EngineTextStreamEvent::ResponseOpened {
+                request_id: Some("request-1".into()),
+                response_id: Some("response-1".into()),
+            }),
+            Ok(EngineTextStreamEvent::TextDelta {
+                text: case.text.into(),
+            }),
+        ];
+        events.extend(case.tail);
+        let stall = !matches!(case.ends, Ends::Script);
+        let mut registry = ProviderRegistry::default();
+        registry
+            .register_chat(
+                "external",
+                ChatProvider {
+                    content: backend.capabilities.content.clone(),
+                    background_modes: vec![],
+                    parameters: backend.capabilities.supported_chat_parameters.clone(),
+                    factory: Arc::new(move |_, _, _| {
+                        Ok(Arc::new(Scripted {
+                            events: events.clone(),
+                            stall,
+                        }))
+                    }),
+                },
+            )
+            .unwrap();
+        let reported = Arc::new(Reported::default());
+        let clock = ManualClock::new(0);
+        let mut request = request(&backend);
+        request.shared.chat.response_format = case.format.clone();
+        request.shared.chat.output_modalities = case.modalities;
+        let stream = registry
+            .create_chat(backend, Some(reported.clone()), Arc::new(clock.clone()))
+            .unwrap()
+            .stream_text(request)
+            .await
+            .unwrap_or_else(|error| panic!("{name}: {error:?}"));
+        let window = Duration::from_millis(match case.ends {
+            Ends::Idle => 10,
+            _ => 20,
+        });
+        let events: Vec<_> = if stall {
+            let (events, remaining) =
+                tokio::join!(stream.collect(), clock.advance_to_timer_within(window));
+            assert_eq!(remaining, window, "{name}");
+            events
+        } else {
+            stream.collect().await
+        };
+        let failure = events.last().unwrap().as_ref().expect_err(name).clone();
+        assert_eq!(failure.kind, case.kind, "{name}");
+        assert_eq!(
+            failure.origin,
+            Origin {
+                operation: Some("stream_text".into()),
+                provider: Some("external".into()),
+                backend: Some("contract".into()),
+                model: Some("configured".into()),
+            },
+            "{name}"
+        );
+        assert_eq!(
+            failure.exchange.request_id.as_deref(),
+            Some("request-1"),
+            "{name}"
+        );
+        assert_eq!(
+            failure.exchange.response_id.as_deref(),
+            Some("response-1"),
+            "{name}"
+        );
+        assert_eq!(
+            failure
+                .partial
+                .present()
+                .map(|partial| partial.text.as_str()),
+            case.format.is_some().then_some(case.text),
+            "{name}"
+        );
+        assert_eq!(*reported.0.lock().unwrap(), vec![failure], "{name}");
     }
 }
 #[tokio::test]

@@ -632,6 +632,44 @@ pub fn with_stream_idle_watchdog(
     ))
 }
 
+/// Ends a stream with one timeout error when `deadline` passes on `clock`. The timeout retains
+/// the latest observed tool evidence and drops the underlying stream.
+pub(crate) fn with_stream_deadline(
+    stream: EngineTextStream,
+    deadline: tokio::time::Instant,
+    provider: impl Into<String>,
+    clock: Arc<dyn crate::Clock>,
+) -> EngineTextStream {
+    use futures_util::StreamExt as _;
+    Box::pin(futures_util::stream::unfold(
+        Some((stream, provider.into(), None)),
+        move |state| {
+            let clock = clock.clone();
+            async move {
+                let (mut stream, provider, mut tool_call) = state?;
+                match crate::clock::timeout_at(clock.as_ref(), deadline, stream.next()).await {
+                    Ok(Some(event)) => {
+                        if let Ok(event) = &event {
+                            retain_tool_evidence(&mut tool_call, event);
+                        }
+                        Some((event, Some((stream, provider, tool_call))))
+                    }
+                    Ok(None) => None,
+                    Err(_) => {
+                        let mut error = Failure::new(
+                            provider,
+                            "Request deadline exceeded.",
+                            error::ErrorKind::Timeout,
+                        );
+                        error.tool_call = tool_call.map(Box::new);
+                        Some((Err(error), None))
+                    }
+                }
+            }
+        },
+    ))
+}
+
 /// Maps a canonical engine tool name to the portable function-name alphabet.
 pub fn local_tool_name(name: &str) -> String {
     name.replace('.', "_")

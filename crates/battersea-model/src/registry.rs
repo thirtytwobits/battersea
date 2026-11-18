@@ -617,6 +617,17 @@ impl AdmittedAdapter {
             ),
             None => stream,
         };
+        // The deadline ends the stream beneath output validation, which holds the structured
+        // text the failure carries.
+        let stream = match deadline {
+            Some(deadline) => super::adapter::with_stream_deadline(
+                stream,
+                deadline,
+                provider.clone(),
+                self.clock.clone(),
+            ),
+            None => stream,
+        };
         let validated = super::adapter::output::validate_output(
             stream,
             provider.clone(),
@@ -626,9 +637,6 @@ impl AdmittedAdapter {
         let stream = validated;
         struct Open {
             stream: EngineTextStream,
-            deadline: Option<tokio::time::Instant>,
-            tool_call: Option<crate::ToolCallEvidence>,
-            clock: Arc<dyn Clock>,
             report: Arc<Report>,
             request_id: Option<String>,
             response_id: Option<String>,
@@ -636,9 +644,6 @@ impl AdmittedAdapter {
         Ok(Box::pin(futures_util::stream::unfold(
             Some(Open {
                 stream,
-                deadline,
-                tool_call: None,
-                clock: self.clock.clone(),
                 report: self.report.clone(),
                 request_id: None,
                 response_id: None,
@@ -647,25 +652,7 @@ impl AdmittedAdapter {
                 use futures_util::StreamExt;
                 let mut open = state?;
                 loop {
-                    let next = match open.deadline {
-                        Some(deadline) => crate::clock::timeout_at(
-                            open.clock.as_ref(),
-                            deadline,
-                            open.stream.next(),
-                        )
-                        .await
-                        .unwrap_or_else(|_| {
-                            let mut error = Failure::new(
-                                &open.report.backend.provider,
-                                "Request deadline exceeded.",
-                                ErrorKind::Timeout,
-                            );
-                            error.tool_call = open.tool_call.clone().map(Box::new);
-                            Some(Err(error))
-                        }),
-                        None => open.stream.next().await,
-                    };
-                    match next? {
+                    match open.stream.next().await? {
                         Ok(EngineTextStreamEvent::ResponseOpened {
                             request_id,
                             response_id,
@@ -688,7 +675,6 @@ impl AdmittedAdapter {
                                 open.request_id = None;
                                 open.response_id = None;
                             }
-                            super::adapter::retain_tool_evidence(&mut open.tool_call, &event);
                             return Some((Ok(event), Some(open)));
                         }
                         Err(mut failure) => {
