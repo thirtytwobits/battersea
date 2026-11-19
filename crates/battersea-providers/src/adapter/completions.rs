@@ -300,6 +300,8 @@ impl EngineAdapter for Completions {
                 .stream_idle_timeout_ms
                 .unwrap_or(binding.timeout_ms),
         );
+        let mut identifiers = crate::retry::Identifiers::default();
+        let turn = async {
         let calls = {
             let work = conversation.next_turn(&runtime, results, &tx);
             tokio::pin!(work);
@@ -310,11 +312,11 @@ impl EngineAdapter for Completions {
                 tokio::select! {
                     result=&mut work=> {
                         rx.close();
-                        while let Some(event)=rx.recv().await { retain_event(&self.backend.provider,&mut events,&mut retained,event?)?; }
+                        while let Some(event)=rx.recv().await { retain_event(&self.backend.provider,&mut events,&mut retained,&mut identifiers,event?)?; }
                         break result?;
                     },
                     Some(event)=rx.recv()=> {
-                        retain_event(&self.backend.provider,&mut events,&mut retained,event?)?;
+                        retain_event(&self.backend.provider,&mut events,&mut retained,&mut identifiers,event?)?;
                         timer = battersea_model::clock::deadline_after(self.clock.as_ref(), idle)
                             .map(|deadline| self.clock.sleep_until(deadline))
                             .unwrap_or_else(|| Box::pin(std::future::pending()));
@@ -347,7 +349,16 @@ impl EngineAdapter for Completions {
             events,
         };
         payload::check_payload(&turn, &self.backend.provider)?;
-        Ok(turn)
+            Ok(turn)
+        }
+        .await;
+        match turn {
+            Ok(mut turn) => {
+                identifiers.announce(&mut turn.events);
+                Ok(turn)
+            }
+            Err(failure) => Err(identifiers.stamp(failure)),
+        }
     }
 
     fn describe_debug_context(&self) -> EngineAdapterDebugContext {
@@ -953,10 +964,11 @@ fn retain_event(
     provider: &str,
     events: &mut Vec<EngineTextStreamEvent>,
     retained: &mut usize,
+    identifiers: &mut crate::retry::Identifiers,
     event: EngineTextStreamEvent,
 ) -> Result<(), Failure> {
     // The opened response is an observation of the exchange, not part of the durable turn.
-    if matches!(event, EngineTextStreamEvent::ResponseOpened { .. }) {
+    if identifiers.note(&event) {
         return Ok(());
     }
     *retained = retained.saturating_add(payload::check_payload(&event, provider)?);

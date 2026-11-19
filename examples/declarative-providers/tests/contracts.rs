@@ -41,9 +41,11 @@ async fn handle(State(wire): State<Wire>, uri: Uri, headers: HeaderMap, body: By
     Response::builder()
         .status(status)
         .header("content-type", content_type)
+        .header("request-id", REQUEST_ID)
         .body(Body::from(body))
         .unwrap()
 }
+const REQUEST_ID: &str = "req-fixture";
 async fn server(
     replies: Vec<(u16, String, String)>,
 ) -> (String, Wire, tokio::task::JoinHandle<()>) {
@@ -499,6 +501,101 @@ impl EngineLocalToolExecutor for Echo {
         })
     }
 }
+/// contracts/failures.md, Identity: a durable turn that fails after its response arrives carries
+/// both issued identifiers, whether the adapter refuses the response or Battersea's output
+/// validation does.
+#[tokio::test]
+async fn a_durable_turn_failure_after_the_response_carries_the_issued_identifiers() {
+    let responses = |output: Value| {
+        sse(
+            vec![
+                json!({"type":"response.completed", "sequence_number":1, "response":{
+                "id":"response-fixture", "created_at":1, "model":"fixture", "object":"response",
+                "status":"completed", "output":output}}),
+            ],
+            false,
+        )
+    };
+    let wire_reply = |protocol: &str, accepted: bool| match protocol {
+        "anthropic-messages" => reply(json!({
+            "id":"response-fixture", "type":"message", "role":"assistant",
+            "content":[{"type":"text", "text":"not JSON"}],
+            "stop_reason": if accepted { "end_turn" } else { "max_tokens" },
+            "usage":{"input_tokens":1, "output_tokens":1}})),
+        "google-generate-content" => reply(json!({
+            "responseId":"response-fixture", "candidates":[{
+                "content":{"role":"model", "parts":[{"text":"not JSON"}]},
+                "finishReason": if accepted { "STOP" } else { "MAX_TOKENS" }}]})),
+        "openai-responses" if accepted => responses(json!([{
+            "type":"message", "id":"message-fixture", "status":"completed", "role":"assistant",
+            "content":[{"type":"output_text", "text":"not JSON", "annotations":[]}]}])),
+        "openai-responses" => responses(json!([])),
+        "openai-chat-completions" => reply(json!({
+            "id":"response-fixture", "choices":[{
+                "message":{"role":"assistant", "content":"not JSON"},
+                "finish_reason": if accepted { "stop" } else { "length" }}]})),
+        _ => unreachable!(),
+    };
+    for protocol in [
+        "anthropic-messages",
+        "google-generate-content",
+        "openai-responses",
+        "openai-chat-completions",
+    ] {
+        for accepted in [true, false] {
+            let name = format!("{protocol}, accepted by the adapter: {accepted}");
+            let (url, _, task) = server(vec![wire_reply(protocol, accepted)]).await;
+            let mut config = configuration(protocol, &url);
+            if protocol == "openai-chat-completions" {
+                let backend = config.backends.get_mut("office-chat").unwrap();
+                backend.properties.as_mut().unwrap().stream = Some(false);
+            }
+            let configured = config
+                .validate(&protocols())
+                .unwrap()
+                .bind(&Secrets::new(), None, clock())
+                .unwrap();
+            let mut shared = request(&config).shared;
+            shared.chat.response_format = Some(ResponseFormat::JsonSchema {
+                name: "result".into(),
+                schema: json!({"type":"object"}),
+            });
+            let failure = configured
+                .chat("office-chat")
+                .unwrap()
+                .conversation_turn(
+                    ConversationRequest {
+                        shared,
+                        tools: vec![],
+                        max_turns: 2,
+                    },
+                    None,
+                    vec![],
+                )
+                .await
+                .err()
+                .unwrap_or_else(|| panic!("{name}: the turn passed"));
+            task.abort();
+            let exchange = &failure.exchange;
+            assert_eq!(
+                exchange.request_id.as_deref(),
+                Some(REQUEST_ID),
+                "{name}: {failure:?}"
+            );
+            assert_eq!(
+                exchange.response_id.as_deref(),
+                Some("response-fixture"),
+                "{name}: {failure:?}"
+            );
+            assert_eq!(
+                failure.origin.operation.as_deref(),
+                Some("conversation_turn"),
+                "{name}"
+            );
+        }
+    }
+}
+
 #[tokio::test]
 async fn completions_retries_immutable_turns_and_executes_tools_once() {
     let first = json!({"choices":[{"finish_reason":"tool_calls","message":{"role":"assistant","content":null,"tool_calls":[{"id":"call-1","type":"function","function":{"name":"echo","arguments":"{\"value\":3}"}}]}}]});

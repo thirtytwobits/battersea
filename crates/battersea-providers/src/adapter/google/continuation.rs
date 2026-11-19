@@ -363,12 +363,37 @@ impl GoogleEngineAdapter {
             self.clock.as_ref(),
         )
         .await?;
+        let mut identifiers = crate::retry::Identifiers::of(&response);
         let status = response.status().as_u16();
-        let native: Value = response.bounded_json().await?;
+        let native: Value = match response.bounded_json().await {
+            Ok(native) => native,
+            Err(failure) => return Err(identifiers.stamp(failure)),
+        };
+        identifiers.name(native.get("responseId"));
+        let turn = self
+            .completed_turn(&request, binding, contents, native, status)
+            .await;
+        match turn {
+            Ok(mut turn) => {
+                identifiers.announce(&mut turn.events);
+                Ok(turn)
+            }
+            Err(failure) => Err(identifiers.stamp(failure)),
+        }
+    }
+
+    async fn completed_turn(
+        &self,
+        request: &ConversationRequest,
+        binding: ConversationBinding,
+        contents: Vec<Value>,
+        native: Value,
+        status: u16,
+    ) -> Result<ConversationTurn, Failure> {
         // The completed native response determines durable events and calls.
-        let events = response_events(&request, &native, false)?;
-        let index = (contents.len() - original_len(&self.backend, &request)?) / 2;
-        let calls = model_calls(&request, &native["candidates"][0]["content"], index)?;
+        let events = response_events(request, &native, false)?;
+        let index = (contents.len() - original_len(&self.backend, request)?) / 2;
+        let calls = model_calls(request, &native["candidates"][0]["content"], index)?;
         emit_response(
             self.logger.as_ref(),
             &self.context,
@@ -398,7 +423,7 @@ impl GoogleEngineAdapter {
         let checkpoint = Checkpoint {
             version: CHECKPOINT_VERSION,
             binding,
-            request_revision: request_revision(&request),
+            request_revision: request_revision(request),
             contents,
             response: native,
         };

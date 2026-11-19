@@ -179,6 +179,31 @@ impl EngineAdapter for Scripted {
     ) -> Result<u64, Failure> {
         Ok(0)
     }
+    fn validate_conversation(
+        &self,
+        _: &ConversationRequest,
+        _: Option<&serde_json::Value>,
+    ) -> Result<ConversationBinding, Failure> {
+        Ok(serde_json::from_value(json!({
+            "origin": {"provider": "external", "adapter": "fixture", "bindingRevision": "fixture"},
+            "configuration_revision": "fixture",
+            "timeout_ms": 20,
+        }))
+        .unwrap())
+    }
+    /// A completed turn holding the scripted events; a scripted failure fails the turn.
+    async fn conversation_turn(
+        &self,
+        _: ConversationRequest,
+        _: Option<serde_json::Value>,
+        _: Vec<ConversationToolResult>,
+    ) -> Result<ConversationTurn, Failure> {
+        Ok(ConversationTurn {
+            state: serde_json::Value::Null,
+            calls: vec![],
+            events: self.events.iter().cloned().collect::<Result<_, _>>()?,
+        })
+    }
     async fn stream_text(&self, _: EngineTextStreamRequest) -> Result<EngineTextStream, Failure> {
         let events = stream::iter(self.events.clone());
         Ok(if self.stall {
@@ -492,6 +517,154 @@ async fn every_stream_failure_carries_origin_identifiers_and_held_text() {
         );
         assert_eq!(*reported.0.lock().unwrap(), vec![failure], "{name}");
     }
+}
+/// contracts/failures.md, Identity and Partial output: a completed conversation turn that fails
+/// Battersea's validation carries the origin, the identifiers the adapter announced and the
+/// structured text of the turn, on the turn and the step interface alike. The announcement
+/// leaves a turn that passes.
+#[tokio::test]
+async fn a_completed_turns_failure_carries_origin_identifiers_and_held_text() {
+    let mut backend = backend();
+    backend.capabilities.content.structured_output = vec![StructuredOutputMode::JsonSchema];
+    if !backend
+        .capabilities
+        .supported_chat_parameters
+        .iter()
+        .any(|held| held == "responseFormat")
+    {
+        backend
+            .capabilities
+            .supported_chat_parameters
+            .push("responseFormat".into());
+    }
+    let turn = |text: &str, class| {
+        vec![
+            Ok(EngineTextStreamEvent::ResponseOpened {
+                request_id: Some("request-1".into()),
+                response_id: Some("response-1".into()),
+            }),
+            Ok(EngineTextStreamEvent::MessageStart { turn_index: 0 }),
+            Ok(EngineTextStreamEvent::TextDelta { text: text.into() }),
+            Ok(EngineTextStreamEvent::MessageStop {
+                class,
+                native: json!({"stop_reason": "fixture"}),
+            }),
+        ]
+    };
+    let adapter = |events: Vec<Result<EngineTextStreamEvent, Failure>>, reported| {
+        let mut registry = ProviderRegistry::default();
+        registry
+            .register_chat(
+                "external",
+                ChatProvider {
+                    content: backend.capabilities.content.clone(),
+                    background_modes: vec![],
+                    parameters: backend.capabilities.supported_chat_parameters.clone(),
+                    factory: Arc::new(move |_, _, _| {
+                        Ok(Arc::new(Scripted {
+                            events: events.clone(),
+                            stall: false,
+                        }))
+                    }),
+                },
+            )
+            .unwrap();
+        registry
+            .create_chat(backend.clone(), reported, clock())
+            .unwrap()
+    };
+    let mut shared = request(&backend).shared;
+    shared.chat.response_format = Some(ResponseFormat::JsonSchema {
+        name: "result".into(),
+        schema: json!({"type":"object","properties":{"ok":{"type":"boolean"}},"required":["ok"]}),
+    });
+    let request = ConversationRequest {
+        shared,
+        tools: vec![],
+        max_turns: 2,
+    };
+    for (name, text, class, kind) in [
+        (
+            "schema violation",
+            "{\"ok\":3}",
+            StopClass::Complete,
+            ErrorKind::InvalidResponse,
+        ),
+        (
+            "malformed JSON",
+            "{\"ok\":",
+            StopClass::Complete,
+            ErrorKind::InvalidResponse,
+        ),
+        (
+            "refusal",
+            "{\"ok\":",
+            StopClass::Refusal,
+            ErrorKind::Refusal,
+        ),
+        (
+            "truncation",
+            "{\"ok\":",
+            StopClass::Length,
+            ErrorKind::Incomplete,
+        ),
+    ] {
+        for operation in ["conversation_turn", "conversation_step"] {
+            let name = format!("{name}, {operation}");
+            let reported = Arc::new(Reported::default());
+            let adapter = adapter(turn(text, class), Some(reported.clone() as _));
+            let failure = if operation == "conversation_turn" {
+                adapter
+                    .conversation_turn(request.clone(), None, vec![])
+                    .await
+                    .err()
+            } else {
+                adapter
+                    .conversation_step(request.clone(), None, vec![], ConversationCommand::Start)
+                    .await
+                    .err()
+            }
+            .unwrap_or_else(|| panic!("{name}: the turn passed"));
+            assert_eq!(failure.kind, kind, "{name}");
+            assert_eq!(
+                failure.origin,
+                Origin {
+                    operation: Some(operation.into()),
+                    provider: Some("external".into()),
+                    backend: Some("contract".into()),
+                    model: Some("configured".into()),
+                },
+                "{name}"
+            );
+            assert_eq!(
+                failure.exchange.request_id.as_deref(),
+                Some("request-1"),
+                "{name}"
+            );
+            assert_eq!(
+                failure.exchange.response_id.as_deref(),
+                Some("response-1"),
+                "{name}"
+            );
+            assert_eq!(
+                failure
+                    .partial
+                    .present()
+                    .map(|partial| partial.text.as_str()),
+                Some(text),
+                "{name}"
+            );
+            assert_eq!(*reported.0.lock().unwrap(), vec![failure], "{name}");
+        }
+    }
+    let passed = adapter(turn("{\"ok\":true}", StopClass::Complete), None)
+        .conversation_turn(request, None, vec![])
+        .await
+        .unwrap_or_else(|failure| panic!("{failure:?}"));
+    assert!(!passed
+        .events
+        .iter()
+        .any(|event| matches!(event, EngineTextStreamEvent::ResponseOpened { .. })));
 }
 #[tokio::test]
 async fn request_deadline_covers_token_count_and_consumption_of_a_stalled_stream() {

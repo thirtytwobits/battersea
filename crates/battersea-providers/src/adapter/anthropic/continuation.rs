@@ -283,6 +283,7 @@ impl AnthropicEngineAdapter {
             self.clock.as_ref(),
         )
         .await?;
+        let mut identifiers = crate::retry::Identifiers::of(&response);
         let status = response.status().as_u16();
         let request_id = response
             .headers()
@@ -290,10 +291,31 @@ impl AnthropicEngineAdapter {
             .and_then(|value| value.to_str().ok())
             .map(ToOwned::to_owned);
         let native: Value = read_anthropic_json(response, request_id.clone()).await?;
+        identifiers.name(native.get("id"));
+        let turn = self
+            .completed_turn(&request, binding, messages, native, status, request_id)
+            .await;
+        match turn {
+            Ok(mut turn) => {
+                identifiers.announce(&mut turn.events);
+                Ok(turn)
+            }
+            Err(failure) => Err(identifiers.stamp(failure)),
+        }
+    }
+
+    async fn completed_turn(
+        &self,
+        request: &ConversationRequest,
+        binding: ConversationBinding,
+        messages: Vec<Value>,
+        native: Value,
+        status: u16,
+        request_id: Option<String>,
+    ) -> Result<ConversationTurn, Failure> {
         // The completed native message determines durable events and calls.
-        let events = response_events(&request, &native, false)
-            .map_err(|error| error.with_request_id(request_id.clone()))?;
-        let calls = assistant_calls(&request, &native["content"])?;
+        let events = response_events(request, &native, false)?;
+        let calls = assistant_calls(request, &native["content"])?;
         emit_response(
             self.logger.as_ref(),
             &self.context,
@@ -321,7 +343,7 @@ impl AnthropicEngineAdapter {
         let checkpoint = Checkpoint {
             version: CHECKPOINT_VERSION,
             binding,
-            request_revision: request_revision(&request),
+            request_revision: request_revision(request),
             messages,
             response: native,
         };

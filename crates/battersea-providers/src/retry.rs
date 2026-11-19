@@ -74,6 +74,70 @@ pub(crate) fn identified(
     })
 }
 
+/// The identifiers a provider issued for one exchange, kept for the failures a durable turn or
+/// step raises after the response arrives.
+#[derive(Default)]
+pub(crate) struct Identifiers {
+    request_id: Option<String>,
+    response_id: Option<String>,
+}
+impl Identifiers {
+    /// The identifiers the headers of `response` carry.
+    pub(crate) fn of(response: &Response) -> Self {
+        Self {
+            request_id: request_id(response.headers()),
+            response_id: None,
+        }
+    }
+    /// Records the response identifier a provider payload holds at `id`.
+    pub(crate) fn name(&mut self, id: Option<&serde_json::Value>) {
+        if let Some(id) = id.and_then(serde_json::Value::as_str) {
+            self.response_id = Some(id.to_owned());
+        }
+    }
+    /// Records the identifiers `event` announces and reports whether it announced any.
+    pub(crate) fn note(&mut self, event: &battersea_model::EngineTextStreamEvent) -> bool {
+        let battersea_model::EngineTextStreamEvent::ResponseOpened {
+            request_id,
+            response_id,
+        } = event
+        else {
+            return false;
+        };
+        if request_id.is_some() {
+            self.request_id.clone_from(request_id);
+        }
+        if response_id.is_some() {
+            self.response_id.clone_from(response_id);
+        }
+        true
+    }
+    /// Carries the identifiers on `failure` where the failure names none of its own.
+    pub(crate) fn stamp(&self, mut failure: battersea_model::Failure) -> battersea_model::Failure {
+        let exchange = &mut failure.exchange;
+        if exchange.request_id.is_none() {
+            exchange.request_id.clone_from(&self.request_id);
+        }
+        if exchange.response_id.is_none() {
+            exchange.response_id.clone_from(&self.response_id);
+        }
+        failure
+    }
+    /// Announces the identifiers at the head of a completed turn's events, where the registry
+    /// reads them for the failures of its own validation.
+    pub(crate) fn announce(self, events: &mut Vec<battersea_model::EngineTextStreamEvent>) {
+        if self.request_id.is_some() || self.response_id.is_some() {
+            events.insert(
+                0,
+                battersea_model::EngineTextStreamEvent::ResponseOpened {
+                    request_id: self.request_id,
+                    response_id: self.response_id,
+                },
+            );
+        }
+    }
+}
+
 /// Sends `request`, retrying safe failures with backoff timed by `clock`. The caller's operation
 /// deadline bounds every attempt and delay.
 pub(crate) async fn send(

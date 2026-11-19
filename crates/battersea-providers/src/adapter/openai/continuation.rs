@@ -262,14 +262,32 @@ impl OpenAiEngineAdapter {
             self.stream_idle_timeout_ms,
         );
         tokio::pin!(work);
+        // The stream announces the identifiers; the completed response names its own.
+        let mut identifiers = crate::retry::Identifiers::default();
         let response = loop {
             tokio::select! {
-                result = &mut work => break result?,
-                Some(event) = rx.recv() => { event?; },
+                result = &mut work => break result,
+                Some(event) = rx.recv() => match event {
+                    Ok(event) => { identifiers.note(&event); }
+                    Err(failure) => break Err(failure),
+                },
             }
         };
-        self.completed_turn(&request, binding, input, response, true)
-            .await
+        let turn = match response {
+            Ok(response) => {
+                identifiers.name(response.get("id"));
+                self.completed_turn(&request, binding, input, response, true)
+                    .await
+            }
+            Err(failure) => Err(failure),
+        };
+        match turn {
+            Ok(mut turn) => {
+                identifiers.announce(&mut turn.events);
+                Ok(turn)
+            }
+            Err(failure) => Err(identifiers.stamp(failure)),
+        }
     }
 
     async fn completed_turn(

@@ -384,6 +384,37 @@ impl AdmittedAdapter {
         request: &crate::ConversationRequest,
         turn: &mut crate::ConversationTurn,
     ) -> Result<(), Failure> {
+        // The adapter announces the exchange's identifiers at the head of the turn's events.
+        // They are an observation of the exchange and leave the turn here.
+        let mut exchange = (None, None);
+        turn.events.retain_mut(|event| match event {
+            EngineTextStreamEvent::ResponseOpened {
+                request_id,
+                response_id,
+            } => {
+                exchange.0 = request_id.take().or(exchange.0.take());
+                exchange.1 = response_id.take().or(exchange.1.take());
+                false
+            }
+            _ => true,
+        });
+        self.validated_output(request, turn)
+            .await
+            .map_err(|mut failure| {
+                if failure.exchange.request_id.is_none() {
+                    failure.exchange.request_id = exchange.0;
+                }
+                if failure.exchange.response_id.is_none() {
+                    failure.exchange.response_id = exchange.1;
+                }
+                failure
+            })
+    }
+    async fn validated_output(
+        &self,
+        request: &crate::ConversationRequest,
+        turn: &mut crate::ConversationTurn,
+    ) -> Result<(), Failure> {
         let format = request.shared.chat.response_format.clone();
         let modalities = request
             .shared

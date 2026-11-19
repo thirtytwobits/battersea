@@ -127,6 +127,30 @@ impl OpenAiEngineAdapter {
         results: Vec<ConversationToolResult>,
         command: ConversationCommand,
     ) -> Result<ConversationStep, Failure> {
+        let mut identifiers = crate::retry::Identifiers::default();
+        let step = self
+            .identified_step(request, previous, results, command, &mut identifiers)
+            .await;
+        match step {
+            Ok(mut step) => {
+                if let ConversationStep::Completed { turn } = &mut step {
+                    identifiers.announce(&mut turn.events);
+                }
+                Ok(step)
+            }
+            Err(failure) => Err(identifiers.stamp(failure)),
+        }
+    }
+
+    /// Runs one step, recording in `identifiers` what the provider's response names.
+    async fn identified_step(
+        &self,
+        request: ConversationRequest,
+        previous: Option<Value>,
+        results: Vec<ConversationToolResult>,
+        command: ConversationCommand,
+        identifiers: &mut crate::retry::Identifiers,
+    ) -> Result<ConversationStep, Failure> {
         let binding = self.validate_durable_request(&request, previous.as_ref())?;
         if !self.background {
             return match command {
@@ -199,9 +223,12 @@ impl OpenAiEngineAdapter {
         )
         .await;
         let response: Value = match sent {
-            Ok(response) => response.bounded_json().await.map_err(|cause| {
-                invalid("Invalid background response payload.").with_cause(cause)
-            })?,
+            Ok(response) => {
+                *identifiers = crate::retry::Identifiers::of(&response);
+                response.bounded_json().await.map_err(|cause| {
+                    invalid("Invalid background response payload.").with_cause(cause)
+                })?
+            }
             Err(error)
                 if matches!(command, ConversationCommand::Cancel { .. })
                     && matches!(error.exchange.status, Some(400 | 409)) =>
@@ -212,17 +239,16 @@ impl OpenAiEngineAdapter {
                         .as_str()
                         .expect("identity"),
                 );
-                let response: Value = crate::retry::send(
+                let retrieved = crate::retry::send(
                     self.retrieve_durable_response(&request, &id)
                         .headers(build_openai_headers(&self.backend)?),
                     &self.backend,
                     self.logger.as_ref(),
                     self.clock.as_ref(),
                 )
-                .await?
-                .bounded_json()
-                .await
-                .map_err(|cause| {
+                .await?;
+                *identifiers = crate::retry::Identifiers::of(&retrieved);
+                let response: Value = retrieved.bounded_json().await.map_err(|cause| {
                     invalid("Invalid background response payload.").with_cause(cause)
                 })?;
                 let step = ConversationStep::Cancelled {
@@ -234,6 +260,7 @@ impl OpenAiEngineAdapter {
             }
             Err(error) => return Err(error),
         };
+        identifiers.name(response.get("id"));
         native_response(&response)?;
         if pending
             .as_ref()
