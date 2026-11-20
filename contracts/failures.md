@@ -25,6 +25,7 @@ Every operation that fails or ends incomplete reports one `Failure`.
 | Native detail | The reporter's own account, whole |
 | Partial output | Output received before the failure and not delivered |
 | Cause | The failure or foreign error that this failure wraps |
+| Cleanup | The failure of the cleanup Battersea attempted after the operation failed |
 
 Native detail is a provider's error body, stream error event or terminal event, or a tool's error.
 Battersea carries native detail as the structured value it received and selects no fields from
@@ -44,6 +45,9 @@ native detail or in the cause.
 A failure that wraps another failure carries it as its cause. A wrapped error of another type is
 a foreign error, carried as its text and the text of each of its sources in order. No failure
 site discards the error it handles.
+
+A failed operation whose cleanup also fails, such as the cancellation of a remote job, reports
+the operation's failure and carries the cleanup's failure whole.
 
 Partial output is output Battersea held when the operation failed: buffered structured text and
 incomplete content blocks. Events already delivered remain with their consumer.
@@ -72,7 +76,7 @@ identity, before applying the node's failure policy. A failed observer call fail
 
 The host chooses what the flow receives. `FailureDisclosure` is `full` or `withheld`; omission
 means `full`. Under `withheld`, native detail, partial output and foreign error text are marked
-withheld at every depth of the cause chain in the `node_failure` token, the checkpoint and the
+withheld at every depth of the cause chain, and in a cleanup failure, in the `node_failure` token, the checkpoint and the
 runtime records. The context is not withheld. A withheld part is distinct from an absent part. The `node_failure` identity
 joins a withheld failure to the complete failure the observer received.
 
@@ -89,6 +93,7 @@ native detail, partial output and foreign error text as content under
 | Termination | Distinct native reasons of one class remain distinct in the failure; an unrecognised reason has the class `other` |
 | Partial output | A refusal under a response format carries the buffered text |
 | Cause | A wrapped foreign error's text and its sources' text are present in order |
+| Cleanup | A failed remote cancellation's rejection body is present in the failure the host receives, and withheld with it |
 | Credentials | A credential in each encoded form inside a provider payload is masked and the rest of the payload is unchanged |
 | Disclosure | Under `withheld`, the token, the checkpoint and the runtime records hold no native detail, partial output or foreign error text, and the observer received the complete failure under the same identity; under `full` the token holds them |
 | Observer | The observer is called before the policy applies; its failure fails the activation |

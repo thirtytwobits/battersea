@@ -16,7 +16,7 @@ pub(crate) fn bounded_stream(
     )
 }
 
-fn limit_stream<T: AsRef<[u8]>, E: std::fmt::Display>(
+fn limit_stream<T: AsRef<[u8]>, E: std::error::Error + 'static>(
     stream: impl Stream<Item = Result<T, E>>,
     limit: usize,
 ) -> impl Stream<Item = Result<T, Failure>> {
@@ -40,7 +40,7 @@ fn limit_stream<T: AsRef<[u8]>, E: std::fmt::Display>(
                     "http",
                     "Provider response stream failed.",
                 )
-                .caused_by_text(error.to_string())))
+                .caused_by(&error)))
             }
         };
         std::future::ready(value)
@@ -104,7 +104,8 @@ mod tests {
     #[tokio::test]
     async fn chunk_boundaries_cannot_bypass_the_predecode_limit_and_failure_is_terminal() {
         for chunks in [vec![vec![0; 4]], vec![vec![0; 2], vec![0; 2]]] {
-            let source = futures_util::stream::iter(chunks.into_iter().map(Ok::<_, String>));
+            let source =
+                futures_util::stream::iter(chunks.into_iter().map(Ok::<_, std::io::Error>));
             let result = limit_stream(source, 3).collect::<Vec<_>>().await;
             assert!(result.last().unwrap().is_err());
             assert!(
@@ -116,7 +117,41 @@ mod tests {
                     <= 3
             );
         }
-        let source = futures_util::stream::iter([Ok::<_, String>(vec![0; 3])]);
+        let source = futures_util::stream::iter([Ok::<_, std::io::Error>(vec![0; 3])]);
         assert!(limit_stream(source, 3).collect::<Vec<_>>().await[0].is_ok());
+    }
+    /// contracts/failures.md, Cause: a body read failure keeps the text of its sources in order.
+    #[tokio::test]
+    async fn a_failed_body_read_carries_the_error_and_its_sources() {
+        #[derive(Debug)]
+        struct Decode(std::io::Error);
+        impl std::fmt::Display for Decode {
+            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                f.write_str("error decoding response body")
+            }
+        }
+        impl std::error::Error for Decode {
+            fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+                Some(&self.0)
+            }
+        }
+        let source = futures_util::stream::iter([Err::<Vec<u8>, _>(Decode(
+            std::io::Error::other("connection reset"),
+        ))]);
+        let failure = limit_stream(source, 3)
+            .collect::<Vec<_>>()
+            .await
+            .remove(0)
+            .err()
+            .unwrap();
+        assert_eq!(
+            failure.cause,
+            Some(battersea_model::Cause::Foreign(
+                battersea_model::Detail::Present(vec![
+                    "error decoding response body".into(),
+                    "connection reset".into()
+                ])
+            ))
+        );
     }
 }

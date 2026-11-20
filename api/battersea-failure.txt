@@ -562,6 +562,7 @@ pub fn battersea_failure::Failure::new(impl core::convert::Into<alloc::string::S
 pub fn battersea_failure::Failure::transport(impl core::convert::Into<alloc::string::String>, &'static str) -> Self
 pub fn battersea_failure::Failure::visit_text(&mut self, &mut dyn core::ops::function::FnMut(&mut alloc::string::String))
 pub fn battersea_failure::Failure::with_cause(self, battersea_failure::Failure) -> Self
+pub fn battersea_failure::Failure::with_cleanup(self, battersea_failure::Failure) -> Self
 pub fn battersea_failure::Failure::with_context(self, &'static str, impl core::convert::Into<serde_json::value::Value>) -> Self
 pub fn battersea_failure::Failure::with_dispatch(self, battersea_failure::DispatchState) -> Self
 pub fn battersea_failure::Failure::with_idle_watchdog(self, u64) -> Self
@@ -635,6 +636,7 @@ pub fn battersea_failure::Failure::__clone_box(&self, dyn_clone::sealed::Private
 impl<T> serde_core::de::DeserializeOwned for battersea_failure::Failure where T: for<'de> serde_core::de::Deserialize<'de>
 pub struct battersea_failure::FailureParts
 pub battersea_failure::FailureParts::cause: core::option::Option<battersea_failure::Cause>
+pub battersea_failure::FailureParts::cleanup: core::option::Option<battersea_failure::Failure>
 pub battersea_failure::FailureParts::context: alloc::collections::btree::map::BTreeMap<alloc::string::String, serde_json::value::Value>
 pub battersea_failure::FailureParts::exchange: battersea_failure::Exchange
 pub battersea_failure::FailureParts::kind: battersea_failure::ErrorKind

@@ -170,6 +170,9 @@ pub struct FailureParts {
     pub partial: Detail<PartialOutput>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub cause: Option<Cause>,
+    /// The failure of the cleanup Battersea attempted after the operation failed.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub cleanup: Option<Failure>,
 }
 
 impl Failure {
@@ -218,6 +221,7 @@ impl Failure {
             native: Detail::Absent,
             partial: Detail::Absent,
             cause: None,
+            cleanup: None,
         }))
     }
 
@@ -286,6 +290,12 @@ impl Failure {
         self
     }
 
+    /// Carries the failure of the cleanup attempted after this failure.
+    pub fn with_cleanup(mut self, cleanup: Failure) -> Self {
+        self.cleanup = Some(cleanup);
+        self
+    }
+
     /// Wraps an error of another type as its text and the text of each of its sources.
     pub fn caused_by(mut self, error: &(dyn std::error::Error + 'static)) -> Self {
         let mut texts = vec![error.to_string()];
@@ -320,6 +330,9 @@ impl Failure {
             Some(Cause::Failure(cause)) => cause.withhold(),
             Some(Cause::Foreign(texts)) => texts.withhold(),
             None => {}
+        }
+        if let Some(cleanup) = self.cleanup.as_mut() {
+            cleanup.withhold();
         }
     }
 
@@ -367,8 +380,11 @@ impl Failure {
         }
         match self.cause.as_mut() {
             Some(Cause::Failure(cause)) => cause.visit_text(visit),
-            Some(Cause::Foreign(Detail::Present(texts))) => texts.iter_mut().for_each(visit),
+            Some(Cause::Foreign(Detail::Present(texts))) => texts.iter_mut().for_each(&mut *visit),
             Some(Cause::Foreign(Detail::Absent | Detail::Withheld)) | None => {}
+        }
+        if let Some(cleanup) = self.cleanup.as_mut() {
+            cleanup.visit_text(visit);
         }
     }
 }
@@ -471,6 +487,33 @@ mod tests {
         for hidden in ["secret-key", "body", "outer", "inner"] {
             assert!(!text.contains(hidden), "{hidden} was disclosed");
         }
+    }
+
+    #[test]
+    fn a_cleanup_failure_is_masked_and_withheld_with_the_failure_that_carries_it() {
+        let mut failure = Failure::local("Cancelled.", ErrorKind::Cancelled).with_cleanup(
+            Failure::new("provider", "Rejected.", ErrorKind::Server)
+                .with_native(Reporter::Provider, json!({"body": "secret-key"}))
+                .caused_by_text("inner secret-key"),
+        );
+        failure.visit_text(&mut |text| *text = text.replace("secret-key", "[REDACTED]"));
+        let cleanup = failure.cleanup.as_ref().unwrap();
+        assert_eq!(
+            cleanup.native,
+            Detail::Present(json!({"body": "[REDACTED]"}))
+        );
+        assert_eq!(
+            cleanup.cause,
+            Some(Cause::Foreign(Detail::Present(vec![
+                "inner [REDACTED]".into()
+            ])))
+        );
+        assert_eq!(failure.disclose(FailureDisclosure::Full), failure);
+        let withheld = failure.disclose(FailureDisclosure::Withheld);
+        let cleanup = withheld.cleanup.as_ref().unwrap();
+        assert_eq!(cleanup.message, "Rejected.");
+        assert_eq!(cleanup.native, Detail::Withheld);
+        assert_eq!(cleanup.cause, Some(Cause::Foreign(Detail::Withheld)));
     }
 
     #[test]

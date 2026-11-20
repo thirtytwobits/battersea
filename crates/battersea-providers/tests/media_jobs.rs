@@ -879,7 +879,10 @@ async fn failed_remote_cancellation_reports_uncertainty_and_does_not_double_canc
         &state,
         [
             Reply::json(update("replicate", "starting", Value::Null)),
-            Reply::error(StatusCode::SERVICE_UNAVAILABLE),
+            Reply {
+                status: StatusCode::SERVICE_UNAVAILABLE,
+                ..Reply::json(json!({"detail":"Cancellation refused."}))
+            },
         ],
     );
     let job = submit(
@@ -895,7 +898,19 @@ async fn failed_remote_cancellation_reports_uncertainty_and_does_not_double_canc
         .unwrap_err();
     assert_eq!(error.kind, ErrorKind::Cancelled);
     assert_eq!(error.context["remoteCancellation"], "failed");
-    assert!(error.context["remoteCancellationFailure"]["message"].is_string());
+    // contracts/failures.md, Cleanup: the host receives the cancellation's rejection whole; a
+    // flow under `withheld` receives it withheld.
+    let cleanup = error.cleanup.as_ref().unwrap();
+    assert_eq!(cleanup.exchange.status, Some(503));
+    assert_eq!(
+        cleanup.native,
+        battersea_model::Detail::Present(json!({"detail":"Cancellation refused."}))
+    );
+    let withheld = error.disclose(battersea_model::FailureDisclosure::Withheld);
+    assert_eq!(
+        withheld.cleanup.as_ref().unwrap().native,
+        battersea_model::Detail::Withheld
+    );
     assert_eq!(error.exchange.request_id.as_deref(), Some("accepted-job"));
     tokio::task::yield_now().await;
     assert_eq!(state.calls.lock().unwrap().len(), 2);

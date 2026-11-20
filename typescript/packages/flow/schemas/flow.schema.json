@@ -250,6 +250,17 @@
             }
           ]
         },
+        "cleanup": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Failure"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "The failure of the cleanup Battersea attempted after the operation failed."
+        },
         "context": {
           "additionalProperties": true,
           "description": "The values Battersea names in its description. A flow receives the context under\neither disclosure, so it holds no text a reporter wrote.",

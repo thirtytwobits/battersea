@@ -555,17 +555,11 @@ impl MediaSubmission {
                     if let Err(error) = &mut result {
                         match cleanup {
                             Ok(Ok(())) => {}
-                            // The cancellation's failure is named in the context, which a flow
-                            // receives under either disclosure, so it is held as withheld.
                             Ok(Err(cleanup)) => {
-                                let cleanup = cleanup.disclose(crate::FailureDisclosure::Withheld);
                                 error
                                     .context
                                     .insert("remoteCancellation".into(), "failed".into());
-                                error.context.insert(
-                                    "remoteCancellationFailure".into(),
-                                    serde_json::to_value(cleanup).unwrap_or_default(),
-                                );
+                                error.cleanup = Some(cleanup);
                             }
                             Err(_) => {
                                 error
