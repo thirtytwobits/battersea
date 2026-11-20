@@ -1885,11 +1885,8 @@ pub trait ExecutionHost: Sized + Send + Sync {
                             crate::failure::handle_error(self, runtime, &node, &definition, "provider_event", error).await?;
                         }
                     }
-                    crate::ProviderEvent::Failure { message } => {
-                        let error = Self::Error::internal(crate::failure::wrapping(
-                            "Provider reported a failure.",
-                            message.clone(),
-                        ));
+                    crate::ProviderEvent::Failure { failure } => {
+                        let error = Self::Error::internal(failure.clone());
                         drop(delivery);
                         crate::failure::handle_error(self, runtime, &node, &definition,
                             "provider_event", error).await?;

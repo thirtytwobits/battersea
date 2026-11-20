@@ -128,8 +128,16 @@ impl OpenAiEngineAdapter {
         command: ConversationCommand,
     ) -> Result<ConversationStep, Failure> {
         let mut identifiers = crate::retry::Identifiers::default();
+        let mut response = Value::Null;
         let step = self
-            .identified_step(request, previous, results, command, &mut identifiers)
+            .identified_step(
+                request,
+                previous,
+                results,
+                command,
+                &mut identifiers,
+                &mut response,
+            )
             .await;
         match step {
             Ok(mut step) => {
@@ -138,11 +146,15 @@ impl OpenAiEngineAdapter {
                 }
                 Ok(step)
             }
-            Err(failure) => Err(identifiers.stamp(failure)),
+            Err(failure) => Err(crate::http_payload::about(
+                identifiers.stamp(failure),
+                &response,
+            )),
         }
     }
 
-    /// Runs one step, recording in `identifiers` what the provider's response names.
+    /// Runs one step, recording in `identifiers` what the provider's response names and in
+    /// `received` the response itself.
     async fn identified_step(
         &self,
         request: ConversationRequest,
@@ -150,6 +162,7 @@ impl OpenAiEngineAdapter {
         results: Vec<ConversationToolResult>,
         command: ConversationCommand,
         identifiers: &mut crate::retry::Identifiers,
+        received: &mut Value,
     ) -> Result<ConversationStep, Failure> {
         let binding = self.validate_durable_request(&request, previous.as_ref())?;
         if !self.background {
@@ -261,6 +274,7 @@ impl OpenAiEngineAdapter {
             Err(error) => return Err(error),
         };
         identifiers.name(response.get("id"));
+        received.clone_from(&response);
         native_response(&response)?;
         if pending
             .as_ref()

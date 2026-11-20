@@ -521,8 +521,7 @@ pub battersea_model::adapter::EngineTextStreamEvent::TextDelta::text: alloc::str
 pub battersea_model::adapter::EngineTextStreamEvent::TokenUsage
 pub battersea_model::adapter::EngineTextStreamEvent::TokenUsage::usage: battersea_model::EngineTokenUsage
 pub battersea_model::adapter::EngineTextStreamEvent::ToolCallCompleted
-pub battersea_model::adapter::EngineTextStreamEvent::ToolCallCompleted::error_classification: core::option::Option<alloc::string::String>
-pub battersea_model::adapter::EngineTextStreamEvent::ToolCallCompleted::error_message: core::option::Option<alloc::string::String>
+pub battersea_model::adapter::EngineTextStreamEvent::ToolCallCompleted::failure: core::option::Option<battersea_failure::Failure>
 pub battersea_model::adapter::EngineTextStreamEvent::ToolCallCompleted::finished_at: alloc::string::String
 pub battersea_model::adapter::EngineTextStreamEvent::ToolCallCompleted::id: alloc::string::String
 pub battersea_model::adapter::EngineTextStreamEvent::ToolCallCompleted::name: alloc::string::String
@@ -7189,8 +7188,7 @@ pub battersea_model::EngineTextStreamEvent::TextDelta::text: alloc::string::Stri
 pub battersea_model::EngineTextStreamEvent::TokenUsage
 pub battersea_model::EngineTextStreamEvent::TokenUsage::usage: battersea_model::EngineTokenUsage
 pub battersea_model::EngineTextStreamEvent::ToolCallCompleted
-pub battersea_model::EngineTextStreamEvent::ToolCallCompleted::error_classification: core::option::Option<alloc::string::String>
-pub battersea_model::EngineTextStreamEvent::ToolCallCompleted::error_message: core::option::Option<alloc::string::String>
+pub battersea_model::EngineTextStreamEvent::ToolCallCompleted::failure: core::option::Option<battersea_failure::Failure>
 pub battersea_model::EngineTextStreamEvent::ToolCallCompleted::finished_at: alloc::string::String
 pub battersea_model::EngineTextStreamEvent::ToolCallCompleted::id: alloc::string::String
 pub battersea_model::EngineTextStreamEvent::ToolCallCompleted::name: alloc::string::String

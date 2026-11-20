@@ -260,68 +260,70 @@ impl EngineAdapter for GoogleEngineAdapter {
         let logger = self.logger.clone();
         let context = self.context.clone();
         let operation = request.shared.operation;
-        let stream = crate::http_payload::bounded_stream(response)
-            .eventsource()
-            .map(move |event| {
-                let logger = logger.clone();
-                let context = context.clone();
-                async move {
-                    match event {
-                        Ok(event) => {
-                            // Gemini's `:streamGenerateContent?alt=sse`
-                            // closes the stream by emitting nothing
-                            // further, not by sending a sentinel event.
-                            // Empty-data ticks are heartbeats we drop.
-                            if event.data.trim().is_empty() {
-                                return Ok(Vec::new());
+        let stream =
+            crate::http_payload::bounded_stream(response)
+                .eventsource()
+                .map(move |event| {
+                    let logger = logger.clone();
+                    let context = context.clone();
+                    async move {
+                        match event {
+                            Ok(event) => {
+                                // Gemini's `:streamGenerateContent?alt=sse`
+                                // closes the stream by emitting nothing
+                                // further, not by sending a sentinel event.
+                                // Empty-data ticks are heartbeats we drop.
+                                if event.data.trim().is_empty() {
+                                    return Ok(Vec::new());
+                                }
+                                let malformed = |error: serde_json::Error| {
+                                    Failure::invalid_response(
+                                        "google",
+                                        "Gemini stream chunk is malformed.",
+                                    )
+                                    .with_native(
+                                        battersea_model::Reporter::Provider,
+                                        Value::String(event.data.clone()),
+                                    )
+                                    .caused_by(&error)
+                                };
+                                let raw: Value =
+                                    serde_json::from_str(&event.data).map_err(malformed)?;
+                                let parsed: GeminiGenerateContentResponse =
+                                    serde_json::from_value(raw.clone()).map_err(malformed)?;
+                                emit_stream_event(
+                                    logger.as_ref(),
+                                    &context,
+                                    operation,
+                                    "stream-chunk",
+                                    serde_json::to_value(&parsed).unwrap_or_else(|_| json!({})),
+                                )
+                                .await;
+                                let mut events: Vec<_> =
+                                    crate::retry::identified(raw.get("responseId"))
+                                        .into_iter()
+                                        .collect();
+                                events.extend(parsed.into_text_stream_events(&raw).map_err(
+                                    |failure| crate::http_payload::about(failure, &raw),
+                                )?);
+                                Ok(events)
                             }
-                            let malformed = |error: serde_json::Error| {
-                                Failure::invalid_response(
-                                    "google",
-                                    "Gemini stream chunk is malformed.",
-                                )
-                                .with_native(
-                                    battersea_model::Reporter::Provider,
-                                    Value::String(event.data.clone()),
-                                )
-                                .caused_by(&error)
-                            };
-                            let raw: Value =
-                                serde_json::from_str(&event.data).map_err(malformed)?;
-                            let parsed: GeminiGenerateContentResponse =
-                                serde_json::from_value(raw.clone()).map_err(malformed)?;
-                            emit_stream_event(
-                                logger.as_ref(),
-                                &context,
-                                operation,
-                                "stream-chunk",
-                                serde_json::to_value(&parsed).unwrap_or_else(|_| json!({})),
-                            )
-                            .await;
-                            let mut events: Vec<_> =
-                                crate::retry::identified(raw.get("responseId"))
-                                    .into_iter()
-                                    .collect();
-                            events.extend(parsed.into_text_stream_events(&raw)?);
-                            Ok(events)
+                            Err(error) => Err(crate::http_payload::event_stream_failure(
+                                Failure::transport("google", "Provider event stream failed."),
+                                error,
+                            )),
                         }
-                        Err(error) => Err(Failure::transport(
-                            "google",
-                            "Provider event stream failed.",
-                        )
-                        .caused_by(&error)),
                     }
-                }
-            })
-            .buffer_unordered(1)
-            .flat_map(|result| {
-                let events = match result {
-                    Ok(events) => events.into_iter().map(Ok).collect::<Vec<_>>(),
-                    Err(error) => vec![Err(error)],
-                };
-                stream::iter(events)
-            })
-            .boxed();
+                })
+                .buffer_unordered(1)
+                .flat_map(|result| {
+                    let events = match result {
+                        Ok(events) => events.into_iter().map(Ok).collect::<Vec<_>>(),
+                        Err(error) => vec![Err(error)],
+                    };
+                    stream::iter(events)
+                })
+                .boxed();
 
         Ok(super::with_stream_idle_watchdog(
             Box::pin(stream::once(std::future::ready(Ok(opened))).chain(stream)),
@@ -507,7 +509,8 @@ impl ToolConversation for GoogleToolConversation {
             .iter()
             .filter(|content| content["role"] == "model")
             .count();
-        let calls = collect_google_function_calls(&payload, turn)?;
+        let calls = collect_google_function_calls(&payload, turn)
+            .map_err(|failure| crate::http_payload::about(failure, &raw))?;
         emit_response(
             self.logger.as_ref(),
             &self.context,

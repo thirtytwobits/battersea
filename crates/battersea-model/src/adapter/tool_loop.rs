@@ -291,20 +291,26 @@ async fn drive_tool_loop(
                     }
                     error
                 });
-            let (content, message, classification, ok) = match &projected {
-                Ok((result, content)) => (content.clone(), None, None, !result.is_error()),
-                Err(error) => (
-                    Value::Null,
-                    Some(error.message.to_string()),
-                    Some(error.kind.to_string()),
-                    false,
-                ),
+            let (content, failure, ok) = match &projected {
+                Ok((result, content)) => (content.clone(), None, !result.is_error()),
+                Err(error) => (Value::Null, Some(error.clone()), false),
             };
-            emit_stream_event(logger.as_ref(), context, operation,
-                if projected.is_ok() { "local_tool_result_returned" } else { "local_tool_error" },
-                if projected.is_ok() { json!({"id": call.id, "name": call.name, "result": content}) }
-                else { json!({"id": call.id, "name": call.name, "message": message, "classification": classification}) }
-            ).await;
+            emit_stream_event(
+                logger.as_ref(),
+                context,
+                operation,
+                if projected.is_ok() {
+                    "local_tool_result_returned"
+                } else {
+                    "local_tool_error"
+                },
+                if projected.is_ok() {
+                    json!({"id": call.id, "name": call.name, "result": content})
+                } else {
+                    json!({"id": call.id, "name": call.name, "failure": failure})
+                },
+            )
+            .await;
             send_event(
                 events,
                 EngineTextStreamEvent::ToolCallCompleted {
@@ -312,8 +318,7 @@ async fn drive_tool_loop(
                     name: call.name.clone(),
                     ok,
                     result: content,
-                    error_message: message,
-                    error_classification: classification,
+                    failure,
                     tool_result: host_result,
                     tool_call: Some(evidence.clone()),
                     finished_at: crate::clock::utc_now(clock).to_rfc3339(),
@@ -692,8 +697,8 @@ mod tests {
         assert!(received.lock().unwrap().is_empty());
         assert!(
             matches!(&events[..], [Ok(EngineTextStreamEvent::ToolCallStarted { .. }),
-            Ok(EngineTextStreamEvent::ToolCallCompleted { ok: false, error_classification: Some(kind), .. }), Err(error)]
-            if kind == error.kind.as_str())
+            Ok(EngineTextStreamEvent::ToolCallCompleted { ok: false, failure: Some(failure), .. }), Err(error)]
+            if failure.kind == error.kind && failure.native == error.native)
         );
         // The provider answered the turn before the executor ran.
         let Some(Err(error)) = events.last() else {
@@ -760,12 +765,12 @@ mod tests {
                 ok,
                 tool_result,
                 tool_call,
-                error_message,
+                failure,
                 ..
             } = event.unwrap()
             {
                 assert!(!ok);
-                assert!(error_message.is_none());
+                assert!(failure.is_none());
                 assert_eq!(tool_result.as_deref(), Some(&result));
                 assert_eq!(
                     tool_call.unwrap().outcome,

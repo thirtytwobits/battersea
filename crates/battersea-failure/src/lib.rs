@@ -89,7 +89,7 @@ pub struct Exchange {
 }
 
 /// Output Battersea held when its operation failed.
-#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub struct PartialOutput {
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub text: String,
@@ -98,7 +98,7 @@ pub struct PartialOutput {
 }
 
 /// What a failure wraps.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum Cause {
     Failure(Failure),
@@ -108,7 +108,7 @@ pub enum Cause {
 
 /// One failed or incomplete operation. The parts are boxed so a `Result` that carries a
 /// failure stays small.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(transparent)]
 pub struct Failure(Box<FailureParts>);
 impl std::error::Error for Failure {}
@@ -138,7 +138,7 @@ impl std::ops::DerefMut for Failure {
 }
 
 /// The parts of a [`Failure`].
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub struct FailureParts {
     #[schemars(with = "String")]
     pub kind: ErrorKind,

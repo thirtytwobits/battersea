@@ -58,6 +58,28 @@ pub(crate) fn send_failure(provider: &str, error: reqwest::Error) -> Failure {
     Failure::transport(provider, "HTTP request failed.").caused_by(&error.without_url())
 }
 
+/// A failed read of a provider event stream. A failure of the response body beneath the event
+/// stream is the cause, whole; the event stream's own error is a foreign cause.
+pub(crate) fn event_stream_failure(
+    failure: Failure,
+    error: eventsource_stream::EventStreamError<Failure>,
+) -> Failure {
+    match error {
+        eventsource_stream::EventStreamError::Transport(lower) => failure.with_cause(lower),
+        other => failure.caused_by(&other),
+    }
+}
+
+/// Carries `payload`, the provider payload Battersea was handling when it raised `failure`, as
+/// native detail on a failure that holds none.
+pub(crate) fn about(failure: Failure, payload: &serde_json::Value) -> Failure {
+    if failure.native.is_absent() && !payload.is_null() {
+        failure.with_native(battersea_model::Reporter::Provider, payload.clone())
+    } else {
+        failure
+    }
+}
+
 /// A rejection's body as the provider sent it: its JSON value, else its text.
 pub(crate) fn rejection_body(body: String) -> Option<serde_json::Value> {
     if body.is_empty() {
@@ -119,6 +141,17 @@ mod tests {
         }
         let source = futures_util::stream::iter([Ok::<_, std::io::Error>(vec![0; 3])]);
         assert!(limit_stream(source, 3).collect::<Vec<_>>().await[0].is_ok());
+    }
+    /// contracts/failures.md, Cause: a body failure beneath an event stream is the cause, whole.
+    #[test]
+    fn an_event_stream_failure_keeps_the_body_failure_beneath_it() {
+        let body = Failure::transport("http", "Provider response stream failed.")
+            .caused_by_text("connection reset");
+        let failure = event_stream_failure(
+            Failure::transport("fixture", "Provider event stream failed."),
+            eventsource_stream::EventStreamError::Transport(body.clone()),
+        );
+        assert_eq!(failure.cause, Some(battersea_model::Cause::Failure(body)));
     }
     /// contracts/failures.md, Cause: a body read failure keeps the text of its sources in order.
     #[tokio::test]

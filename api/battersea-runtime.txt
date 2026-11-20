@@ -1356,7 +1356,7 @@ pub enum battersea_runtime::ProviderEvent
 pub battersea_runtime::ProviderEvent::Data
 pub battersea_runtime::ProviderEvent::Data::value: serde_json::value::Value
 pub battersea_runtime::ProviderEvent::Failure
-pub battersea_runtime::ProviderEvent::Failure::message: alloc::string::String
+pub battersea_runtime::ProviderEvent::Failure::failure: battersea_failure::Failure
 pub battersea_runtime::ProviderEvent::RecoverableFailure
 pub battersea_runtime::ProviderEvent::RecoverableFailure::failure: battersea_runtime::RecoverableNodeFailure
 pub battersea_runtime::ProviderEvent::Signal

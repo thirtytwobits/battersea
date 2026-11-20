@@ -300,8 +300,10 @@ impl OpenAiEngineAdapter {
     ) -> Result<ConversationTurn, Failure> {
         // The completed native response determines durable events; partial stream observations
         // remain diagnostics and cannot disagree with restored output.
-        let events = response_events(&self.backend.provider, request, &response, false)?;
-        let calls = collect_openai_function_calls(&response)?;
+        let about = |failure| crate::http_payload::about(failure, &response);
+        let events =
+            response_events(&self.backend.provider, request, &response, false).map_err(about)?;
+        let calls = collect_openai_function_calls(&response).map_err(about)?;
         emit_response(
             self.logger.as_ref(),
             &self.context,
@@ -355,10 +357,16 @@ fn response_events(
     // Recovery admits the same native schema as the live stream without reserialising it.
     serde_json::from_value::<async_openai::types::responses::Response>(response.clone())
         .map_err(|cause| invalid("Invalid native Responses response.").caused_by(&cause))?;
-    if response["status"] != "completed"
-        || !response["error"].is_null()
-        || !response["incomplete_details"].is_null()
-    {
+    if response["status"] == "incomplete" || !response["incomplete_details"].is_null() {
+        // The response and the text it holds travel with the failure.
+        return Err(battersea_model::terminal_failure(
+            provider,
+            StopClass::Length,
+            response.clone(),
+            read_openai_output_text(response),
+        ));
+    }
+    if response["status"] != "completed" || !response["error"].is_null() {
         return Err(invalid("Responses turn is not successfully completed."));
     }
     let output = response["output"]
@@ -377,10 +385,16 @@ fn response_events(
                     .as_array()
                     .ok_or_else(|| invalid("Invalid Responses message content."))?
                 {
-                    if block["type"] != "output_text" {
-                        return Err(invalid(
-                            "Responses output was refused or contains unsupported content.",
+                    if block["type"] == "refusal" {
+                        return Err(battersea_model::terminal_failure(
+                            provider,
+                            StopClass::Refusal,
+                            response.clone(),
+                            String::new(),
                         ));
+                    }
+                    if block["type"] != "output_text" {
+                        return Err(invalid("Responses output contains unsupported content."));
                     }
                     text.push_str(
                         block["text"]

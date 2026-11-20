@@ -6,8 +6,6 @@ use super::{
 };
 use crate::adapter::error::Failure;
 use crate::http_payload::BoundedResponse as _;
-#[cfg(test)]
-use async_openai::error::OpenAIError;
 use async_openai::types::images::{
     CreateImageRequest, ImageBackground, ImageGenCompletedEvent, ImageGenPartialImageEvent,
     ImageGenStreamEvent, ImageModel, ImageModeration, ImageOutputFormat, ImageQuality, ImageSize,
@@ -334,8 +332,10 @@ async fn send_image_generation_stream_request(
         event_result = stream.next() => event_result
     } {
         let event = event_result.map_err(|error| {
-            Failure::transport("openai", "OpenAI image event stream failed.")
-                .caused_by_text(error.to_string())
+            crate::http_payload::event_stream_failure(
+                Failure::transport("openai", "OpenAI image event stream failed."),
+                error,
+            )
         })?;
         if event.data.trim() == "[DONE]" {
             break;
@@ -524,21 +524,6 @@ fn rejected(status: u16, body: String) -> Failure {
         failure = failure.with_native(battersea_model::Reporter::Provider, native);
     }
     failure
-}
-
-/// Normalises OpenAI media-generation failures into the shared provider-neutral error shape.
-#[cfg(test)]
-fn normalize_openai_error(error: OpenAIError) -> Failure {
-    match error {
-        OpenAIError::ApiError(inner) => {
-            Failure::new("openai", "OpenAI reported an error.", "request").with_native(
-                battersea_model::Reporter::Provider,
-                Value::String(inner.message.clone()),
-            )
-        }
-        OpenAIError::Reqwest(error) => crate::http_payload::send_failure("openai", error),
-        other => Failure::transport("openai", "OpenAI client failed.").caused_by(&other),
-    }
 }
 
 /// Maps supported aspect-ratio aliases onto the image sizes accepted by
@@ -737,16 +722,15 @@ pub(crate) fn prepare_body(
 #[cfg(test)]
 mod tests {
     use super::{
-        configured_openai_quality, create_openai_media_generator, normalize_openai_error,
-        parse_background, parse_dimensions, parse_explicit_size, parse_moderation,
-        parse_openai_images_response_body, parse_output_format, parse_quality, parse_size,
+        configured_openai_quality, create_openai_media_generator, parse_background,
+        parse_dimensions, parse_explicit_size, parse_moderation, parse_openai_images_response_body,
+        parse_output_format, parse_quality, parse_size,
     };
     use crate::adapter::{EngineAuthConfig, EngineBackendOptions};
     use crate::media::{
         MediaBackendConfig, MediaGenerationActivityReporter, MediaGenerationActivityUpdate,
         MediaRenderRequest,
     };
-    use async_openai::error::{ApiError, OpenAIError};
     use async_openai::types::images::{
         ImageBackground, ImageModeration, ImageOutputFormat, ImageQuality, ImageSize,
     };
@@ -1199,26 +1183,5 @@ mod tests {
             );
         }
         assert!(configured_openai_quality(Some("ultra")).is_err());
-    }
-
-    #[test]
-    fn normalize_openai_error_maps_api_request_and_transport_failures() {
-        let api = normalize_openai_error(OpenAIError::ApiError(ApiError {
-            message: "invalid prompt".to_string(),
-            r#type: Some("invalid_request_error".to_string()),
-            param: None,
-            code: None,
-        }));
-        assert_eq!(api.origin.provider.as_deref(), Some("openai"));
-        assert_eq!(api.kind.as_str(), "request");
-        assert_eq!(api.native.present(), Some(&json!("invalid prompt")));
-
-        let transport = normalize_openai_error(OpenAIError::StreamError(Box::new(
-            async_openai::error::StreamError::EventStream("socket closed".to_string()),
-        )));
-        assert_eq!(transport.kind.as_str(), "transport");
-
-        let other = normalize_openai_error(OpenAIError::InvalidArgument("bad args".to_string()));
-        assert_eq!(other.kind.as_str(), "transport");
     }
 }

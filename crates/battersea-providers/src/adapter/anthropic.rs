@@ -252,15 +252,17 @@ impl EngineAdapter for AnthropicEngineAdapter {
                                                 "Stream decoder lock poisoned.",
                                             )
                                         })?
-                                        .decode(parsed, &raw)?,
+                                        .decode(parsed, &raw)
+                                        .map_err(|failure| {
+                                            crate::http_payload::about(failure, &raw)
+                                        })?,
                                 );
                                 Ok(events)
                             }
-                            Err(error) => Err(Failure::transport(
-                                "anthropic",
-                                "Provider event stream failed.",
-                            )
-                            .caused_by(&error)),
+                            Err(error) => Err(crate::http_payload::event_stream_failure(
+                                Failure::transport("anthropic", "Provider event stream failed."),
+                                error,
+                            )),
                         }
                     }
                     .await;
@@ -445,7 +447,8 @@ impl ToolConversation for AnthropicToolConversation {
                 String::new(),
             ));
         }
-        let calls = collect_anthropic_tool_calls(&payload.content)?;
+        let calls = collect_anthropic_tool_calls(&payload.content)
+            .map_err(|failure| crate::http_payload::about(failure, &native))?;
         let text = payload
             .content
             .iter()

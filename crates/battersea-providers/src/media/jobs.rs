@@ -188,24 +188,17 @@ impl RemoteJob {
     }
     fn checked_status(&self) -> Result<MediaJobStatus, Failure> {
         match self.snapshot.status {
-            MediaJobStatus::Failed => {
-                let failure = self.error(ErrorKind::Provider, "Media job failed.");
-                // The terminal response is the provider's account of the failure.
-                Err(if self.update.raw.is_null() {
-                    failure
-                } else {
-                    failure
-                        .with_native(battersea_model::Reporter::Provider, self.update.raw.clone())
-                })
-            }
+            MediaJobStatus::Failed => Err(self.error(ErrorKind::Provider, "Media job failed.")),
             MediaJobStatus::Cancelled => {
                 Err(self.error(ErrorKind::Cancelled, "Provider cancelled media job."))
             }
             MediaJobStatus::Expired => {
                 Err(self.error(ErrorKind::Expired, "Media job outputs expired."))
             }
-            status => Ok(status),
+            status => return Ok(status),
         }
+        // The terminal response is the provider's account of the ending.
+        .map_err(|failure| crate::http_payload::about(failure, &self.update.raw))
     }
     pub(crate) async fn announce(&self, cancellation: CancellationToken) -> Result<(), Failure> {
         tokio::select! {

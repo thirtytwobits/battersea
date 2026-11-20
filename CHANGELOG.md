@@ -23,6 +23,9 @@
   is removed.
 - `ExecutionHost::request_activation_cancel` takes `&'static str`. `PumpError::failure` and
   `RecoveryError::failure` give each error as a `Failure`.
+- `ProviderEvent::Failure` carries a `Failure` in place of a message.
+  `EngineTextStreamEvent::ToolCallCompleted` carries `failure` in place of `error_message` and
+  `error_classification`.
 - `ProviderConfigurationError` has a `cause` field.
 - `battersea_kit::conformance::Failure` is renamed `CaseFailure`.
 

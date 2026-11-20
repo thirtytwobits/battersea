@@ -271,7 +271,8 @@ impl NodeHandler<Host> for Handler {
             }
             if node.parameter_values.get("provider_fail") == Some(&json!(true)) {
                 events.push(ProviderEvent::Failure {
-                    message: "fixture provider failure".into(),
+                    failure: battersea_runtime::Failure::from("fixture provider failure")
+                        .with_native(Default::default(), json!({"detail": "fixture"})),
                 });
             }
             if node.parameter_values.get("pump") == Some(&json!(true)) {
@@ -2307,7 +2308,12 @@ async fn provider_failure_does_not_satisfy_stream_closure() {
         vec![edge("stream", "source", "join", 0, "stream")],
         "stream",
     );
-    assert!(run(&host, &mut state).await.is_err());
+    let error = run(&host, &mut state).await.unwrap_err();
+    // contracts/failures.md: a provider task's failure reaches the host whole.
+    assert_eq!(
+        error.failure().native.present(),
+        Some(&json!({"detail": "fixture"}))
+    );
     assert_eq!(state.seen.len(), 1);
     assert!(!state.calls.iter().any(|id| id == "join"));
     assert_eq!(state.retention.usage(), retention::Usage::default());

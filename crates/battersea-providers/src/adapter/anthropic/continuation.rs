@@ -314,8 +314,9 @@ impl AnthropicEngineAdapter {
         request_id: Option<String>,
     ) -> Result<ConversationTurn, Failure> {
         // The completed native message determines durable events and calls.
-        let events = response_events(request, &native, false)?;
-        let calls = assistant_calls(request, &native["content"])?;
+        let about = |failure| crate::http_payload::about(failure, &native);
+        let events = response_events(request, &native, false).map_err(about)?;
+        let calls = assistant_calls(request, &native["content"]).map_err(about)?;
         emit_response(
             self.logger.as_ref(),
             &self.context,
@@ -372,7 +373,22 @@ fn response_events(
     let stop = match response["stop_reason"].as_str() {
         Some("end_turn" | "stop_sequence") => StopClass::Complete,
         Some("tool_use") => StopClass::ToolUse,
-        _ => return Err(invalid("Anthropic turn is not successfully completed.")),
+        // A turn that stopped for another reason is refused or incomplete; the response and
+        // the text it holds travel with the failure.
+        Some(reason) => {
+            return Err(battersea_model::terminal_failure(
+                "anthropic",
+                stop_class(reason),
+                response.clone(),
+                response["content"]
+                    .as_array()
+                    .into_iter()
+                    .flatten()
+                    .filter_map(anthropic_content_block_text)
+                    .collect(),
+            ))
+        }
+        None => return Err(invalid("Anthropic turn is not successfully completed.")),
     };
     let calls = assistant_calls(request, &response["content"])?;
     if calls.is_empty() == matches!(stop, StopClass::ToolUse) {

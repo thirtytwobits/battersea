@@ -391,9 +391,11 @@ impl GoogleEngineAdapter {
         status: u16,
     ) -> Result<ConversationTurn, Failure> {
         // The completed native response determines durable events and calls.
-        let events = response_events(request, &native, false)?;
+        let about = |failure| crate::http_payload::about(failure, &native);
+        let events = response_events(request, &native, false).map_err(about)?;
         let index = (contents.len() - original_len(&self.backend, request)?) / 2;
-        let calls = model_calls(request, &native["candidates"][0]["content"], index)?;
+        let calls =
+            model_calls(request, &native["candidates"][0]["content"], index).map_err(about)?;
         emit_response(
             self.logger.as_ref(),
             &self.context,
@@ -446,7 +448,12 @@ fn response_events(
     let parsed: GeminiGenerateContentResponse = serde_json::from_value(response.clone())
         .map_err(|cause| invalid("Invalid native Gemini response.").caused_by(&cause))?;
     if !response["promptFeedback"]["blockReason"].is_null() {
-        return Err(invalid("Gemini blocked the request."));
+        return Err(battersea_model::terminal_failure(
+            "google",
+            StopClass::Refusal,
+            response.clone(),
+            String::new(),
+        ));
     }
     let [candidate] = response["candidates"]
         .as_array()
@@ -455,8 +462,25 @@ fn response_events(
     else {
         return Err(invalid("Gemini turn requires exactly one candidate."));
     };
-    if candidate["finishReason"] != "STOP" {
-        return Err(invalid("Gemini turn is not successfully completed."));
+    // A turn that finished for another reason is refused or incomplete; the response and the
+    // text it holds travel with the failure.
+    match candidate["finishReason"].as_str() {
+        Some("STOP") => {}
+        Some(reason) => {
+            return Err(battersea_model::terminal_failure(
+                "google",
+                finish_class(reason),
+                response.clone(),
+                candidate["content"]["parts"]
+                    .as_array()
+                    .into_iter()
+                    .flatten()
+                    .filter(|part| part["thought"] != true)
+                    .filter_map(|part| part["text"].as_str())
+                    .collect(),
+            ))
+        }
+        None => return Err(invalid("Gemini turn is not successfully completed.")),
     }
     // Only whether the turn calls tools matters here, not the calls' correlation IDs.
     let calls = model_calls(request, &candidate["content"], 0)?;

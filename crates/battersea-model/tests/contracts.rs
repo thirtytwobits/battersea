@@ -800,8 +800,7 @@ async fn stream_watchdogs_retain_started_and_completed_tool_evidence() {
                 name: "remote.write".into(),
                 ok: outcome == ToolCallOutcome::Completed,
                 result: json!(null),
-                error_message: None,
-                error_classification: None,
+                failure: None,
                 tool_result: None,
                 tool_call: Some(ToolCallEvidence {
                     call_id: "effect-1".into(),

@@ -916,11 +916,17 @@ async fn failed_remote_cancellation_reports_uncertainty_and_does_not_double_canc
     assert_eq!(state.calls.lock().unwrap().len(), 2);
     task.abort();
 }
-/// contracts/failures.md, Native detail: a failed job carries the provider's terminal response
-/// whole, whether or not the response names a message.
+/// contracts/failures.md, Native detail: a job the provider fails or cancels carries the
+/// provider's terminal response whole, whether or not the response names a message.
 #[tokio::test]
 async fn a_failed_job_carries_the_providers_terminal_response_whole() {
     for (provider, pending, failed, account) in [
+        (
+            "replicate",
+            "starting",
+            "canceled",
+            json!({"logs":"cancelled by operator", "metrics":{"predict_time":0.5}}),
+        ),
         (
             "runway",
             "PENDING",
@@ -957,8 +963,25 @@ async fn a_failed_job_carries_the_providers_terminal_response_whole() {
             .wait(CancellationToken::new(), None)
             .await
             .unwrap_err();
-        assert_eq!(error.kind, ErrorKind::Provider, "{provider}: {error:?}");
-        assert_eq!(error.message, "Media job failed.", "{provider}");
+        let cancelled = failed == "canceled";
+        assert_eq!(
+            error.kind,
+            if cancelled {
+                ErrorKind::Cancelled
+            } else {
+                ErrorKind::Provider
+            },
+            "{provider}: {error:?}"
+        );
+        assert_eq!(
+            error.message,
+            if cancelled {
+                "Provider cancelled media job."
+            } else {
+                "Media job failed."
+            },
+            "{provider}"
+        );
         assert_eq!(
             error.native,
             battersea_model::Detail::Present(terminal),

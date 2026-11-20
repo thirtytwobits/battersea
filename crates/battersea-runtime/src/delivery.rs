@@ -18,7 +18,7 @@ pub enum ProviderEvent {
         value: Value,
     },
     Failure {
-        message: String,
+        failure: crate::Failure,
     },
     RecoverableFailure {
         failure: crate::RecoverableNodeFailure,

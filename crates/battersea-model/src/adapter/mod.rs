@@ -537,6 +537,7 @@ pub enum EngineTextStreamEvent {
     },
     /// The tool call has finished. `ok` reports tool success, including tool-reported errors.
     /// `result` is its provider projection; `tool_result` retains admitted host content.
+    /// `failure` is the failure of a call that produced no result, whole.
     /// `tool_call` records the tool's outcome independently from the provider request.
     ToolCallCompleted {
         id: String,
@@ -545,9 +546,7 @@ pub enum EngineTextStreamEvent {
         #[serde(default)]
         result: Value,
         #[serde(default, skip_serializing_if = "Option::is_none")]
-        error_message: Option<String>,
-        #[serde(default, skip_serializing_if = "Option::is_none")]
-        error_classification: Option<String>,
+        failure: Option<Failure>,
         #[serde(default, skip_serializing_if = "Option::is_none")]
         tool_result: Option<Box<EngineLocalToolResult>>,
         #[serde(default, skip_serializing_if = "Option::is_none")]

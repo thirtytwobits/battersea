@@ -869,7 +869,8 @@ impl ToolConversation for OpenAiToolConversation {
                 String::new(),
             ));
         }
-        let calls = collect_openai_function_calls(&response)?;
+        let calls = collect_openai_function_calls(&response)
+            .map_err(|failure| crate::http_payload::about(failure, &response))?;
         let output_text = read_openai_output_text(&response);
         if calls.is_empty() && output_text.is_empty() {
             return Err(openai_missing_output_text_error(&response));
@@ -1040,11 +1041,10 @@ async fn open_response_stream(
                     })?;
                     Ok((decode_stream_event(&raw)?, raw))
                 })()),
-                Err(error) => Some(Err(Failure::transport(
-                    "openai",
-                    "OpenAI event stream failed.",
-                )
-                .caused_by_text(error.to_string()))),
+                Err(error) => Some(Err(crate::http_payload::event_stream_failure(
+                    Failure::transport("openai", "OpenAI event stream failed."),
+                    error,
+                ))),
             }
         })
         .boxed();
@@ -1400,6 +1400,8 @@ async fn drive_background_stream(
     .await?;
     let _ = tx.send(Ok(crate::retry::opened(&created))).await;
     let mut sse = Box::pin(crate::http_payload::bounded_stream(created).eventsource());
+    // The read error that last interrupted the stream; a failure to reconnect carries it.
+    let mut interruption = None;
 
     loop {
         let reconnect_reason = loop {
@@ -1426,18 +1428,26 @@ async fn drive_background_stream(
             .await
             {
                 Ok(Some(Ok(event))) => {
-                    let value: Value = match serde_json::from_str(&event.data) {
-                        Ok(value) => value,
-                        Err(_) => continue,
-                    };
+                    if event.data.trim() == "[DONE]" || event.data.is_empty() {
+                        continue;
+                    }
+                    let value: Value = serde_json::from_str(&event.data).map_err(|error| {
+                        normalize_openai_error(OpenAIError::JSONDeserialize(
+                            error,
+                            event.data.clone(),
+                        ))
+                    })?;
                     let seq = value
                         .get("sequence_number")
                         .and_then(Value::as_i64)
                         .filter(|seq| *seq >= 0)
                         .ok_or_else(|| {
-                            Failure::invalid_response(
-                                "openai",
-                                "Resumable event omitted its sequence number.",
+                            crate::http_payload::about(
+                                Failure::invalid_response(
+                                    "openai",
+                                    "Resumable event omitted its sequence number.",
+                                ),
+                                &value,
                             )
                         })?;
                     if seq <= cursor {
@@ -1450,9 +1460,12 @@ async fn drive_background_stream(
                         .and_then(Value::as_str)
                     {
                         if guard.id.as_deref().is_some_and(|known| known != id) {
-                            return Err(Failure::invalid_response(
-                                "openai",
-                                "Resumed stream changed response identity.",
+                            return Err(crate::http_payload::about(
+                                Failure::invalid_response(
+                                    "openai",
+                                    "Resumed stream changed response identity.",
+                                ),
+                                &value,
                             ));
                         }
                         if guard.id.is_none() {
@@ -1538,7 +1551,10 @@ async fn drive_background_stream(
                         _ => {}
                     }
                 }
-                Ok(Some(Err(_stream_error))) => break "stream error",
+                Ok(Some(Err(error))) => {
+                    interruption = Some(error);
+                    break "stream error";
+                }
                 Ok(None) => break "stream ended",
                 Err(_elapsed) => break "idle",
             }
@@ -1553,12 +1569,16 @@ async fn drive_background_stream(
         reconnects += 1;
         if reconnects > max_reconnects {
             guard.cancel().await;
-            return Err(Failure::transport(
+            let failure = Failure::transport(
                 "openai",
                 "OpenAI background stream exceeded its reconnect limit.",
             )
             .with_context("backgroundMaxReconnects", max_reconnects)
-            .with_context("reason", reconnect_reason));
+            .with_context("reason", reconnect_reason);
+            return Err(match interruption.take() {
+                Some(error) => crate::http_payload::event_stream_failure(failure, error),
+                None => failure,
+            });
         }
         if clock.instant() >= deadline {
             guard.cancel().await;

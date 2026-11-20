@@ -4,6 +4,7 @@ pub battersea_failure::Cause::Failure(battersea_failure::Failure)
 pub battersea_failure::Cause::Foreign(battersea_failure::Detail<alloc::vec::Vec<alloc::string::String>>)
 impl core::clone::Clone for battersea_failure::Cause
 pub fn battersea_failure::Cause::clone(&self) -> Self
+impl core::cmp::Eq for battersea_failure::Cause
 impl core::cmp::PartialEq for battersea_failure::Cause
 pub fn battersea_failure::Cause::eq(&self, &Self) -> bool
 impl core::fmt::Debug for battersea_failure::Cause
@@ -574,6 +575,7 @@ pub fn battersea_failure::Failure::with_tool_call(self, battersea_failure::ToolC
 pub fn battersea_failure::Failure::with_tool_code(self, battersea_failure::ToolCode) -> Self
 impl core::clone::Clone for battersea_failure::Failure
 pub fn battersea_failure::Failure::clone(&self) -> Self
+impl core::cmp::Eq for battersea_failure::Failure
 impl core::cmp::PartialEq for battersea_failure::Failure
 pub fn battersea_failure::Failure::eq(&self, &Self) -> bool
 impl core::convert::From<&'static str> for battersea_failure::Failure
@@ -650,6 +652,7 @@ pub battersea_failure::FailureParts::tool_code: core::option::Option<battersea_f
 pub battersea_failure::FailureParts::watchdog: core::option::Option<battersea_failure::WatchdogFailure>
 impl core::clone::Clone for battersea_failure::FailureParts
 pub fn battersea_failure::FailureParts::clone(&self) -> Self
+impl core::cmp::Eq for battersea_failure::FailureParts
 impl core::cmp::PartialEq for battersea_failure::FailureParts
 pub fn battersea_failure::FailureParts::eq(&self, &Self) -> bool
 impl core::fmt::Debug for battersea_failure::FailureParts
@@ -757,6 +760,7 @@ pub battersea_failure::PartialOutput::blocks: alloc::vec::Vec<serde_json::value:
 pub battersea_failure::PartialOutput::text: alloc::string::String
 impl core::clone::Clone for battersea_failure::PartialOutput
 pub fn battersea_failure::PartialOutput::clone(&self) -> Self
+impl core::cmp::Eq for battersea_failure::PartialOutput
 impl core::cmp::PartialEq for battersea_failure::PartialOutput
 pub fn battersea_failure::PartialOutput::eq(&self, &Self) -> bool
 impl core::default::Default for battersea_failure::PartialOutput

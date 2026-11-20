@@ -1195,6 +1195,30 @@ async fn a_background_refusal_carries_the_terminal_response() {
     }
 }
 
+/// contracts/failures.md, Adapters: a malformed event of a background stream fails the stream
+/// and carries the event's text.
+#[tokio::test]
+async fn a_malformed_background_stream_event_fails_with_its_text() {
+    let (url, _, server) = server(vec![("text/event-stream", "data: {malformed\n\n".into())]).await;
+    let backend = backend("openai", &url, "background-stream");
+    let mut request = request(&backend, Arc::new(RecordingExecutor::default()));
+    request.local_tools.clear();
+    let events: Vec<_> = adapter(backend)
+        .stream_text(request)
+        .await
+        .unwrap()
+        .collect()
+        .await;
+    server.abort();
+    let failure = events.last().unwrap().as_ref().unwrap_err();
+    assert_eq!(failure.kind, battersea_model::ErrorKind::InvalidResponse);
+    assert_eq!(
+        failure.native,
+        battersea_model::Detail::Present(json!("{malformed"))
+    );
+    assert!(failure.cause.is_some());
+}
+
 #[tokio::test]
 async fn unmodelled_stream_events_are_observed_and_skipped() {
     let delta = |sequence: u64, text: &str| {
