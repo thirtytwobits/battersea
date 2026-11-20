@@ -342,6 +342,21 @@ async fn every_stream_failure_carries_origin_identifiers_and_held_text() {
             ))],
             ErrorKind::Server,
         ),
+        // The adapter's failure already carries its unfinished block; the held text joins it.
+        case(
+            "provider error with blocks",
+            "{\"ok\":",
+            vec![Err(Failure::new(
+                "external",
+                "Rejected.",
+                ErrorKind::Server,
+            )
+            .with_partial(PartialOutput {
+                text: String::new(),
+                blocks: vec![unfinished_block()],
+            }))],
+            ErrorKind::Server,
+        ),
         case(
             "stream ends",
             "{\"ok\":",

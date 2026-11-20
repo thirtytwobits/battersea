@@ -222,13 +222,23 @@ pub fn validate_output(
     ))
 }
 
-/// Moves buffered structured text into a failure that carries no partial output.
+/// Moves buffered structured text into a failure whose partial output holds no text. Content
+/// blocks the failure already carries stay with it.
 fn held(mut failure: Failure, text: &mut String) -> Failure {
-    if !text.is_empty() && failure.partial == crate::Detail::Absent {
-        failure = failure.with_partial(crate::PartialOutput {
-            text: std::mem::take(text),
-            blocks: vec![],
-        });
+    if text.is_empty() {
+        return failure;
+    }
+    match &mut failure.partial {
+        crate::Detail::Present(partial) if partial.text.is_empty() => {
+            partial.text = std::mem::take(text);
+        }
+        crate::Detail::Absent => {
+            failure = failure.with_partial(crate::PartialOutput {
+                text: std::mem::take(text),
+                blocks: vec![],
+            });
+        }
+        _ => {}
     }
     failure
 }

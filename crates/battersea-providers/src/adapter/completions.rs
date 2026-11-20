@@ -612,7 +612,30 @@ impl ToolConversation for Conversation {
                 value,
             )
         };
-        let about = |failure| crate::http_payload::about(failure, &native);
+        // A stream's native account is its terminal chunk, so a failure of the assembled turn
+        // also carries the tool calls the stream delivered in fragments.
+        let begun = match &message["tool_calls"] {
+            Value::Array(calls) if chat.stream => calls.clone(),
+            _ => vec![],
+        };
+        let about = |failure| {
+            let mut failure: Failure = crate::http_payload::about(failure, &native);
+            if !begun.is_empty() {
+                match &mut failure.partial {
+                    battersea_model::Detail::Present(partial) if partial.blocks.is_empty() => {
+                        partial.blocks.clone_from(&begun);
+                    }
+                    battersea_model::Detail::Absent => {
+                        failure = failure.with_partial(battersea_model::PartialOutput {
+                            text: String::new(),
+                            blocks: begun.clone(),
+                        });
+                    }
+                    _ => {}
+                }
+            }
+            failure
+        };
         if !matches!(finish.as_str(), "stop" | "tool_calls")
             || message["role"] != "assistant"
             || !message["refusal"].is_null()
@@ -624,7 +647,12 @@ impl ToolConversation for Conversation {
             } else {
                 StopClass::Other
             };
-            return Err(terminal_failure(provider, class, native, String::new()));
+            return Err(about(terminal_failure(
+                provider,
+                class,
+                native.clone(),
+                String::new(),
+            )));
         }
         let calls = completion_calls(provider, &message).map_err(about)?;
         if (finish == "tool_calls") == calls.is_empty() {
