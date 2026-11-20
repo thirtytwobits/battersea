@@ -14,7 +14,6 @@ pub(crate) struct RemoteUpdate {
     pub raw: Value,
     pub expires_at: Option<DateTime<Utc>>,
     pub expiry_is_estimate: bool,
-    pub failure: Option<String>,
     pub progress: Option<f32>,
 }
 #[allow(clippy::double_must_use)] // async_trait annotates its boxed futures.
@@ -124,7 +123,6 @@ impl RemoteJob {
             raw: Value::Null,
             expires_at: None,
             expiry_is_estimate: false,
-            failure: None,
             progress: None,
         };
         let policy = poll_policy(transport.backend())?;
@@ -192,12 +190,12 @@ impl RemoteJob {
         match self.snapshot.status {
             MediaJobStatus::Failed => {
                 let failure = self.error(ErrorKind::Provider, "Media job failed.");
-                Err(match &self.update.failure {
-                    Some(reported) => failure.with_native(
-                        battersea_model::Reporter::Provider,
-                        Value::String(reported.clone()),
-                    ),
-                    None => failure,
+                // The terminal response is the provider's account of the failure.
+                Err(if self.update.raw.is_null() {
+                    failure
+                } else {
+                    failure
+                        .with_native(battersea_model::Reporter::Provider, self.update.raw.clone())
                 })
             }
             MediaJobStatus::Cancelled => {

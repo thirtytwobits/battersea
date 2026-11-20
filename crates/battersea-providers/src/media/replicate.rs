@@ -296,7 +296,6 @@ impl Replicate {
             assets,
             expires_at,
             expiry_is_estimate: true,
-            failure: raw["error"].as_str().map(str::to_owned),
             progress: None,
             raw,
         })

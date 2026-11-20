@@ -188,67 +188,85 @@ impl EngineAdapter for AnthropicEngineAdapter {
                 let logger = logger.clone();
                 let context = context.clone();
                 async move {
-                    match event {
-                        Ok(event) => {
-                            let invalid = |error: serde_json::Error| {
-                                Failure::invalid_response(
-                                    "anthropic",
-                                    "Malformed provider stream event.",
+                    let decoded: Result<Vec<_>, Failure> = async {
+                        match event {
+                            Ok(event) => {
+                                let invalid = |error: serde_json::Error| {
+                                    Failure::invalid_response(
+                                        "anthropic",
+                                        "Malformed provider stream event.",
+                                    )
+                                    .with_native(
+                                        battersea_model::Reporter::Provider,
+                                        Value::String(event.data.clone()),
+                                    )
+                                    .caused_by(&error)
+                                };
+                                let raw: Value =
+                                    serde_json::from_str(&event.data).map_err(invalid)?;
+                                let parsed: AnthropicStreamEvent =
+                                    serde_json::from_value(raw.clone()).map_err(invalid)?;
+                                let (event_type, detail) = match parsed.event_type() {
+                                    Some(event_type) => (
+                                        event_type,
+                                        serde_json::to_value(&parsed).unwrap_or_else(|_| json!({})),
+                                    ),
+                                    None => (
+                                        raw.get("type").and_then(Value::as_str).unwrap_or_default(),
+                                        raw.clone(),
+                                    ),
+                                };
+                                emit_stream_event(
+                                    logger.as_ref(),
+                                    &context,
+                                    operation,
+                                    if event.event.is_empty() {
+                                        event_type
+                                    } else {
+                                        event.event.as_str()
+                                    },
+                                    detail,
                                 )
-                                .with_native(
-                                    battersea_model::Reporter::Provider,
-                                    Value::String(event.data.clone()),
-                                )
-                                .caused_by(&error)
-                            };
-                            let raw: Value = serde_json::from_str(&event.data).map_err(invalid)?;
-                            let parsed: AnthropicStreamEvent =
-                                serde_json::from_value(raw.clone()).map_err(invalid)?;
-                            let (event_type, detail) = match parsed.event_type() {
-                                Some(event_type) => (
-                                    event_type,
-                                    serde_json::to_value(&parsed).unwrap_or_else(|_| json!({})),
-                                ),
-                                None => (
-                                    raw.get("type").and_then(Value::as_str).unwrap_or_default(),
-                                    raw.clone(),
-                                ),
-                            };
-                            emit_stream_event(
-                                logger.as_ref(),
-                                &context,
-                                operation,
-                                if event.event.is_empty() {
-                                    event_type
-                                } else {
-                                    event.event.as_str()
-                                },
-                                detail,
+                                .await;
+                                let mut events: Vec<_> =
+                                    crate::retry::identified(raw.pointer("/message/id"))
+                                        .into_iter()
+                                        .collect();
+                                events.extend(
+                                    decoder
+                                        .lock()
+                                        .map_err(|_poisoned| {
+                                            Failure::invalid_response(
+                                                "anthropic",
+                                                "Stream decoder lock poisoned.",
+                                            )
+                                        })?
+                                        .decode(parsed, &raw)?,
+                                );
+                                Ok(events)
+                            }
+                            Err(error) => Err(Failure::transport(
+                                "anthropic",
+                                "Provider event stream failed.",
                             )
-                            .await;
-                            let mut events: Vec<_> =
-                                crate::retry::identified(raw.pointer("/message/id"))
-                                    .into_iter()
-                                    .collect();
-                            events.extend(
-                                decoder
-                                    .lock()
-                                    .map_err(|_poisoned| {
-                                        Failure::invalid_response(
-                                            "anthropic",
-                                            "Stream decoder lock poisoned.",
-                                        )
-                                    })?
-                                    .decode(parsed, &raw)?,
-                            );
-                            Ok(events)
+                            .caused_by(&error)),
                         }
-                        Err(error) => Err(Failure::transport(
-                            "anthropic",
-                            "Provider event stream failed.",
-                        )
-                        .caused_by(&error)),
                     }
+                    .await;
+                    // A failure of the stream carries the content blocks left unfinished.
+                    decoded.map_err(|failure| {
+                        let blocks = decoder
+                            .lock()
+                            .map(|mut decoder| decoder.unfinished())
+                            .unwrap_or_default();
+                        if blocks.is_empty() || failure.partial != battersea_model::Detail::Absent {
+                            return failure;
+                        }
+                        failure.with_partial(battersea_model::PartialOutput {
+                            text: String::new(),
+                            blocks,
+                        })
+                    })
                 }
             })
             .buffer_unordered(1)
@@ -972,6 +990,21 @@ struct AnthropicStreamDecoder {
     stop: Option<(super::StopClass, Value)>,
 }
 impl AnthropicStreamDecoder {
+    /// Takes the content blocks the stream opened and did not close. A block holds the text,
+    /// thinking and signature received for it; tool arguments received for a block are its
+    /// `partial_json`, as Anthropic names the fragments.
+    fn unfinished(&mut self) -> Vec<Value> {
+        let mut arguments = std::mem::take(&mut self.arguments);
+        std::mem::take(&mut self.blocks)
+            .into_iter()
+            .map(|(index, mut block)| {
+                if let Some(arguments) = arguments.remove(&index) {
+                    block["partial_json"] = json!(arguments);
+                }
+                block
+            })
+            .collect()
+    }
     fn decode(
         &mut self,
         event: AnthropicStreamEvent,
@@ -1016,13 +1049,19 @@ impl AnthropicStreamDecoder {
             AnthropicStreamEvent::ContentBlockStop { index } => {
                 if let Some(mut payload) = self.blocks.remove(&index) {
                     if let Some(arguments) = self.arguments.remove(&index) {
-                        payload["input"] = serde_json::from_str(&arguments).map_err(|e| {
-                            Failure::invalid_response(
-                                "anthropic",
-                                "Malformed streamed tool arguments.",
-                            )
-                            .caused_by(&e)
-                        })?;
+                        match serde_json::from_str(&arguments) {
+                            Ok(input) => payload["input"] = input,
+                            Err(error) => {
+                                // The block rejoins the unfinished blocks the failure carries.
+                                self.blocks.insert(index, payload);
+                                self.arguments.insert(index, arguments);
+                                return Err(Failure::invalid_response(
+                                    "anthropic",
+                                    "Malformed streamed tool arguments.",
+                                )
+                                .caused_by(&error));
+                            }
+                        }
                     }
                     events.push(EngineTextStreamEvent::ContentBlock {
                         block: battersea_model::ContentBlock::Native {
@@ -1047,11 +1086,7 @@ impl AnthropicStreamDecoder {
                     return Err(Failure::invalid_response(
                         "anthropic",
                         "Message stopped with incomplete content blocks.",
-                    )
-                    .with_partial(battersea_model::PartialOutput {
-                        text: String::new(),
-                        blocks: std::mem::take(&mut self.blocks).into_values().collect(),
-                    }));
+                    ));
                 }
                 events.push(EngineTextStreamEvent::MessageStop { class, native });
             }

@@ -1087,6 +1087,70 @@ async fn a_stream_failure_after_the_headers_carries_origin_and_the_issued_identi
     }
 }
 
+/// contracts/failures.md, Partial output: an Anthropic stream that fails with content blocks
+/// open carries each block with the signature and tool arguments received for it, which no
+/// event delivered.
+#[tokio::test]
+async fn an_anthropic_stream_failure_carries_its_unfinished_blocks() {
+    let opened = [
+        json!({"type":"message_start", "message":{"id":"msg_fixture", "type":"message",
+            "role":"assistant", "content":[], "model":"fixture-model",
+            "usage":{"input_tokens":4, "output_tokens":0}}}),
+        json!({"type":"content_block_start", "index":0,
+            "content_block":{"type":"thinking", "thinking":"", "signature":""}}),
+        json!({"type":"content_block_delta", "index":0,
+            "delta":{"type":"thinking_delta", "thinking":"Consider."}}),
+        json!({"type":"content_block_delta", "index":0,
+            "delta":{"type":"signature_delta", "signature":"signed"}}),
+        json!({"type":"content_block_start", "index":1,
+            "content_block":{"type":"tool_use", "id":"toolu_fixture", "name":"session_get", "input":{}}}),
+        json!({"type":"content_block_delta", "index":1,
+            "delta":{"type":"input_json_delta", "partial_json":"{\"key\":"}}),
+    ];
+    let unfinished = vec![
+        json!({"type":"thinking", "thinking":"Consider.", "signature":"signed"}),
+        json!({"type":"tool_use", "id":"toolu_fixture", "name":"session_get", "input":{},
+            "partial_json":"{\"key\":"}),
+    ];
+    let reported =
+        json!({"type":"error", "error":{"type":"overloaded_error", "message":"Overloaded"}});
+    for (name, tail, kind) in [
+        (
+            "provider error",
+            stream_body(std::slice::from_ref(&reported)),
+            battersea_model::ErrorKind::Server,
+        ),
+        (
+            "malformed event",
+            "event: content_block_delta\ndata: {malformed\n\n".to_string(),
+            battersea_model::ErrorKind::InvalidResponse,
+        ),
+        (
+            "malformed tool arguments",
+            stream_body(&[json!({"type":"content_block_stop", "index":1})]),
+            battersea_model::ErrorKind::InvalidResponse,
+        ),
+        (
+            "stopped with blocks open",
+            stream_body(&[
+                json!({"type":"message_delta", "delta":{"stop_reason":"end_turn"},
+                    "usage":{"output_tokens":3}}),
+                json!({"type":"message_stop"}),
+            ]),
+            battersea_model::ErrorKind::InvalidResponse,
+        ),
+    ] {
+        let (events, _) = plain_stream("anthropic", stream_body(&opened) + &tail).await;
+        let failure = events.last().unwrap().as_ref().expect_err(name);
+        assert_eq!(failure.kind, kind, "{name}: {failure:?}");
+        assert_eq!(
+            failure.partial.present().map(|partial| &partial.blocks),
+            Some(&unfinished),
+            "{name}: {failure:?}"
+        );
+    }
+}
+
 #[tokio::test]
 async fn unmodelled_stream_events_are_observed_and_skipped() {
     let delta = |sequence: u64, text: &str| {

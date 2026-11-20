@@ -901,6 +901,58 @@ async fn failed_remote_cancellation_reports_uncertainty_and_does_not_double_canc
     assert_eq!(state.calls.lock().unwrap().len(), 2);
     task.abort();
 }
+/// contracts/failures.md, Native detail: a failed job carries the provider's terminal response
+/// whole, whether or not the response names a message.
+#[tokio::test]
+async fn a_failed_job_carries_the_providers_terminal_response_whole() {
+    for (provider, pending, failed, account) in [
+        (
+            "runway",
+            "PENDING",
+            "FAILED",
+            json!({"failure":{"message":"Unsafe.", "detail":"moderation"}, "failureCode":"SAFETY.INPUT.IMAGE"}),
+        ),
+        (
+            "runway",
+            "PENDING",
+            "FAILED",
+            json!({"failureCode":"INTERNAL"}),
+        ),
+        (
+            "replicate",
+            "starting",
+            "failed",
+            json!({"error":"Out of memory.", "logs":"step 3 of 50", "metrics":{"predict_time":1.5}}),
+        ),
+    ] {
+        let (url, state, task) = server().await;
+        let mut terminal = update(provider, failed, Value::Null);
+        for (name, value) in account.as_object().unwrap() {
+            terminal[name] = value.clone();
+        }
+        enqueue(
+            &state,
+            [
+                Reply::json(update(provider, pending, Value::Null)),
+                Reply::json(terminal.clone()),
+            ],
+        );
+        let job = submit(backend(provider, &url, MediaKind::Image), MediaKind::Image).await;
+        let error = MediaSubmission::Pending(job)
+            .wait(CancellationToken::new(), None)
+            .await
+            .unwrap_err();
+        assert_eq!(error.kind, ErrorKind::Provider, "{provider}: {error:?}");
+        assert_eq!(error.message, "Media job failed.", "{provider}");
+        assert_eq!(
+            error.native,
+            battersea_model::Detail::Present(terminal),
+            "{provider}"
+        );
+        assert_eq!(error.exchange.request_id.as_deref(), Some("accepted-job"));
+        task.abort();
+    }
+}
 #[tokio::test]
 async fn aggregate_output_bound_prevents_partial_publication() {
     let (url, state, task) = server().await;

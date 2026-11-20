@@ -683,10 +683,6 @@ fn decode_task(
         assets,
         expires_at: (status == Status::Succeeded).then(|| now + chrono::Duration::hours(24)),
         expiry_is_estimate: true,
-        failure: raw["failure"]
-            .as_str()
-            .or_else(|| raw["failure"]["message"].as_str())
-            .map(str::to_owned),
         progress: raw["progress"]
             .as_f64()
             .filter(|v| v.is_finite())
