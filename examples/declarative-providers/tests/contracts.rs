@@ -596,6 +596,108 @@ async fn a_durable_turn_failure_after_the_response_carries_the_issued_identifier
     }
 }
 
+/// contracts/failures.md, Identity: a background step that fails after its response arrives
+/// carries both issued identifiers, on the start, poll and cancel commands.
+#[tokio::test]
+async fn a_background_step_failure_after_the_response_carries_the_issued_identifiers() {
+    let response = |id: &str, status: &str, output: Value| {
+        reply(
+            json!({"id":id, "created_at":1, "model":"fixture", "object":"response",
+            "background":true, "status":status, "output":output}),
+        )
+    };
+    let (url, _, task) = server(vec![
+        response("response-fixture", "failed", json!([])),
+        response("response-fixture", "queued", json!([])),
+        response(
+            "response-fixture",
+            "completed",
+            json!([{"type":"message", "id":"message-fixture", "status":"completed",
+                "role":"assistant",
+                "content":[{"type":"output_text", "text":"not JSON", "annotations":[]}]}]),
+        ),
+        response("response-other", "cancelled", json!([])),
+    ])
+    .await;
+    let mut config = configuration("openai-responses", &url);
+    let backend = config.backends.get_mut("office-chat").unwrap();
+    backend.properties.as_mut().unwrap().stream = Some(false);
+    let options = backend.options.as_mut().unwrap();
+    options.background = Some(true);
+    options.background_mode = Some("poll".into());
+    options.background_poll_interval_ms = Some(200);
+    options.background_max_wait_ms = Some(3000);
+    let polling = battersea_model::ManualClock::new(0);
+    let configured = config
+        .validate(&protocols())
+        .unwrap()
+        .bind(&Secrets::new(), None, Arc::new(polling.clone()))
+        .unwrap();
+    let adapter = configured.chat("office-chat").unwrap();
+    let mut shared = request(&config).shared;
+    shared.chat.response_format = Some(ResponseFormat::JsonSchema {
+        name: "result".into(),
+        schema: json!({"type":"object"}),
+    });
+    let request = ConversationRequest {
+        shared,
+        tools: vec![],
+        max_turns: 2,
+    };
+    let step = |command| adapter.conversation_step(request.clone(), None, vec![], command);
+    let identified = |name: &str, failure: Failure, response_id: &str| {
+        let exchange = &failure.exchange;
+        assert_eq!(
+            exchange.request_id.as_deref(),
+            Some(REQUEST_ID),
+            "{name}: {failure:?}"
+        );
+        assert_eq!(
+            exchange.response_id.as_deref(),
+            Some(response_id),
+            "{name}: {failure:?}"
+        );
+        assert_eq!(
+            failure.origin.operation.as_deref(),
+            Some("conversation_step"),
+            "{name}"
+        );
+    };
+
+    // The provider reports the started response as failed.
+    let failure = step(ConversationCommand::Start).await.err().unwrap();
+    assert_eq!(failure.message, "OpenAI background response failed.");
+    identified("start", failure, "response-fixture");
+
+    let ConversationStep::Pending { state } = step(ConversationCommand::Start).await.unwrap()
+    else {
+        panic!("the queued response is pending")
+    };
+
+    // The polled response completes with text that is not the requested JSON; the poll is sent
+    // after one 200ms interval.
+    let interval = std::time::Duration::from_millis(200);
+    let (polled, remaining) = tokio::join!(
+        step(ConversationCommand::Poll {
+            state: state.clone()
+        }),
+        polling.advance_to_timer_within(interval)
+    );
+    assert_eq!(remaining, interval);
+    let failure = polled.err().unwrap();
+    assert_eq!(failure.message, "Malformed structured output.");
+    identified("poll", failure, "response-fixture");
+
+    // The cancellation answers for another response.
+    let failure = step(ConversationCommand::Cancel { state })
+        .await
+        .err()
+        .unwrap();
+    assert_eq!(failure.message, "Background response identity changed.");
+    identified("cancel", failure, "response-other");
+    task.abort();
+}
+
 #[tokio::test]
 async fn completions_retries_immutable_turns_and_executes_tools_once() {
     let first = json!({"choices":[{"finish_reason":"tool_calls","message":{"role":"assistant","content":null,"tool_calls":[{"id":"call-1","type":"function","function":{"name":"echo","arguments":"{\"value\":3}"}}]}}]});
