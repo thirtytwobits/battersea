@@ -1156,6 +1156,45 @@ async fn an_anthropic_stream_failure_carries_its_unfinished_blocks() {
     }
 }
 
+/// contracts/failures.md, Native detail: a background response that completes with a refusal
+/// fails with the provider's terminal response whole, in the stream and the poll mode.
+#[tokio::test]
+async fn a_background_refusal_carries_the_terminal_response() {
+    let mut refused = openai_response(json!([{"type":"message", "id":"message-fixture",
+        "status":"completed", "role":"assistant",
+        "content":[{"type":"refusal", "refusal":"Declined."}]}]));
+    refused["usage"] = openai_usage();
+    for mode in ["background-stream", "poll"] {
+        let reply = if mode == "poll" {
+            ("application/json", refused.to_string())
+        } else {
+            ("text/event-stream", sse(&refused, false))
+        };
+        let (url, _, server) = server(vec![reply]).await;
+        let backend = backend("openai", &url, mode);
+        let mut request = request(&backend, Arc::new(RecordingExecutor::default()));
+        request.local_tools.clear();
+        let events: Vec<_> = adapter(backend)
+            .stream_text(request)
+            .await
+            .unwrap()
+            .collect()
+            .await;
+        server.abort();
+        let failure = events.last().unwrap().as_ref().expect_err(mode);
+        assert_eq!(
+            failure.kind,
+            battersea_model::ErrorKind::Refusal,
+            "{mode}: {failure:?}"
+        );
+        assert_eq!(
+            failure.native,
+            battersea_model::Detail::Present(refused.clone()),
+            "{mode}"
+        );
+    }
+}
+
 #[tokio::test]
 async fn unmodelled_stream_events_are_observed_and_skipped() {
     let delta = |sequence: u64, text: &str| {

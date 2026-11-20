@@ -14,8 +14,8 @@
   TypeScript `FlowNodeFailure` carry `failure`.
 - `MessageStop` carries `class: StopClass` and the provider's terminal payload as `native`;
   `StopReason` is removed. `EngineTextStreamEvent::ResponseOpened` is a new variant.
-- Scheduler, execution and conversation checkpoints are version 3. Records of other versions are
-  refused.
+- Scheduler, execution and conversation checkpoints are version 3, and tool approval journals
+  are version 2. Records of other versions are refused.
 - Failure messages use fixed wording, and the `Failure` constructors take `&'static str`. A
   provider's message, a response body and a lower error's text are in native detail or the cause.
   A node, an edge, a limit or another value Battersea names is in the new `context` part, which

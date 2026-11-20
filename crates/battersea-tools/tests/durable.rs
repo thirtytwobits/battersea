@@ -887,12 +887,18 @@ async fn a_journal_settles_only_when_every_call_is_terminal() {
     }
 }
 
+/// A stored version 2 journal, one call failed and one pending, reads and writes unchanged. A
+/// journal of another version is refused.
 #[tokio::test]
-async fn a_journal_written_by_battersea_0_17_reads_unchanged() {
-    let written = include_str!("fixtures/journal-v0.17.0.json");
+async fn a_version_2_journal_reads_unchanged_and_another_version_is_refused() {
+    let written = include_str!("fixtures/journal-v2.json");
     let journal: ToolApprovalJournal = serde_json::from_str(written).unwrap();
     journal.validate().unwrap();
     assert_eq!(journal.version, TOOL_APPROVAL_JOURNAL_VERSION);
+    assert_eq!(TOOL_APPROVAL_JOURNAL_VERSION, 2);
+    let mut earlier = journal.clone();
+    earlier.version = 1;
+    assert!(earlier.validate().is_err());
     assert_eq!(
         serde_json::to_string_pretty(&journal).unwrap() + "\n",
         written

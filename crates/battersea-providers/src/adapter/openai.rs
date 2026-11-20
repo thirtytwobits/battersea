@@ -1327,7 +1327,7 @@ async fn emit_background_terminal_response(
             } else {
                 super::StopClass::Length
             },
-            native: serde_json::Value::Null,
+            native: response.clone(),
         }))
         .await;
 }
@@ -1510,7 +1510,7 @@ async fn drive_background_stream(
                                 tx,
                                 EngineTextStreamEvent::MessageStop {
                                     class: completed_stop_reason(&response),
-                                    native: serde_json::Value::Null,
+                                    native: response.clone(),
                                 },
                             )
                             .await?;
@@ -1923,6 +1923,10 @@ fn openai_missing_output_text_error(response: &Value) -> Failure {
     let mut failure = describe_missing_output_text(response);
     if response.get("status").and_then(Value::as_str) == Some("incomplete") {
         failure.kind = battersea_model::ErrorKind::Incomplete;
+    }
+    // A refusal produces no output text; the missing text is the refusal.
+    if matches!(completed_stop_reason(response), super::StopClass::Refusal) {
+        failure.kind = battersea_model::ErrorKind::Refusal;
     }
     failure.with_native(battersea_model::Reporter::Provider, response.clone())
 }

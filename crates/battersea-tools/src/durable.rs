@@ -12,7 +12,7 @@ use serde_json::json;
 use std::{collections::BTreeMap, io::Write, sync::Arc, time::Duration};
 use tokio::time::Instant;
 
-pub const TOOL_APPROVAL_JOURNAL_VERSION: u32 = 1;
+pub const TOOL_APPROVAL_JOURNAL_VERSION: u32 = 2;
 const MAX_CALLS: usize = 4096;
 const MAX_BYTES: usize = battersea_model::payload::PROVIDER_PAYLOAD_BYTES;
 
