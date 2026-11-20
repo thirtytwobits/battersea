@@ -75,6 +75,26 @@ impl Context {
                     block => block,
                 },
             },
+            // A tool's failure travels in the event as well as in the stream's error.
+            EngineTextStreamEvent::ToolCallCompleted {
+                id,
+                name,
+                ok,
+                result,
+                failure,
+                tool_result,
+                tool_call,
+                finished_at,
+            } => EngineTextStreamEvent::ToolCallCompleted {
+                id,
+                name,
+                ok,
+                result,
+                failure: failure.map(|failure| self.error(failure)),
+                tool_result,
+                tool_call,
+                finished_at,
+            },
             event => event,
         })
     }

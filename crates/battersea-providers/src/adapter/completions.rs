@@ -589,13 +589,10 @@ impl ToolConversation for Conversation {
             .and_then(|v| v.to_str().ok())
             .map(str::to_owned);
         let status = response.status().as_u16();
-        // `native` is the provider's account of the turn: its response, or for a stream the
-        // message and finish reason the events assembled.
+        // `native` is the provider's account of the turn's end: its response, or for a stream
+        // the chunk that named the finish reason.
         let (message, finish, usage, native) = if chat.stream {
-            let (message, finish, usage) =
-                decode_stream(provider, response, events, &self.begun).await?;
-            let native = json!({"message": message, "finish_reason": finish});
-            (message, finish, usage, native)
+            decode_stream(provider, response, events, &self.begun).await?
         } else {
             let value: Value = response.bounded_json().await?;
             if let Some(identified) = crate::retry::identified(value.get("id")) {
@@ -774,7 +771,8 @@ impl CompletionBuffer {
     }
 }
 
-/// Decodes a streamed completion into its message, finish reason and usage. A failure carries
+/// Decodes a streamed completion into its message, finish reason, usage and the chunk that
+/// named the finish reason. A failure carries
 /// the event Battersea was handling as native detail and the tool calls the stream had begun as
 /// partial output.
 async fn decode_stream(
@@ -782,18 +780,18 @@ async fn decode_stream(
     response: reqwest::Response,
     events: &ToolEventSender,
     begun: &BegunTools,
-) -> Result<(Value, String, Value), Failure> {
+) -> Result<(Value, String, Value, Value), Failure> {
     take_begun(begun);
     let mut buffer = CompletionBuffer::new(payload::PROVIDER_PAYLOAD_BYTES, begun.clone());
     let mut current = Value::Null;
     match decode_events(provider, response, events, &mut buffer, &mut current).await {
-        Ok((finish, usage)) => {
+        Ok((finish, usage, terminal)) => {
             let mut message = json!({"role":"assistant","content":buffer.text});
             let tools = take_begun(begun);
             if !tools.is_empty() {
                 message["tool_calls"] = json!(tools);
             }
-            Ok((message, finish, usage))
+            Ok((message, finish, usage, terminal))
         }
         Err(failure) => {
             let failure = crate::http_payload::about(failure, &current);
@@ -817,10 +815,11 @@ async fn decode_events(
     events: &ToolEventSender,
     buffer: &mut CompletionBuffer,
     current: &mut Value,
-) -> Result<(String, Value), Failure> {
+) -> Result<(String, Value, Value), Failure> {
     let stream = crate::http_payload::bounded_stream(response).eventsource();
     futures_util::pin_mut!(stream);
     let mut finish = String::new();
+    let mut terminal = Value::Null;
     let mut usage = Value::Null;
     let mut done = false;
     let mut identified = false;
@@ -915,6 +914,7 @@ async fn decode_events(
                 return Err(invalid(provider, "Repeated completion finish."));
             }
             finish = reason.into();
+            terminal = value.clone();
         }
     }
     if !done || finish.is_empty() {
@@ -923,7 +923,7 @@ async fn decode_events(
             "Completion stream ended before its terminal event.",
         ));
     }
-    Ok((finish, usage))
+    Ok((finish, usage, terminal))
 }
 
 #[derive(serde::Serialize, serde::Deserialize)]

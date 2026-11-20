@@ -501,6 +501,90 @@ impl EngineLocalToolExecutor for Echo {
         })
     }
 }
+/// A tool that fails with the binding's credential in its account and its cause.
+struct Leaking;
+#[async_trait]
+impl EngineLocalToolExecutor for Leaking {
+    async fn call(&self, _: EngineLocalToolCall) -> Result<EngineLocalToolResult, Failure> {
+        Err(Failure::new("host", "Tool failed.", ErrorKind::Server)
+            .with_native(Reporter::Tool, json!({"echo": "secret-office-key"}))
+            .caused_by_text("denied for secret-office-key"))
+    }
+}
+/// contracts/failures.md, Credentials: a tool's failure is masked in the tool-completion event
+/// as it is in the stream's error.
+#[tokio::test]
+async fn a_tool_failure_is_masked_in_its_completion_event_and_in_the_stream_error() {
+    let first = json!({"choices":[{"finish_reason":"tool_calls","message":{"role":"assistant","content":null,"tool_calls":[{"id":"call-1","type":"function","function":{"name":"echo","arguments":"{\"value\":3}"}}]}}]});
+    let (url, _, task) = server(vec![reply(first)]).await;
+    let mut config = configuration("openai-chat-completions", &url);
+    let backend = config.backends.get_mut("office-chat").unwrap();
+    backend.properties.as_mut().unwrap().stream = Some(false);
+    let configured = config
+        .validate(&protocols())
+        .unwrap()
+        .bind(&Secrets::new(), None, clock())
+        .unwrap();
+    let mut req = request(&config);
+    req.local_tools = vec![EngineLocalToolDefinition {
+        name: "echo".into(),
+        description: "Echo".into(),
+        input_schema: json!({"type":"object"}),
+    }];
+    req.local_tool_executor = Some(Arc::new(Leaking));
+    let items: Vec<_> = configured
+        .chat("office-chat")
+        .unwrap()
+        .stream_text(req)
+        .await
+        .unwrap()
+        .collect()
+        .await;
+    task.abort();
+    let in_event = items
+        .iter()
+        .find_map(|item| match item {
+            Ok(EngineTextStreamEvent::ToolCallCompleted { failure, .. }) => failure.clone(),
+            _ => None,
+        })
+        .expect("the tool's failure is in its completion event");
+    let returned = items.last().unwrap().as_ref().unwrap_err();
+    for failure in [&in_event, returned] {
+        let text = serde_json::to_string(failure).unwrap();
+        assert!(!text.contains("secret-office-key"), "{text}");
+        assert!(failure.native.present().is_some());
+        assert!(failure.cause.is_some());
+    }
+}
+
+/// contracts/failures.md, Native detail: a streamed completion the provider filters fails with
+/// the chunk that named the finish reason, whole.
+#[tokio::test]
+async fn a_filtered_completion_stream_carries_its_terminal_chunk() {
+    let terminal = json!({"choices":[{"index":0,"delta":{},"finish_reason":"content_filter",
+        "content_filter_results":{"hate":{"filtered":true,"severity":"high"}}}]});
+    let (url, _, task) = server(vec![sse(
+        vec![
+            json!({"choices":[{"index":0,"delta":{"role":"assistant","content":"Partial"},"finish_reason":null}]}),
+            terminal.clone(),
+        ],
+        true,
+    )])
+    .await;
+    let config = configuration("openai-chat-completions", &url);
+    let configured = config
+        .validate(&protocols())
+        .unwrap()
+        .bind(&Secrets::new(), None, clock())
+        .unwrap();
+    let failure = events(configured.chat("office-chat").unwrap(), request(&config))
+        .await
+        .unwrap_err();
+    task.abort();
+    assert_eq!(failure.kind, ErrorKind::Refusal, "{failure:?}");
+    assert_eq!(failure.native, Detail::Present(terminal));
+}
+
 /// contracts/failures.md, Identity: a durable turn that fails after its response arrives carries
 /// both issued identifiers, whether the adapter refuses the response or Battersea's output
 /// validation does.
