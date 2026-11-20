@@ -33,6 +33,10 @@
   the checkpoint and the runtime records.
 - Every adapter failure carries its operation's origin and, once response headers arrive, the
   identifiers the provider issued.
+- `Failure` has a `cleanup` part: the failure of the cleanup Battersea attempted after the
+  operation failed, such as a rejected remote cancellation.
+- `EngineAdapter::open_text_stream` opens a stream with a report of its unfinished content
+  blocks. The registry carries those blocks as partial output on any failure that ends the stream.
 - A tool refusal carries Clapham's refusal as native detail, and an approval operation's refusal
   carries the tool failure in `details.failure`.
 - `cargo xtask regression` runs the preflight checks and every test binary.

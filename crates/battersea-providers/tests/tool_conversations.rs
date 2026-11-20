@@ -1087,9 +1087,9 @@ async fn a_stream_failure_after_the_headers_carries_origin_and_the_issued_identi
     }
 }
 
-/// contracts/failures.md, Partial output: an Anthropic stream that fails with content blocks
-/// open carries each block with the signature and tool arguments received for it, which no
-/// event delivered.
+/// contracts/failures.md, Partial output: an Anthropic stream that fails or ends with content
+/// blocks open carries each block with the signature and tool arguments received for it, which
+/// no event delivered.
 #[tokio::test]
 async fn an_anthropic_stream_failure_carries_its_unfinished_blocks() {
     let opened = [
@@ -1115,6 +1115,11 @@ async fn an_anthropic_stream_failure_carries_its_unfinished_blocks() {
     let reported =
         json!({"type":"error", "error":{"type":"overloaded_error", "message":"Overloaded"}});
     for (name, tail, kind) in [
+        (
+            "stream ends",
+            String::new(),
+            battersea_model::ErrorKind::InvalidResponse,
+        ),
         (
             "provider error",
             stream_body(std::slice::from_ref(&reported)),

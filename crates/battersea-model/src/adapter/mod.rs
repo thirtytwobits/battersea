@@ -444,6 +444,16 @@ impl EngineLocalToolExecutor for NoLocalTools {
     }
 }
 
+/// Takes the content blocks a provider stream has opened and not closed, each with what the
+/// stream received for the block.
+pub type UnfinishedBlocks = Arc<dyn Fn() -> Vec<Value> + Send + Sync>;
+
+/// A text stream and the report of the content blocks the stream holds open.
+pub struct OpenedTextStream {
+    pub stream: EngineTextStream,
+    pub unfinished: Option<UnfinishedBlocks>,
+}
+
 /// Represents a backend request that expects a streaming text response.
 pub type MockResponseRenderer = dyn Fn(&str) -> String + Send + Sync;
 
@@ -862,6 +872,19 @@ pub trait EngineAdapter: Send + Sync {
         &self,
         request: EngineTextStreamRequest,
     ) -> Result<EngineTextStream, Failure>;
+
+    /// Opens the stream of [`EngineAdapter::stream_text`] with a report of its unfinished
+    /// content blocks. An adapter built by the registry carries the reported blocks as partial
+    /// output on a failure that ends the stream, whichever component raises the failure.
+    async fn open_text_stream(
+        &self,
+        request: EngineTextStreamRequest,
+    ) -> Result<OpenedTextStream, Failure> {
+        Ok(OpenedTextStream {
+            stream: self.stream_text(request).await?,
+            unfinished: None,
+        })
+    }
 }
 
 /// Emits one structured request log entry when a logger is configured and otherwise does nothing.

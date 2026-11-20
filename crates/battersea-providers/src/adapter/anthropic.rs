@@ -130,9 +130,19 @@ impl EngineAdapter for AnthropicEngineAdapter {
         &self,
         request: EngineTextStreamRequest,
     ) -> Result<EngineTextStream, Failure> {
+        Ok(self.open_text_stream(request).await?.stream)
+    }
+
+    async fn open_text_stream(
+        &self,
+        request: EngineTextStreamRequest,
+    ) -> Result<battersea_model::OpenedTextStream, Failure> {
         super::validate_chat_request(&self.backend, &request)?;
         if !request.local_tools.is_empty() {
-            return self.stream_text_with_local_tools(request).await;
+            return Ok(battersea_model::OpenedTextStream {
+                stream: self.stream_text_with_local_tools(request).await?,
+                unfinished: None,
+            });
         }
 
         let body = build_stream_body(&self.backend, &request)?;
@@ -181,6 +191,7 @@ impl EngineAdapter for AnthropicEngineAdapter {
         let context = self.context.clone();
         let operation = request.shared.operation;
         let decoder = Arc::new(std::sync::Mutex::new(AnthropicStreamDecoder::default()));
+        let unfinished = decoder.clone();
         let stream = crate::http_payload::bounded_stream(response)
             .eventsource()
             .map(move |event| {
@@ -253,20 +264,7 @@ impl EngineAdapter for AnthropicEngineAdapter {
                         }
                     }
                     .await;
-                    // A failure of the stream carries the content blocks left unfinished.
-                    decoded.map_err(|failure| {
-                        let blocks = decoder
-                            .lock()
-                            .map(|mut decoder| decoder.unfinished())
-                            .unwrap_or_default();
-                        if blocks.is_empty() || failure.partial != battersea_model::Detail::Absent {
-                            return failure;
-                        }
-                        failure.with_partial(battersea_model::PartialOutput {
-                            text: String::new(),
-                            blocks,
-                        })
-                    })
+                    decoded
                 }
             })
             .buffer_unordered(1)
@@ -279,12 +277,20 @@ impl EngineAdapter for AnthropicEngineAdapter {
             })
             .boxed();
 
-        Ok(super::with_stream_idle_watchdog(
-            Box::pin(stream::once(std::future::ready(Ok(opened))).chain(stream)),
-            std::time::Duration::from_millis(self.stream_idle_timeout_ms),
-            "anthropic",
-            self.clock.clone(),
-        ))
+        Ok(battersea_model::OpenedTextStream {
+            stream: super::with_stream_idle_watchdog(
+                Box::pin(stream::once(std::future::ready(Ok(opened))).chain(stream)),
+                std::time::Duration::from_millis(self.stream_idle_timeout_ms),
+                "anthropic",
+                self.clock.clone(),
+            ),
+            unfinished: Some(Arc::new(move || {
+                unfinished
+                    .lock()
+                    .map(|mut decoder| decoder.unfinished())
+                    .unwrap_or_default()
+            })),
+        })
     }
 
     async fn count_text_stream_input_tokens(

@@ -212,6 +212,20 @@ impl EngineAdapter for Scripted {
             Box::pin(events)
         })
     }
+    /// The scripted stream, holding one content block open.
+    async fn open_text_stream(
+        &self,
+        request: EngineTextStreamRequest,
+    ) -> Result<OpenedTextStream, Failure> {
+        Ok(OpenedTextStream {
+            stream: self.stream_text(request).await?,
+            unfinished: Some(Arc::new(|| vec![unfinished_block()])),
+        })
+    }
+}
+/// The content block a [`Scripted`] stream holds open.
+fn unfinished_block() -> serde_json::Value {
+    json!({"type": "tool_use", "partial_json": "{\"key\":"})
 }
 /// contracts/failures.md, Identity: a failure carries the identifiers of its own exchange.
 #[tokio::test]
@@ -276,8 +290,9 @@ impl EngineAdapterLogger for Reported {
     }
 }
 /// contracts/failures.md, Identity and Partial output: however a text stream fails after its
-/// response headers, the failure carries the origin, the issued identifiers and the structured
-/// text Battersea held, and the observer receives that failure once.
+/// response headers, the failure carries the origin, the issued identifiers, the structured
+/// text Battersea held and the content blocks the adapter held open, and the observer receives
+/// that failure once.
 #[tokio::test]
 async fn every_stream_failure_carries_origin_identifiers_and_held_text() {
     enum Ends {
@@ -508,11 +523,15 @@ async fn every_stream_failure_carries_origin_identifiers_and_held_text() {
             "{name}"
         );
         assert_eq!(
-            failure
-                .partial
-                .present()
-                .map(|partial| partial.text.as_str()),
-            case.format.is_some().then_some(case.text),
+            failure.partial,
+            Detail::Present(PartialOutput {
+                text: if case.format.is_some() {
+                    case.text.into()
+                } else {
+                    String::new()
+                },
+                blocks: vec![unfinished_block()],
+            }),
             "{name}"
         );
         assert_eq!(*reported.0.lock().unwrap(), vec![failure], "{name}");

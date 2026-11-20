@@ -625,8 +625,8 @@ impl AdmittedAdapter {
             .output_modalities
             .clone()
             .unwrap_or_else(|| vec![crate::Modality::Text]);
-        let call = self.inner.stream_text(request);
-        let stream = match deadline {
+        let call = self.inner.open_text_stream(request);
+        let crate::OpenedTextStream { stream, unfinished } = match deadline {
             Some(deadline) => crate::clock::timeout_at(self.clock.as_ref(), deadline, call)
                 .await
                 .map_err(|_elapsed| {
@@ -669,6 +669,7 @@ impl AdmittedAdapter {
         struct Open {
             stream: EngineTextStream,
             report: Arc<Report>,
+            unfinished: Option<crate::UnfinishedBlocks>,
             request_id: Option<String>,
             response_id: Option<String>,
         }
@@ -676,6 +677,7 @@ impl AdmittedAdapter {
             Some(Open {
                 stream,
                 report: self.report.clone(),
+                unfinished,
                 request_id: None,
                 response_id: None,
             }),
@@ -709,6 +711,26 @@ impl AdmittedAdapter {
                             return Some((Ok(event), Some(open)));
                         }
                         Err(mut failure) => {
+                            // The failure ends the stream, so it carries the content blocks
+                            // the provider stream left unfinished.
+                            let blocks = open.unfinished.take().map(|take| take());
+                            if let Some(blocks) = blocks.filter(|blocks| !blocks.is_empty()) {
+                                match &mut failure.partial {
+                                    crate::Detail::Present(partial)
+                                        if partial.blocks.is_empty() =>
+                                    {
+                                        partial.blocks = blocks;
+                                    }
+                                    crate::Detail::Absent => {
+                                        failure.partial =
+                                            crate::Detail::Present(crate::PartialOutput {
+                                                text: String::new(),
+                                                blocks,
+                                            });
+                                    }
+                                    _ => {}
+                                }
+                            }
                             let exchange = &mut failure.exchange;
                             if exchange.request_id.is_none() {
                                 exchange.request_id = open.request_id.take();

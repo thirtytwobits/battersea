@@ -91,7 +91,7 @@ native detail, partial output and foreign error text as content under
 | Adapters | For each registered adapter and each recorded failure of that adapter (HTTP rejection, stream error event, refusal, truncation, block, malformed event), every leaf of the provider's payload is present in the failure |
 | Identity | A decoding failure, a stream error and a completion-validation failure after the response headers each carry the issued identifiers and the origin |
 | Termination | Distinct native reasons of one class remain distinct in the failure; an unrecognised reason has the class `other` |
-| Partial output | A refusal under a response format carries the buffered text |
+| Partial output | A refusal under a response format carries the buffered text; a stream that fails, ends, stalls or passes its deadline with content blocks open carries those blocks |
 | Cause | A wrapped foreign error's text and its sources' text are present in order |
 | Cleanup | A failed remote cancellation's rejection body is present in the failure the host receives, and withheld with it |
 | Credentials | A credential in each encoded form inside a provider payload is masked and the rest of the payload is unchanged |
