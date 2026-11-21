@@ -7,6 +7,9 @@ reports about a failed or incomplete operation reaches the host intact. Batterse
 context to a failure and neither replaces nor drops what it received. Resolved credentials are
 masked.
 
+The obligations of this contract are the rows of [Required proof](#required-proof). The sections
+before it define the terms those rows use.
+
 ## Failure
 
 Every operation that fails or ends incomplete reports one `Failure`.
@@ -43,14 +46,15 @@ context. The message and the context contain no text written by the reporter. Re
 native detail or in the cause.
 
 A failure that wraps another failure carries it as its cause. A wrapped error of another type is
-a foreign error, carried as its text and the text of each of its sources in order. No failure
-site discards the error it handles.
+a foreign error, carried as its text and the text of each of its sources in order. A failure
+site that discards the error it handles states its reason in the source.
 
 A failed operation whose cleanup also fails, such as the cancellation of a remote job, reports
 the operation's failure and carries the cleanup's failure whole.
 
-Partial output is output Battersea held when the operation failed: buffered structured text and
-incomplete content blocks. Events already delivered remain with their consumer.
+Partial output is output Battersea held when the operation failed: buffered structured text,
+incomplete content blocks and tool calls a stream had begun. Events already delivered remain with
+their consumer.
 
 A failure is bounded by the limits of what it carries: the provider payload limit and the output
 limits of its operation.
@@ -91,8 +95,8 @@ native detail, partial output and foreign error text as content under
 | Adapters | For each registered adapter and each recorded failure of that adapter (HTTP rejection, stream error event, refusal, truncation, block, malformed event), every leaf of the provider's payload is present in the failure |
 | Identity | A decoding failure, a stream error and a completion-validation failure after the response headers each carry the issued identifiers and the origin |
 | Termination | Distinct native reasons of one class remain distinct in the failure; an unrecognised reason has the class `other`; a truncated or refused conversation turn has the kind `incomplete` or `refusal` and carries the provider's response |
-| Partial output | A refusal under a response format carries the buffered text; a stream that fails, ends, stalls or passes its deadline with content blocks open carries those blocks |
-| Cause | A wrapped foreign error's text and its sources' text are present in order |
+| Partial output | A refusal under a response format carries the buffered text; a stream that fails, ends, stalls or passes its deadline with content blocks open carries those blocks; a tool turn whose stream fails carries the tool calls the stream had begun, each with the arguments received for it |
+| Cause | A wrapped foreign error's text and its sources' text are present in order; a background stream that passes its reconnect limit carries the read error that interrupted it |
 | Cleanup | A failed remote cancellation's rejection body is present in the failure the host receives, and withheld with it |
 | Credentials | A credential in each encoded form inside a provider payload is masked and the rest of the payload is unchanged |
 | Disclosure | Under `withheld`, the token, the checkpoint and the runtime records hold no native detail, partial output or foreign error text, and the observer received the complete failure under the same identity; under `full` the token holds them |
