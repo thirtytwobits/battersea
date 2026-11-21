@@ -1,5 +1,5 @@
 {
-  "version": 1,
+  "version": 2,
   "revision": 6,
   "scope": {
     "run_id": "run-1",
@@ -48,10 +48,29 @@
         "at_unix_ms": 1792966669274
       },
       "state": {
-        "phase": "completed",
-        "result": {
-          "content": {
-            "value": 1
+        "phase": "failed",
+        "error": {
+          "kind": "server",
+          "message": "Tool failed.",
+          "reporter": "tool",
+          "origin": {
+            "provider": "host"
+          },
+          "exchange": {
+            "dispatch": "unknown",
+            "attempts": 0
+          },
+          "tool_call": {
+            "call_id": "one",
+            "tool_name": "host.write",
+            "outcome": "completed"
+          },
+          "native": {
+            "state": "present",
+            "value": {
+              "code": "disk_full",
+              "detail": "No space left."
+            }
           }
         }
       },

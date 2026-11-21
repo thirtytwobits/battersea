@@ -33,10 +33,8 @@ pub trait NodeHandler<H: ExecutionHost>: Send + Sync {
     ) -> Result<(), H::Error> {
         Err(H::Error::invalid_request(
             crate::error_codes::UNSUPPORTED_HANDLER_OPERATION,
-            format!(
-                "Flow handler \"{}\" does not support source materialisation.",
-                self.handler_id()
-            ),
+            crate::Failure::from("Flow handler does not support source materialisation.")
+                .with_context("handler", self.handler_id()),
         ))
     }
 
@@ -56,10 +54,8 @@ pub trait NodeHandler<H: ExecutionHost>: Send + Sync {
     ) -> Result<(), H::Error> {
         Err(H::Error::invalid_request(
             crate::error_codes::UNSUPPORTED_HANDLER_OPERATION,
-            format!(
-                "Flow handler \"{}\" does not support direct node execution.",
-                self.handler_id()
-            ),
+            crate::Failure::from("Flow handler does not support direct node execution.")
+                .with_context("handler", self.handler_id()),
         ))
     }
 
@@ -78,10 +74,8 @@ pub trait NodeHandler<H: ExecutionHost>: Send + Sync {
     ) -> Result<(), H::Error> {
         Err(H::Error::invalid_request(
             crate::error_codes::UNSUPPORTED_HANDLER_OPERATION,
-            format!(
-                "Flow handler \"{}\" does not support sink execution.",
-                self.handler_id()
-            ),
+            crate::Failure::from("Flow handler does not support sink execution.")
+                .with_context("handler", self.handler_id()),
         ))
     }
 
@@ -100,10 +94,8 @@ pub trait NodeHandler<H: ExecutionHost>: Send + Sync {
     ) -> Result<(), H::Error> {
         Err(H::Error::invalid_request(
             crate::error_codes::UNSUPPORTED_HANDLER_OPERATION,
-            format!(
-                "Flow handler \"{}\" does not support action execution.",
-                self.handler_id()
-            ),
+            crate::Failure::from("Flow handler does not support action execution.")
+                .with_context("handler", self.handler_id()),
         ))
     }
 
@@ -121,10 +113,8 @@ pub trait NodeHandler<H: ExecutionHost>: Send + Sync {
     ) -> Result<(), H::Error> {
         Err(H::Error::invalid_request(
             crate::error_codes::UNSUPPORTED_HANDLER_OPERATION,
-            format!(
-                "Flow handler \"{}\" does not support controller actions.",
-                self.handler_id()
-            ),
+            crate::Failure::from("Flow handler does not support controller actions.")
+                .with_context("handler", self.handler_id()),
         ))
     }
 
@@ -142,10 +132,8 @@ pub trait NodeHandler<H: ExecutionHost>: Send + Sync {
     ) -> Result<(), H::Error> {
         Err(H::Error::invalid_request(
             crate::error_codes::UNSUPPORTED_HANDLER_OPERATION,
-            format!(
-                "Flow handler {:?} does not consume streaming inputs.",
-                self.handler_id()
-            ),
+            crate::Failure::from("Flow handler does not consume streaming inputs.")
+                .with_context("handler", self.handler_id()),
         ))
     }
     /// Applies one custom event from an owned provider pump on the driver.

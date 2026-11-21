@@ -3,10 +3,10 @@
 use super::*;
 use battersea_model::{ConversationCommand, ConversationStep};
 
-fn native_response(response: &Value) -> Result<(), EngineAdapterRequestError> {
+fn native_response(response: &Value) -> Result<(), Failure> {
     check_payload(response, "openai")?;
     serde_json::from_value::<async_openai::types::responses::Response>(response.clone())
-        .map_err(|_| invalid("Invalid background Responses response."))?;
+        .map_err(|cause| invalid("Invalid background Responses response.").caused_by(&cause))?;
     if response["background"] != true
         || response["id"]
             .as_str()
@@ -38,7 +38,7 @@ impl OpenAiEngineAdapter {
         previous: Option<&Value>,
         results: &[ConversationToolResult],
         state: &Value,
-    ) -> Result<Checkpoint, EngineAdapterRequestError> {
+    ) -> Result<Checkpoint, Failure> {
         let binding = self.validate_durable_request(request, previous)?;
         let checkpoint = decode(state)?;
         native_response(&checkpoint.response)?;
@@ -69,7 +69,7 @@ impl OpenAiEngineAdapter {
         results: &[ConversationToolResult],
         command: &ConversationCommand,
         step: &ConversationStep,
-    ) -> Result<ConversationBinding, EngineAdapterRequestError> {
+    ) -> Result<ConversationBinding, Failure> {
         let binding = self.validate_durable_request(request, previous)?;
         let pending = match command {
             ConversationCommand::Start => None,
@@ -126,7 +126,44 @@ impl OpenAiEngineAdapter {
         previous: Option<Value>,
         results: Vec<ConversationToolResult>,
         command: ConversationCommand,
-    ) -> Result<ConversationStep, EngineAdapterRequestError> {
+    ) -> Result<ConversationStep, Failure> {
+        let mut identifiers = crate::retry::Identifiers::default();
+        let mut response = Value::Null;
+        let step = self
+            .identified_step(
+                request,
+                previous,
+                results,
+                command,
+                &mut identifiers,
+                &mut response,
+            )
+            .await;
+        match step {
+            Ok(mut step) => {
+                if let ConversationStep::Completed { turn } = &mut step {
+                    identifiers.announce(&mut turn.events);
+                }
+                Ok(step)
+            }
+            Err(failure) => Err(crate::http_payload::about(
+                identifiers.stamp(failure),
+                &response,
+            )),
+        }
+    }
+
+    /// Runs one step, recording in `identifiers` what the provider's response names and in
+    /// `received` the response itself.
+    async fn identified_step(
+        &self,
+        request: ConversationRequest,
+        previous: Option<Value>,
+        results: Vec<ConversationToolResult>,
+        command: ConversationCommand,
+        identifiers: &mut crate::retry::Identifiers,
+        received: &mut Value,
+    ) -> Result<ConversationStep, Failure> {
         let binding = self.validate_durable_request(&request, previous.as_ref())?;
         if !self.background {
             return match command {
@@ -199,13 +236,15 @@ impl OpenAiEngineAdapter {
         )
         .await;
         let response: Value = match sent {
-            Ok(response) => response
-                .bounded_json()
-                .await
-                .map_err(|_| invalid("Invalid background response payload."))?,
+            Ok(response) => {
+                *identifiers = crate::retry::Identifiers::of(&response);
+                response.bounded_json().await.map_err(|cause| {
+                    invalid("Invalid background response payload.").with_cause(cause)
+                })?
+            }
             Err(error)
                 if matches!(command, ConversationCommand::Cancel { .. })
-                    && matches!(error.status_code, Some(400 | 409)) =>
+                    && matches!(error.exchange.status, Some(400 | 409)) =>
             {
                 // A response can finish between the last retrieval and cancellation.
                 let id = crate::connection::segment(
@@ -213,26 +252,29 @@ impl OpenAiEngineAdapter {
                         .as_str()
                         .expect("identity"),
                 );
-                let response: Value = crate::retry::send(
+                let retrieved = crate::retry::send(
                     self.retrieve_durable_response(&request, &id)
                         .headers(build_openai_headers(&self.backend)?),
                     &self.backend,
                     self.logger.as_ref(),
                     self.clock.as_ref(),
                 )
-                .await?
-                .bounded_json()
-                .await
-                .map_err(|_| invalid("Invalid background response payload."))?;
+                .await?;
+                *identifiers = crate::retry::Identifiers::of(&retrieved);
+                let response: Value = retrieved.bounded_json().await.map_err(|cause| {
+                    invalid("Invalid background response payload.").with_cause(cause)
+                })?;
                 let step = ConversationStep::Cancelled {
                     state: response.clone(),
                 };
                 self.validate_durable_step(&request, previous.as_ref(), &results, &command, &step)
-                    .map_err(|_| error)?;
+                    .map_err(|_invalid_step| error)?;
                 response
             }
             Err(error) => return Err(error),
         };
+        identifiers.name(response.get("id"));
+        received.clone_from(&response);
         native_response(&response)?;
         if pending
             .as_ref()

@@ -108,7 +108,8 @@ fn policy_and_failure_schema_survive_json_and_text_round_trips() {
         .validate_token(
             NODE_FAILURE_TOKEN_TYPE,
             &json!({"id":"failure","node_id":"node",
-        "phase":"execution","operation":"execute_node","code":"declined","message":"Declined"})
+        "phase":"execution","operation":"execute_node","code":"declined",
+        "failure":{"kind":"runtime","message":"Declined"}})
         )
         .is_ok());
     assert!(registry

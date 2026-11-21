@@ -2,6 +2,7 @@
 
 The Cargo workspace owns the backend and repository tooling. `typescript/` owns npm packages.
 Rust builds and tests must work without Node. Cargo-backed commands run sequentially.
+`cargo xtask check` runs its static steps beside its tests, each lane in a target directory of its own.
 
 Keep product sessions, storage policy, owned media and UI composition in the consuming application.
 The conversation nodes and compaction over the application's transcript are

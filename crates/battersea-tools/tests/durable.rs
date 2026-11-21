@@ -34,7 +34,7 @@ impl ToolApprovalStore for Store {
                 if b.len() > max {
                     return Err(ToolApprovalStoreError::Unavailable);
                 }
-                serde_json::from_slice(b).map_err(|_| ToolApprovalStoreError::Unavailable)
+                serde_json::from_slice(b).map_err(|_corrupt| ToolApprovalStoreError::Unavailable)
             })
             .transpose()
     }
@@ -73,10 +73,7 @@ struct Effect {
 }
 #[async_trait]
 impl EngineLocalToolExecutor for Effect {
-    async fn call(
-        &self,
-        call: EngineLocalToolCall,
-    ) -> Result<EngineLocalToolResult, EngineAdapterRequestError> {
+    async fn call(&self, call: EngineLocalToolCall) -> Result<EngineLocalToolResult, Failure> {
         self.calls.fetch_add(1, Ordering::SeqCst);
         if self.wait {
             std::future::pending::<()>().await;
@@ -180,7 +177,7 @@ async fn approve(executor: &DurableToolExecutor) -> u64 {
         .unwrap()
         .revision
 }
-fn code(error: EngineAdapterRequestError, code: ToolCode) {
+fn code(error: Failure, code: ToolCode) {
     assert_eq!(error.tool_code, Some(code));
 }
 
@@ -890,12 +887,18 @@ async fn a_journal_settles_only_when_every_call_is_terminal() {
     }
 }
 
+/// A stored version 2 journal, one call failed and one pending, reads and writes unchanged. A
+/// journal of another version is refused.
 #[tokio::test]
-async fn a_journal_written_by_battersea_0_17_reads_unchanged() {
-    let written = include_str!("fixtures/journal-v0.17.0.json");
+async fn a_version_2_journal_reads_unchanged_and_another_version_is_refused() {
+    let written = include_str!("fixtures/journal-v2.json");
     let journal: ToolApprovalJournal = serde_json::from_str(written).unwrap();
     journal.validate().unwrap();
     assert_eq!(journal.version, TOOL_APPROVAL_JOURNAL_VERSION);
+    assert_eq!(TOOL_APPROVAL_JOURNAL_VERSION, 2);
+    let mut earlier = journal.clone();
+    earlier.version = 1;
+    assert!(earlier.validate().is_err());
     assert_eq!(
         serde_json::to_string_pretty(&journal).unwrap() + "\n",
         written
@@ -1007,6 +1010,9 @@ async fn a_tool_still_running_at_expiry_is_reported_uncertain() {
     let (resumed, remaining) = tokio::join!(e.resume("one", 3), expire);
     assert_eq!(remaining, Duration::from_secs(60));
     let error = resumed.unwrap_err();
-    assert_eq!(error.classification, battersea_model::ErrorKind::Timeout);
-    assert_eq!(error.tool_call.unwrap().outcome, ToolCallOutcome::Uncertain);
+    assert_eq!(error.kind, battersea_model::ErrorKind::Timeout);
+    assert_eq!(
+        error.tool_call.clone().unwrap().outcome,
+        ToolCallOutcome::Uncertain
+    );
 }

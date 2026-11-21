@@ -41,9 +41,11 @@ async fn handle(State(wire): State<Wire>, uri: Uri, headers: HeaderMap, body: By
     Response::builder()
         .status(status)
         .header("content-type", content_type)
+        .header("request-id", REQUEST_ID)
         .body(Body::from(body))
         .unwrap()
 }
+const REQUEST_ID: &str = "req-fixture";
 async fn server(
     replies: Vec<(u16, String, String)>,
 ) -> (String, Wire, tokio::task::JoinHandle<()>) {
@@ -161,7 +163,7 @@ fn request(config: &ProviderConfiguration) -> EngineTextStreamRequest {
 async fn events(
     adapter: &Arc<dyn EngineAdapter>,
     request: EngineTextStreamRequest,
-) -> Result<Vec<EngineTextStreamEvent>, EngineAdapterRequestError> {
+) -> Result<Vec<EngineTextStreamEvent>, Failure> {
     let mut stream = adapter.stream_text(request).await?;
     let mut events = Vec::new();
     while let Some(event) = stream.next().await {
@@ -177,7 +179,7 @@ async fn events_advancing(
     request: EngineTextStreamRequest,
     clock: &battersea_model::ManualClock,
     window: std::time::Duration,
-) -> Result<Vec<EngineTextStreamEvent>, EngineAdapterRequestError> {
+) -> Result<Vec<EngineTextStreamEvent>, Failure> {
     let collect = events(adapter, request);
     tokio::pin!(collect);
     loop {
@@ -359,8 +361,8 @@ async fn services_sharing_an_adapter_keep_authentication_continuation_and_revisi
     )
     .await
     .unwrap_err();
-    assert_eq!(&*error.provider, "research");
-    assert_eq!(error.dispatch, DispatchState::NotSent);
+    assert_eq!(error.origin.provider.as_deref(), Some("research"));
+    assert_eq!(error.exchange.dispatch, DispatchState::NotSent);
     events(configured.chat("research-chat").unwrap(), request(&config))
         .await
         .unwrap();
@@ -457,8 +459,8 @@ async fn completions_reject_unsupported_image_formats_before_dispatch() {
                 mime_type: mime.into(),
             });
             let error = events(adapter, req).await.unwrap_err();
-            assert_eq!(error.classification, ErrorKind::InvalidRequest);
-            assert_eq!(error.dispatch, DispatchState::NotSent);
+            assert_eq!(error.kind, ErrorKind::InvalidRequest);
+            assert_eq!(error.exchange.dispatch, DispatchState::NotSent);
         }
     }
     assert!(wire.requests.lock().unwrap().is_empty());
@@ -492,16 +494,493 @@ async fn completions_reject_unsupported_image_formats_before_dispatch() {
 struct Echo(Arc<AtomicUsize>);
 #[async_trait]
 impl EngineLocalToolExecutor for Echo {
-    async fn call(
-        &self,
-        call: EngineLocalToolCall,
-    ) -> Result<EngineLocalToolResult, EngineAdapterRequestError> {
+    async fn call(&self, call: EngineLocalToolCall) -> Result<EngineLocalToolResult, Failure> {
         self.0.fetch_add(1, Ordering::SeqCst);
         Ok(EngineLocalToolResult::Json {
             content: call.arguments,
         })
     }
 }
+/// A tool that fails with the binding's credential in its account and its cause.
+struct Leaking;
+#[async_trait]
+impl EngineLocalToolExecutor for Leaking {
+    async fn call(&self, _: EngineLocalToolCall) -> Result<EngineLocalToolResult, Failure> {
+        Err(Failure::new("host", "Tool failed.", ErrorKind::Server)
+            .with_native(Reporter::Tool, json!({"echo": "secret-office-key"}))
+            .caused_by_text("denied for secret-office-key"))
+    }
+}
+/// contracts/failures.md, Credentials: a tool's failure is masked in the tool-completion event
+/// as it is in the stream's error.
+#[tokio::test]
+async fn a_tool_failure_is_masked_in_its_completion_event_and_in_the_stream_error() {
+    let first = json!({"choices":[{"finish_reason":"tool_calls","message":{"role":"assistant","content":null,"tool_calls":[{"id":"call-1","type":"function","function":{"name":"echo","arguments":"{\"value\":3}"}}]}}]});
+    let (url, _, task) = server(vec![reply(first)]).await;
+    let mut config = configuration("openai-chat-completions", &url);
+    let backend = config.backends.get_mut("office-chat").unwrap();
+    backend.properties.as_mut().unwrap().stream = Some(false);
+    let configured = config
+        .validate(&protocols())
+        .unwrap()
+        .bind(&Secrets::new(), None, clock())
+        .unwrap();
+    let mut req = request(&config);
+    req.local_tools = vec![EngineLocalToolDefinition {
+        name: "echo".into(),
+        description: "Echo".into(),
+        input_schema: json!({"type":"object"}),
+    }];
+    req.local_tool_executor = Some(Arc::new(Leaking));
+    let items: Vec<_> = configured
+        .chat("office-chat")
+        .unwrap()
+        .stream_text(req)
+        .await
+        .unwrap()
+        .collect()
+        .await;
+    task.abort();
+    let in_event = items
+        .iter()
+        .find_map(|item| match item {
+            Ok(EngineTextStreamEvent::ToolCallCompleted { failure, .. }) => failure.clone(),
+            _ => None,
+        })
+        .expect("the tool's failure is in its completion event");
+    let returned = items.last().unwrap().as_ref().unwrap_err();
+    for failure in [&in_event, returned] {
+        let text = serde_json::to_string(failure).unwrap();
+        assert!(!text.contains("secret-office-key"), "{text}");
+        assert!(failure.native.present().is_some());
+        assert!(failure.cause.is_some());
+    }
+}
+
+/// contracts/failures.md, Partial output: a streamed completion truncated after tool-call
+/// fragments fails with its terminal chunk and the tool calls it had begun.
+#[tokio::test]
+async fn a_truncated_completion_stream_carries_its_begun_tool_calls() {
+    let terminal = json!({"choices":[{"index":0,"delta":{},"finish_reason":"length"}]});
+    let (url, _, task) = server(vec![sse(
+        vec![
+            json!({"choices":[{"index":0,"delta":{"role":"assistant","tool_calls":[
+                {"index":0,"id":"call-1","type":"function",
+                    "function":{"name":"echo","arguments":"{\"value\":"}}]},"finish_reason":null}]}),
+            terminal.clone(),
+        ],
+        true,
+    )])
+    .await;
+    let config = configuration("openai-chat-completions", &url);
+    let configured = config
+        .validate(&protocols())
+        .unwrap()
+        .bind(&Secrets::new(), None, clock())
+        .unwrap();
+    let mut req = request(&config);
+    req.local_tools = vec![EngineLocalToolDefinition {
+        name: "echo".into(),
+        description: "Echo".into(),
+        input_schema: json!({"type":"object"}),
+    }];
+    let failure = events(configured.chat("office-chat").unwrap(), req)
+        .await
+        .unwrap_err();
+    task.abort();
+    assert_eq!(failure.kind, ErrorKind::Incomplete, "{failure:?}");
+    assert_eq!(failure.native, Detail::Present(terminal));
+    assert_eq!(
+        failure.partial.present().map(|partial| &partial.blocks),
+        Some(&vec![json!({"id":"call-1","type":"function",
+            "function":{"name":"echo","arguments":"{\"value\":"}})])
+    );
+}
+
+/// contracts/failures.md, Native detail: a streamed completion the provider filters fails with
+/// the chunk that named the finish reason, whole.
+#[tokio::test]
+async fn a_filtered_completion_stream_carries_its_terminal_chunk() {
+    let terminal = json!({"choices":[{"index":0,"delta":{},"finish_reason":"content_filter",
+        "content_filter_results":{"hate":{"filtered":true,"severity":"high"}}}]});
+    let (url, _, task) = server(vec![sse(
+        vec![
+            json!({"choices":[{"index":0,"delta":{"role":"assistant","content":"Partial"},"finish_reason":null}]}),
+            terminal.clone(),
+        ],
+        true,
+    )])
+    .await;
+    let config = configuration("openai-chat-completions", &url);
+    let configured = config
+        .validate(&protocols())
+        .unwrap()
+        .bind(&Secrets::new(), None, clock())
+        .unwrap();
+    let failure = events(configured.chat("office-chat").unwrap(), request(&config))
+        .await
+        .unwrap_err();
+    task.abort();
+    assert_eq!(failure.kind, ErrorKind::Refusal, "{failure:?}");
+    assert_eq!(failure.native, Detail::Present(terminal));
+}
+
+/// contracts/failures.md, Identity: a durable turn that fails after its response arrives carries
+/// both issued identifiers, whether the adapter refuses the response or Battersea's output
+/// validation does.
+#[tokio::test]
+async fn a_durable_turn_failure_after_the_response_carries_the_issued_identifiers() {
+    let responses = |output: Value| {
+        sse(
+            vec![
+                json!({"type":"response.completed", "sequence_number":1, "response":{
+                "id":"response-fixture", "created_at":1, "model":"fixture", "object":"response",
+                "status":"completed", "output":output}}),
+            ],
+            false,
+        )
+    };
+    let wire_reply = |protocol: &str, accepted: bool| match protocol {
+        "anthropic-messages" => reply(json!({
+            "id":"response-fixture", "type":"message", "role":"assistant",
+            "content":[{"type":"text", "text":"not JSON"}],
+            "stop_reason": if accepted { "end_turn" } else { "max_tokens" },
+            "usage":{"input_tokens":1, "output_tokens":1}})),
+        "google-generate-content" => reply(json!({
+            "responseId":"response-fixture", "candidates":[{
+                "content":{"role":"model", "parts":[{"text":"not JSON"}]},
+                "finishReason": if accepted { "STOP" } else { "MAX_TOKENS" }}]})),
+        "openai-responses" if accepted => responses(json!([{
+            "type":"message", "id":"message-fixture", "status":"completed", "role":"assistant",
+            "content":[{"type":"output_text", "text":"not JSON", "annotations":[]}]}])),
+        "openai-responses" => responses(json!([])),
+        "openai-chat-completions" => reply(json!({
+            "id":"response-fixture", "choices":[{
+                "message":{"role":"assistant", "content":"not JSON"},
+                "finish_reason": if accepted { "stop" } else { "length" }}]})),
+        _ => unreachable!(),
+    };
+    for protocol in [
+        "anthropic-messages",
+        "google-generate-content",
+        "openai-responses",
+        "openai-chat-completions",
+    ] {
+        for accepted in [true, false] {
+            let name = format!("{protocol}, accepted by the adapter: {accepted}");
+            let (url, _, task) = server(vec![wire_reply(protocol, accepted)]).await;
+            let mut config = configuration(protocol, &url);
+            if protocol == "openai-chat-completions" {
+                let backend = config.backends.get_mut("office-chat").unwrap();
+                backend.properties.as_mut().unwrap().stream = Some(false);
+            }
+            let configured = config
+                .validate(&protocols())
+                .unwrap()
+                .bind(&Secrets::new(), None, clock())
+                .unwrap();
+            let mut shared = request(&config).shared;
+            shared.chat.response_format = Some(ResponseFormat::JsonSchema {
+                name: "result".into(),
+                schema: json!({"type":"object"}),
+            });
+            let failure = configured
+                .chat("office-chat")
+                .unwrap()
+                .conversation_turn(
+                    ConversationRequest {
+                        shared,
+                        tools: vec![],
+                        max_turns: 2,
+                    },
+                    None,
+                    vec![],
+                )
+                .await
+                .err()
+                .unwrap_or_else(|| panic!("{name}: the turn passed"));
+            task.abort();
+            let exchange = &failure.exchange;
+            assert_eq!(
+                exchange.request_id.as_deref(),
+                Some(REQUEST_ID),
+                "{name}: {failure:?}"
+            );
+            assert_eq!(
+                exchange.response_id.as_deref(),
+                Some("response-fixture"),
+                "{name}: {failure:?}"
+            );
+            assert_eq!(
+                failure.origin.operation.as_deref(),
+                Some("conversation_turn"),
+                "{name}"
+            );
+        }
+    }
+}
+
+/// contracts/failures.md, Native detail: a durable turn the provider truncates or refuses fails
+/// with the kind `incomplete` or `refusal` and the provider's response whole.
+#[tokio::test]
+async fn a_truncated_or_refused_durable_turn_fails_with_its_kind_and_the_response() {
+    let responses = |kind: &str, response: Value| {
+        (
+            sse(
+                vec![json!({"type":kind, "sequence_number":1, "response":response})],
+                false,
+            ),
+            response,
+        )
+    };
+    let body = |value: Value| (reply(value.clone()), value);
+    let wire = |protocol: &str, refused: bool| match protocol {
+        "anthropic-messages" => body(json!({
+            "id":"response-fixture", "type":"message", "role":"assistant",
+            "content":[{"type":"text", "text":"Partial"}],
+            "stop_reason": if refused { "refusal" } else { "max_tokens" },
+            "stop_details":{"category":"fixture"},
+            "usage":{"input_tokens":1, "output_tokens":1}})),
+        "google-generate-content" => body(json!({
+            "responseId":"response-fixture", "candidates":[{
+                "content":{"role":"model", "parts":[{"text":"Partial"}]},
+                "finishReason": if refused { "SAFETY" } else { "MAX_TOKENS" },
+                "safetyRatings":[{"category":"fixture"}]}]})),
+        "openai-responses" if refused => responses(
+            "response.completed",
+            json!({"id":"response-fixture", "created_at":1, "model":"fixture",
+                "object":"response", "status":"completed", "output":[{
+                    "type":"message", "id":"message-fixture", "status":"completed",
+                    "role":"assistant",
+                    "content":[{"type":"refusal", "refusal":"Declined."}]}]}),
+        ),
+        "openai-responses" => responses(
+            "response.incomplete",
+            json!({"id":"response-fixture", "created_at":1, "model":"fixture",
+                "object":"response", "status":"incomplete",
+                "incomplete_details":{"reason":"max_output_tokens"}, "output":[]}),
+        ),
+        "openai-chat-completions" => body(json!({
+            "id":"response-fixture", "system_fingerprint":"fixture", "choices":[{
+                "message":{"role":"assistant", "content":"Partial"},
+                "finish_reason": if refused { "content_filter" } else { "length" }}]})),
+        _ => unreachable!(),
+    };
+    for protocol in [
+        "anthropic-messages",
+        "google-generate-content",
+        "openai-responses",
+        "openai-chat-completions",
+    ] {
+        for refused in [false, true] {
+            let name = format!("{protocol}, refused: {refused}");
+            let (reply, response) = wire(protocol, refused);
+            let (url, _, task) = server(vec![reply]).await;
+            let mut config = configuration(protocol, &url);
+            if protocol == "openai-chat-completions" {
+                let backend = config.backends.get_mut("office-chat").unwrap();
+                backend.properties.as_mut().unwrap().stream = Some(false);
+            }
+            let configured = config
+                .validate(&protocols())
+                .unwrap()
+                .bind(&Secrets::new(), None, clock())
+                .unwrap();
+            let failure = configured
+                .chat("office-chat")
+                .unwrap()
+                .conversation_turn(
+                    ConversationRequest {
+                        shared: request(&config).shared,
+                        tools: vec![],
+                        max_turns: 2,
+                    },
+                    None,
+                    vec![],
+                )
+                .await
+                .err()
+                .unwrap_or_else(|| panic!("{name}: the turn passed"));
+            task.abort();
+            assert_eq!(
+                failure.kind,
+                if refused {
+                    ErrorKind::Refusal
+                } else {
+                    ErrorKind::Incomplete
+                },
+                "{name}: {failure:?}"
+            );
+            assert_eq!(failure.native, Detail::Present(response), "{name}");
+        }
+    }
+}
+
+/// contracts/failures.md, Native detail and Partial output: a streamed completion that fails
+/// carries the event Battersea was handling and the tool calls the stream had begun; a stream
+/// that ends early carries the begun tool calls; a refusal has the kind `refusal`.
+#[tokio::test]
+async fn a_failed_completion_stream_carries_its_event_and_begun_tool_calls() {
+    let begun = json!({"choices":[{"index":0,"delta":{"role":"assistant","tool_calls":[
+        {"index":0,"id":"call-1","type":"function",
+            "function":{"name":"echo","arguments":"{\"value\":"}}]},"finish_reason":null}]});
+    let held = vec![json!({"id":"call-1","type":"function",
+        "function":{"name":"echo","arguments":"{\"value\":"}})];
+    let unsupported =
+        json!({"choices":[{"index":0,"delta":{"audio":{"id":"a"}},"finish_reason":null}]});
+    let refusal =
+        json!({"choices":[{"index":0,"delta":{"refusal":"Declined."},"finish_reason":null}]});
+    for (name, last, kind, native) in [
+        (
+            "unsupported delta",
+            Some(unsupported.clone()),
+            ErrorKind::InvalidResponse,
+            Detail::Present(unsupported),
+        ),
+        (
+            "refusal",
+            Some(refusal.clone()),
+            ErrorKind::Refusal,
+            Detail::Present(refusal),
+        ),
+        (
+            "stream ends",
+            None,
+            ErrorKind::InvalidResponse,
+            Detail::Absent,
+        ),
+    ] {
+        let mut wire = vec![begun.clone()];
+        wire.extend(last);
+        let (url, _, task) = server(vec![sse(wire, false)]).await;
+        let config = configuration("openai-chat-completions", &url);
+        let configured = config
+            .validate(&protocols())
+            .unwrap()
+            .bind(&Secrets::new(), None, clock())
+            .unwrap();
+        let mut req = request(&config);
+        req.local_tools = vec![EngineLocalToolDefinition {
+            name: "echo".into(),
+            description: "Echo".into(),
+            input_schema: json!({"type":"object"}),
+        }];
+        let failure = events(configured.chat("office-chat").unwrap(), req)
+            .await
+            .expect_err(name);
+        task.abort();
+        assert_eq!(failure.kind, kind, "{name}: {failure:?}");
+        assert_eq!(failure.native, native, "{name}");
+        assert_eq!(
+            failure.partial.present().map(|partial| &partial.blocks),
+            Some(&held),
+            "{name}: {failure:?}"
+        );
+    }
+}
+
+/// contracts/failures.md, Identity: a background step that fails after its response arrives
+/// carries both issued identifiers, on the start, poll and cancel commands.
+#[tokio::test]
+async fn a_background_step_failure_after_the_response_carries_the_issued_identifiers() {
+    let response = |id: &str, status: &str, output: Value| {
+        reply(
+            json!({"id":id, "created_at":1, "model":"fixture", "object":"response",
+            "background":true, "status":status, "output":output}),
+        )
+    };
+    let (url, _, task) = server(vec![
+        response("response-fixture", "failed", json!([])),
+        response("response-fixture", "queued", json!([])),
+        response(
+            "response-fixture",
+            "completed",
+            json!([{"type":"message", "id":"message-fixture", "status":"completed",
+                "role":"assistant",
+                "content":[{"type":"output_text", "text":"not JSON", "annotations":[]}]}]),
+        ),
+        response("response-other", "cancelled", json!([])),
+    ])
+    .await;
+    let mut config = configuration("openai-responses", &url);
+    let backend = config.backends.get_mut("office-chat").unwrap();
+    backend.properties.as_mut().unwrap().stream = Some(false);
+    let options = backend.options.as_mut().unwrap();
+    options.background = Some(true);
+    options.background_mode = Some("poll".into());
+    options.background_poll_interval_ms = Some(200);
+    options.background_max_wait_ms = Some(3000);
+    let polling = battersea_model::ManualClock::new(0);
+    let configured = config
+        .validate(&protocols())
+        .unwrap()
+        .bind(&Secrets::new(), None, Arc::new(polling.clone()))
+        .unwrap();
+    let adapter = configured.chat("office-chat").unwrap();
+    let mut shared = request(&config).shared;
+    shared.chat.response_format = Some(ResponseFormat::JsonSchema {
+        name: "result".into(),
+        schema: json!({"type":"object"}),
+    });
+    let request = ConversationRequest {
+        shared,
+        tools: vec![],
+        max_turns: 2,
+    };
+    let step = |command| adapter.conversation_step(request.clone(), None, vec![], command);
+    let identified = |name: &str, failure: Failure, response_id: &str| {
+        let exchange = &failure.exchange;
+        assert_eq!(
+            exchange.request_id.as_deref(),
+            Some(REQUEST_ID),
+            "{name}: {failure:?}"
+        );
+        assert_eq!(
+            exchange.response_id.as_deref(),
+            Some(response_id),
+            "{name}: {failure:?}"
+        );
+        assert_eq!(
+            failure.origin.operation.as_deref(),
+            Some("conversation_step"),
+            "{name}"
+        );
+    };
+
+    // The provider reports the started response as failed.
+    let failure = step(ConversationCommand::Start).await.err().unwrap();
+    assert_eq!(failure.message, "OpenAI background response failed.");
+    identified("start", failure, "response-fixture");
+
+    let ConversationStep::Pending { state } = step(ConversationCommand::Start).await.unwrap()
+    else {
+        panic!("the queued response is pending")
+    };
+
+    // The polled response completes with text that is not the requested JSON; the poll is sent
+    // after one 200ms interval.
+    let interval = std::time::Duration::from_millis(200);
+    let (polled, remaining) = tokio::join!(
+        step(ConversationCommand::Poll {
+            state: state.clone()
+        }),
+        polling.advance_to_timer_within(interval)
+    );
+    assert_eq!(remaining, interval);
+    let failure = polled.err().unwrap();
+    assert_eq!(failure.message, "Malformed structured output.");
+    identified("poll", failure, "response-fixture");
+
+    // The cancellation answers for another response.
+    let failure = step(ConversationCommand::Cancel { state })
+        .await
+        .err()
+        .unwrap();
+    assert_eq!(failure.message, "Background response identity changed.");
+    identified("cancel", failure, "response-other");
+    task.abort();
+}
+
 #[tokio::test]
 async fn completions_retries_immutable_turns_and_executes_tools_once() {
     let first = json!({"choices":[{"finish_reason":"tool_calls","message":{"role":"assistant","content":null,"tool_calls":[{"id":"call-1","type":"function","function":{"name":"echo","arguments":"{\"value\":3}"}}]}}]});
@@ -1080,7 +1559,8 @@ async fn encoded_credentials_are_masked_in_returned_errors_and_request_and_error
                 (
                     401,
                     "application/json".into(),
-                    json!({"error":{"message":format!("rejected {alias}")}}).to_string(),
+                    json!({"error":{"message":format!("rejected {alias}"), *alias: "echoed"}})
+                        .to_string(),
                 )
             })
             .collect();
@@ -1106,18 +1586,22 @@ async fn encoded_credentials_are_masked_in_returned_errors_and_request_and_error
             let error = events(configured.chat("office-chat").unwrap(), req)
                 .await
                 .unwrap_err();
+            // The provider's body is native detail, whole, with the credential masked.
             assert_eq!(
-                &*error.message,
-                "Provider HTTP request failed with status 401: rejected [REDACTED]"
+                error.native.present(),
+                Some(&json!({"error":{"message":"rejected [REDACTED]","[REDACTED]":"echoed"}}))
             );
-            assert_eq!(error.classification, ErrorKind::Authentication);
-            assert_eq!(error.status_code, Some(401));
+            assert_eq!(error.kind, ErrorKind::Authentication);
+            assert_eq!(error.exchange.status, Some(401));
             let entries = logs.0.lock().unwrap();
             let logged_error = entries
                 .iter()
                 .find(|entry| entry["detail"]["message"].is_string())
                 .unwrap();
-            assert_eq!(logged_error["detail"]["message"], &*error.message);
+            assert_eq!(
+                logged_error["detail"],
+                serde_json::to_value(&error).unwrap()
+            );
             let logged_request = entries
                 .iter()
                 .find(|entry| entry["detail"]["body"].is_object())
@@ -1175,9 +1659,11 @@ async fn runway_error_bodies_mask_uri_and_json_escaped_credentials() {
             .await
             .err()
             .unwrap();
-        assert_eq!(error.status_code, Some(401));
-        let body: Value = serde_json::from_str(&error.message).unwrap();
-        assert_eq!(body["error"], "rejected [REDACTED]");
+        assert_eq!(error.exchange.status, Some(401));
+        assert_eq!(
+            error.native.present(),
+            Some(&json!({"error":"rejected [REDACTED]"}))
+        );
     }
     assert_eq!(wire.requests.lock().unwrap().len(), aliases.len());
     task.abort();
@@ -1219,8 +1705,8 @@ async fn credentials_are_redacted_and_rotation_requires_a_new_binding() {
     let error = events(configured.chat("office-chat").unwrap(), request(&config))
         .await
         .unwrap_err();
-    assert_eq!(&*error.provider, "office");
-    assert_eq!(error.classification, ErrorKind::Authentication);
+    assert_eq!(error.origin.provider.as_deref(), Some("office"));
+    assert_eq!(error.kind, ErrorKind::Authentication);
     let diagnostics = format!(
         "{error:?} {:?} {:?}",
         configured.snapshot(),
@@ -1306,7 +1792,7 @@ async fn incomplete_streams_and_server_failures_do_not_replay_generation() {
         let error = events(configured.chat("office-chat").unwrap(), request(&config))
             .await
             .unwrap_err();
-        assert_ne!(error.dispatch, DispatchState::NotSent);
+        assert_ne!(error.exchange.dispatch, DispatchState::NotSent);
         assert_eq!(wire.requests.lock().unwrap().len(), 1);
         task.abort();
     }
@@ -1507,10 +1993,9 @@ fn missing_credentials_and_unsupported_modes_fail_during_binding_or_validation()
         .as_mut()
         .unwrap()
         .top_k = Some(3);
-    assert_eq!(
-        config.validate(&protocols()).err().unwrap().code,
-        ProviderCode::UnsupportedCapability
-    );
+    let error = config.validate(&protocols()).err().unwrap();
+    assert_eq!(error.code, ProviderCode::UnsupportedCapability);
+    assert!(error.cause.is_some_and(|cause| !cause.is_empty()));
     config
         .backends
         .get_mut("office-chat")

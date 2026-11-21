@@ -4,7 +4,7 @@ use super::*;
 use battersea_model::{
     adapter::payload::check_payload, configuration_digest, engine::EngineContextOverflow,
     ContentBlock, ConversationBinding, ConversationRequest, ConversationToolResult,
-    ConversationTurn, ErrorKind, Modality, StopReason,
+    ConversationTurn, ErrorKind, Modality, StopClass,
 };
 
 #[derive(Serialize, Deserialize)]
@@ -32,13 +32,14 @@ const DATA_FIELDS: &[&str] = &[
     "codeExecutionResult",
 ];
 
-fn invalid(message: &str) -> EngineAdapterRequestError {
-    EngineAdapterRequestError::invalid_response("google", message)
+fn invalid(message: &'static str) -> Failure {
+    Failure::invalid_response("google", message)
 }
 
-fn decode(state: &Value) -> Result<Checkpoint, EngineAdapterRequestError> {
+fn decode(state: &Value) -> Result<Checkpoint, Failure> {
     check_payload(state, "google")?;
-    serde_json::from_value(state.clone()).map_err(|_| invalid("Invalid Gemini checkpoint."))
+    serde_json::from_value(state.clone())
+        .map_err(|cause| invalid("Invalid Gemini checkpoint.").caused_by(&cause))
 }
 
 fn request_revision(request: &ConversationRequest) -> String {
@@ -49,7 +50,7 @@ fn request_revision(request: &ConversationRequest) -> String {
 fn original_len(
     backend: &EngineBackendConfig,
     request: &ConversationRequest,
-) -> Result<usize, EngineAdapterRequestError> {
+) -> Result<usize, Failure> {
     Ok(crate::content::messages("google", &backend.provider, &request.shared.messages)?.len())
 }
 
@@ -66,7 +67,7 @@ fn same_calls<'a>(
 }
 
 /// Durable turns admit text, thought text and function-call parts.
-fn validate_part(part: &Value) -> Result<(), EngineAdapterRequestError> {
+fn validate_part(part: &Value) -> Result<(), Failure> {
     let fields = part
         .as_object()
         .ok_or_else(|| invalid("Malformed Gemini part."))?;
@@ -100,7 +101,7 @@ fn model_calls(
     request: &ConversationRequest,
     content: &Value,
     turn: usize,
-) -> Result<Vec<EngineLocalToolCall>, EngineAdapterRequestError> {
+) -> Result<Vec<EngineLocalToolCall>, Failure> {
     let parts = content["parts"]
         .as_array()
         .filter(|parts| !parts.is_empty() && content["role"] == "model")
@@ -112,7 +113,7 @@ fn model_calls(
         candidates: vec![GeminiCandidate {
             content: Some(
                 serde_json::from_value(content.clone())
-                    .map_err(|_| invalid("Malformed Gemini content."))?,
+                    .map_err(|cause| invalid("Malformed Gemini content.").caused_by(&cause))?,
             ),
             finish_reason: None,
         }],
@@ -138,7 +139,7 @@ fn call_parts(content: &Value) -> Vec<&Value> {
 fn function_responses(
     content: &Value,
     results: &[ConversationToolResult],
-) -> Result<Value, EngineAdapterRequestError> {
+) -> Result<Value, Failure> {
     let parts = call_parts(content)
         .into_iter()
         .zip(results)
@@ -153,7 +154,7 @@ fn function_responses(
             }
             Ok(json!({"functionResponse": function_response}))
         })
-        .collect::<Result<Vec<_>, EngineAdapterRequestError>>()?;
+        .collect::<Result<Vec<_>, Failure>>()?;
     Ok(json!({"role": "user", "parts": parts}))
 }
 
@@ -162,10 +163,10 @@ impl GoogleEngineAdapter {
         &self,
         request: &ConversationRequest,
         state: Option<&Value>,
-    ) -> Result<ConversationBinding, EngineAdapterRequestError> {
+    ) -> Result<ConversationBinding, Failure> {
         super::super::validate_chat_request(&self.backend, &request.to_request())?;
         if request.shared.chat.context_overflow != EngineContextOverflow::Error {
-            return Err(EngineAdapterRequestError::new(
+            return Err(Failure::new(
                 "google",
                 "Durable Gemini continuation requires contextOverflow=error.",
                 ErrorKind::InvalidRequest,
@@ -178,7 +179,7 @@ impl GoogleEngineAdapter {
             .as_ref()
             .is_some_and(|modalities| modalities.as_slice() != [Modality::Text])
         {
-            return Err(EngineAdapterRequestError::new(
+            return Err(Failure::new(
                 "google",
                 "Durable Gemini continuation requires text output.",
                 ErrorKind::InvalidRequest,
@@ -246,7 +247,7 @@ impl GoogleEngineAdapter {
         request: &ConversationRequest,
         previous: Option<&Value>,
         results: &[ConversationToolResult],
-    ) -> Result<Vec<Value>, EngineAdapterRequestError> {
+    ) -> Result<Vec<Value>, Failure> {
         let (mut contents, calls, model) = if let Some(state) = previous {
             self.validate_durable_request(request, Some(state))?;
             let checkpoint = decode(state)?;
@@ -286,7 +287,7 @@ impl GoogleEngineAdapter {
         previous: Option<&Value>,
         results: &[ConversationToolResult],
         turn: &ConversationTurn,
-    ) -> Result<ConversationBinding, EngineAdapterRequestError> {
+    ) -> Result<ConversationBinding, Failure> {
         check_payload(turn, "google")?;
         let binding = self.validate_durable_request(request, Some(&turn.state))?;
         let checkpoint = decode(&turn.state)?;
@@ -340,7 +341,7 @@ impl GoogleEngineAdapter {
         request: ConversationRequest,
         state: Option<Value>,
         results: Vec<ConversationToolResult>,
-    ) -> Result<ConversationTurn, EngineAdapterRequestError> {
+    ) -> Result<ConversationTurn, Failure> {
         let binding = self.validate_durable_request(&request, state.as_ref())?;
         let contents = self.continuation_contents(&request, state.as_ref(), &results)?;
         let body = build_local_tool_body(&self.backend, &request.to_request(), contents.clone());
@@ -362,15 +363,39 @@ impl GoogleEngineAdapter {
             self.clock.as_ref(),
         )
         .await?;
+        let mut identifiers = crate::retry::Identifiers::of(&response);
         let status = response.status().as_u16();
-        let native: Value = response
-            .bounded_json()
-            .await
-            .map_err(|error| invalid(&error.to_string()))?;
+        let native: Value = match response.bounded_json().await {
+            Ok(native) => native,
+            Err(failure) => return Err(identifiers.stamp(failure)),
+        };
+        identifiers.name(native.get("responseId"));
+        let turn = self
+            .completed_turn(&request, binding, contents, native, status)
+            .await;
+        match turn {
+            Ok(mut turn) => {
+                identifiers.announce(&mut turn.events);
+                Ok(turn)
+            }
+            Err(failure) => Err(identifiers.stamp(failure)),
+        }
+    }
+
+    async fn completed_turn(
+        &self,
+        request: &ConversationRequest,
+        binding: ConversationBinding,
+        contents: Vec<Value>,
+        native: Value,
+        status: u16,
+    ) -> Result<ConversationTurn, Failure> {
         // The completed native response determines durable events and calls.
-        let events = response_events(&request, &native, false)?;
-        let index = (contents.len() - original_len(&self.backend, &request)?) / 2;
-        let calls = model_calls(&request, &native["candidates"][0]["content"], index)?;
+        let about = |failure| crate::http_payload::about(failure, &native);
+        let events = response_events(request, &native, false).map_err(about)?;
+        let index = (contents.len() - original_len(&self.backend, request)?) / 2;
+        let calls =
+            model_calls(request, &native["candidates"][0]["content"], index).map_err(about)?;
         emit_response(
             self.logger.as_ref(),
             &self.context,
@@ -400,7 +425,7 @@ impl GoogleEngineAdapter {
         let checkpoint = Checkpoint {
             version: CHECKPOINT_VERSION,
             binding,
-            request_revision: request_revision(&request),
+            request_revision: request_revision(request),
             contents,
             response: native,
         };
@@ -419,11 +444,16 @@ fn response_events(
     request: &ConversationRequest,
     response: &Value,
     structured: bool,
-) -> Result<Vec<EngineTextStreamEvent>, EngineAdapterRequestError> {
+) -> Result<Vec<EngineTextStreamEvent>, Failure> {
     let parsed: GeminiGenerateContentResponse = serde_json::from_value(response.clone())
-        .map_err(|_| invalid("Invalid native Gemini response."))?;
+        .map_err(|cause| invalid("Invalid native Gemini response.").caused_by(&cause))?;
     if !response["promptFeedback"]["blockReason"].is_null() {
-        return Err(invalid("Gemini blocked the request."));
+        return Err(battersea_model::terminal_failure(
+            "google",
+            StopClass::Refusal,
+            response.clone(),
+            String::new(),
+        ));
     }
     let [candidate] = response["candidates"]
         .as_array()
@@ -432,8 +462,25 @@ fn response_events(
     else {
         return Err(invalid("Gemini turn requires exactly one candidate."));
     };
-    if candidate["finishReason"] != "STOP" {
-        return Err(invalid("Gemini turn is not successfully completed."));
+    // A turn that finished for another reason is refused or incomplete; the response and the
+    // text it holds travel with the failure.
+    match candidate["finishReason"].as_str() {
+        Some("STOP") => {}
+        Some(reason) => {
+            return Err(battersea_model::terminal_failure(
+                "google",
+                finish_class(reason),
+                response.clone(),
+                candidate["content"]["parts"]
+                    .as_array()
+                    .into_iter()
+                    .flatten()
+                    .filter(|part| part["thought"] != true)
+                    .filter_map(|part| part["text"].as_str())
+                    .collect(),
+            ))
+        }
+        None => return Err(invalid("Gemini turn is not successfully completed.")),
     }
     // Only whether the turn calls tools matters here, not the calls' correlation IDs.
     let calls = model_calls(request, &candidate["content"], 0)?;
@@ -489,11 +536,12 @@ fn response_events(
         }
     }
     events.push(EngineTextStreamEvent::MessageStop {
-        reason: if calls.is_empty() {
-            StopReason::Complete
+        class: if calls.is_empty() {
+            StopClass::Complete
         } else {
-            StopReason::ToolUse
+            StopClass::ToolUse
         },
+        native: serde_json::Value::Null,
     });
     Ok(events)
 }

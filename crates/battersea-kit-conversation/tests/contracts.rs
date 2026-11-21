@@ -658,7 +658,7 @@ impl EngineLocalToolExecutor for Echo {
     async fn call(
         &self,
         call: EngineLocalToolCall,
-    ) -> Result<EngineLocalToolResult, battersea_model::EngineAdapterRequestError> {
+    ) -> Result<EngineLocalToolResult, battersea_model::Failure> {
         Ok(EngineLocalToolResult::json(call.arguments))
     }
 }
@@ -688,8 +688,8 @@ impl EngineLocalToolExecutor for Failing {
     async fn call(
         &self,
         _call: EngineLocalToolCall,
-    ) -> Result<EngineLocalToolResult, battersea_model::EngineAdapterRequestError> {
-        let error = battersea_model::EngineAdapterRequestError::new(
+    ) -> Result<EngineLocalToolResult, battersea_model::Failure> {
+        let error = battersea_model::Failure::new(
             "test",
             "the tool timed out",
             battersea_model::ErrorKind::Timeout,

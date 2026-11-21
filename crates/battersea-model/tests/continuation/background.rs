@@ -22,19 +22,16 @@ impl EngineAdapter for Remote {
         &self,
         request: &ConversationRequest,
         state: Option<&Value>,
-    ) -> Result<ConversationBinding, EngineAdapterRequestError> {
+    ) -> Result<ConversationBinding, Failure> {
         self.provider.validate_conversation(request, state)
     }
     async fn count_text_stream_input_tokens(
         &self,
         _: EngineTextStreamRequest,
-    ) -> Result<u64, EngineAdapterRequestError> {
+    ) -> Result<u64, Failure> {
         Ok(0)
     }
-    async fn stream_text(
-        &self,
-        _: EngineTextStreamRequest,
-    ) -> Result<EngineTextStream, EngineAdapterRequestError> {
+    async fn stream_text(&self, _: EngineTextStreamRequest) -> Result<EngineTextStream, Failure> {
         unreachable!()
     }
     fn validate_conversation_step(
@@ -44,9 +41,8 @@ impl EngineAdapter for Remote {
         results: &[ConversationToolResult],
         command: &ConversationCommand,
         step: &ConversationStep,
-    ) -> Result<ConversationBinding, EngineAdapterRequestError> {
-        let invalid =
-            || EngineAdapterRequestError::invalid_response("fixture", "Invalid remote evidence");
+    ) -> Result<ConversationBinding, Failure> {
+        let invalid = || Failure::invalid_response("fixture", "Invalid remote evidence");
         let validate = |state: &Value| {
             if state["version"] != 1
                 || !state["id"].is_u64()
@@ -92,7 +88,7 @@ impl EngineAdapter for Remote {
         previous: Option<Value>,
         results: Vec<ConversationToolResult>,
         command: ConversationCommand,
-    ) -> Result<ConversationStep, EngineAdapterRequestError> {
+    ) -> Result<ConversationStep, Failure> {
         Ok(match command {
             ConversationCommand::Start => {
                 let id = self.creates.fetch_add(1, Ordering::SeqCst) + 1;
@@ -311,22 +307,33 @@ async fn expired_remote_work_can_be_cancelled_but_cannot_be_polled() {
     assert_eq!(provider.cancels.load(Ordering::SeqCst), 1);
 }
 
+/// contracts/providers.md: the shared checkpoint has one version and other versions are refused.
 #[tokio::test]
-async fn version_one_records_remain_unchanged_on_inspection_and_keep_their_version_on_resume() {
-    let store = Arc::new(Store::default());
-    let provider = Arc::new(Provider::default());
-    let scope = scope();
-    let d = create(store.clone(), provider.clone(), scope.clone()).await;
-    let mut value = serde_json::to_value(d.inspect().await.unwrap()).unwrap();
-    value["version"] = json!(1);
-    value.as_object_mut().unwrap().remove("checksum");
-    value["checksum"] = json!(configuration_digest(&value));
-    let bytes = serde_json::to_vec(&value).unwrap();
-    *store.bytes.lock().unwrap() = Some(bytes.clone());
-    let d = open(store.clone(), provider, scope).await;
-    assert_eq!(d.inspect().await.unwrap().version, 1);
-    assert_eq!(*store.bytes.lock().unwrap(), Some(bytes));
-    assert_eq!(d.resume(1).await.unwrap().version, 1);
+async fn a_record_of_another_version_is_refused_and_left_unchanged() {
+    for version in [1, 2, CONVERSATION_CHECKPOINT_VERSION + 1] {
+        let store = Arc::new(Store::default());
+        let provider = Arc::new(Provider::default());
+        let scope = scope();
+        let d = create(store.clone(), provider.clone(), scope.clone()).await;
+        let mut value = serde_json::to_value(d.inspect().await.unwrap()).unwrap();
+        value["version"] = json!(version);
+        value.as_object_mut().unwrap().remove("checksum");
+        value["checksum"] = json!(configuration_digest(&value));
+        let bytes = serde_json::to_vec(&value).unwrap();
+        *store.bytes.lock().unwrap() = Some(bytes.clone());
+        let refused = DurableConversation::open(
+            store.clone(),
+            provider,
+            scope,
+            request(),
+            65536,
+            Duration::from_secs(1),
+            clock(),
+        )
+        .await;
+        assert!(refused.is_err(), "version {version}");
+        assert_eq!(*store.bytes.lock().unwrap(), Some(bytes));
+    }
 }
 
 #[tokio::test]
@@ -454,7 +461,7 @@ async fn cancellation_conflicts_report_dispatch_certainty_at_the_publication_bou
         let error = d.cancel(3).await.unwrap_err();
         assert_eq!(error.tool_code, Some(ToolCode::ToolContinuationConflict));
         assert_eq!(
-            error.dispatch,
+            error.exchange.dispatch,
             if revision == 4 {
                 DispatchState::NotSent
             } else {

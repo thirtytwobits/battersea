@@ -1,7 +1,7 @@
 //! Protocol implementations and immutable configured service identities.
 mod redaction;
 
-use crate::{ChatProvider, EngineAdapterRequestError, ErrorKind, MediaProvider};
+use crate::{ChatProvider, ErrorKind, Failure, MediaProvider};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use sha2::{Digest, Sha256};
@@ -26,7 +26,8 @@ pub enum ProviderCode {
     UpgradeRequired,
 }
 
-/// A configuration refusal. Paths and identities identify the failing declaration; values are omitted.
+/// A configuration refusal. Paths and identities identify the failing declaration; `cause` is the
+/// refused check's explanation.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, thiserror::Error)]
 #[error("{code:?} at {path}")]
 pub struct ProviderConfigurationError {
@@ -34,6 +35,8 @@ pub struct ProviderConfigurationError {
     pub path: String,
     pub provider: Option<String>,
     pub adapter: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub cause: Option<String>,
 }
 impl ProviderConfigurationError {
     pub fn new(code: ProviderCode, path: impl Into<String>) -> Self {
@@ -42,7 +45,13 @@ impl ProviderConfigurationError {
             path: path.into(),
             provider: None,
             adapter: None,
+            cause: None,
         }
+    }
+    /// Records the lower error that refused the declaration.
+    pub fn caused_by(mut self, cause: &dyn std::fmt::Display) -> Self {
+        self.cause = Some(cause.to_string());
+        self
     }
     pub fn at_binding(mut self, provider: &str, adapter: &str) -> Self {
         self.provider = Some(provider.into());
@@ -206,7 +215,8 @@ impl ProviderConnection {
         // Empty connections are useful for local adapters; the adapter descriptor admits them.
         let mut result = self.clone();
         if !self.base_url.is_empty() {
-            let mut url = url::Url::parse(&self.base_url).map_err(|_| bad_url())?;
+            let mut url =
+                url::Url::parse(&self.base_url).map_err(|cause| bad_url().caused_by(&cause))?;
             if !matches!(url.scheme(), "http" | "https")
                 || url.host_str().is_none()
                 || !url.username().is_empty()
@@ -226,7 +236,7 @@ impl ProviderConnection {
             Authentication::Bearer { .. } => Some("authorization".to_owned()),
             Authentication::Header { header, .. } => {
                 let name = http::header::HeaderName::from_bytes(header.as_bytes())
-                    .map_err(|_| bad_auth())?;
+                    .map_err(|cause| bad_auth().caused_by(&cause))?;
                 if matches!(
                     name.as_str(),
                     "host" | "content-length" | "content-type" | "transfer-encoding" | "connection"
@@ -258,9 +268,10 @@ impl ProviderConnection {
         }
         result.headers.clear();
         for (key, value) in &self.headers {
-            let name =
-                http::header::HeaderName::from_bytes(key.as_bytes()).map_err(|_| bad_auth())?;
-            http::header::HeaderValue::from_str(value).map_err(|_| bad_auth())?;
+            let name = http::header::HeaderName::from_bytes(key.as_bytes())
+                .map_err(|cause| bad_auth().caused_by(&cause))?;
+            http::header::HeaderValue::from_str(value)
+                .map_err(|cause| bad_auth().caused_by(&cause))?;
             if matches!(
                 name.as_str(),
                 "authorization"
@@ -283,7 +294,7 @@ impl ProviderConnection {
             }
         }
         for origin in &mut result.delivery_origins {
-            let parsed = url::Url::parse(origin).map_err(|_| bad_url())?;
+            let parsed = url::Url::parse(origin).map_err(|cause| bad_url().caused_by(&cause))?;
             if parsed.scheme() != "https"
                 || !parsed.username().is_empty()
                 || parsed.password().is_some()
@@ -314,7 +325,8 @@ impl ProviderConnection {
             }
             Authentication::Bearer { .. } | Authentication::Header { .. } => {
                 let value = credential.ok_or_else(invalid)?;
-                http::header::HeaderValue::from_str(value.expose()).map_err(|_| invalid())?;
+                http::header::HeaderValue::from_str(value.expose())
+                    .map_err(|_credential| invalid())?;
             }
             Authentication::Query { .. } => {
                 credential.ok_or_else(invalid)?;
@@ -323,9 +335,9 @@ impl ProviderConnection {
         Ok(())
     }
     /// Append a protocol-owned relative route, preserving the configured path prefix.
-    pub fn route(&self, path: &str) -> Result<url::Url, EngineAdapterRequestError> {
+    pub fn route(&self, path: &str) -> Result<url::Url, Failure> {
         let invalid = || {
-            EngineAdapterRequestError::new(
+            Failure::new(
                 "configuration",
                 "Invalid relative protocol route.",
                 ErrorKind::InvalidRequest,
@@ -337,8 +349,10 @@ impl ProviderConnection {
         {
             return Err(invalid());
         }
-        let base = url::Url::parse(&self.base_url).map_err(|_| invalid())?;
-        let url = base.join(path).map_err(|_| invalid())?;
+        let base = url::Url::parse(&self.base_url).map_err(|cause| invalid().caused_by(&cause))?;
+        let url = base
+            .join(path)
+            .map_err(|cause| invalid().caused_by(&cause))?;
         if url.origin() != base.origin()
             || !url.path().starts_with(base.path())
             || url.fragment().is_some()
@@ -383,25 +397,13 @@ impl ProviderBinding {
         self.revision =
             configuration_digest(&serde_json::to_value(&self).expect("serialisable binding"));
     }
-    pub fn error(
-        &self,
-        mut error: EngineAdapterRequestError,
-        secret: Option<&str>,
-    ) -> EngineAdapterRequestError {
-        error.provider = self.provider.clone().into_boxed_str();
+    /// Names this binding's provider as the failure's origin and masks `secret` in every
+    /// part of the failure.
+    pub fn error(&self, mut error: Failure, secret: Option<&str>) -> Failure {
+        error.origin.provider = Some(self.provider.clone());
         if let Some(secret) = secret.filter(|s| !s.is_empty()) {
-            error.message = SecretString::from(secret)
-                .redact(&error.message)
-                .into_boxed_str();
-            error.request_id = error
-                .request_id
-                .map(|id| SecretString::from(secret).redact(&id).into_boxed_str());
-            if let Some(evidence) = &mut error.tool_call {
-                evidence.request_id = evidence
-                    .request_id
-                    .take()
-                    .map(|id| SecretString::from(secret).redact(&id));
-            }
+            let secret = SecretString::from(secret);
+            error.visit_text(&mut |text| *text = secret.redact(text));
         }
         error
     }
@@ -474,8 +476,9 @@ impl ProtocolRegistry {
                 "adapter",
             ));
         }
-        jsonschema::validator_for(&adapter.options_schema).map_err(|_| {
+        jsonschema::validator_for(&adapter.options_schema).map_err(|cause| {
             ProviderConfigurationError::new(ProviderCode::InvalidOptions, "adapter.optionsSchema")
+                .caused_by(&cause)
         })?;
         self.adapters.insert(adapter.id.clone(), Arc::new(adapter));
         Ok(())
@@ -553,18 +556,19 @@ mod tests {
             connection: connection("https://service.example/v1/"),
         };
         for request_id in ["special+ /token", "special%2B+%2Ftoken"] {
-            let error = EngineAdapterRequestError::transport("remote", "tool failed")
-                .with_tool_call(crate::ToolCallEvidence {
+            let error = Failure::transport("remote", "tool failed").with_tool_call(
+                crate::ToolCallEvidence {
                     call_id: "call".into(),
                     tool_name: "lookup".into(),
                     outcome: crate::ToolCallOutcome::Uncertain,
                     request_id: Some(format!("request-{request_id}")),
-                });
+                },
+            );
             let error = binding.error(error, Some("special+ /token"));
             let wire = serde_json::to_value(&error).unwrap();
             assert_eq!(wire["tool_call"]["request_id"], "request-[REDACTED]");
             assert!(!format!("{error:?}").contains(request_id));
-            let evidence = error.tool_call.unwrap();
+            let evidence = error.tool_call.clone().unwrap();
             assert_eq!(evidence.call_id, "call");
             assert_eq!(evidence.tool_name, "lookup");
             assert_eq!(evidence.outcome, crate::ToolCallOutcome::Uncertain);

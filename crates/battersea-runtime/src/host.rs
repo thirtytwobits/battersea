@@ -68,6 +68,22 @@ pub trait ExecutionHost: Sized + Send + Sync {
         self.execution_event(runtime, event).await;
     }
     fn observe_token(&self, _runtime: &Self::State, _node: &str, _port: &str, _token: &Token) {}
+    /// What the flow receives of a failure: the `node_failure` token, the checkpoint and the
+    /// execution records hold the failure as this disclosure leaves it.
+    fn failure_disclosure(&self) -> FailureDisclosure {
+        FailureDisclosure::Full
+    }
+    /// Receives every node failure, complete, before the node's failure policy applies. `id`
+    /// is the `node_failure` identity. An error fails the activation.
+    async fn observe_failure(
+        &self,
+        _runtime: &Self::State,
+        _id: &str,
+        _node_id: &str,
+        _failure: &Failure,
+    ) -> Result<(), Self::Error> {
+        Ok(())
+    }
     async fn resolve_parameter_write(
         &self,
         runtime: &Self::State,
@@ -275,7 +291,10 @@ pub trait ExecutionHost: Sized + Send + Sync {
             .collect::<Vec<_>>();
         let source_ids =
             order_source_phase_materialization(runtime, source_ids).map_err(|message| {
-                Self::Error::invalid_request(error_codes::INVALID_EXECUTION_CONTRACT, message)
+                Self::Error::invalid_request(
+                    error_codes::INVALID_EXECUTION_CONTRACT,
+                    crate::failure::wrapping("Source materialisation cannot be ordered.", message),
+                )
             })?;
 
         for node_id in source_ids {
@@ -351,14 +370,15 @@ pub trait ExecutionHost: Sized + Send + Sync {
             let node = runtime.nodes_by_id.get(node_id).cloned().ok_or_else(|| {
                 Self::Error::invalid_request(
                     error_codes::UNKNOWN_NODE,
-                    format!("Unknown flow node \"{node_id}\"."),
+                    crate::Failure::from("Unknown flow node.").with_context("node", node_id),
                 )
             })?;
             let definition = node_definition(&runtime.definitions, &node)
                 .ok_or_else(|| {
                     Self::Error::invalid_request(
                         error_codes::UNKNOWN_DEFINITION,
-                        format!("Unknown flow node definition \"{}\".", node.definition_name),
+                        crate::Failure::from("Unknown flow node definition.")
+                            .with_context("definition", node.definition_name.as_str()),
                     )
                 })?
                 .clone();
@@ -403,7 +423,7 @@ pub trait ExecutionHost: Sized + Send + Sync {
             runtime.started_nodes.insert(node.id.clone());
             let phase = if definition.kind == FlowNodeClass::Source
                 && !expanded_output_ports_for_node(&runtime.definitions, &node)
-                    .map_err(Self::Error::internal)?
+                    .map_err(crate::failure::unexpandable_ports::<Self::Error>)?
                     .iter()
                     .any(|p| p.phase == FlowPortPhase::Execution)
             {
@@ -465,7 +485,9 @@ pub trait ExecutionHost: Sized + Send + Sync {
             .ok_or_else(|| {
                 Self::Error::invalid_request(
                     error_codes::MISSING_INPUT_VALUE,
-                    format!("No final value on {node_id:?}.{port_name}."),
+                    crate::Failure::from("Input holds no final value.")
+                        .with_context("node", node_id)
+                        .with_context("port", port_name),
                 )
             })?;
         runtime.consumed_tokens += 1;
@@ -519,7 +541,7 @@ pub trait ExecutionHost: Sized + Send + Sync {
         node: &FlowNode,
     ) -> Result<bool, Self::Error> {
         Ok(expanded_input_ports_for_node(&runtime.definitions, node)
-            .map_err(Self::Error::internal)?
+            .map_err(crate::failure::unexpandable_ports::<Self::Error>)?
             .iter()
             .any(|port| {
                 let key = (node.id.clone(), port.name.clone());
@@ -555,7 +577,7 @@ pub trait ExecutionHost: Sized + Send + Sync {
             ));
         }
         let port = expanded_output_ports_for_node(&runtime.definitions, source)
-            .map_err(Self::Error::internal)?
+            .map_err(crate::failure::unexpandable_ports::<Self::Error>)?
             .into_iter()
             .find(|p| p.name == source_port)
             .ok_or_else(|| {
@@ -568,7 +590,12 @@ pub trait ExecutionHost: Sized + Send + Sync {
         if runtime.closed_outputs.contains(&key)
             || (port.mode == FlowPortMode::FinalValue && runtime.final_outputs.contains(&key))
         {
-            return Err(Self::Error::invalid_request(error_codes::CLOSED_OUTPUT, format!("Output {source_node_id:?}.{source_port} is closed or has already published its final value.")));
+            return Err(Self::Error::invalid_request(
+                error_codes::CLOSED_OUTPUT,
+                crate::Failure::from("Output is closed or has already published its final value.")
+                    .with_context("node", source_node_id)
+                    .with_context("port", source_port),
+            ));
         }
         if runtime
             .node_phases
@@ -577,18 +604,18 @@ pub trait ExecutionHost: Sized + Send + Sync {
         {
             return Err(Self::Error::invalid_request(
                 error_codes::MISMATCHED_OUTPUT_PHASE,
-                format!(
-                    "Output {source_node_id:?}.{source_port} belongs to a different node phase."
-                ),
+                crate::Failure::from("Output belongs to a different node phase.")
+                    .with_context("node", source_node_id)
+                    .with_context("port", source_port),
             ));
         }
         if port.token_type != "auto" && !port_accepts_token_type(&port, &value.token_type) {
             return Err(Self::Error::invalid_request(
                 error_codes::INCOMPATIBLE_TOKEN_TYPE,
-                format!(
-                    "Output {source_node_id:?}.{source_port} cannot emit token type {:?}.",
-                    value.token_type
-                ),
+                crate::Failure::from("Output cannot emit the token type.")
+                    .with_context("node", source_node_id)
+                    .with_context("port", source_port)
+                    .with_context("tokenType", value.token_type.as_str()),
             ));
         }
         let edges = runtime
@@ -614,7 +641,10 @@ pub trait ExecutionHost: Sized + Send + Sync {
                 })?;
             let automation = expanded_automation_ports_for_node(&runtime.definitions, target)
                 .map_err(|message| {
-                    Self::Error::invalid_request(error_codes::UNKNOWN_DEFINITION, message)
+                    Self::Error::invalid_request(
+                        error_codes::UNKNOWN_DEFINITION,
+                        crate::failure::wrapping("Node ports cannot be expanded.", message),
+                    )
                 })?
                 .into_iter()
                 .find(|p| p.name == edge.target_port);
@@ -624,13 +654,17 @@ pub trait ExecutionHost: Sized + Send + Sync {
                 {
                     return Err(Self::Error::invalid_request(
                         error_codes::INCOMPATIBLE_EDGE_TARGET,
-                        format!("Incompatible automation destination on edge {:?}.", edge.id),
+                        crate::Failure::from("Incompatible automation destination.")
+                            .with_context("edge", edge.id.as_str()),
                     ));
                 }
             } else {
                 let target_port = expanded_input_ports_for_node(&runtime.definitions, target)
                     .map_err(|message| {
-                        Self::Error::invalid_request(error_codes::INVALID_DYNAMIC_PORTS, message)
+                        Self::Error::invalid_request(
+                            error_codes::INVALID_DYNAMIC_PORTS,
+                            crate::failure::wrapping("Node ports cannot be expanded.", message),
+                        )
                     })?
                     .into_iter()
                     .find(|p| p.name == edge.target_port)
@@ -645,7 +679,8 @@ pub trait ExecutionHost: Sized + Send + Sync {
                 {
                     return Err(Self::Error::invalid_request(
                         error_codes::INCOMPATIBLE_EDGE_TARGET,
-                        format!("Incompatible token destination on edge {:?}.", edge.id),
+                        crate::Failure::from("Incompatible token destination.")
+                            .with_context("edge", edge.id.as_str()),
                     ));
                 }
             }
@@ -656,7 +691,9 @@ pub trait ExecutionHost: Sized + Send + Sync {
             {
                 return Err(Self::Error::invalid_request(
                     error_codes::PAYLOAD_TOO_LARGE,
-                    format!("Oversize token on edge {:?}: {bytes} bytes.", edge.id),
+                    crate::Failure::from("Token exceeds the edge's event limit.")
+                        .with_context("edge", edge.id.as_str())
+                        .with_context("bytes", bytes),
                 ));
             }
         }
@@ -711,7 +748,7 @@ pub trait ExecutionHost: Sized + Send + Sync {
                                     &(old.value.as_ref(), &old.cause),
                                     usize::MAX,
                                 )
-                                .map_err(|e| Self::Error::internal(e.to_string()))?;
+                                .map_err(|e| Self::Error::internal(e.failure()))?;
                                 let sequence = old.sequence;
                                 drop(old);
                                 self.publish_execution_record(runtime, source_node_id, EventKind::TokenDrop, "Discarded oldest streaming delivery.".into(), Some(json!({"edgeId":edge.id,"sourcePort":source_port,"tokenType":value.token_type,"sequence":sequence,"encodedBytes":discarded_bytes}))).await;
@@ -733,7 +770,9 @@ pub trait ExecutionHost: Sized + Send + Sync {
                 {
                     return Err(Self::Error::invalid_request(
                         error_codes::CAPACITY_DEADLOCK,
-                        format!("Capacity deadlock at {source_node_id:?}.{source_port}, {reason}"),
+                        crate::failure::wrapping("Capacity deadlock publishing an output.", reason)
+                            .with_context("node", source_node_id)
+                            .with_context("port", source_port),
                     ));
                 }
             } else {
@@ -821,10 +860,9 @@ pub trait ExecutionHost: Sized + Send + Sync {
             if !Self::definition_is_output_capable(&definition) {
                 Err(Self::Error::invalid_request(
                     error_codes::UNSUPPORTED_ACTION_PORT,
-                    format!(
-                        "Flow node \"{}\" does not support action port \"{}\".",
-                        node.id, FLOW_ACTION_DISABLE
-                    ),
+                    crate::Failure::from("Flow node does not support the action port.")
+                        .with_context("node", node.id.as_str())
+                        .with_context("port", FLOW_ACTION_DISABLE),
                 ))
             } else {
                 runtime.disabled_output_nodes.insert(node.id.clone());
@@ -882,7 +920,7 @@ pub trait ExecutionHost: Sized + Send + Sync {
                     continue;
                 }
                 let ports = expanded_input_ports_for_node(&runtime.definitions, node)
-                    .map_err(Self::Error::internal)?;
+                    .map_err(crate::failure::unexpandable_ports::<Self::Error>)?;
                 let missing = self
                     .connected_input_ports(runtime, &node.id)
                     .into_iter()
@@ -911,7 +949,7 @@ pub trait ExecutionHost: Sized + Send + Sync {
                 runtime.executed_nodes.insert(node.id.clone());
                 self.discard_queued_input_tokens_for_node(runtime, &node.id);
                 for port in expanded_output_ports_for_node(&runtime.definitions, &node)
-                    .map_err(Self::Error::internal)?
+                    .map_err(crate::failure::unexpandable_ports::<Self::Error>)?
                 {
                     if port.phase == FlowPortPhase::Execution {
                         self.close_flow_output(runtime, &node.id, &port.name)
@@ -944,7 +982,8 @@ pub trait ExecutionHost: Sized + Send + Sync {
             if !blocked.is_empty() {
                 return Err(Self::Error::invalid_request(
                     error_codes::UNSATISFIED_INPUTS,
-                    format!("Flow cannot complete: unsatisfied inputs on nodes {blocked:?}."),
+                    crate::Failure::from("Flow cannot complete with unsatisfied inputs.")
+                        .with_context("nodes", blocked),
                 ));
             }
             break;
@@ -971,7 +1010,7 @@ pub trait ExecutionHost: Sized + Send + Sync {
     ) -> Result<(), Self::Error> {
         let emitted = emitted_ports.iter().collect::<HashSet<_>>();
         let signal_ports = expanded_signal_ports_for_node(&runtime.definitions, node)
-            .map_err(Self::Error::internal)?;
+            .map_err(crate::failure::unexpandable_ports::<Self::Error>)?;
         for port in signal_ports {
             if emitted.contains(&port.name) {
                 continue;
@@ -1020,7 +1059,7 @@ pub trait ExecutionHost: Sized + Send + Sync {
         node: &FlowNode,
     ) -> Result<bool, Self::Error> {
         let action_ports = expanded_action_ports_for_node(&runtime.definitions, node)
-            .map_err(Self::Error::internal)?;
+            .map_err(crate::failure::unexpandable_ports::<Self::Error>)?;
         let mut has_participating_input = false;
         for action_port in action_ports {
             let incoming_edge = runtime
@@ -1061,7 +1100,7 @@ pub trait ExecutionHost: Sized + Send + Sync {
                 .ok_or_else(|| Self::Error::internal("Flow runtime lost a logic definition."))?
                 .clone();
             let action_ports = expanded_action_ports_for_node(&runtime.definitions, node)
-                .map_err(Self::Error::internal)?;
+                .map_err(crate::failure::unexpandable_ports::<Self::Error>)?;
             let fired_ports = action_ports
                 .iter()
                 .filter(|port| {
@@ -1072,7 +1111,7 @@ pub trait ExecutionHost: Sized + Send + Sync {
                 .map(|port| port.name.clone())
                 .collect::<HashSet<_>>();
             let signal_ports = expanded_signal_ports_for_node(&runtime.definitions, node)
-                .map_err(Self::Error::internal)?;
+                .map_err(crate::failure::unexpandable_ports::<Self::Error>)?;
             let enabled = if runtime
                 .incoming_signal_edges
                 .get(&(node.id.clone(), "enable".to_string()))
@@ -1145,7 +1184,7 @@ pub trait ExecutionHost: Sized + Send + Sync {
     fn request_activation_cancel(
         &self,
         runtime: &mut Self::State,
-        message: &str,
+        message: &'static str,
     ) -> Result<(), Self::Error> {
         runtime.cancellation_requested = true;
         runtime.activation_token.cancel();
@@ -1168,7 +1207,7 @@ pub trait ExecutionHost: Sized + Send + Sync {
             ));
         }
         if !expanded_signal_ports_for_node(&runtime.definitions, node)
-            .map_err(Self::Error::internal)?
+            .map_err(crate::failure::unexpandable_ports::<Self::Error>)?
             .iter()
             .any(|p| p.name == signal_port)
         {
@@ -1193,10 +1232,12 @@ pub trait ExecutionHost: Sized + Send + Sync {
                         if !self.progress_delivery(runtime, &token).await? {
                             return Err(Self::Error::invalid_request(
                                 error_codes::CAPACITY_DEADLOCK,
-                                format!(
-                                    "Capacity deadlock on signal {}.{signal_port}: {reason}",
-                                    node.id
-                                ),
+                                crate::failure::wrapping(
+                                    "Capacity deadlock publishing a signal.",
+                                    reason,
+                                )
+                                .with_context("node", node.id.as_str())
+                                .with_context("port", signal_port),
                             ));
                         }
                     }
@@ -1265,7 +1306,8 @@ pub trait ExecutionHost: Sized + Send + Sync {
         if runtime.producers.contains_key(node_id) {
             return Err(Self::Error::invalid_request(
                 error_codes::DUPLICATE_PROVIDER,
-                format!("Node {node_id:?} already has an active provider."),
+                crate::Failure::from("Node already has an active provider.")
+                    .with_context("node", node_id),
             ));
         }
         let phase = *runtime
@@ -1287,7 +1329,11 @@ pub trait ExecutionHost: Sized + Send + Sync {
                     {
                         return Err(Self::Error::invalid_request(
                             error_codes::CAPACITY_DEADLOCK,
-                            format!("Capacity deadlock starting provider on {node_id:?}: {reason}"),
+                            crate::failure::wrapping(
+                                "Capacity deadlock starting a provider.",
+                                reason,
+                            )
+                            .with_context("node", node_id),
                         ));
                     }
                 }
@@ -1342,7 +1388,12 @@ pub trait ExecutionHost: Sized + Send + Sync {
                     if !self.progress_delivery(runtime, &token).await? {
                         return Err(Self::Error::invalid_request(
                             error_codes::CAPACITY_DEADLOCK,
-                            format!("Capacity deadlock closing {node_id:?}.{port}: {reason}"),
+                            crate::failure::wrapping(
+                                "Capacity deadlock closing an output.",
+                                reason,
+                            )
+                            .with_context("node", node_id)
+                            .with_context("port", port),
                         ));
                     }
                 }
@@ -1390,7 +1441,7 @@ pub trait ExecutionHost: Sized + Send + Sync {
             return Ok(());
         }
         for port in expanded_output_ports_for_node(&runtime.definitions, node)
-            .map_err(Self::Error::internal)?
+            .map_err(crate::failure::unexpandable_ports::<Self::Error>)?
         {
             if port.phase == phase {
                 self.close_flow_output(runtime, &node.id, &port.name)
@@ -1423,7 +1474,10 @@ pub trait ExecutionHost: Sized + Send + Sync {
                         if !self.progress_delivery(runtime, &token).await? {
                             return Err(Self::Error::invalid_request(
                                 error_codes::CAPACITY_DEADLOCK,
-                                format!("Capacity deadlock applying controller effects: {reason}"),
+                                crate::failure::wrapping(
+                                    "Capacity deadlock applying controller effects.",
+                                    reason,
+                                ),
                             ));
                         }
                     }
@@ -1442,7 +1496,7 @@ pub trait ExecutionHost: Sized + Send + Sync {
                 });
         }
         let inputs = expanded_input_ports_for_node(&runtime.definitions, node)
-            .map_err(Self::Error::internal)?;
+            .map_err(crate::failure::unexpandable_ports::<Self::Error>)?;
         for port in inputs {
             if port.phase == phase {
                 runtime.input_tokens.remove(&(node.id.clone(), port.name));
@@ -1515,7 +1569,7 @@ pub trait ExecutionHost: Sized + Send + Sync {
             return Ok(());
         }
         let ports = expanded_input_ports_for_node(&runtime.definitions, node)
-            .map_err(Self::Error::internal)?;
+            .map_err(crate::failure::unexpandable_ports::<Self::Error>)?;
         let ready = self
             .connected_input_ports(runtime, &node.id)
             .iter()
@@ -1577,10 +1631,13 @@ pub trait ExecutionHost: Sized + Send + Sync {
                 if runtime.unhandled_node.is_none() {
                     runtime.unhandled_node = Some(delivery.edge.target_node_id.clone());
                     let policy = runtime.nodes_by_id.get(&delivery.edge.target_node_id).map(|node| node.failure_policy).unwrap_or_default();
-                    self.publish_execution_record(runtime, &delivery.edge.target_node_id,
+                    let target = delivery.edge.target_node_id.clone();
+                    let id = crate::failure::observe(self, runtime, &target, error.failure()).await?;
+                    let detail = crate::failure::error_detail(self, error.reason_code().unwrap_or(error.code()), error.failure());
+                    self.publish_execution_record(runtime, &target,
                         EventKind::NodeError, error.message().into(),
                         Some(json!({"policy":policy,"handled":false,"operation":"delivery",
-                            "error":{"code":error.reason_code().unwrap_or(error.code()),"message":error.message()}}))).await;
+                            "failureId":id,"error":detail}))).await;
                 }
                 return Err(error);
             }
@@ -1619,7 +1676,7 @@ pub trait ExecutionHost: Sized + Send + Sync {
                         if runtime.stopped_nodes.contains(&target.id) { return Ok(()); }
                         let key = (target.id.clone(), edge.target_port.clone());
                         if runtime.signal_cause.contains(&key) {
-                            return Err(Self::Error::invalid_request(error_codes::SIGNAL_CYCLE, format!("Signal cycle: {:?} -> {:?} (edge {:?}).", runtime.signal_cause, key, edge.id)));
+                            return Err(Self::Error::invalid_request(error_codes::SIGNAL_CYCLE, crate::Failure::from("Signal cycle.").with_context("path", json!(runtime.signal_cause)).with_context("target", json!(key)).with_context("edge", edge.id.as_str())));
                         }
                         runtime.signal_cause.push(key.clone());
                         runtime.signal_action_latches.insert(key);
@@ -1670,7 +1727,7 @@ pub trait ExecutionHost: Sized + Send + Sync {
             return Ok(());
         }
         if let Some(port) = expanded_automation_ports_for_node(&runtime.definitions, &target)
-            .map_err(Self::Error::internal)?
+            .map_err(crate::failure::unexpandable_ports::<Self::Error>)?
             .into_iter()
             .find(|p| p.name == edge.target_port)
         {
@@ -1687,7 +1744,7 @@ pub trait ExecutionHost: Sized + Send + Sync {
                 .await;
         }
         let port = expanded_input_ports_for_node(&runtime.definitions, &target)
-            .map_err(Self::Error::internal)?
+            .map_err(crate::failure::unexpandable_ports::<Self::Error>)?
             .into_iter()
             .find(|p| p.name == edge.target_port)
             .ok_or_else(|| Self::Error::internal("Missing input port."))?;
@@ -1700,10 +1757,9 @@ pub trait ExecutionHost: Sized + Send + Sync {
         {
             return Err(Self::Error::invalid_request(
                 error_codes::DUPLICATE_FINAL_VALUE,
-                format!(
-                    "Final input {:?}.{} received more than one value.",
-                    target.id, port.name
-                ),
+                crate::Failure::from("Final input received more than one value.")
+                    .with_context("node", target.id.as_str())
+                    .with_context("port", port.name.as_str()),
             ));
         }
         if definition.kind == FlowNodeClass::Sink {
@@ -1829,8 +1885,8 @@ pub trait ExecutionHost: Sized + Send + Sync {
                             crate::failure::handle_error(self, runtime, &node, &definition, "provider_event", error).await?;
                         }
                     }
-                    crate::ProviderEvent::Failure { message } => {
-                        let error = Self::Error::internal(message.clone());
+                    crate::ProviderEvent::Failure { failure } => {
+                        let error = Self::Error::internal(failure.clone());
                         drop(delivery);
                         crate::failure::handle_error(self, runtime, &node, &definition,
                             "provider_event", error).await?;

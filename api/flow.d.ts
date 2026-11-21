@@ -1,4 +1,60 @@
 // contract.d.ts
+export type Cause = {
+    "failure": Failure;
+} | {
+    "foreign": Detail3;
+};
+export type Detail = {
+    "state": "absent";
+} | {
+    "state": "present";
+    "value": unknown;
+} | {
+    "state": "withheld";
+};
+export type Detail2 = {
+    "state": "absent";
+} | {
+    "state": "present";
+    "value": PartialOutput;
+} | {
+    "state": "withheld";
+};
+export type Detail3 = {
+    "state": "absent";
+} | {
+    "state": "present";
+    "value": Array<string>;
+} | {
+    "state": "withheld";
+};
+export type DispatchState = "not_sent" | "rejected" | "accepted" | "unknown";
+export type Exchange = {
+    "attempts": number;
+    "dispatch": DispatchState;
+    "request_id"?: string | null;
+    "response_id"?: string | null;
+    "retry_after_ms"?: number | null;
+    "status"?: number | null;
+};
+export type Failure = FailureParts;
+export type FailureParts = {
+    "cause"?: Cause | null;
+    "cleanup"?: Failure | null;
+    "context"?: {
+        [key: string]: unknown;
+    };
+    "exchange": Exchange;
+    "kind": string;
+    "message": string;
+    "native"?: Detail;
+    "origin": Origin;
+    "partial"?: Detail2;
+    "reporter": Reporter;
+    "tool_call"?: ToolCallEvidence | null;
+    "tool_code"?: ToolCode | null;
+    "watchdog"?: WatchdogFailure | null;
+};
 export type FlowActionPortDefinition = {
     "display_class"?: FlowPortDisplayClass;
     "long_description"?: string;
@@ -124,8 +180,8 @@ export type FlowNodeDefinition = {
 };
 export type FlowNodeFailure = {
     "code": string;
+    "failure": Failure;
     "id": string;
-    "message": string;
     "node_id": string;
     "operation": string;
     "phase": FlowPortPhase;
@@ -274,6 +330,28 @@ export type FlowValidationIssue = {
 export type FlowValidationResult = {
     "issues": Array<FlowValidationIssue>;
     "valid": boolean;
+};
+export type Origin = {
+    "backend"?: string | null;
+    "model"?: string | null;
+    "operation"?: string | null;
+    "provider"?: string | null;
+};
+export type PartialOutput = {
+    "blocks"?: Array<unknown>;
+    "text"?: string;
+};
+export type Reporter = "battersea" | "provider" | "tool";
+export type ToolCallEvidence = {
+    "call_id": string;
+    "outcome": ToolCallOutcome;
+    "request_id"?: string | null;
+    "tool_name": string;
+};
+export type ToolCallOutcome = "not_dispatched" | "completed" | "uncertain";
+export type ToolCode = "invalid_tool_continuation" | "tool_continuation_conflict" | "tool_continuation_storage" | "tool_continuation_unresolved" | "tool_continuation_expired" | "unsupported_tool_continuation" | "tool_approval_conflict" | "tool_approval_storage" | "tool_approval_unresolved" | "invalid_tool_approval" | "tool_approval_denied" | "tool_approval_pending" | "tool_approval_expired" | "tool_approval_capacity" | "invalid_tool_rounds" | "duplicate_tool" | "invalid_tool_schema" | "invalid_tool_definition" | "unoffered_tool_choice" | "malformed_tool_call" | "tool_use_disabled" | "invalid_tool_call_id" | "unoffered_tool" | "tool_outside_choice" | "invalid_tool_arguments" | "invalid_tool_result" | "unsupported_tool_content" | "unregistered_tool" | "tool_transcript_too_large" | "tool_rounds_exceeded";
+export type WatchdogFailure = {
+    "limit_ms": number;
 };
 
 // defaults.d.ts

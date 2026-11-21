@@ -1,7 +1,7 @@
 pub mod battersea_providers
 pub use battersea_providers::<<battersea_model::adapter::*>>
 pub use battersea_providers::<<battersea_model::media::*>>
-pub use battersea_providers::EngineAdapterRequestError
+pub use battersea_providers::Failure
 pub mod battersea_providers::adapter
 pub use battersea_providers::adapter::<<battersea_model::adapter::*>>
 pub mod battersea_providers::media
@@ -50,14 +50,14 @@ pub fn battersea_providers::media::MediaTimingRecorder::vzip(self) -> V
 pub fn battersea_providers::media::accepts_aspect_ratio(&str, &str, &str) -> bool
 pub fn battersea_providers::media::accepts_size(&str, &str, &str) -> bool
 pub fn battersea_providers::media::duration_ms(core::time::Duration) -> u64
-pub fn battersea_providers::media::prepare_media_request(&battersea_model::media::MediaBackendConfig, battersea_model::media::MediaRenderRequest) -> core::result::Result<battersea_model::media::PreparedMediaRequest, battersea_model::adapter::error::EngineAdapterRequestError>
+pub fn battersea_providers::media::prepare_media_request(&battersea_model::media::MediaBackendConfig, battersea_model::media::MediaRenderRequest) -> core::result::Result<battersea_model::media::PreparedMediaRequest, battersea_failure::Failure>
 pub fn battersea_providers::media::resolve_estimated_generation_ms(&battersea_model::media::MediaBackendConfig) -> u64
-pub async fn battersea_providers::media::with_estimated_generation_progress<T>(&battersea_model::media::MediaBackendConfig, usize, core::option::Option<alloc::rcs::arc::Arc<dyn battersea_model::media::MediaGenerationActivityReporter>>, tokio_util::sync::cancellation_token::CancellationToken, &dyn battersea_model::clock::Clock, impl core::future::future::Future<Output = core::result::Result<T, battersea_model::adapter::error::EngineAdapterRequestError>>) -> core::result::Result<T, battersea_model::adapter::error::EngineAdapterRequestError>
+pub async fn battersea_providers::media::with_estimated_generation_progress<T>(&battersea_model::media::MediaBackendConfig, usize, core::option::Option<alloc::rcs::arc::Arc<dyn battersea_model::media::MediaGenerationActivityReporter>>, tokio_util::sync::cancellation_token::CancellationToken, &dyn battersea_model::clock::Clock, impl core::future::future::Future<Output = core::result::Result<T, battersea_failure::Failure>>) -> core::result::Result<T, battersea_failure::Failure>
 pub type battersea_providers::media::MediaRenderTiming = battersea_model::media::MediaProvenanceTiming
 pub mod battersea_providers::registry
 pub fn battersea_providers::registry::builtin_registry() -> &'static battersea_model::registry::ProviderRegistry
-pub fn battersea_providers::registry::register_builtin_providers(&mut battersea_model::registry::ProviderRegistry) -> core::result::Result<(), battersea_model::adapter::error::EngineAdapterRequestError>
+pub fn battersea_providers::registry::register_builtin_providers(&mut battersea_model::registry::ProviderRegistry) -> core::result::Result<(), battersea_failure::Failure>
 pub fn battersea_providers::builtin_registry() -> &'static battersea_model::registry::ProviderRegistry
 pub fn battersea_providers::estimate_mock_token_count(&str) -> u64
 pub fn battersea_providers::register_builtin_adapters(&mut battersea_model::protocol::ProtocolRegistry) -> core::result::Result<(), battersea_model::protocol::ProviderConfigurationError>
-pub fn battersea_providers::register_builtin_providers(&mut battersea_model::registry::ProviderRegistry) -> core::result::Result<(), battersea_model::adapter::error::EngineAdapterRequestError>
+pub fn battersea_providers::register_builtin_providers(&mut battersea_model::registry::ProviderRegistry) -> core::result::Result<(), battersea_failure::Failure>

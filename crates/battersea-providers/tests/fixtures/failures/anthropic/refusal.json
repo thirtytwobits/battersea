@@ -1,0 +1,54 @@
+{
+  "status": 200,
+  "content_type": "text/event-stream",
+  "sse": [
+    {
+      "type": "message_start",
+      "message": {
+        "id": "msg_fixture",
+        "type": "message",
+        "role": "assistant",
+        "content": [],
+        "model": "fixture-model",
+        "usage": {
+          "input_tokens": 4,
+          "output_tokens": 0
+        }
+      }
+    },
+    {
+      "type": "message_delta",
+      "delta": {
+        "stop_reason": "refusal",
+        "stop_sequence": null,
+        "stop_details": {
+          "type": "refusal",
+          "category": "fixture_category",
+          "explanation": "The request falls under a fixture policy."
+        }
+      },
+      "usage": {
+        "output_tokens": 0
+      }
+    },
+    {
+      "type": "message_stop"
+    }
+  ],
+  "kind": "refusal",
+  "payload": {
+    "type": "message_delta",
+    "delta": {
+      "stop_reason": "refusal",
+      "stop_sequence": null,
+      "stop_details": {
+        "type": "refusal",
+        "category": "fixture_category",
+        "explanation": "The request falls under a fixture policy."
+      }
+    },
+    "usage": {
+      "output_tokens": 0
+    }
+  }
+}

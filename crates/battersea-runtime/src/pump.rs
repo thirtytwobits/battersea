@@ -97,16 +97,37 @@ impl PumpError {
         }
     }
 
+    /// This failure in fixed wording, with its limit as context and a lower layer's text as
+    /// its cause.
+    pub fn failure(&self) -> crate::Failure {
+        let failure = |message: &'static str| crate::Failure::from(message);
+        match self {
+            Self::InvalidLimits => failure("Invalid event-pump capacity limits."),
+            Self::PayloadTooLarge { limit } => {
+                failure("Provider event exceeds its payload limit.").with_context("limit", *limit)
+            }
+            Self::Serialization(text) => {
+                failure("Cannot measure provider event.").caused_by_text(text)
+            }
+            Self::Capacity(text) => {
+                failure("Provider payload retention failed.").caused_by_text(text)
+            }
+            Self::Cancelled => failure("Event pump cancelled."),
+            Self::ProducerPanicked => failure("Provider event pump panicked."),
+            Self::ProducerStopped => failure("Provider event pump stopped unexpectedly."),
+        }
+    }
+
     /// This failure as a host error: cancellation, interruption for a stopped producer, or a
     /// refused request.
     pub(crate) fn into_error<E: crate::ExecutionError>(self) -> E {
         let reason = self.code();
         match self {
-            Self::Cancelled => E::cancelled(reason, self.to_string()),
+            Self::Cancelled => E::cancelled(reason, self.failure()),
             Self::ProducerPanicked | Self::ProducerStopped => {
-                E::interrupted(reason, self.to_string())
+                E::interrupted(reason, self.failure())
             }
-            _ => E::invalid_request(reason, self.to_string()),
+            _ => E::invalid_request(reason, self.failure()),
         }
     }
 }
@@ -166,12 +187,12 @@ impl<T: Serialize + Send + 'static> EventPump<T> {
                         .clone()
                         .acquire_owned()
                         .await
-                        .map_err(|_| PumpError::ProducerStopped)?;
+                        .map_err(|_closed| PumpError::ProducerStopped)?;
                     let mut reservation = bytes
                         .clone()
                         .acquire_many_owned(limits.max_event_bytes)
                         .await
-                        .map_err(|_| PumpError::ProducerStopped)?;
+                        .map_err(|_closed| PumpError::ProducerStopped)?;
                     let Some(value) = source.next().await else {
                         return Ok(());
                     };

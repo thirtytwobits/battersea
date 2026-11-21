@@ -1,5 +1,5 @@
 //! Model-declared content capabilities and native structured-output validation.
-use crate::{ContentBlock, EngineAdapterRequestError, ErrorKind, Message, Role};
+use crate::{ContentBlock, ErrorKind, Failure, Message, Role};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
@@ -91,20 +91,21 @@ impl ResponseFormat {
         }
         Ok(())
     }
-    pub fn parse(&self, provider: &str, text: &str) -> Result<Value, EngineAdapterRequestError> {
-        let invalid = |message| EngineAdapterRequestError::invalid_response(provider, message);
+    pub fn parse(&self, provider: &str, text: &str) -> Result<Value, Failure> {
+        let invalid = |message: &'static str| Failure::invalid_response(provider, message);
         let value: Value = serde_json::from_str(text)
-            .map_err(|e| invalid(format!("Malformed structured output: {e}")))?;
+            .map_err(|e| invalid("Malformed structured output.").caused_by(&e))?;
         match self {
             Self::JsonObject if !value.is_object() => {
-                return Err(invalid("Structured output is not a JSON object.".into()))
+                return Err(invalid("Structured output is not a JSON object."))
             }
             Self::JsonSchema { schema, .. } => {
-                let validator =
-                    jsonschema::validator_for(schema).map_err(|e| invalid(e.to_string()))?;
-                validator
-                    .validate(&value)
-                    .map_err(|e| invalid(format!("Structured output violates its schema: {e}")))?;
+                let validator = jsonschema::validator_for(schema).map_err(|e| {
+                    invalid("Invalid structured output schema.").caused_by_text(e.to_string())
+                })?;
+                validator.validate(&value).map_err(|e| {
+                    invalid("Structured output violates its schema.").caused_by_text(e.to_string())
+                })?;
             }
             _ => {}
         }
@@ -137,8 +138,8 @@ pub fn validate_messages(
     provider: &str,
     capabilities: &ContentCapabilities,
     messages: &[Message],
-) -> Result<(), EngineAdapterRequestError> {
-    let invalid = |text| EngineAdapterRequestError::new(provider, text, ErrorKind::InvalidRequest);
+) -> Result<(), Failure> {
+    let invalid = |text| Failure::new(provider, text, ErrorKind::InvalidRequest);
     let mut conversation = false;
     let mut calls = std::collections::HashMap::new();
     let mut completed = std::collections::HashSet::new();

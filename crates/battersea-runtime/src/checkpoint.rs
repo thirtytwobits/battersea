@@ -7,7 +7,7 @@ use serde_json::Value;
 use std::collections::{BTreeMap, HashSet};
 use std::sync::atomic::Ordering;
 
-pub const SCHEDULER_CHECKPOINT_VERSION: u32 = 2;
+pub const SCHEDULER_CHECKPOINT_VERSION: u32 = 3;
 type PortKey = (String, String);
 type PortResolver = fn(
     &std::collections::HashMap<String, FlowNodeDefinition>,
@@ -393,7 +393,7 @@ impl SchedulerCheckpoint {
                 .ok_or_else(|| invalid("Unknown failure node."))?;
             let classified = crate::RecoverableNodeFailure {
                 code: record.failure.code.clone(),
-                message: record.failure.message.clone(),
+                failure: record.failure.failure.clone(),
             };
             if !classified.validate()
                 || record.policy != node.failure_policy

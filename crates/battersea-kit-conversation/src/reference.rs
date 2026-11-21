@@ -12,9 +12,9 @@ use crate::{
 use async_trait::async_trait;
 use battersea_kit::{ManualClock, ReferenceError, ReferenceHost, ReferenceState};
 use battersea_model::{
-    sleep, utc_now, Clock, EngineAdapter, EngineAdapterDebugContext, EngineAdapterRequestError,
-    EngineLocalToolCall, EngineTextStream, EngineTextStreamEvent, EngineTextStreamRequest,
-    EngineTokenUsage, ErrorKind, StopReason, ToolCallEvidence, ToolCallOutcome, ToolCode,
+    sleep, utc_now, Clock, EngineAdapter, EngineAdapterDebugContext, EngineLocalToolCall,
+    EngineTextStream, EngineTextStreamEvent, EngineTextStreamRequest, EngineTokenUsage, ErrorKind,
+    Failure, StopClass, ToolCallEvidence, ToolCallOutcome, ToolCode,
 };
 use battersea_runtime::{ExecutionError, HandlerRegistry};
 use futures_util::stream;
@@ -130,8 +130,8 @@ pub fn host(
     ReferenceHost::new(handlers, clock).with_completion(commit)
 }
 
-fn refuse(reason: &'static str, message: String) -> ReferenceError {
-    ReferenceError::invalid_request(reason, message)
+fn refuse(reason: &'static str, failure: Failure) -> ReferenceError {
+    ReferenceError::invalid_request(reason, failure)
 }
 
 #[async_trait]
@@ -157,7 +157,8 @@ impl Port for ReferenceHost<State> {
             .ok_or_else(|| {
                 refuse(
                     codes::UNKNOWN_TRANSCRIPT,
-                    format!("Transcript {transcript} is not held."),
+                    Failure::from("Transcript is not held.")
+                        .with_context("transcript", transcript.to_string()),
                 )
             })
     }
@@ -192,10 +193,9 @@ impl Port for ReferenceHost<State> {
             }
             None => Err(refuse(
                 codes::UNKNOWN_TURN,
-                format!(
-                    "Transcript {transcript} does not hold turn {}.",
-                    revision.turn
-                ),
+                Failure::from("Transcript does not hold the turn.")
+                    .with_context("transcript", transcript.to_string())
+                    .with_context("turn", revision.turn.to_string()),
             )),
         }
     }
@@ -208,7 +208,8 @@ impl Port for ReferenceHost<State> {
         let held = store.transcripts.get(transcript).ok_or_else(|| {
             refuse(
                 codes::UNKNOWN_TRANSCRIPT,
-                format!("Transcript {transcript} is not held."),
+                Failure::from("Transcript is not held.")
+                    .with_context("transcript", transcript.to_string()),
             )
         })?;
         let after = held
@@ -236,7 +237,8 @@ impl Port for ReferenceHost<State> {
         let held = store.transcripts.get_mut(&transcript).ok_or_else(|| {
             refuse(
                 codes::UNKNOWN_TRANSCRIPT,
-                format!("Transcript {transcript} is not held."),
+                Failure::from("Transcript is not held.")
+                    .with_context("transcript", transcript.to_string()),
             )
         })?;
         held.summary = Some(summary);
@@ -265,7 +267,9 @@ impl Port for ReferenceHost<State> {
                 if total > budget {
                     return Err(refuse(
                         codes::SPEND_REFUSED,
-                        format!("{total} tokens exceed the {budget} the host allows."),
+                        Failure::from("Tokens exceed the budget the host allows.")
+                            .with_context("tokens", total)
+                            .with_context("budget", budget),
                     ));
                 }
                 store.budget = Some(budget - total);
@@ -288,10 +292,10 @@ impl Port for ReferenceHost<State> {
     ) -> Result<(), ReferenceError> {
         let open = &mut state.kit.run.reservations;
         let Some(position) = open.iter().position(|held| held.id == reservation.id) else {
-            return Err(ReferenceError::internal(format!(
-                "Reservation {} is not open.",
-                reservation.id
-            )));
+            return Err(ReferenceError::internal(
+                Failure::from("Reservation is not open.")
+                    .with_context("reservation", reservation.id.to_string()),
+            ));
         };
         open.remove(position);
         state.kit.store().ledger.push((reservation, usage));
@@ -314,7 +318,8 @@ impl Port for ReferenceHost<State> {
         if !store.transcripts.contains_key(transcript) {
             return Err(refuse(
                 codes::UNKNOWN_TRANSCRIPT,
-                format!("Transcript {transcript} is not held."),
+                Failure::from("Transcript is not held.")
+                    .with_context("transcript", transcript.to_string()),
             ));
         }
         Ok(store.policy.clone())
@@ -351,7 +356,7 @@ impl Port for ReferenceHost<State> {
             }
             None => Err(refuse(
                 codes::UNKNOWN_JOB,
-                format!("Job {job} is not held."),
+                Failure::from("Job is not held.").with_context("job", job.to_string()),
             )),
         }
     }
@@ -375,10 +380,10 @@ pub enum ScriptedResponse {
 
 /// One item of a scripted stream.
 enum Item {
-    Event(Box<Result<EngineTextStreamEvent, EngineAdapterRequestError>>),
+    Event(Box<Result<EngineTextStreamEvent, Failure>>),
     Wait(Duration),
 }
-fn event(event: Result<EngineTextStreamEvent, EngineAdapterRequestError>) -> Item {
+fn event(event: Result<EngineTextStreamEvent, Failure>) -> Item {
     Item::Event(Box::new(event))
 }
 
@@ -445,13 +450,13 @@ impl EngineAdapter for ScriptedEngine {
     async fn count_text_stream_input_tokens(
         &self,
         request: EngineTextStreamRequest,
-    ) -> Result<u64, EngineAdapterRequestError> {
+    ) -> Result<u64, Failure> {
         Ok(Self::words(&request))
     }
     async fn stream_text(
         &self,
         request: EngineTextStreamRequest,
-    ) -> Result<EngineTextStream, EngineAdapterRequestError> {
+    ) -> Result<EngineTextStream, Failure> {
         let input = Self::words(&request);
         // Events already produced, tool evidence among them, reach the caller before an
         // error ends the stream.
@@ -461,7 +466,7 @@ impl EngineAdapter for ScriptedEngine {
         let mut round = 0u32;
         loop {
             let Some(response) = self.take() else {
-                let error = EngineAdapterRequestError::new(
+                let error = Failure::new(
                     "reference",
                     "The script has no response left.",
                     ErrorKind::Mock,
@@ -492,7 +497,8 @@ impl EngineAdapter for ScriptedEngine {
                     let output = text.split_whitespace().count() as u64;
                     items.push(event(Ok(EngineTextStreamEvent::TextDelta { text })));
                     items.push(event(Ok(EngineTextStreamEvent::MessageStop {
-                        reason: StopReason::Complete,
+                        class: StopClass::Complete,
+                        native: Value::Null,
                     })));
                     items.push(event(Ok(EngineTextStreamEvent::TokenUsage {
                         usage: EngineTokenUsage {
@@ -507,7 +513,7 @@ impl EngineAdapter for ScriptedEngine {
                 }
                 ScriptedResponse::ToolCalls(calls) => {
                     if round as usize >= request.max_tool_rounds {
-                        let error = EngineAdapterRequestError::new(
+                        let error = Failure::new(
                             "reference",
                             "The script asks for more tool rounds than the request allows.",
                             ErrorKind::Request,
@@ -529,9 +535,9 @@ impl EngineAdapter for ScriptedEngine {
                         })));
                         let result = match &request.local_tool_executor {
                             Some(executor) => executor.call(call.clone()).await,
-                            None => Err(EngineAdapterRequestError::new(
+                            None => Err(Failure::new(
                                 "reference",
-                                format!("Tool {:?} has no executor.", call.name),
+                                "Tool has no executor.",
                                 ErrorKind::InvalidRequest,
                             )),
                         };
@@ -550,7 +556,11 @@ impl EngineAdapter for ScriptedEngine {
                                         call_id: call.id.clone(),
                                         tool_name: call.name.clone(),
                                         outcome: ToolCallOutcome::Uncertain,
-                                        request_id: error.request_id.as_deref().map(String::from),
+                                        request_id: error
+                                            .exchange
+                                            .request_id
+                                            .as_deref()
+                                            .map(String::from),
                                     }
                                 })
                             }
@@ -561,8 +571,7 @@ impl EngineAdapter for ScriptedEngine {
                                 name: call.name,
                                 ok: !result.is_error(),
                                 result: result.provider_content().unwrap_or(Value::Null),
-                                error_message: None,
-                                error_classification: None,
+                                failure: None,
                                 tool_result: Some(Box::new(result)),
                                 tool_call: Some(evidence),
                                 finished_at: self.now(),
@@ -572,10 +581,7 @@ impl EngineAdapter for ScriptedEngine {
                                 name: call.name,
                                 ok: false,
                                 result: Value::Null,
-                                error_message: Some(error.message.to_string()),
-                                error_classification: Some(
-                                    error.classification.as_str().to_string(),
-                                ),
+                                failure: Some(error),
                                 tool_result: None,
                                 tool_call: Some(evidence),
                                 finished_at: self.now(),
@@ -583,7 +589,8 @@ impl EngineAdapter for ScriptedEngine {
                         })));
                     }
                     items.push(event(Ok(EngineTextStreamEvent::MessageStop {
-                        reason: StopReason::ToolUse,
+                        class: StopClass::ToolUse,
+                        native: Value::Null,
                     })));
                     open = false;
                     round += 1;

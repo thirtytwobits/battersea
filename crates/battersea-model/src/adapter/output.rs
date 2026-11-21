@@ -1,20 +1,62 @@
 //! Completion validation shared by every registered provider.
 use super::{
-    error::EngineAdapterRequestError, payload::PROVIDER_PAYLOAD_BYTES, EngineTextStream,
-    EngineTextStreamEvent,
+    error::Failure, payload::PROVIDER_PAYLOAD_BYTES, EngineTextStream, EngineTextStreamEvent,
 };
 use crate::ResponseFormat;
 use futures_util::StreamExt;
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+/// How a turn ended, as far as control flow is concerned. The provider's own terminal payload
+/// travels beside the class.
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
-pub enum StopReason {
+pub enum StopClass {
     Complete,
     ToolUse,
     Length,
     Refusal,
-    Other(String),
+    /// A native reason Battersea does not recognise.
+    Other,
+}
+impl StopClass {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Complete => "complete",
+            Self::ToolUse => "tool_use",
+            Self::Length => "length",
+            Self::Refusal => "refusal",
+            Self::Other => "other",
+        }
+    }
+}
+
+/// The failure of a final turn that ended in any class but `complete`. `native` is the
+/// provider's terminal payload and `partial` the text Battersea held undelivered.
+pub fn terminal_failure(
+    provider: &str,
+    class: StopClass,
+    native: Value,
+    partial: String,
+) -> Failure {
+    let (kind, message) = match class {
+        StopClass::Refusal => (crate::ErrorKind::Refusal, "Provider refused the request."),
+        StopClass::Complete | StopClass::ToolUse | StopClass::Length | StopClass::Other => (
+            crate::ErrorKind::Incomplete,
+            "Provider stopped before completing its result.",
+        ),
+    };
+    let mut failure = Failure::new(provider, message, kind);
+    if !native.is_null() {
+        failure = failure.with_native(crate::Reporter::Provider, native);
+    }
+    if !partial.is_empty() {
+        failure = failure.with_partial(crate::PartialOutput {
+            text: partial,
+            blocks: vec![],
+        });
+    }
+    failure
 }
 
 pub fn validate_output(
@@ -29,7 +71,7 @@ pub fn validate_output(
         format: Option<ResponseFormat>,
         modalities: Vec<crate::Modality>,
         text: String,
-        stop: Option<StopReason>,
+        stop: Option<StopClass>,
         done: bool,
         pending: std::collections::VecDeque<EngineTextStreamEvent>,
     }
@@ -73,13 +115,14 @@ pub fn validate_output(
                                 };
                                 if modality.is_some_and(|mode| !state.modalities.contains(&mode)) {
                                     state.done = true;
-                                    return Some((
-                                        Err(EngineAdapterRequestError::invalid_response(
+                                    let failure = held(
+                                        Failure::invalid_response(
                                             &state.provider,
                                             "Provider returned an unrequested output modality.",
-                                        )),
-                                        state,
-                                    ));
+                                        ),
+                                        &mut state.text,
+                                    );
+                                    return Some((Err(failure), state));
                                 }
                             }
                             EngineTextStreamEvent::MessageStart { .. }
@@ -92,7 +135,7 @@ pub fn validate_output(
                             {
                                 state.done = true;
                                 return Some((
-                                    Err(EngineAdapterRequestError::invalid_response(
+                                    Err(Failure::invalid_response(
                                         &state.provider,
                                         "Provider returned unrequested text output.",
                                     )),
@@ -104,27 +147,35 @@ pub fn validate_output(
                                     > PROVIDER_PAYLOAD_BYTES.saturating_sub(state.text.len())
                                 {
                                     state.done = true;
-                                    return Some((
-                                        Err(EngineAdapterRequestError::invalid_response(
+                                    let failure = held(
+                                        Failure::invalid_response(
                                             &state.provider,
                                             "Structured output exceeds its byte limit.",
-                                        )),
-                                        state,
-                                    ));
+                                        ),
+                                        &mut state.text,
+                                    );
+                                    return Some((Err(failure), state));
                                 }
                                 state.text.push_str(text);
                                 continue;
                             }
                             EngineTextStreamEvent::MessageStop {
-                                reason: StopReason::ToolUse,
+                                class: StopClass::ToolUse,
+                                ..
                             } => {
                                 state.text.clear();
-                                state.stop = Some(StopReason::ToolUse);
+                                state.stop = Some(StopClass::ToolUse);
                             }
-                            EngineTextStreamEvent::MessageStop { reason } => {
+                            EngineTextStreamEvent::MessageStop { class, native } => {
                                 state.done = true;
-                                if *reason != StopReason::Complete {
-                                    return Some((Err(EngineAdapterRequestError::invalid_response(&state.provider, format!("Provider stopped without a complete result: {reason:?}."))), state));
+                                if *class != StopClass::Complete {
+                                    let failure = terminal_failure(
+                                        &state.provider,
+                                        *class,
+                                        native.clone(),
+                                        std::mem::take(&mut state.text),
+                                    );
+                                    return Some((Err(failure), state));
                                 }
                                 if let Some(format) = &state.format {
                                     match format.parse(&state.provider, &state.text) {
@@ -139,7 +190,10 @@ pub fn validate_output(
                                                 state,
                                             ));
                                         }
-                                        Err(error) => return Some((Err(error), state)),
+                                        Err(error) => {
+                                            let failure = held(error, &mut state.text);
+                                            return Some((Err(failure), state));
+                                        }
                                     }
                                 }
                             }
@@ -149,13 +203,16 @@ pub fn validate_output(
                     }
                     Some(Err(error)) => {
                         state.done = true;
-                        Err(error)
+                        Err(held(error, &mut state.text))
                     }
                     None => {
                         state.done = true;
-                        Err(EngineAdapterRequestError::invalid_response(
-                            &state.provider,
-                            "Provider stream ended without completing its final message.",
+                        Err(held(
+                            Failure::invalid_response(
+                                &state.provider,
+                                "Provider stream ended without completing its final message.",
+                            ),
+                            &mut state.text,
                         ))
                     }
                 };
@@ -163,6 +220,27 @@ pub fn validate_output(
             }
         },
     ))
+}
+
+/// Moves buffered structured text into a failure whose partial output holds no text. Content
+/// blocks the failure already carries stay with it.
+fn held(mut failure: Failure, text: &mut String) -> Failure {
+    if text.is_empty() {
+        return failure;
+    }
+    match &mut failure.partial {
+        crate::Detail::Present(partial) if partial.text.is_empty() => {
+            partial.text = std::mem::take(text);
+        }
+        crate::Detail::Absent => {
+            failure = failure.with_partial(crate::PartialOutput {
+                text: std::mem::take(text),
+                blocks: vec![],
+            });
+        }
+        _ => {}
+    }
+    failure
 }
 
 #[cfg(test)]
@@ -184,14 +262,16 @@ mod tests {
                 text: "intermediate tool reasoning".into(),
             },
             EngineTextStreamEvent::MessageStop {
-                reason: StopReason::ToolUse,
+                class: StopClass::ToolUse,
+                native: Value::Null,
             },
             EngineTextStreamEvent::MessageStart { turn_index: 1 },
             EngineTextStreamEvent::TextDelta {
                 text: expected.to_string(),
             },
             EngineTextStreamEvent::MessageStop {
-                reason: StopReason::Complete,
+                class: StopClass::Complete,
+                native: Value::Null,
             },
         ];
         let stream = Box::pin(futures_util::stream::iter(input.into_iter().map(Ok)));
@@ -218,14 +298,17 @@ mod tests {
     async fn refusal_truncation_malformed_json_and_schema_mismatch_never_publish_a_value() {
         for (text, reason) in [
             ("{\"ok\":true}", None),
-            ("{\"ok\":true}", Some(StopReason::Refusal)),
-            ("{\"ok\":true}", Some(StopReason::Length)),
-            ("{", Some(StopReason::Complete)),
-            ("{\"ok\":3}", Some(StopReason::Complete)),
+            ("{\"ok\":true}", Some(StopClass::Refusal)),
+            ("{\"ok\":true}", Some(StopClass::Length)),
+            ("{", Some(StopClass::Complete)),
+            ("{\"ok\":3}", Some(StopClass::Complete)),
         ] {
             let mut input = vec![Ok(EngineTextStreamEvent::TextDelta { text: text.into() })];
-            if let Some(reason) = reason {
-                input.push(Ok(EngineTextStreamEvent::MessageStop { reason }));
+            if let Some(class) = reason {
+                input.push(Ok(EngineTextStreamEvent::MessageStop {
+                    class,
+                    native: json!({"stop_reason": "fixture"}),
+                }));
             }
             let output = validate_output(
                 Box::pin(futures_util::stream::iter(input)),
@@ -235,10 +318,34 @@ mod tests {
             )
             .collect::<Vec<_>>()
             .await;
-            assert!(output.last().unwrap().is_err());
+            let failure = output.last().unwrap().as_ref().unwrap_err();
             assert!(!output
                 .iter()
                 .any(|event| matches!(event, Ok(EngineTextStreamEvent::StructuredOutput { .. }))));
+            // contracts/failures.md: a turn that does not complete fails with the provider's
+            // terminal payload as native detail and the buffered text as partial output.
+            let kind = match reason {
+                Some(StopClass::Refusal) => Some(crate::ErrorKind::Refusal),
+                Some(StopClass::Length) => Some(crate::ErrorKind::Incomplete),
+                _ => None,
+            };
+            if let Some(kind) = kind {
+                assert_eq!(failure.kind, kind);
+                assert_eq!(failure.reporter, crate::Reporter::Provider);
+                assert_eq!(
+                    failure.native.present(),
+                    Some(&json!({"stop_reason": "fixture"}))
+                );
+            }
+            // Text that fails parsing or validation, or that its stream abandons, is held
+            // output too.
+            assert_eq!(
+                failure
+                    .partial
+                    .present()
+                    .map(|partial| partial.text.as_str()),
+                Some(text)
+            );
         }
     }
     #[test]

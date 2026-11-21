@@ -1,10 +1,10 @@
-use super::error::EngineAdapterRequestError;
+use super::error::Failure;
 use super::tool_loop::{
     run_tool_loop, send_event, ExecutedToolCall, ToolConversation, ToolEventSender,
 };
 use super::{
-    emit_error, emit_request, emit_response, emit_stream_event, missing_backend_option,
-    EngineAdapter, EngineAdapterDebugContext, EngineAdapterLogger, EngineAdapterResponseDetail,
+    emit_request, emit_response, emit_stream_event, missing_backend_option, EngineAdapter,
+    EngineAdapterDebugContext, EngineAdapterLogger, EngineAdapterResponseDetail,
     EngineBackendConfig, EngineLocalToolCall, EngineTextStream, EngineTextStreamEvent,
     EngineTextStreamRequest, EngineTokenUsage,
 };
@@ -34,7 +34,7 @@ pub(crate) fn create_openai_adapter(
     backend: EngineBackendConfig,
     logger: Option<Arc<dyn EngineAdapterLogger>>,
     clock: Arc<dyn Clock>,
-) -> Result<Arc<dyn EngineAdapter>, EngineAdapterRequestError> {
+) -> Result<Arc<dyn EngineAdapter>, Failure> {
     crate::retry::validate(&backend)?;
     validate_stream_mode(&backend, backend.chat.stream)?;
     let timeout_ms = backend
@@ -96,13 +96,10 @@ pub(crate) fn create_openai_adapter(
                     })?,
                 ),
                 other => {
-                    return Err(EngineAdapterRequestError::new(
-                        "openai",
-                        format!(
-                            "Unknown backgroundMode \"{other}\"; expected \"stream\" or \"poll\"."
-                        ),
-                        "request",
-                    ))
+                    return Err(
+                        Failure::new("openai", "Unknown background mode.", "request")
+                            .with_context("backgroundMode", other),
+                    )
                 }
             }
         } else {
@@ -112,7 +109,7 @@ pub(crate) fn create_openai_adapter(
         && background_mode == "poll"
         && background_poll_interval_ms >= timeout_ms.min(background_max_wait_ms)
     {
-        return Err(EngineAdapterRequestError::new(
+        return Err(Failure::new(
             &backend.provider,
             "Background polling interval must be shorter than operation and background wait timeouts.",
             battersea_model::ErrorKind::InvalidRequest,
@@ -129,7 +126,10 @@ pub(crate) fn create_openai_adapter(
         .retry(reqwest::retry::never())
         .redirect(reqwest::redirect::Policy::none())
         .build()
-        .map_err(|error| EngineAdapterRequestError::transport("openai", error.to_string()))?;
+        .map_err(|error| {
+            Failure::transport("openai", "OpenAI HTTP client could not be built.")
+                .caused_by(&error.without_url())
+        })?;
 
     Ok(Arc::new(OpenAiEngineAdapter {
         http_client,
@@ -156,17 +156,14 @@ pub(crate) fn create_openai_adapter(
     }))
 }
 
-fn validate_stream_mode(
-    backend: &EngineBackendConfig,
-    stream: bool,
-) -> Result<(), EngineAdapterRequestError> {
+fn validate_stream_mode(backend: &EngineBackendConfig, stream: bool) -> Result<(), Failure> {
     if stream
         || (backend.options.background == Some(true)
             && backend.options.background_mode.as_deref() == Some("poll"))
     {
         return Ok(());
     }
-    Err(EngineAdapterRequestError::new(
+    Err(Failure::new(
         &backend.provider,
         "Non-streaming Responses requests require background polling.",
         battersea_model::ErrorKind::InvalidRequest,
@@ -192,7 +189,7 @@ struct OpenAiEngineAdapter {
     context: EngineAdapterDebugContext,
 }
 
-fn completed_stop_reason(response: &Value) -> super::StopReason {
+fn completed_stop_reason(response: &Value) -> super::StopClass {
     if response["output"].as_array().is_some_and(|items| {
         items.iter().any(|item| {
             item["content"]
@@ -200,9 +197,9 @@ fn completed_stop_reason(response: &Value) -> super::StopReason {
                 .is_some_and(|blocks| blocks.iter().any(|block| block["type"] == "refusal"))
         })
     }) {
-        super::StopReason::Refusal
+        super::StopClass::Refusal
     } else {
-        super::StopReason::Complete
+        super::StopClass::Complete
     }
 }
 
@@ -221,7 +218,8 @@ fn openai_events(event: &ResponseStreamEvent, raw: &Value) -> Vec<EngineTextStre
             })
             .collect::<Vec<_>>();
         events.push(EngineTextStreamEvent::MessageStop {
-            reason: completed_stop_reason(response),
+            class: completed_stop_reason(response),
+            native: response.clone(),
         });
         events
     } else {
@@ -264,7 +262,7 @@ impl EngineAdapter for OpenAiEngineAdapter {
         &self,
         request: &battersea_model::ConversationRequest,
         state: Option<&Value>,
-    ) -> Result<battersea_model::ConversationBinding, EngineAdapterRequestError> {
+    ) -> Result<battersea_model::ConversationBinding, Failure> {
         self.validate_durable_request(request, state)
     }
 
@@ -274,7 +272,7 @@ impl EngineAdapter for OpenAiEngineAdapter {
         previous: Option<&Value>,
         results: &[battersea_model::ConversationToolResult],
         turn: &battersea_model::ConversationTurn,
-    ) -> Result<battersea_model::ConversationBinding, EngineAdapterRequestError> {
+    ) -> Result<battersea_model::ConversationBinding, Failure> {
         self.validate_durable_turn(request, previous, results, turn)
     }
 
@@ -283,7 +281,7 @@ impl EngineAdapter for OpenAiEngineAdapter {
         request: battersea_model::ConversationRequest,
         state: Option<Value>,
         results: Vec<battersea_model::ConversationToolResult>,
-    ) -> Result<battersea_model::ConversationTurn, EngineAdapterRequestError> {
+    ) -> Result<battersea_model::ConversationTurn, Failure> {
         self.durable_turn(request, state, results).await
     }
 
@@ -294,7 +292,7 @@ impl EngineAdapter for OpenAiEngineAdapter {
         results: &[battersea_model::ConversationToolResult],
         command: &battersea_model::ConversationCommand,
         step: &battersea_model::ConversationStep,
-    ) -> Result<battersea_model::ConversationBinding, EngineAdapterRequestError> {
+    ) -> Result<battersea_model::ConversationBinding, Failure> {
         self.validate_durable_step(request, previous, results, command, step)
     }
     async fn conversation_step(
@@ -303,7 +301,7 @@ impl EngineAdapter for OpenAiEngineAdapter {
         previous: Option<Value>,
         results: Vec<battersea_model::ConversationToolResult>,
         command: battersea_model::ConversationCommand,
-    ) -> Result<battersea_model::ConversationStep, EngineAdapterRequestError> {
+    ) -> Result<battersea_model::ConversationStep, Failure> {
         self.durable_step(request, previous, results, command).await
     }
 
@@ -314,7 +312,7 @@ impl EngineAdapter for OpenAiEngineAdapter {
     async fn stream_text(
         &self,
         request: EngineTextStreamRequest,
-    ) -> Result<EngineTextStream, EngineAdapterRequestError> {
+    ) -> Result<EngineTextStream, Failure> {
         super::validate_chat_request(&self.backend, &request)?;
         validate_stream_mode(&self.backend, request.shared.chat.stream)?;
         if !request.local_tools.is_empty() {
@@ -339,7 +337,7 @@ impl EngineAdapter for OpenAiEngineAdapter {
         )
         .await;
 
-        let stream = open_response_stream(
+        let (opened, stream) = open_response_stream(
             &self.http_client,
             &self.base_url,
             &self.backend,
@@ -373,85 +371,96 @@ impl EngineAdapter for OpenAiEngineAdapter {
                 let logger = logger.clone();
                 let context = context.clone();
                 async move {
-                    match event {
-                        Ok((event, event_value)) => {
-                            let Some(event) = event else {
+                    let mut events: Vec<_> = event
+                        .as_ref()
+                        .ok()
+                        .and_then(|(_, value)| {
+                            crate::retry::identified(value.pointer("/response/id"))
+                        })
+                        .into_iter()
+                        .collect();
+                    let decoded: Result<Vec<_>, Failure> = async {
+                        match event {
+                            Ok((event, event_value)) => {
+                                let Some(event) = event else {
+                                    emit_stream_event(
+                                        logger.as_ref(),
+                                        &context,
+                                        operation,
+                                        stream_event_type(&event_value),
+                                        event_value.clone(),
+                                    )
+                                    .await;
+                                    return Ok(Vec::new());
+                                };
+                                // Per-event scratch: each ResponseStreamEvent variant maps to
+                                // zero or more neutral text-stream events. Usage frames (which
+                                // share variants with text frames at the protocol level) are
+                                // appended below.
+                                let text_events = openai_events(&event, &event_value);
+                                match &event {
+                                    ResponseStreamEvent::ResponseFailed(_) => {
+                                        return Err(Failure::invalid_response(
+                                            "openai",
+                                            "OpenAI response failed.",
+                                        )
+                                        .with_native(
+                                            battersea_model::Reporter::Provider,
+                                            event_value.clone(),
+                                        ));
+                                    }
+                                    ResponseStreamEvent::ResponseIncomplete(_) => {
+                                        return Err(openai_missing_output_text_error(
+                                            &event_value["response"],
+                                        ));
+                                    }
+                                    ResponseStreamEvent::ResponseError(_) => {
+                                        return Err(Failure::transport(
+                                            "openai",
+                                            "OpenAI reported a stream error.",
+                                        )
+                                        .with_native(
+                                            battersea_model::Reporter::Provider,
+                                            event_value.clone(),
+                                        ));
+                                    }
+                                    _ => {}
+                                }
+
                                 emit_stream_event(
                                     logger.as_ref(),
                                     &context,
                                     operation,
-                                    stream_event_type(&event_value),
+                                    event.event_type(),
                                     event_value.clone(),
                                 )
                                 .await;
-                                return Ok(Vec::new());
-                            };
-                            // Per-event scratch: each ResponseStreamEvent variant maps to
-                            // zero or more neutral text-stream events. Usage frames (which
-                            // share variants with text frames at the protocol level) are
-                            // appended below.
-                            let text_events = openai_events(&event, &event_value);
-                            match &event {
-                                ResponseStreamEvent::ResponseFailed(item) => {
-                                    let message = item
-                                        .response
-                                        .error
-                                        .as_ref()
-                                        .map(|error| error.message.to_string())
-                                        .unwrap_or_else(|| {
-                                            "OpenAI streaming response failed.".to_string()
-                                        });
-                                    return Err(EngineAdapterRequestError::invalid_response(
-                                        "openai", message,
-                                    ));
-                                }
-                                ResponseStreamEvent::ResponseIncomplete(item) => {
-                                    let response = serde_json::to_value(&item.response)
-                                        .unwrap_or_else(|_| json!({}));
-                                    return Err(openai_missing_output_text_error(&response));
-                                }
-                                ResponseStreamEvent::ResponseError(item) => {
-                                    return Err(EngineAdapterRequestError::transport(
-                                        "openai",
-                                        item.message.clone(),
-                                    ));
-                                }
-                                _ => {}
-                            }
 
-                            emit_stream_event(
-                                logger.as_ref(),
-                                &context,
-                                operation,
-                                event.event_type(),
-                                event_value.clone(),
-                            )
-                            .await;
-
-                            let mut events = Vec::new();
-                            if let Some(usage) = extract_token_usage(&event_value) {
-                                events.push(EngineTextStreamEvent::TokenUsage { usage });
-                            }
-                            for text_event in text_events {
-                                let is_empty = match &text_event {
-                                    EngineTextStreamEvent::TextDelta { text }
-                                    | EngineTextStreamEvent::ReasoningDelta { text } => {
-                                        text.is_empty()
+                                let mut events = Vec::new();
+                                if let Some(usage) = extract_token_usage(&event_value) {
+                                    events.push(EngineTextStreamEvent::TokenUsage { usage });
+                                }
+                                for text_event in text_events {
+                                    let is_empty = match &text_event {
+                                        EngineTextStreamEvent::TextDelta { text }
+                                        | EngineTextStreamEvent::ReasoningDelta { text } => {
+                                            text.is_empty()
+                                        }
+                                        _ => false,
+                                    };
+                                    if !is_empty {
+                                        events.push(text_event);
                                     }
-                                    _ => false,
-                                };
-                                if !is_empty {
-                                    events.push(text_event);
                                 }
-                            }
 
-                            Ok(events)
-                        }
-                        Err(error) => {
-                            emit_error(logger.as_ref(), &context, operation, &error).await;
-                            Err(error)
+                                Ok(events)
+                            }
+                            Err(error) => Err(error),
                         }
                     }
+                    .await;
+                    events.extend(decoded?);
+                    Ok(events)
                 }
             })
             .flat_map(|result| {
@@ -464,7 +473,7 @@ impl EngineAdapter for OpenAiEngineAdapter {
             .boxed();
 
         Ok(super::with_stream_idle_watchdog(
-            Box::pin(mapped),
+            Box::pin(stream::once(std::future::ready(Ok(opened))).chain(mapped)),
             std::time::Duration::from_millis(self.stream_idle_timeout_ms),
             "openai",
             self.clock.clone(),
@@ -474,7 +483,7 @@ impl EngineAdapter for OpenAiEngineAdapter {
     async fn count_text_stream_input_tokens(
         &self,
         request: EngineTextStreamRequest,
-    ) -> Result<u64, EngineAdapterRequestError> {
+    ) -> Result<u64, Failure> {
         super::validate_chat_request(&self.backend, &request)?;
         validate_stream_mode(&self.backend, request.shared.chat.stream)?;
         let body = build_input_token_count_body(&self.backend, &request)?;
@@ -488,14 +497,12 @@ impl EngineAdapter for OpenAiEngineAdapter {
             self.clock.as_ref(),
         )
         .await?;
-        let payload: Value = response.bounded_json().await.map_err(|error| {
-            EngineAdapterRequestError::invalid_response("openai", error.to_string())
-        })?;
+        let payload: Value = response.bounded_json().await?;
         payload
             .get("input_tokens")
             .and_then(Value::as_u64)
             .ok_or_else(|| {
-                EngineAdapterRequestError::invalid_response(
+                Failure::invalid_response(
                     "openai",
                     "OpenAI input token count response omitted input_tokens.",
                 )
@@ -507,9 +514,9 @@ impl OpenAiEngineAdapter {
     async fn stream_text_with_local_tools(
         &self,
         request: EngineTextStreamRequest,
-    ) -> Result<EngineTextStream, EngineAdapterRequestError> {
+    ) -> Result<EngineTextStream, Failure> {
         let executor = request.local_tool_executor.clone().ok_or_else(|| {
-            EngineAdapterRequestError::new(
+            Failure::new(
                 "openai",
                 "Local engine tool executor is unavailable.",
                 "request",
@@ -565,7 +572,7 @@ impl OpenAiEngineAdapter {
     async fn background_text(
         &self,
         request: EngineTextStreamRequest,
-    ) -> Result<EngineTextStream, EngineAdapterRequestError> {
+    ) -> Result<EngineTextStream, Failure> {
         let body = to_background_body(build_stream_body(&self.backend, &request)?);
         battersea_model::adapter::payload::check_payload(&body, "openai")?;
         emit_request(
@@ -577,8 +584,7 @@ impl OpenAiEngineAdapter {
         )
         .await;
 
-        let (tx, rx) =
-            mpsc::channel::<Result<EngineTextStreamEvent, EngineAdapterRequestError>>(64);
+        let (tx, rx) = mpsc::channel::<Result<EngineTextStreamEvent, Failure>>(64);
         let http_client = self.http_client.clone();
         let base_url = self.base_url.clone();
         let backend = self.backend.clone();
@@ -611,7 +617,6 @@ impl OpenAiEngineAdapter {
                         .await;
                 }
                 Err(error) => {
-                    emit_error(logger.as_ref(), &context, operation, &error).await;
                     let _ = tx.send(Err(error)).await;
                 }
             }
@@ -626,7 +631,7 @@ impl OpenAiEngineAdapter {
     async fn background_stream(
         &self,
         request: EngineTextStreamRequest,
-    ) -> Result<EngineTextStream, EngineAdapterRequestError> {
+    ) -> Result<EngineTextStream, Failure> {
         let body = to_background_stream_body(build_stream_body(&self.backend, &request)?);
         battersea_model::adapter::payload::check_payload(&body, "openai")?;
         emit_request(
@@ -638,8 +643,7 @@ impl OpenAiEngineAdapter {
         )
         .await;
 
-        let (tx, rx) =
-            mpsc::channel::<Result<EngineTextStreamEvent, EngineAdapterRequestError>>(64);
+        let (tx, rx) = mpsc::channel::<Result<EngineTextStreamEvent, Failure>>(64);
         let http_client = self.http_client.clone();
         let base_url = self.base_url.clone();
         let backend = self.backend.clone();
@@ -698,12 +702,10 @@ impl OpenAiEngineAdapter {
                     )
                     .await;
                     if let Some(error) = missing {
-                        emit_error(logger.as_ref(), &context, operation, &error).await;
                         let _ = tx.send(Err(error)).await;
                     }
                 }
                 Err(error) => {
-                    emit_error(logger.as_ref(), &context, operation, &error).await;
                     let _ = tx.send(Err(error)).await;
                 }
             }
@@ -732,32 +734,23 @@ fn is_terminal_background_status(status: &str) -> bool {
 /// Maps a terminal background response to either its value (completed /
 /// incomplete — the caller extracts whatever text exists) or an error
 /// (failed / cancelled / unexpected).
-fn finalize_background_response(
-    response: Value,
-    status: &str,
-) -> Result<Value, EngineAdapterRequestError> {
+fn finalize_background_response(response: Value, status: &str) -> Result<Value, Failure> {
     match status {
         "completed" => Ok(response),
         "incomplete" => Err(openai_missing_output_text_error(&response)),
-        "failed" => {
-            let message = response
-                .get("error")
-                .and_then(|error| error.get("message"))
-                .and_then(Value::as_str)
-                .unwrap_or("OpenAI background response failed.")
-                .to_string();
-            Err(EngineAdapterRequestError::invalid_response(
-                "openai", message,
-            ))
-        }
-        "cancelled" => Err(EngineAdapterRequestError::transport(
+        "failed" => Err(
+            Failure::invalid_response("openai", "OpenAI background response failed.")
+                .with_native(battersea_model::Reporter::Provider, response),
+        ),
+        "cancelled" => Err(Failure::transport(
             "openai",
-            "OpenAI background response was cancelled.".to_string(),
+            "OpenAI background response was cancelled.",
         )),
-        other => Err(EngineAdapterRequestError::invalid_response(
+        _ => Err(Failure::invalid_response(
             "openai",
-            format!("OpenAI background response ended in unexpected status \"{other}\"."),
-        )),
+            "OpenAI background response ended in an unexpected status.",
+        )
+        .with_native(battersea_model::Reporter::Provider, response)),
     }
 }
 
@@ -799,7 +792,7 @@ impl ToolConversation for OpenAiToolConversation {
         request: &EngineTextStreamRequest,
         results: Vec<ExecutedToolCall>,
         events: &ToolEventSender,
-    ) -> Result<Vec<EngineLocalToolCall>, EngineAdapterRequestError> {
+    ) -> Result<Vec<EngineLocalToolCall>, Failure> {
         self.input.extend(results.into_iter().map(|item| json!({
             "type": "function_call_output", "call_id": item.call.id, "output": item.provider_content.to_string()
         })));
@@ -869,12 +862,15 @@ impl ToolConversation for OpenAiToolConversation {
                     .is_some_and(|blocks| blocks.iter().any(|block| block["type"] == "refusal"))
             })
         }) {
-            return Err(EngineAdapterRequestError::invalid_response(
+            return Err(battersea_model::terminal_failure(
                 "openai",
-                "Provider refused the tool conversation.",
+                super::StopClass::Refusal,
+                response,
+                String::new(),
             ));
         }
-        let calls = collect_openai_function_calls(&response)?;
+        let calls = collect_openai_function_calls(&response)
+            .map_err(|failure| crate::http_payload::about(failure, &response))?;
         let output_text = read_openai_output_text(&response);
         if calls.is_empty() && output_text.is_empty() {
             return Err(openai_missing_output_text_error(&response));
@@ -927,8 +923,8 @@ impl OpenAiToolConversation {
         operation: super::EngineOperation,
         events: &ToolEventSender,
         idle_ms: u64,
-    ) -> Result<Value, EngineAdapterRequestError> {
-        let mut stream = open_response_stream(
+    ) -> Result<Value, Failure> {
+        let (opened, mut stream) = open_response_stream(
             &self.http_client,
             &self.base_url,
             &self.backend,
@@ -937,6 +933,7 @@ impl OpenAiToolConversation {
             self.clock.as_ref(),
         )
         .await?;
+        send_event(events, opened).await?;
         loop {
             let (event, value) = battersea_model::clock::timeout(
                 self.clock.as_ref(),
@@ -944,18 +941,18 @@ impl OpenAiToolConversation {
                 stream.next(),
             )
             .await
-            .map_err(|_| {
-                EngineAdapterRequestError::transport(
-                    "openai",
-                    format!("OpenAI stream stalled for {idle_ms}ms."),
-                )
+            .map_err(|_elapsed| {
+                Failure::transport("openai", "OpenAI stream stalled.").with_idle_watchdog(idle_ms)
             })?
             .ok_or_else(|| {
-                EngineAdapterRequestError::invalid_response(
+                Failure::invalid_response(
                     "openai",
                     "OpenAI tool stream ended without ResponseCompleted.",
                 )
             })??;
+            if let Some(identified) = crate::retry::identified(value.pointer("/response/id")) {
+                send_event(events, identified).await?;
+            }
             emit_stream_event(
                 self.logger.as_ref(),
                 &self.context,
@@ -968,26 +965,20 @@ impl OpenAiToolConversation {
                 continue;
             };
             match &event {
-                ResponseStreamEvent::ResponseFailed(item) => {
-                    return Err(EngineAdapterRequestError::invalid_response(
-                        "openai",
-                        item.response
-                            .error
-                            .as_ref()
-                            .map(|error| error.message.to_string())
-                            .unwrap_or_else(|| "OpenAI response failed.".to_string()),
-                    ))
+                ResponseStreamEvent::ResponseFailed(_) => {
+                    return Err(
+                        Failure::invalid_response("openai", "OpenAI response failed.")
+                            .with_native(battersea_model::Reporter::Provider, value.clone()),
+                    )
                 }
-                ResponseStreamEvent::ResponseIncomplete(item) => {
-                    return Err(openai_missing_output_text_error(
-                        &serde_json::to_value(&item.response).expect("response serializes"),
-                    ))
+                ResponseStreamEvent::ResponseIncomplete(_) => {
+                    return Err(openai_missing_output_text_error(&value["response"]))
                 }
-                ResponseStreamEvent::ResponseError(item) => {
-                    return Err(EngineAdapterRequestError::transport(
-                        "openai",
-                        item.message.clone(),
-                    ))
+                ResponseStreamEvent::ResponseError(_) => {
+                    return Err(
+                        Failure::transport("openai", "OpenAI reported a stream error.")
+                            .with_native(battersea_model::Reporter::Provider, value.clone()),
+                    )
                 }
                 _ => {}
             }
@@ -1015,11 +1006,14 @@ async fn open_response_stream(
     logger: &Option<Arc<dyn EngineAdapterLogger>>,
     clock: &dyn Clock,
 ) -> Result<
-    futures_util::stream::BoxStream<
-        'static,
-        Result<(Option<ResponseStreamEvent>, Value), EngineAdapterRequestError>,
-    >,
-    EngineAdapterRequestError,
+    (
+        EngineTextStreamEvent,
+        futures_util::stream::BoxStream<
+            'static,
+            Result<(Option<ResponseStreamEvent>, Value), Failure>,
+        >,
+    ),
+    Failure,
 > {
     battersea_model::adapter::payload::check_payload(body, "openai")?;
     let response = crate::retry::send(
@@ -1032,7 +1026,8 @@ async fn open_response_stream(
         clock,
     )
     .await?;
-    Ok(crate::http_payload::bounded_stream(response)
+    let opened = crate::retry::opened(&response);
+    let stream = crate::http_payload::bounded_stream(response)
         .eventsource()
         .filter_map(|event| async move {
             match event {
@@ -1046,20 +1041,19 @@ async fn open_response_stream(
                     })?;
                     Ok((decode_stream_event(&raw)?, raw))
                 })()),
-                Err(error) => Some(Err(EngineAdapterRequestError::transport(
-                    "openai",
-                    error.to_string(),
+                Err(error) => Some(Err(crate::http_payload::event_stream_failure(
+                    Failure::transport("openai", "OpenAI event stream failed."),
+                    error,
                 ))),
             }
         })
-        .boxed())
+        .boxed();
+    Ok((opened, stream))
 }
 
 /// Decodes one Responses stream event, returning `None` for an event type the SDK does not model.
 /// An event of a modelled type that fails to decode is an error.
-fn decode_stream_event(
-    raw: &Value,
-) -> Result<Option<ResponseStreamEvent>, EngineAdapterRequestError> {
+fn decode_stream_event(raw: &Value) -> Result<Option<ResponseStreamEvent>, Failure> {
     match serde_json::from_value(raw.clone()) {
         Ok(event) => Ok(Some(event)),
         Err(_) if !is_modelled_stream_event_type(raw) => Ok(None),
@@ -1166,8 +1160,8 @@ async fn create_and_poll_background(
     poll_interval_ms: u64,
     max_wait_ms: u64,
     clock: &Arc<dyn Clock>,
-    tx: &mpsc::Sender<Result<EngineTextStreamEvent, EngineAdapterRequestError>>,
-) -> Result<Value, EngineAdapterRequestError> {
+    tx: &mpsc::Sender<Result<EngineTextStreamEvent, Failure>>,
+) -> Result<Value, Failure> {
     let headers = build_openai_headers(backend)?;
 
     let created = crate::retry::send(
@@ -1180,16 +1174,18 @@ async fn create_and_poll_background(
         clock.as_ref(),
     )
     .await?;
-    let response: Value = created.bounded_json().await.map_err(|error| {
-        EngineAdapterRequestError::invalid_response("openai", error.to_string())
-    })?;
+    let _ = tx.send(Ok(crate::retry::opened(&created))).await;
+    let response: Value = created.bounded_json().await?;
+    if let Some(identified) = crate::retry::identified(response.get("id")) {
+        let _ = tx.send(Ok(identified)).await;
+    }
     let id = response
         .get("id")
         .and_then(Value::as_str)
         .ok_or_else(|| {
-            EngineAdapterRequestError::invalid_response(
+            Failure::invalid_response(
                 "openai",
-                "OpenAI background create returned no response id.".to_string(),
+                "OpenAI background create returned no response id.",
             )
         })?
         .to_string();
@@ -1214,22 +1210,20 @@ async fn create_and_poll_background(
     loop {
         if tx.is_closed() {
             guard.cancel().await;
-            return Err(EngineAdapterRequestError::transport(
+            return Err(Failure::transport(
                 "openai",
-                "OpenAI background response cancelled — consumer dropped the stream.".to_string(),
+                "OpenAI background response cancelled: the consumer dropped the stream.",
             ));
         }
         if clock.instant().saturating_duration_since(started)
             >= std::time::Duration::from_millis(max_wait_ms)
         {
             guard.cancel().await;
-            return Err(EngineAdapterRequestError::transport(
+            return Err(Failure::transport(
                 "openai",
-                format!(
-                    "OpenAI background response exceeded backgroundMaxWaitMs ({max_wait_ms}ms); \
-                     aborted to bound cost."
-                ),
-            ));
+                "OpenAI background response exceeded its maximum wait.",
+            )
+            .with_context("backgroundMaxWaitMs", max_wait_ms));
         }
         battersea_model::clock::sleep(
             clock.as_ref(),
@@ -1248,9 +1242,8 @@ async fn create_and_poll_background(
             clock.as_ref(),
         )
         .await?;
-        let response: Value = polled.bounded_json().await.map_err(|error| {
-            EngineAdapterRequestError::invalid_response("openai", error.to_string())
-        })?;
+        let _ = tx.send(Ok(crate::retry::opened(&polled))).await;
+        let response: Value = polled.bounded_json().await?;
         let status = response
             .get("status")
             .and_then(Value::as_str)
@@ -1272,7 +1265,7 @@ async fn emit_background_terminal_response(
     context: &EngineAdapterDebugContext,
     operation: super::EngineOperation,
     response: &Value,
-    tx: &mpsc::Sender<Result<EngineTextStreamEvent, EngineAdapterRequestError>>,
+    tx: &mpsc::Sender<Result<EngineTextStreamEvent, Failure>>,
 ) {
     let output_text = read_openai_output_text(response);
     let missing_output_error = output_text
@@ -1298,7 +1291,6 @@ async fn emit_background_terminal_response(
     )
     .await;
     if let Some(error) = missing_output_error {
-        emit_error(logger.as_ref(), context, operation, &error).await;
         let _ = tx.send(Err(error)).await;
         return;
     }
@@ -1330,11 +1322,12 @@ async fn emit_background_terminal_response(
     }
     let _ = tx
         .send(Ok(EngineTextStreamEvent::MessageStop {
-            reason: if response["status"] == "completed" {
+            class: if response["status"] == "completed" {
                 completed_stop_reason(response)
             } else {
-                super::StopReason::Length
+                super::StopClass::Length
             },
+            native: response.clone(),
         }))
         .await;
 }
@@ -1380,8 +1373,8 @@ async fn drive_background_stream(
     context: &EngineAdapterDebugContext,
     operation: super::EngineOperation,
     clock: &Arc<dyn Clock>,
-    tx: &mpsc::Sender<Result<EngineTextStreamEvent, EngineAdapterRequestError>>,
-) -> Result<Value, EngineAdapterRequestError> {
+    tx: &mpsc::Sender<Result<EngineTextStreamEvent, Failure>>,
+) -> Result<Value, Failure> {
     let headers = build_openai_headers(backend)?;
     let deadline = clock.instant() + std::time::Duration::from_millis(max_wait_ms);
     let mut guard = BackgroundResponseGuard {
@@ -1405,26 +1398,27 @@ async fn drive_background_stream(
         clock.as_ref(),
     )
     .await?;
+    let _ = tx.send(Ok(crate::retry::opened(&created))).await;
     let mut sse = Box::pin(crate::http_payload::bounded_stream(created).eventsource());
+    // The read error that last interrupted the stream; a failure to reconnect carries it.
+    let mut interruption = None;
 
     loop {
         let reconnect_reason = loop {
             if tx.is_closed() {
                 guard.cancel().await;
-                return Err(EngineAdapterRequestError::transport(
+                return Err(Failure::transport(
                     "openai",
-                    "OpenAI background stream cancelled — consumer dropped the stream.".to_string(),
+                    "OpenAI background stream cancelled: the consumer dropped the stream.",
                 ));
             }
             if clock.instant() >= deadline {
                 guard.cancel().await;
-                return Err(EngineAdapterRequestError::transport(
+                return Err(Failure::transport(
                     "openai",
-                    format!(
-                        "OpenAI background stream exceeded backgroundMaxWaitMs ({max_wait_ms}ms); \
-                         aborted to bound cost."
-                    ),
-                ));
+                    "OpenAI background stream exceeded its maximum wait.",
+                )
+                .with_context("backgroundMaxWaitMs", max_wait_ms));
             }
             match battersea_model::clock::timeout(
                 clock.as_ref(),
@@ -1434,18 +1428,26 @@ async fn drive_background_stream(
             .await
             {
                 Ok(Some(Ok(event))) => {
-                    let value: Value = match serde_json::from_str(&event.data) {
-                        Ok(value) => value,
-                        Err(_) => continue,
-                    };
+                    if event.data.trim() == "[DONE]" || event.data.is_empty() {
+                        continue;
+                    }
+                    let value: Value = serde_json::from_str(&event.data).map_err(|error| {
+                        normalize_openai_error(OpenAIError::JSONDeserialize(
+                            error,
+                            event.data.clone(),
+                        ))
+                    })?;
                     let seq = value
                         .get("sequence_number")
                         .and_then(Value::as_i64)
                         .filter(|seq| *seq >= 0)
                         .ok_or_else(|| {
-                            EngineAdapterRequestError::invalid_response(
-                                "openai",
-                                "Resumable event omitted its sequence number.",
+                            crate::http_payload::about(
+                                Failure::invalid_response(
+                                    "openai",
+                                    "Resumable event omitted its sequence number.",
+                                ),
+                                &value,
                             )
                         })?;
                     if seq <= cursor {
@@ -1458,10 +1460,21 @@ async fn drive_background_stream(
                         .and_then(Value::as_str)
                     {
                         if guard.id.as_deref().is_some_and(|known| known != id) {
-                            return Err(EngineAdapterRequestError::invalid_response(
-                                "openai",
-                                "Resumed stream changed response identity.",
+                            return Err(crate::http_payload::about(
+                                Failure::invalid_response(
+                                    "openai",
+                                    "Resumed stream changed response identity.",
+                                ),
+                                &value,
                             ));
+                        }
+                        if guard.id.is_none() {
+                            let _ = tx
+                                .send(Ok(EngineTextStreamEvent::ResponseOpened {
+                                    request_id: None,
+                                    response_id: Some(id.to_string()),
+                                }))
+                                .await;
                         }
                         guard.id = Some(id.to_string());
                     }
@@ -1491,10 +1504,9 @@ async fn drive_background_stream(
                         );
                         if !is_empty && tx.send(Ok(text_event)).await.is_err() {
                             guard.cancel().await;
-                            return Err(EngineAdapterRequestError::transport(
+                            return Err(Failure::transport(
                                 "openai",
-                                "OpenAI background stream cancelled — consumer dropped the stream."
-                                    .to_string(),
+                                "OpenAI background stream cancelled: the consumer dropped the stream.",
                             ));
                         }
                     }
@@ -1510,74 +1522,71 @@ async fn drive_background_stream(
                             send_event(
                                 tx,
                                 EngineTextStreamEvent::MessageStop {
-                                    reason: completed_stop_reason(&response),
+                                    class: completed_stop_reason(&response),
+                                    native: response.clone(),
                                 },
                             )
                             .await?;
                             return Ok(response);
                         }
-                        ResponseStreamEvent::ResponseFailed(item) => {
+                        ResponseStreamEvent::ResponseFailed(_) => {
                             guard.id = None;
-                            let message = item
-                                .response
-                                .error
-                                .as_ref()
-                                .map(|error| error.message.to_string())
-                                .unwrap_or_else(|| {
-                                    "OpenAI background response failed.".to_string()
-                                });
-                            return Err(EngineAdapterRequestError::invalid_response(
-                                "openai", message,
-                            ));
-                        }
-                        ResponseStreamEvent::ResponseIncomplete(item) => {
-                            guard.id = None;
-                            let response =
-                                serde_json::to_value(&item.response).unwrap_or_else(|_| json!({}));
-                            return Err(openai_missing_output_text_error(&response));
-                        }
-                        ResponseStreamEvent::ResponseError(item) => {
-                            return Err(EngineAdapterRequestError::transport(
+                            return Err(Failure::invalid_response(
                                 "openai",
-                                item.message.clone(),
-                            ));
+                                "OpenAI response failed.",
+                            )
+                            .with_native(battersea_model::Reporter::Provider, value.clone()));
+                        }
+                        ResponseStreamEvent::ResponseIncomplete(_) => {
+                            guard.id = None;
+                            return Err(openai_missing_output_text_error(&value["response"]));
+                        }
+                        ResponseStreamEvent::ResponseError(_) => {
+                            return Err(Failure::transport(
+                                "openai",
+                                "OpenAI reported a stream error.",
+                            )
+                            .with_native(battersea_model::Reporter::Provider, value.clone()));
                         }
                         _ => {}
                     }
                 }
-                Ok(Some(Err(_stream_error))) => break "stream error",
+                Ok(Some(Err(error))) => {
+                    interruption = Some(error);
+                    break "stream error";
+                }
                 Ok(None) => break "stream ended",
                 Err(_elapsed) => break "idle",
             }
         };
 
         let Some(id) = guard.id.clone() else {
-            return Err(EngineAdapterRequestError::invalid_response(
+            return Err(Failure::invalid_response(
                 "openai",
-                "OpenAI background stream ended before returning a response id; cannot resume."
-                    .to_string(),
+                "OpenAI background stream ended before returning a response id.",
             ));
         };
         reconnects += 1;
         if reconnects > max_reconnects {
             guard.cancel().await;
-            return Err(EngineAdapterRequestError::transport(
+            let failure = Failure::transport(
                 "openai",
-                format!(
-                    "OpenAI background stream exceeded backgroundMaxReconnects ({max_reconnects}) \
-                     after \"{reconnect_reason}\"; aborted."
-                ),
-            ));
+                "OpenAI background stream exceeded its reconnect limit.",
+            )
+            .with_context("backgroundMaxReconnects", max_reconnects)
+            .with_context("reason", reconnect_reason);
+            return Err(match interruption.take() {
+                Some(error) => crate::http_payload::event_stream_failure(failure, error),
+                None => failure,
+            });
         }
         if clock.instant() >= deadline {
             guard.cancel().await;
-            return Err(EngineAdapterRequestError::transport(
+            return Err(Failure::transport(
                 "openai",
-                format!(
-                    "OpenAI background stream exceeded backgroundMaxWaitMs ({max_wait_ms}ms); \
-                     aborted to bound cost."
-                ),
-            ));
+                "OpenAI background stream exceeded its maximum wait.",
+            )
+            .with_context("backgroundMaxWaitMs", max_wait_ms));
         }
         if let Some(logger) = logger {
             logger
@@ -1602,6 +1611,7 @@ async fn drive_background_stream(
             clock.as_ref(),
         )
         .await?;
+        let _ = tx.send(Ok(crate::retry::opened(&resumed))).await;
         sse = Box::pin(crate::http_payload::bounded_stream(resumed).eventsource());
     }
 }
@@ -1619,7 +1629,7 @@ fn apply_openai_temperature(body: &mut Value, backend: &EngineBackendConfig, tem
 fn build_stream_body(
     backend: &EngineBackendConfig,
     request: &EngineTextStreamRequest,
-) -> Result<Value, EngineAdapterRequestError> {
+) -> Result<Value, Failure> {
     let mut body = json!({
         "model": backend.model,
         "stream": true,
@@ -1784,9 +1794,7 @@ fn openai_prompt_cache_retention(value: EnginePromptCacheRetention) -> &'static 
     }
 }
 
-fn collect_openai_function_calls(
-    response: &Value,
-) -> Result<Vec<EngineLocalToolCall>, EngineAdapterRequestError> {
+fn collect_openai_function_calls(response: &Value) -> Result<Vec<EngineLocalToolCall>, Failure> {
     response
         .get("output")
         .and_then(Value::as_array)
@@ -1796,10 +1804,7 @@ fn collect_openai_function_calls(
         .map(|item| {
             let arguments = match item.get("arguments") {
                 Some(Value::String(text)) => Some(serde_json::from_str(text).map_err(|error| {
-                    EngineAdapterRequestError::invalid_response(
-                        "openai",
-                        format!("Invalid tool arguments: {error}"),
-                    )
+                    Failure::invalid_response("openai", "Invalid tool arguments.").caused_by(&error)
                 })?),
                 value => value.cloned(),
             };
@@ -1816,7 +1821,7 @@ fn collect_openai_function_calls(
 fn build_input_token_count_body(
     backend: &EngineBackendConfig,
     request: &EngineTextStreamRequest,
-) -> Result<Value, EngineAdapterRequestError> {
+) -> Result<Value, Failure> {
     let generation = if request.local_tools.is_empty() {
         build_stream_body(backend, request)?
     } else {
@@ -1847,9 +1852,7 @@ fn build_input_token_count_body(
     Ok(body)
 }
 
-fn build_openai_headers(
-    backend: &EngineBackendConfig,
-) -> Result<HeaderMap, EngineAdapterRequestError> {
+fn build_openai_headers(backend: &EngineBackendConfig) -> Result<HeaderMap, Failure> {
     if let Some(binding) = &backend.binding {
         return crate::connection::headers(binding, &backend.auth);
     }
@@ -1860,13 +1863,16 @@ fn build_openai_headers(
         .as_deref()
         .ok_or_else(|| missing_backend_option("openai", "auth.header"))?;
     headers.insert(
-        HeaderName::from_bytes(header_name.as_bytes())
-            .map_err(|error| EngineAdapterRequestError::transport("openai", error.to_string()))?,
+        HeaderName::from_bytes(header_name.as_bytes()).map_err(|error| {
+            Failure::transport("openai", "Invalid authorisation header name.").caused_by(&error)
+        })?,
         HeaderValue::from_str(&format!(
             "Bearer {}",
             backend.auth.api_key.as_deref().unwrap_or("")
         ))
-        .map_err(|error| EngineAdapterRequestError::transport("openai", error.to_string()))?,
+        .map_err(|error| {
+            Failure::transport("openai", "Invalid authorisation header value.").caused_by(&error)
+        })?,
     );
     Ok(headers)
 }
@@ -1931,83 +1937,68 @@ fn read_openai_output_text(value: &Value) -> String {
         .to_string()
 }
 
-fn openai_missing_output_text_error(response: &Value) -> EngineAdapterRequestError {
-    if let Some(message) = response
+/// The failure of a response that ended without output text. The response travels whole as
+/// native detail.
+fn openai_missing_output_text_error(response: &Value) -> Failure {
+    let mut failure = describe_missing_output_text(response);
+    if response.get("status").and_then(Value::as_str) == Some("incomplete") {
+        failure.kind = battersea_model::ErrorKind::Incomplete;
+    }
+    // A refusal produces no output text; the missing text is the refusal.
+    if matches!(completed_stop_reason(response), super::StopClass::Refusal) {
+        failure.kind = battersea_model::ErrorKind::Refusal;
+    }
+    failure.with_native(battersea_model::Reporter::Provider, response.clone())
+}
+
+fn describe_missing_output_text(response: &Value) -> Failure {
+    if response
         .get("error")
         .and_then(|error| error.get("message"))
         .and_then(Value::as_str)
-        .map(str::trim)
-        .filter(|message| !message.is_empty())
+        .is_some_and(|message| !message.trim().is_empty())
     {
-        return EngineAdapterRequestError::invalid_response(
+        return Failure::invalid_response(
             "openai",
-            format!("OpenAI response failed before producing text: {message}"),
+            "OpenAI response failed before producing text.",
         );
     }
 
     let status = response.get("status").and_then(Value::as_str);
     if matches!(status, Some("incomplete")) {
-        let reason = response
-            .get("incomplete_details")
-            .and_then(Value::as_object)
-            .and_then(|details| details.get("reason"))
-            .and_then(Value::as_str)
-            .map(str::trim)
-            .filter(|reason| !reason.is_empty());
-        let message = match reason {
-            Some(reason) => {
-                format!("OpenAI response ended incomplete before producing text: {reason}.")
-            }
-            None => "OpenAI response ended incomplete before producing text.".to_string(),
-        };
-        return EngineAdapterRequestError::invalid_response("openai", message);
+        return Failure::invalid_response(
+            "openai",
+            "OpenAI response ended incomplete before producing text.",
+        );
     }
 
-    let output_types = collect_openai_output_item_types(response);
-    let message = if output_types.is_empty() {
-        "OpenAI response did not include output text.".to_string()
-    } else {
-        format!(
-            "OpenAI response did not include output text. Output item types: {}.",
-            output_types.join(", ")
-        )
-    };
-    EngineAdapterRequestError::invalid_response("openai", message)
-}
-
-fn collect_openai_output_item_types(response: &Value) -> Vec<String> {
-    let mut types = Vec::new();
-    if let Some(output) = response.get("output").and_then(Value::as_array) {
-        for item in output {
-            if let Some(kind) = item.get("type").and_then(Value::as_str) {
-                let kind = kind.trim();
-                if !kind.is_empty() && !types.iter().any(|existing| existing == kind) {
-                    types.push(kind.to_string());
-                }
-            }
-        }
-    }
-    types
+    Failure::invalid_response("openai", "OpenAI response did not include output text.")
 }
 
 /// Normalises OpenAI client, API, transport, and deserialisation failures into the shared
 /// provider-neutral error shape.
-fn normalize_openai_error(error: OpenAIError) -> EngineAdapterRequestError {
+fn normalize_openai_error(error: OpenAIError) -> Failure {
     match error {
         OpenAIError::Reqwest(inner) => {
-            let mut normalized = EngineAdapterRequestError::transport("openai", inner.to_string());
-            if let Some(status) = inner.status() {
-                normalized.status_code = Some(status.as_u16());
-                normalized.classification = classify_status(status.as_u16()).into();
+            let status = inner.status();
+            let mut normalized = Failure::transport("openai", "OpenAI HTTP request failed.")
+                .caused_by(&inner.without_url());
+            if let Some(status) = status {
+                normalized.exchange.status = Some(status.as_u16());
+                normalized.kind = classify_status(status.as_u16()).into();
             }
             normalized
         }
-        OpenAIError::ApiError(inner) => EngineAdapterRequestError::new(
+        OpenAIError::ApiError(inner) => Failure::new(
             "openai",
-            inner.message,
+            "OpenAI reported an error.",
             classify_openai_message(inner.r#type.as_deref(), inner.code.as_deref()),
+        )
+        .with_native(
+            battersea_model::Reporter::Provider,
+            serde_json::to_value(&inner).unwrap_or_else(|_| Value::String(inner.to_string())),
         ),
-        OpenAIError::JSONDeserialize(_, content) => {
+        OpenAIError::JSONDeserialize(error, content) => {
             // Before treating as a generic parse failure, check for a provider error envelope.
             // The Responses API streams errors as:
             //   {"type":"error","error":{"type":...,"code":...,"message":...},"sequence_number":N}
@@ -2018,29 +2009,30 @@ fn normalize_openai_error(error: OpenAIError) -> EngineAdapterRequestError {
                 if let Some(error_obj) = body.get("error") {
                     let error_type = error_obj.get("type").and_then(serde_json::Value::as_str);
                     let error_code = error_obj.get("code").and_then(serde_json::Value::as_str);
-                    let message = error_obj
-                        .get("message")
-                        .and_then(serde_json::Value::as_str)
-                        .unwrap_or("Provider returned an unspecified error");
-                    return EngineAdapterRequestError::new(
+                    return Failure::new(
                         "openai",
-                        message,
+                        "OpenAI reported an error.",
                         classify_openai_message(error_type, error_code),
-                    );
+                    )
+                    .with_native(battersea_model::Reporter::Provider, body.clone());
                 }
             }
-            EngineAdapterRequestError::invalid_response(
-                "openai",
-                format!("Failed to deserialize OpenAI response: {content}"),
-            )
+            Failure::invalid_response("openai", "Failed to deserialize OpenAI response.")
+                .with_native(
+                    battersea_model::Reporter::Provider,
+                    serde_json::from_str(&content).unwrap_or(Value::String(content)),
+                )
+                .caused_by(&error)
         }
         OpenAIError::StreamError(inner) => {
-            EngineAdapterRequestError::transport("openai", inner.to_string())
+            Failure::transport("openai", "OpenAI event stream failed.")
+                .caused_by_text(inner.to_string())
         }
         OpenAIError::InvalidArgument(message) => {
-            EngineAdapterRequestError::new("openai", message, "request")
+            Failure::new("openai", "Invalid OpenAI request argument.", "request")
+                .caused_by_text(message)
         }
-        other => EngineAdapterRequestError::transport("openai", other.to_string()),
+        other => Failure::transport("openai", "OpenAI client failed.").caused_by(&other),
     }
 }
 
@@ -2406,8 +2398,8 @@ mod tests {
             Ok(_) => panic!("invalid header name should fail"),
             Err(error) => error,
         };
-        assert_eq!(&*error.provider, "openai");
-        assert_eq!(error.classification.as_str(), "transport");
+        assert_eq!(error.origin.provider.as_deref(), Some("openai"));
+        assert_eq!(error.kind.as_str(), "transport");
     }
 
     #[test]
@@ -2606,10 +2598,14 @@ mod tests {
                 "type": "reasoning"
             }]
         }));
-        assert_eq!(incomplete.classification.as_str(), "invalid_response");
+        assert_eq!(incomplete.kind.as_str(), "incomplete");
+        assert_eq!(
+            incomplete.native.present().unwrap()["incomplete_details"]["reason"],
+            "max_output_tokens"
+        );
         assert_eq!(
             &*incomplete.message,
-            "OpenAI response ended incomplete before producing text: max_output_tokens."
+            "OpenAI response ended incomplete before producing text."
         );
 
         let shaped = openai_missing_output_text_error(&json!({
@@ -2622,7 +2618,11 @@ mod tests {
         }));
         assert_eq!(
             &*shaped.message,
-            "OpenAI response did not include output text. Output item types: reasoning, message."
+            "OpenAI response did not include output text."
+        );
+        assert_eq!(
+            shaped.native.present().unwrap()["output"][2]["type"],
+            "message"
         );
 
         let errored = openai_missing_output_text_error(&json!({
@@ -2632,7 +2632,13 @@ mod tests {
         }));
         assert_eq!(
             &*errored.message,
-            "OpenAI response failed before producing text: provider-side failure"
+            "OpenAI response failed before producing text."
+        );
+        assert_eq!(
+            errored.native,
+            battersea_model::Detail::Present(json!({
+                "error": {"message": "provider-side failure"}
+            }))
         );
     }
 
@@ -2646,8 +2652,8 @@ mod tests {
             .expect_err("status error");
         handle.join().expect("join server");
         let normalized = normalize_openai_error(OpenAIError::Reqwest(reqwest_error));
-        assert_eq!(normalized.classification.as_str(), "rate_limit");
-        assert_eq!(normalized.status_code, Some(429));
+        assert_eq!(normalized.kind.as_str(), "rate_limit");
+        assert_eq!(normalized.exchange.status, Some(429));
 
         let api_auth = normalize_openai_error(OpenAIError::ApiError(ApiError {
             message: "bad key".to_string(),
@@ -2655,8 +2661,8 @@ mod tests {
             param: None,
             code: None,
         }));
-        assert_eq!(api_auth.classification.as_str(), "auth");
-        assert_eq!(&*api_auth.message, "bad key");
+        assert_eq!(api_auth.kind.as_str(), "auth");
+        assert_eq!(api_auth.native.present().unwrap()["message"], "bad key");
 
         let api_rate_limit = normalize_openai_error(OpenAIError::ApiError(ApiError {
             message: "slow down".to_string(),
@@ -2664,13 +2670,13 @@ mod tests {
             param: None,
             code: None,
         }));
-        assert_eq!(api_rate_limit.classification.as_str(), "rate_limit");
+        assert_eq!(api_rate_limit.kind.as_str(), "rate_limit");
 
         let invalid_response = normalize_openai_error(OpenAIError::JSONDeserialize(
             serde_json::from_str::<serde_json::Value>("{").expect_err("json error"),
             "{\"bad\":".to_string(),
         ));
-        assert_eq!(invalid_response.classification.as_str(), "invalid_response");
+        assert_eq!(invalid_response.kind.as_str(), "invalid_response");
         assert!(invalid_response
             .message
             .contains("Failed to deserialize OpenAI response"));
@@ -2678,7 +2684,7 @@ mod tests {
         let stream = normalize_openai_error(OpenAIError::StreamError(Box::new(
             StreamError::EventStream("stream broke".to_string()),
         )));
-        assert_eq!(stream.classification.as_str(), "transport");
+        assert_eq!(stream.kind.as_str(), "transport");
     }
 
     #[test]
@@ -2723,31 +2729,34 @@ mod tests {
             parse_err(),
             r#"{"type":"error","error":{"type":"invalid_request_error","code":"rate_limit_exceeded","message":"You've exceeded the rate limit, please slow down and try again after 0.0 seconds.","param":null},"sequence_number":2}"#.to_string(),
         ));
-        assert_eq!(responses_api.classification.as_str(), "rate_limit");
-        assert!(responses_api.message.contains("rate limit"));
-        assert_eq!(&*responses_api.provider, "openai");
+        assert_eq!(responses_api.kind.as_str(), "rate_limit");
+        assert!(responses_api.native.present().unwrap()["error"]["message"]
+            .as_str()
+            .unwrap()
+            .contains("rate limit"));
+        assert_eq!(responses_api.origin.provider.as_deref(), Some("openai"));
 
         // OpenAI Chat Completions API error: {"error":{"type":"rate_limit_error",...}}
         let completions_api = normalize_openai_error(OpenAIError::JSONDeserialize(
             parse_err(),
             r#"{"error":{"type":"rate_limit_error","code":null,"message":"Rate limit reached for requests.","param":null}}"#.to_string(),
         ));
-        assert_eq!(completions_api.classification.as_str(), "rate_limit");
-        assert_eq!(&*completions_api.provider, "openai");
+        assert_eq!(completions_api.kind.as_str(), "rate_limit");
+        assert_eq!(completions_api.origin.provider.as_deref(), Some("openai"));
 
         // Auth error in envelope form
         let auth_envelope = normalize_openai_error(OpenAIError::JSONDeserialize(
             parse_err(),
             r#"{"error":{"type":"authentication_error","code":null,"message":"Invalid API key.","param":null}}"#.to_string(),
         ));
-        assert_eq!(auth_envelope.classification.as_str(), "auth");
+        assert_eq!(auth_envelope.kind.as_str(), "auth");
 
         // Unrecognised body still falls back to invalid_response
         let unrecognised = normalize_openai_error(OpenAIError::JSONDeserialize(
             parse_err(),
             r#"{"something_else":"value"}"#.to_string(),
         ));
-        assert_eq!(unrecognised.classification.as_str(), "invalid_response");
+        assert_eq!(unrecognised.kind.as_str(), "invalid_response");
         assert!(unrecognised
             .message
             .contains("Failed to deserialize OpenAI response"));
@@ -2837,16 +2846,23 @@ mod tests {
         let failed =
             finalize_background_response(json!({ "error": { "message": "boom" } }), "failed")
                 .expect_err("failed status is an error");
-        assert_eq!(failed.classification.as_str(), "invalid_response");
-        assert!(failed.message.contains("boom"));
+        assert_eq!(failed.kind.as_str(), "invalid_response");
+        assert_eq!(&*failed.message, "OpenAI background response failed.");
+        assert_eq!(
+            failed.native,
+            battersea_model::Detail::Present(json!({ "error": { "message": "boom" } }))
+        );
 
         let cancelled = finalize_background_response(json!({}), "cancelled")
             .expect_err("cancelled status is an error");
         assert!(cancelled.message.contains("cancelled"));
 
-        let unexpected = finalize_background_response(json!({}), "banana")
+        let unexpected = finalize_background_response(json!({ "status": "banana" }), "banana")
             .expect_err("unknown status is an error");
-        assert!(unexpected.message.contains("banana"));
+        assert_eq!(
+            unexpected.native,
+            battersea_model::Detail::Present(json!({ "status": "banana" }))
+        );
     }
 
     #[test]
@@ -2860,7 +2876,7 @@ mod tests {
             Ok(_) => panic!("poll mode without poll interval should fail"),
             Err(error) => error,
         };
-        assert!(error.message.contains("backgroundPollIntervalMs"));
+        assert_eq!(error.context["field"], "options.backgroundPollIntervalMs");
 
         // background: true but no mode at all -> hard error naming backgroundMode.
         let mut no_mode = sample_backend();
@@ -2869,7 +2885,7 @@ mod tests {
             Ok(_) => panic!("background without a mode should fail"),
             Err(error) => error,
         };
-        assert!(error.message.contains("backgroundMode"));
+        assert_eq!(error.context["field"], "options.backgroundMode");
 
         // Fully configured background backend constructs fine.
         assert!(create_openai_adapter(background_backend(), None, crate::test_clock()).is_ok());
@@ -2895,7 +2911,7 @@ mod tests {
         let response = json!({"status":"completed", "output":[{"type":"message","content":[{"type":"refusal","refusal":"denied"}]}]});
         assert_eq!(
             super::completed_stop_reason(&response),
-            super::super::StopReason::Refusal
+            super::super::StopClass::Refusal
         );
     }
 
@@ -2991,7 +3007,8 @@ mod tests {
             Ok(_) => panic!("unknown backgroundMode should fail"),
             Err(error) => error,
         };
-        assert!(error.message.contains("Unknown backgroundMode"));
+        assert_eq!(&*error.message, "Unknown background mode.");
+        assert_eq!(error.context["backgroundMode"], "teleport");
 
         // Stream mode requires the reconnect knobs.
         let mut missing = background_backend();
@@ -3001,7 +3018,7 @@ mod tests {
             Ok(_) => panic!("stream mode without reconnect idle should fail"),
             Err(error) => error,
         };
-        assert!(error.message.contains("backgroundReconnectIdleMs"));
+        assert_eq!(error.context["field"], "options.backgroundReconnectIdleMs");
 
         // Fully configured stream-mode backend constructs.
         let mut stream_ok = background_backend();
@@ -3079,9 +3096,8 @@ mod tests {
             Err(error) => error,
         };
         assert!(
-            error.message.contains("backgroundMaxReconnects"),
-            "expected a max-reconnects error, got: {}",
-            error.message
+            error.context.contains_key("backgroundMaxReconnects"),
+            "expected a max-reconnects error, got: {error}"
         );
 
         // First connection is the create POST; the second is the cursor resume.

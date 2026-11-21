@@ -62,7 +62,10 @@ impl<H: ExecutionHost> HandlerRegistry<H> {
     /// [`UNKNOWN_HANDLER`](crate::error_codes::UNKNOWN_HANDLER) when there is none.
     pub(crate) fn resolve(&self, id: &str) -> Result<&dyn NodeHandler<H>, H::Error> {
         self.get(id).map_err(|message| {
-            H::Error::invalid_request(crate::error_codes::UNKNOWN_HANDLER, message)
+            H::Error::invalid_request(
+                crate::error_codes::UNKNOWN_HANDLER,
+                crate::failure::wrapping("Flow handler is not registered.", message),
+            )
         })
     }
     pub fn ids(&self) -> impl Iterator<Item = &str> {

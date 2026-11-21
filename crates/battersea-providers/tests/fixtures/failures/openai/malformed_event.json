@@ -1,0 +1,7 @@
+{
+  "status": 200,
+  "content_type": "text/event-stream",
+  "raw": "data: {\"type\":\"response.output_text.delta\",\"delta\":\n\n",
+  "kind": "invalid_response",
+  "payload": "{\"type\":\"response.output_text.delta\",\"delta\":"
+}

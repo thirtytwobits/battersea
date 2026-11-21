@@ -18,6 +18,7 @@
   - [Text source](contracts/text-source.md)
   - [Execution](contracts/execution.md)
   - [Recovery](contracts/recovery.md)
+  - [Failures](contracts/failures.md)
   - [Provider conversations](contracts/providers.md)
   - [Application tools](contracts/tools.md)
   - [Operations](contracts/operations.md)

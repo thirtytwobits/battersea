@@ -152,8 +152,12 @@ impl IntoResponse for Error {
             .into_response()
     }
 }
+/// A failure in the server's wording that wraps the text of the error it handled.
+fn wrapping(message: &'static str, cause: impl std::fmt::Display) -> battersea_runtime::Failure {
+    battersea_runtime::Failure::from(message).caused_by_text(cause.to_string())
+}
 fn io(e: impl std::fmt::Display) -> Error {
-    Error::internal(e.to_string())
+    Error::internal(wrapping("The server could not complete the operation.", e))
 }
 fn key(value: &str) -> Result<&str, Error> {
     if value.is_empty()
@@ -246,7 +250,7 @@ async fn save(
     if !validation.valid {
         return Err(Error::invalid_request(
             codes::INVALID_FLOW,
-            format!("{:?}", validation.issues),
+            wrapping("Flow is invalid.", format!("{:?}", validation.issues)),
         ));
     }
     let path = app
@@ -256,8 +260,12 @@ async fn save(
         .join(format!("{}.json", flow.flow_key));
     match std::fs::read_to_string(&path) {
         Ok(source) => {
-            load_document(&source)
-                .map_err(|e| Error::invalid_request(codes::INVALID_DOCUMENT, e.to_string()))?;
+            load_document(&source).map_err(|e| {
+                Error::invalid_request(
+                    codes::INVALID_DOCUMENT,
+                    wrapping("Stored flow document is invalid.", e),
+                )
+            })?;
         }
         Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
         Err(error) => return Err(io(error)),
@@ -370,7 +378,7 @@ async fn start(app: &App, request: Activation) -> Result<String, Error> {
         }
         app.runtime.changed.notify_waiters();
     });
-    receiver.await.map_err(io)?.map_err(Error::internal)?;
+    receiver.await.map_err(io)?.map_err(io)?;
     Ok(id)
 }
 async fn activate(
@@ -468,7 +476,7 @@ async fn runtime_view(
     Query(query): Query<RuntimeQuery>,
 ) -> Result<Json<Value>, Error> {
     if let Some(error) = app.runtime.observation_error.lock().unwrap().clone() {
-        return Err(Error::internal(error));
+        return Err(io(error));
     }
     let view = app.runtime.view.lock().unwrap();
     let update = match (query.epoch, query.revision) {

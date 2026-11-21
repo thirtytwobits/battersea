@@ -12,7 +12,7 @@ use std::{
 };
 use tokio::time::Instant;
 
-pub const CONVERSATION_CHECKPOINT_VERSION: u32 = 2;
+pub const CONVERSATION_CHECKPOINT_VERSION: u32 = 3;
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -179,23 +179,22 @@ pub trait ConversationStore: Send + Sync {
         next: &ConversationCheckpoint,
     ) -> Result<(), ConversationStoreError>;
 }
-fn error(code: ToolCode, message: &str) -> EngineAdapterRequestError {
-    EngineAdapterRequestError::new("conversation", message, ErrorKind::InvalidRequest)
-        .with_tool_code(code)
+fn error(code: ToolCode, message: &'static str) -> Failure {
+    Failure::new("conversation", message, ErrorKind::InvalidRequest).with_tool_code(code)
 }
-fn invalid() -> EngineAdapterRequestError {
+fn invalid() -> Failure {
     error(
         ToolCode::InvalidToolContinuation,
         "Invalid or incompatible conversation checkpoint.",
     )
 }
-pub(crate) fn unsupported() -> EngineAdapterRequestError {
+pub(crate) fn unsupported() -> Failure {
     error(
         ToolCode::UnsupportedToolContinuation,
         "Adapter does not support durable tool conversations.",
     )
 }
-fn bounded(value: &impl Serialize, max: usize) -> Result<(), EngineAdapterRequestError> {
+fn bounded(value: &impl Serialize, max: usize) -> Result<(), Failure> {
     let bytes = payload::check_payload(value, "conversation")
         .map_err(|e| e.with_tool_code(ToolCode::ToolTranscriptTooLarge))?;
     if bytes > max {
@@ -224,16 +223,16 @@ fn same_call(a: &EngineLocalToolCall, b: &EngineLocalToolCall) -> bool {
 fn validate_turn_events(
     request: &ConversationRequest,
     turn: &ConversationTurn,
-) -> Result<(), EngineAdapterRequestError> {
+) -> Result<(), Failure> {
     let reason = if turn.calls.is_empty() {
-        StopReason::Complete
+        StopClass::Complete
     } else {
-        StopReason::ToolUse
+        StopClass::ToolUse
     };
     if !matches!(
         turn.events.first(),
         Some(EngineTextStreamEvent::MessageStart { .. })
-    ) || !matches!(turn.events.last(),Some(EngineTextStreamEvent::MessageStop { reason:r }) if *r==reason)
+    ) || !matches!(turn.events.last(),Some(EngineTextStreamEvent::MessageStop { class:r, .. }) if *r==reason)
         || turn
             .events
             .iter()
@@ -308,8 +307,8 @@ impl ConversationCheckpoint {
         }
     }
 
-    fn digest(&self) -> Result<String, EngineAdapterRequestError> {
-        let mut value = serde_json::to_value(self).map_err(|_| invalid())?;
+    fn digest(&self) -> Result<String, Failure> {
+        let mut value = serde_json::to_value(self).map_err(|cause| invalid().caused_by(&cause))?;
         value
             .as_object_mut()
             .ok_or_else(invalid)?
@@ -317,16 +316,8 @@ impl ConversationCheckpoint {
         Ok(configuration_digest(&value))
     }
     /// Check format, integrity, bounds and shared batch invariants without changing storage.
-    pub fn validate(&self) -> Result<(), EngineAdapterRequestError> {
-        if ![1, CONVERSATION_CHECKPOINT_VERSION].contains(&self.version)
-            || (self.version == 1
-                && (self.pending.is_some()
-                    || self.cancellation.is_some()
-                    || self.turns.iter().any(|t| t.pending.is_some())
-                    || self
-                        .resolutions
-                        .iter()
-                        .any(|r| matches!(r.resolution, ConversationResolution::Pending { .. }))))
+    pub fn validate(&self) -> Result<(), Failure> {
+        if self.version != CONVERSATION_CHECKPOINT_VERSION
             || self.revision == 0
             || !(1..=payload::PROVIDER_PAYLOAD_BYTES).contains(&self.max_bytes)
             || self.scope.run_id.trim().is_empty()
@@ -453,7 +444,7 @@ impl DurableConversation {
         max_bytes: usize,
         store_timeout: Duration,
         clock: Arc<dyn Clock>,
-    ) -> Result<Self, EngineAdapterRequestError> {
+    ) -> Result<Self, Failure> {
         if scope.run_id.trim().is_empty()
             || scope.tool_binding_revision.trim().is_empty()
             || !(1..=32).contains(&request.max_turns)
@@ -494,7 +485,7 @@ impl DurableConversation {
         max_bytes: usize,
         store_timeout: Duration,
         clock: Arc<dyn Clock>,
-    ) -> Result<Self, EngineAdapterRequestError> {
+    ) -> Result<Self, Failure> {
         let this = Self::build(
             store,
             adapter,
@@ -538,7 +529,7 @@ impl DurableConversation {
         max_bytes: usize,
         store_timeout: Duration,
         clock: Arc<dyn Clock>,
-    ) -> Result<Self, EngineAdapterRequestError> {
+    ) -> Result<Self, Failure> {
         let this = Self::build(
             store,
             adapter,
@@ -551,13 +542,13 @@ impl DurableConversation {
         this.inspect().await?;
         Ok(this)
     }
-    fn storage(e: ConversationStoreError) -> EngineAdapterRequestError {
+    fn storage(e: ConversationStoreError) -> Failure {
         match e {
             ConversationStoreError::Conflict => error(
                 ToolCode::ToolContinuationConflict,
                 "Conversation revision changed.",
             ),
-            ConversationStoreError::Unavailable => EngineAdapterRequestError::new(
+            ConversationStoreError::Unavailable => Failure::new(
                 "conversation",
                 "Conversation storage outcome requires inspection.",
                 ErrorKind::Transport,
@@ -565,14 +556,14 @@ impl DurableConversation {
             .with_tool_code(ToolCode::ToolContinuationStorage),
         }
     }
-    pub async fn inspect(&self) -> Result<ConversationCheckpoint, EngineAdapterRequestError> {
+    pub async fn inspect(&self) -> Result<ConversationCheckpoint, Failure> {
         let record = crate::clock::timeout(
             self.clock.as_ref(),
             self.store_timeout,
             self.store.load(&self.scope.run_id, self.max_bytes),
         )
         .await
-        .map_err(|_| Self::storage(ConversationStoreError::Unavailable))?
+        .map_err(|_elapsed| Self::storage(ConversationStoreError::Unavailable))?
         .map_err(Self::storage)?
         .ok_or_else(invalid)?;
         bounded(&record, self.max_bytes)?;
@@ -642,17 +633,14 @@ impl DurableConversation {
         }
         Ok(record)
     }
-    async fn expected(
-        &self,
-        revision: u64,
-    ) -> Result<ConversationCheckpoint, EngineAdapterRequestError> {
+    async fn expected(&self, revision: u64) -> Result<ConversationCheckpoint, Failure> {
         let r = self.inspect().await?;
         if r.revision != revision {
             return Err(Self::storage(ConversationStoreError::Conflict));
         }
         Ok(r)
     }
-    fn now(&self) -> Result<u64, EngineAdapterRequestError> {
+    fn now(&self) -> Result<u64, Failure> {
         self.clock.unix_ms().ok_or_else(invalid)
     }
     /// The time left before expiry, by the monotonic clock.
@@ -660,23 +648,21 @@ impl DurableConversation {
         self.deadline
             .saturating_duration_since(self.clock.instant())
     }
-    fn live(&self, r: &ConversationCheckpoint) -> Result<(), EngineAdapterRequestError> {
+    fn live(&self, r: &ConversationCheckpoint) -> Result<(), Failure> {
         let now = self.now()?;
         if now < r.updated_at_unix_ms {
             return Err(invalid());
         }
         if now >= self.scope.expires_at_unix_ms || self.clock.instant() >= self.deadline {
-            return Err(EngineAdapterRequestError::new(
-                "conversation",
-                "Conversation expired.",
-                ErrorKind::Expired,
-            )
-            .with_tool_code(ToolCode::ToolContinuationExpired)
-            .with_dispatch(crate::DispatchState::NotSent));
+            return Err(
+                Failure::new("conversation", "Conversation expired.", ErrorKind::Expired)
+                    .with_tool_code(ToolCode::ToolContinuationExpired)
+                    .with_dispatch(crate::DispatchState::NotSent),
+            );
         }
         Ok(())
     }
-    fn advance(&self, r: &mut ConversationCheckpoint) -> Result<(), EngineAdapterRequestError> {
+    fn advance(&self, r: &mut ConversationCheckpoint) -> Result<(), Failure> {
         let now = self.now()?;
         if now < r.updated_at_unix_ms {
             return Err(invalid());
@@ -689,7 +675,7 @@ impl DurableConversation {
         &self,
         expected: Option<u64>,
         r: &mut ConversationCheckpoint,
-    ) -> Result<(), EngineAdapterRequestError> {
+    ) -> Result<(), Failure> {
         bounded(r, self.max_bytes)?;
         r.checksum = r.digest()?;
         r.validate()?;
@@ -700,7 +686,7 @@ impl DurableConversation {
             self.store.compare_exchange(&self.scope.run_id, expected, r),
         )
         .await
-        .map_err(|_| Self::storage(ConversationStoreError::Unavailable))?
+        .map_err(|_elapsed| Self::storage(ConversationStoreError::Unavailable))?
         .map_err(Self::storage)
     }
     /// Copy an exact, completed tool result from host-owned durable execution state.
@@ -708,7 +694,7 @@ impl DurableConversation {
         &self,
         expected_revision: u64,
         result: ConversationToolResult,
-    ) -> Result<ConversationCheckpoint, EngineAdapterRequestError> {
+    ) -> Result<ConversationCheckpoint, Failure> {
         let mut r = self.expected(expected_revision).await?;
         if r.phase != ConversationPhase::AwaitingTools {
             return Err(invalid());
@@ -740,7 +726,7 @@ impl DurableConversation {
         &self,
         r: &mut ConversationCheckpoint,
         mut turn: ConversationTurn,
-    ) -> Result<(), EngineAdapterRequestError> {
+    ) -> Result<(), Failure> {
         bounded(&turn, self.max_bytes)?;
         tool_loop::validate_tool_calls("conversation", &r.request.to_request(), &turn.calls)?;
         for event in &mut turn.events {
@@ -770,7 +756,7 @@ impl DurableConversation {
         record: &mut ConversationCheckpoint,
         command: &ConversationCommand,
         step: ConversationStep,
-    ) -> Result<(), EngineAdapterRequestError> {
+    ) -> Result<(), Failure> {
         bounded(&step, self.max_bytes)?;
         let previous = record.turns.last();
         if self.adapter.validate_conversation_step(
@@ -795,9 +781,7 @@ impl DurableConversation {
                 ConversationCommand::Start | ConversationCommand::Poll { .. },
                 ConversationStep::Pending { state },
             ) => {
-                if record.version < 2
-                    || record.pending.as_ref().is_some_and(|known| known != &state)
-                {
+                if record.pending.as_ref().is_some_and(|known| known != &state) {
                     return Err(invalid());
                 }
                 record.pending = Some(state);
@@ -814,10 +798,7 @@ impl DurableConversation {
 
     /// Cancel the retained remote response. Failed or interrupted cancellation may be repeated.
     /// Cleanup remains available after expiry and never authorises generation or tool execution.
-    pub async fn cancel(
-        &self,
-        expected_revision: u64,
-    ) -> Result<ConversationCheckpoint, EngineAdapterRequestError> {
+    pub async fn cancel(&self, expected_revision: u64) -> Result<ConversationCheckpoint, Failure> {
         let mut record = self.expected(expected_revision).await?;
         if record.phase == ConversationPhase::Abandoned && record.cancellation.is_some() {
             return Ok(record);
@@ -848,8 +829,8 @@ impl DurableConversation {
             ),
         )
         .await
-        .map_err(|_| {
-            EngineAdapterRequestError::new(
+        .map_err(|_elapsed| {
+            Failure::new(
                 "conversation",
                 "Provider cancellation deadline exceeded; inspect retained state.",
                 ErrorKind::Timeout,
@@ -867,10 +848,7 @@ impl DurableConversation {
     }
 
     /// Start or retrieve one provider turn, or inspect a terminal result. Pending tools stop before I/O.
-    pub async fn resume(
-        &self,
-        expected_revision: u64,
-    ) -> Result<ConversationCheckpoint, EngineAdapterRequestError> {
+    pub async fn resume(&self, expected_revision: u64) -> Result<ConversationCheckpoint, Failure> {
         let r = self.expected(expected_revision).await?;
         let evidence = r
             .turns
@@ -901,7 +879,7 @@ impl DurableConversation {
         &self,
         mut r: ConversationCheckpoint,
         expected_revision: u64,
-    ) -> Result<ConversationCheckpoint, EngineAdapterRequestError> {
+    ) -> Result<ConversationCheckpoint, Failure> {
         if r.phase == ConversationPhase::Completed {
             return Ok(r);
         }
@@ -961,8 +939,8 @@ impl DurableConversation {
                 .conversation_step(r.request.clone(), state, results, command.clone()),
         )
         .await
-        .map_err(|_| {
-            EngineAdapterRequestError::new(
+        .map_err(|_elapsed| {
+            Failure::new(
                 "conversation",
                 "Provider operation deadline expired; inspect retained state.",
                 ErrorKind::Timeout,
@@ -986,7 +964,7 @@ impl DurableConversation {
         resolution: ConversationResolution,
         actor: &str,
         evidence: &str,
-    ) -> Result<ConversationCheckpoint, EngineAdapterRequestError> {
+    ) -> Result<ConversationCheckpoint, Failure> {
         let mut r = self.expected(expected_revision).await?;
         if actor.trim().is_empty()
             || evidence.trim().is_empty()

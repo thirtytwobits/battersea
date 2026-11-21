@@ -9,7 +9,7 @@ use crate::{codes, Port, Turn};
 use async_trait::async_trait;
 use battersea_flow::{FlowNode, FlowNodeDefinition};
 use battersea_kit::text::{activation_text, prepare_static_prompt};
-use battersea_model::{EngineAdapter, EngineAdapterRequestError, Role};
+use battersea_model::{EngineAdapter, Failure, Role};
 use battersea_runtime::NodeHandler;
 use serde_json::{json, Map, Value};
 use std::{collections::HashMap, ops::Range};
@@ -143,7 +143,7 @@ pub async fn fit<X: Clone>(
     engine: &dyn EngineAdapter,
     turns: &[Turn<X>],
     budget: u64,
-) -> Result<(Vec<Turn<X>>, u64), EngineAdapterRequestError> {
+) -> Result<(Vec<Turn<X>>, u64), Failure> {
     let mut kept = turns.len();
     let mut tokens = 0;
     for unit in units(turns).into_iter().rev() {
@@ -224,7 +224,9 @@ impl<H: Port> NodeHandler<H> for RefinementSourceHandler {
             .ok_or_else(|| {
                 refuse::<H::Error>(
                     codes::UNKNOWN_TURN,
-                    format!("Transcript {transcript} does not hold turn {id:?}."),
+                    battersea_model::Failure::from("Transcript does not hold the turn.")
+                        .with_context("transcript", transcript.to_string())
+                        .with_context("turn", id.as_str()),
                 )
             })?;
         host.emit_flow_token(

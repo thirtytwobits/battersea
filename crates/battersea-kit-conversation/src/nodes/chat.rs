@@ -15,9 +15,8 @@ use crate::{
 use async_trait::async_trait;
 use battersea_flow::{FlowNode, FlowNodeDefinition};
 use battersea_model::{
-    engine::EngineChatParameters, EngineAdapterRequestError, EngineTextStream,
-    EngineTextStreamEvent, EngineTokenUsage, ErrorKind, Message, Role, StopReason,
-    ToolCallEvidence, ToolCode,
+    engine::EngineChatParameters, EngineTextStream, EngineTextStreamEvent, EngineTokenUsage,
+    ErrorKind, Failure, Message, Role, ToolCallEvidence, ToolCode,
 };
 use battersea_runtime::{ExecutionError, NodeHandler, ProviderEvent, Token};
 use futures_util::{stream, Stream, StreamExt};
@@ -37,7 +36,7 @@ struct Completion {
     usage: EngineTokenUsage,
     stop_reason: Option<String>,
     started_at: u64,
-    failure: Option<EngineAdapterRequestError>,
+    failure: Option<Failure>,
 }
 
 /// The stream's accumulation.
@@ -110,7 +109,7 @@ impl Progress {
             }),
         }
     }
-    fn completion(&mut self, failure: Option<EngineAdapterRequestError>) -> ProviderEvent {
+    fn completion(&mut self, failure: Option<Failure>) -> ProviderEvent {
         self.done = true;
         if let Some(evidence) = failure
             .as_ref()
@@ -158,17 +157,6 @@ fn total<'a>(turns: impl Iterator<Item = &'a EngineTokenUsage>) -> EngineTokenUs
         sum(&mut all.total_tokens, usage.total_tokens);
     }
     all
-}
-
-/// The stop reason as the model crate spells it.
-fn spelled(reason: StopReason) -> String {
-    match reason {
-        StopReason::Other(other) => other,
-        reason => serde_json::to_value(reason)
-            .ok()
-            .and_then(|value| value.as_str().map(str::to_owned))
-            .unwrap_or_default(),
-    }
 }
 
 fn raw(port: &str, text: String) -> ProviderEvent {
@@ -248,13 +236,14 @@ fn provider_events(
                                 evidence: tool_call,
                             }),
                         },
-                        EngineTextStreamEvent::MessageStop { reason } => {
+                        EngineTextStreamEvent::MessageStop { class, .. } => {
                             progress.flush_round();
-                            progress.stop_reason = Some(spelled(reason));
+                            progress.stop_reason = Some(class.as_str().into());
                         }
                         EngineTextStreamEvent::MessageStart { .. } => progress.flush_round(),
                         EngineTextStreamEvent::TokenUsage { usage } => progress.observe(usage),
                         EngineTextStreamEvent::ContentBlock { .. }
+                        | EngineTextStreamEvent::ResponseOpened { .. }
                         | EngineTextStreamEvent::StructuredOutput { .. }
                         | EngineTextStreamEvent::TextDelta { .. }
                         | EngineTextStreamEvent::ReasoningDelta { .. } => {}
@@ -386,7 +375,9 @@ impl<H: Port> NodeHandler<H> for ChatHandler {
             host.emit_flow_signal(runtime, node, "over_budget").await?;
             return Err(refuse(
                 codes::OVER_BUDGET,
-                format!("{input_tokens} input tokens exceed the budget of {budget}."),
+                battersea_model::Failure::from("Input tokens exceed the budget.")
+                    .with_context("inputTokens", input_tokens)
+                    .with_context("budget", budget),
             ));
         }
         host.reserve(
@@ -433,14 +424,17 @@ impl<H: Port> NodeHandler<H> for ChatHandler {
         cancel: &CancellationToken,
     ) -> Result<(), H::Error> {
         let completion: Completion = serde_json::from_value(value.clone()).map_err(|error| {
-            H::Error::internal(format!("The chat completion is malformed: {error}"))
+            H::Error::internal(
+                battersea_model::Failure::from("The chat completion is malformed.")
+                    .caused_by(&error),
+            )
         })?;
         let (outcome, failure) = match &completion.failure {
             None => (CallOutcome::Completed, None),
             Some(error) if error.tool_code == Some(ToolCode::ToolRoundsExceeded) => {
                 (CallOutcome::Failed, Some(codes::TOOL_ROUNDS_EXHAUSTED))
             }
-            Some(error) if error.classification == ErrorKind::Cancelled => {
+            Some(error) if error.kind == ErrorKind::Cancelled => {
                 (CallOutcome::Cancelled, Some(codes::PROVIDER_FAILED))
             }
             Some(_) => (CallOutcome::Failed, Some(codes::PROVIDER_FAILED)),
@@ -487,7 +481,7 @@ impl<H: Port> NodeHandler<H> for ChatHandler {
         )
         .await?;
         match (failure, completion.failure) {
-            (Some(code), Some(error)) => Err(refuse(code, error.message.to_string())),
+            (Some(code), Some(error)) => Err(refuse(code, error)),
             _ => host.emit_flow_signal(runtime, node, "completed").await,
         }
     }
@@ -496,12 +490,12 @@ impl<H: Port> NodeHandler<H> for ChatHandler {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use battersea_model::{EngineAdapterRequestError, ToolCallOutcome};
+    use battersea_model::{Failure, ToolCallOutcome};
     use serde_json::json;
 
     /// The completion the stream of `events` ends with.
     async fn completion_of(
-        events: Vec<Result<EngineTextStreamEvent, EngineAdapterRequestError>>,
+        events: Vec<Result<EngineTextStreamEvent, Failure>>,
     ) -> (Vec<ProviderEvent>, Completion) {
         let mut events = provider_events(Box::pin(stream::iter(events)), 7)
             .collect::<Vec<_>>()
@@ -554,7 +548,8 @@ mod tests {
             Ok(EngineTextStreamEvent::MessageStart { turn_index: 1 }),
             Ok(usage(1, Some(4), Some(2))),
             Ok(EngineTextStreamEvent::MessageStop {
-                reason: StopReason::Complete,
+                class: battersea_model::StopClass::Complete,
+                native: Value::Null,
             }),
         ])
         .await;
@@ -570,7 +565,7 @@ mod tests {
 
     #[tokio::test]
     async fn tool_rounds_close_at_the_next_message_and_at_a_failed_end() {
-        let mut error = EngineAdapterRequestError::new("test", "rounds", ErrorKind::Request)
+        let mut error = Failure::new("test", "rounds", ErrorKind::Request)
             .with_tool_code(ToolCode::ToolRoundsExceeded);
         error.tool_call = Some(Box::new(ToolCallEvidence {
             call_id: "call-2".into(),
@@ -586,8 +581,7 @@ mod tests {
                 name: "echo".into(),
                 ok: true,
                 result: json!(1),
-                error_message: None,
-                error_classification: None,
+                failure: None,
                 tool_result: None,
                 tool_call: None,
                 finished_at: String::new(),

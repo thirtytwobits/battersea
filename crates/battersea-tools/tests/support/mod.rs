@@ -88,7 +88,7 @@ pub fn handler(
                 .await
                 .map(outcome)
                 .map_err(|error| {
-                    Refusal::new("executor_failed", Category::Internal, error.message)
+                    Refusal::new("executor_failed", Category::Internal, error.message.clone())
                         .with_evidence(Evidence::Uncertain)
                 })
         })

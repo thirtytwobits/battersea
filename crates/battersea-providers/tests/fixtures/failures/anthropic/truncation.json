@@ -1,0 +1,44 @@
+{
+  "status": 200,
+  "content_type": "text/event-stream",
+  "sse": [
+    {
+      "type": "message_start",
+      "message": {
+        "id": "msg_fixture",
+        "type": "message",
+        "role": "assistant",
+        "content": [],
+        "model": "fixture-model",
+        "usage": {
+          "input_tokens": 4,
+          "output_tokens": 0
+        }
+      }
+    },
+    {
+      "type": "message_delta",
+      "delta": {
+        "stop_reason": "max_tokens",
+        "stop_sequence": null
+      },
+      "usage": {
+        "output_tokens": 64
+      }
+    },
+    {
+      "type": "message_stop"
+    }
+  ],
+  "kind": "incomplete",
+  "payload": {
+    "type": "message_delta",
+    "delta": {
+      "stop_reason": "max_tokens",
+      "stop_sequence": null
+    },
+    "usage": {
+      "output_tokens": 64
+    }
+  }
+}

@@ -53,6 +53,7 @@ success as failure, and leave retry ownership with the host.
 
 Content capture requires a mask callback. Hash and byte length describe the original content;
 only the callback's output enters the runtime record. Exporters consume those records.
+A failure's native detail, partial output and foreign error text are content.
 
 GenAI attribute/metric vocabulary is pinned to
 [`6fd0d763a092db245a54104fc1124031eb3c51d2`](https://github.com/open-telemetry/semantic-conventions-genai/tree/6fd0d763a092db245a54104fc1124031eb3c51d2/docs/gen-ai).

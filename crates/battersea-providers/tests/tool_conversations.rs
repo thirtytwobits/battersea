@@ -14,9 +14,9 @@ use battersea_model::engine::{
 use battersea_model::ManualClock;
 use battersea_providers::{
     adapter::EngineAuthConfig, EngineAdapter, EngineAdapterLogger, EngineAdapterRequest,
-    EngineAdapterRequestError, EngineAdapterStreamLog, EngineBackendConfig, EngineBackendOptions,
-    EngineLocalToolCall, EngineLocalToolDefinition, EngineLocalToolExecutor, EngineLocalToolResult,
-    EngineOperation, EngineTextStreamEvent, EngineTextStreamRequest,
+    EngineAdapterStreamLog, EngineBackendConfig, EngineBackendOptions, EngineLocalToolCall,
+    EngineLocalToolDefinition, EngineLocalToolExecutor, EngineLocalToolResult, EngineOperation,
+    EngineTextStreamEvent, EngineTextStreamRequest, Failure,
 };
 use futures_util::StreamExt;
 use serde_json::{json, Value};
@@ -32,10 +32,7 @@ struct RecordingExecutor(
 );
 #[async_trait]
 impl EngineLocalToolExecutor for RecordingExecutor {
-    async fn call(
-        &self,
-        call: EngineLocalToolCall,
-    ) -> Result<EngineLocalToolResult, EngineAdapterRequestError> {
+    async fn call(&self, call: EngineLocalToolCall) -> Result<EngineLocalToolResult, Failure> {
         self.0.lock().unwrap().push(call.clone());
         Ok(self
             .1
@@ -51,7 +48,12 @@ impl EngineAdapterLogger for StreamObserver {
     async fn on_stream_event(&self, entry: EngineAdapterStreamLog) {
         self.0.lock().unwrap().push(entry.event_type);
     }
+    async fn on_error(&self, _entry: battersea_model::EngineAdapterErrorLog) {
+        self.0.lock().unwrap().push(ON_ERROR.into());
+    }
 }
+const ON_ERROR: &str = "battersea.on_error";
+const REQUEST_ID: &str = "req-fixture";
 impl StreamObserver {
     fn count(&self, event_type: &str) -> usize {
         self.0
@@ -76,7 +78,7 @@ async fn reply(State(state): State<ServerState>, Json(body): Json<Value>) -> imp
         .unwrap()
         .pop_front()
         .expect("unexpected provider request");
-    ([("content-type", kind)], body)
+    ([("content-type", kind), ("request-id", REQUEST_ID)], body)
 }
 async fn server(
     replies: Vec<(&'static str, String)>,
@@ -231,7 +233,7 @@ async fn durable_responses_reject_unsupported_modes_before_dispatch() {
         };
         let adapter = adapter(backend);
         let error = adapter.validate_conversation(&request, None).unwrap_err();
-        assert_eq!(error.classification, ErrorKind::InvalidRequest);
+        assert_eq!(error.kind, ErrorKind::InvalidRequest);
         if streaming {
             assert_eq!(error.tool_code, Some(ToolCode::UnsupportedToolContinuation));
         }
@@ -563,8 +565,8 @@ async fn configured_tool_choice_restrictions_fail_before_counting_or_generation(
                 Err(error) => error,
                 Ok(_) => panic!("unsupported choice accepted"),
             };
-            assert_eq!(count_error.classification.as_str(), "invalid_request");
-            assert_eq!(generation_error.classification, count_error.classification);
+            assert_eq!(count_error.kind.as_str(), "invalid_request");
+            assert_eq!(generation_error.kind, count_error.kind);
         }
     }
 }
@@ -605,9 +607,10 @@ async fn truncation_and_malformed_calls_never_reach_the_executor() {
             .unwrap()
             .collect()
             .await;
-        assert!(
-            matches!(events.last(), Some(Err(error)) if error.classification.as_str() == "invalid_response")
-        );
+        assert!(matches!(
+            events.last(),
+            Some(Err(error)) if matches!(error.kind.as_str(), "invalid_response" | "incomplete")
+        ));
         assert!(!events.iter().any(|event| matches!(
             event,
             Ok(EngineTextStreamEvent::ToolCallStarted { .. }
@@ -692,10 +695,13 @@ async fn unsupported_effort_fails_before_counting_or_generation_for_every_provid
             .count_text_stream_input_tokens(request.clone())
             .await
             .unwrap_err();
-        assert_eq!(error.classification.as_str(), "invalid_request");
-        assert!(error.message.contains("reasoning effort"));
+        assert_eq!(error.kind.as_str(), "invalid_request");
+        assert!(
+            format!("{:?}", error.cause).contains("reasoning effort"),
+            "{error:?}"
+        );
         match adapter.stream_text(request).await {
-            Err(error) => assert_eq!(error.classification.as_str(), "invalid_request"),
+            Err(error) => assert_eq!(error.kind.as_str(), "invalid_request"),
             Ok(_) => panic!("unsupported effort accepted by {provider}"),
         }
     }
@@ -1005,7 +1011,10 @@ async fn ambiguous_server_failure_and_partial_stream_never_replay_generation() {
                     .find_map(Result::err)
                     .expect("truncation must fail"),
             };
-            assert_eq!(error.dispatch, battersea_model::DispatchState::Unknown);
+            assert_eq!(
+                error.exchange.dispatch,
+                battersea_model::DispatchState::Unknown
+            );
             assert_eq!(state.requests.lock().unwrap().len(), 1);
             server.abort();
         }
@@ -1028,7 +1037,7 @@ async fn plain_stream(
     provider: &str,
     body: String,
 ) -> (
-    Vec<Result<EngineTextStreamEvent, EngineAdapterRequestError>>,
+    Vec<Result<EngineTextStreamEvent, Failure>>,
     Arc<StreamObserver>,
 ) {
     let (url, _, server) = server(vec![("text/event-stream", body)]).await;
@@ -1044,6 +1053,170 @@ async fn plain_stream(
         .await;
     server.abort();
     (events, observer)
+}
+
+/// contracts/failures.md: a failure raised after the response headers carries the operation's
+/// origin and the identifiers the provider issued, and reaches the observer once.
+#[tokio::test]
+async fn a_stream_failure_after_the_headers_carries_origin_and_the_issued_identifier() {
+    for provider in ["anthropic", "openai"] {
+        let body = "event: message_start\ndata: {malformed\n\n".to_string();
+        let (events, observer) = plain_stream(provider, body).await;
+        assert!(
+            !events
+                .iter()
+                .any(|event| matches!(event, Ok(EngineTextStreamEvent::ResponseOpened { .. }))),
+            "{provider}"
+        );
+        let failure = events.last().unwrap().as_ref().unwrap_err();
+        assert_eq!(
+            failure.exchange.request_id.as_deref(),
+            Some(REQUEST_ID),
+            "{provider}"
+        );
+        let origin = &failure.origin;
+        assert_eq!(
+            origin.operation.as_deref(),
+            Some("stream_text"),
+            "{provider}"
+        );
+        assert_eq!(origin.provider.as_deref(), Some(provider));
+        assert_eq!(origin.backend.as_deref(), Some("fixture"), "{provider}");
+        assert_eq!(origin.model.as_deref(), Some("fixture-model"), "{provider}");
+        assert_eq!(observer.count(ON_ERROR), 1, "{provider}");
+    }
+}
+
+/// contracts/failures.md, Partial output: an Anthropic stream that fails or ends with content
+/// blocks open carries each block with the signature and tool arguments received for it, which
+/// no event delivered.
+#[tokio::test]
+async fn an_anthropic_stream_failure_carries_its_unfinished_blocks() {
+    let opened = [
+        json!({"type":"message_start", "message":{"id":"msg_fixture", "type":"message",
+            "role":"assistant", "content":[], "model":"fixture-model",
+            "usage":{"input_tokens":4, "output_tokens":0}}}),
+        json!({"type":"content_block_start", "index":0,
+            "content_block":{"type":"thinking", "thinking":"", "signature":""}}),
+        json!({"type":"content_block_delta", "index":0,
+            "delta":{"type":"thinking_delta", "thinking":"Consider."}}),
+        json!({"type":"content_block_delta", "index":0,
+            "delta":{"type":"signature_delta", "signature":"signed"}}),
+        json!({"type":"content_block_start", "index":1,
+            "content_block":{"type":"tool_use", "id":"toolu_fixture", "name":"session_get", "input":{}}}),
+        json!({"type":"content_block_delta", "index":1,
+            "delta":{"type":"input_json_delta", "partial_json":"{\"key\":"}}),
+    ];
+    let unfinished = vec![
+        json!({"type":"thinking", "thinking":"Consider.", "signature":"signed"}),
+        json!({"type":"tool_use", "id":"toolu_fixture", "name":"session_get", "input":{},
+            "partial_json":"{\"key\":"}),
+    ];
+    let reported =
+        json!({"type":"error", "error":{"type":"overloaded_error", "message":"Overloaded"}});
+    for (name, tail, kind) in [
+        (
+            "stream ends",
+            String::new(),
+            battersea_model::ErrorKind::InvalidResponse,
+        ),
+        (
+            "provider error",
+            stream_body(std::slice::from_ref(&reported)),
+            battersea_model::ErrorKind::Server,
+        ),
+        (
+            "malformed event",
+            "event: content_block_delta\ndata: {malformed\n\n".to_string(),
+            battersea_model::ErrorKind::InvalidResponse,
+        ),
+        (
+            "malformed tool arguments",
+            stream_body(&[json!({"type":"content_block_stop", "index":1})]),
+            battersea_model::ErrorKind::InvalidResponse,
+        ),
+        (
+            "stopped with blocks open",
+            stream_body(&[
+                json!({"type":"message_delta", "delta":{"stop_reason":"end_turn"},
+                    "usage":{"output_tokens":3}}),
+                json!({"type":"message_stop"}),
+            ]),
+            battersea_model::ErrorKind::InvalidResponse,
+        ),
+    ] {
+        let (events, _) = plain_stream("anthropic", stream_body(&opened) + &tail).await;
+        let failure = events.last().unwrap().as_ref().expect_err(name);
+        assert_eq!(failure.kind, kind, "{name}: {failure:?}");
+        assert_eq!(
+            failure.partial.present().map(|partial| &partial.blocks),
+            Some(&unfinished),
+            "{name}: {failure:?}"
+        );
+    }
+}
+
+/// contracts/failures.md, Native detail: a background response that completes with a refusal
+/// fails with the provider's terminal response whole, in the stream and the poll mode.
+#[tokio::test]
+async fn a_background_refusal_carries_the_terminal_response() {
+    let mut refused = openai_response(json!([{"type":"message", "id":"message-fixture",
+        "status":"completed", "role":"assistant",
+        "content":[{"type":"refusal", "refusal":"Declined."}]}]));
+    refused["usage"] = openai_usage();
+    for mode in ["background-stream", "poll"] {
+        let reply = if mode == "poll" {
+            ("application/json", refused.to_string())
+        } else {
+            ("text/event-stream", sse(&refused, false))
+        };
+        let (url, _, server) = server(vec![reply]).await;
+        let backend = backend("openai", &url, mode);
+        let mut request = request(&backend, Arc::new(RecordingExecutor::default()));
+        request.local_tools.clear();
+        let events: Vec<_> = adapter(backend)
+            .stream_text(request)
+            .await
+            .unwrap()
+            .collect()
+            .await;
+        server.abort();
+        let failure = events.last().unwrap().as_ref().expect_err(mode);
+        assert_eq!(
+            failure.kind,
+            battersea_model::ErrorKind::Refusal,
+            "{mode}: {failure:?}"
+        );
+        assert_eq!(
+            failure.native,
+            battersea_model::Detail::Present(refused.clone()),
+            "{mode}"
+        );
+    }
+}
+
+/// contracts/failures.md, Adapters: a malformed event of a background stream fails the stream
+/// and carries the event's text.
+#[tokio::test]
+async fn a_malformed_background_stream_event_fails_with_its_text() {
+    let (url, _, server) = server(vec![("text/event-stream", "data: {malformed\n\n".into())]).await;
+    let backend = backend("openai", &url, "background-stream");
+    let mut request = request(&backend, Arc::new(RecordingExecutor::default()));
+    request.local_tools.clear();
+    let events: Vec<_> = adapter(backend)
+        .stream_text(request)
+        .await
+        .unwrap()
+        .collect()
+        .await;
+    server.abort();
+    let failure = events.last().unwrap().as_ref().unwrap_err();
+    assert_eq!(failure.kind, battersea_model::ErrorKind::InvalidResponse);
+    assert_eq!(
+        failure.native,
+        battersea_model::Detail::Present(json!("{malformed"))
+    );
+    assert!(failure.cause.is_some());
 }
 
 #[tokio::test]
@@ -1133,7 +1306,7 @@ async fn malformed_modelled_stream_events_fail_as_invalid_response() {
             .find_map(Result::err)
             .unwrap_or_else(|| panic!("{event} must fail"));
         assert_eq!(
-            error.classification,
+            error.kind,
             battersea_model::ErrorKind::InvalidResponse,
             "{event}"
         );
@@ -1152,8 +1325,11 @@ async fn retry_after_beyond_the_configured_delay_bound_stops_without_retrying_ea
         .await
         .err()
         .expect("rate limit");
-    assert_eq!(error.dispatch, battersea_model::DispatchState::Rejected);
-    assert_eq!(error.retry_after_ms, Some(3_600_000));
+    assert_eq!(
+        error.exchange.dispatch,
+        battersea_model::DispatchState::Rejected
+    );
+    assert_eq!(error.exchange.retry_after_ms, Some(3_600_000));
     assert_eq!(state.requests.lock().unwrap().len(), 1);
     server.abort();
 }
@@ -1185,9 +1361,7 @@ async fn the_operation_deadline_covers_backoff_and_retry_does_not_reset_it() {
         clock.advance(std::time::Duration::from_millis(50));
     };
     let (result, ()) = tokio::join!(adapter.stream_text(request), expire);
-    assert!(
-        matches!(result,Err(error) if error.classification==battersea_model::ErrorKind::Timeout)
-    );
+    assert!(matches!(result,Err(error) if error.kind==battersea_model::ErrorKind::Timeout));
     assert_eq!(state.requests.lock().unwrap().len(), 1);
     server.abort();
 }
@@ -1360,8 +1534,11 @@ async fn connection_refusal_retries_only_within_the_explicit_attempt_bound() {
             "{provider}"
         );
         let error = result.err().expect("connection refused");
-        assert_eq!(error.dispatch, battersea_model::DispatchState::NotSent);
-        assert_eq!(error.attempts, attempts);
+        assert_eq!(
+            error.exchange.dispatch,
+            battersea_model::DispatchState::NotSent
+        );
+        assert_eq!(error.exchange.attempts, attempts);
     }
 }
 
@@ -1388,8 +1565,11 @@ async fn accepted_connection_loss_does_not_recreate_generation() {
             .await
             .err()
             .expect("connection lost");
-        assert_eq!(error.dispatch, battersea_model::DispatchState::Unknown);
-        assert_eq!(error.attempts, 1);
+        assert_eq!(
+            error.exchange.dispatch,
+            battersea_model::DispatchState::Unknown
+        );
+        assert_eq!(error.exchange.attempts, 1);
         // The finished request made no second connection.
         let listener = server.await.unwrap();
         assert!(futures_util::poll!(Box::pin(listener.accept())).is_pending());
@@ -1435,6 +1615,149 @@ async fn content_results_and_tool_errors_reach_each_provider_without_host_metada
                 meta: serde_json::Map::from_iter([("host".into(), json!("private-host-value"))]),
             });
             round_trip_result(provider, "stream", Some(result)).await;
+        }
+    }
+}
+
+/// Adapters that reach no provider over HTTP and so report no provider payload.
+const LOCAL_ADAPTERS: &[&str] = &["mock"];
+
+/// Whether `payload` survives in `native`: at some depth `native` holds a value with every
+/// leaf of `payload`.
+fn carries(native: &Value, payload: &Value) -> bool {
+    fn covers(native: &Value, payload: &Value) -> bool {
+        match (native, payload) {
+            (Value::Object(native), Value::Object(payload)) => payload
+                .iter()
+                .all(|(key, value)| native.get(key).is_some_and(|held| covers(held, value))),
+            (Value::Array(native), Value::Array(payload)) => {
+                native.len() == payload.len()
+                    && native
+                        .iter()
+                        .zip(payload)
+                        .all(|(held, value)| covers(held, value))
+            }
+            (native, payload) => native == payload,
+        }
+    }
+    covers(native, payload)
+        || match native {
+            Value::Object(map) => map.values().any(|held| carries(held, payload)),
+            Value::Array(items) => items.iter().any(|held| carries(held, payload)),
+            _ => false,
+        }
+}
+
+async fn fixture_server(
+    status: u16,
+    content_type: String,
+    body: String,
+) -> (String, tokio::task::JoinHandle<()>) {
+    let listener = tokio::net::TcpListener::bind(test_endpoints::TEST_BIND_ADDRESS)
+        .await
+        .unwrap();
+    let url = format!("http://{}", listener.local_addr().unwrap());
+    let app = Router::new().fallback(post(move || {
+        let (content_type, body) = (content_type.clone(), body.clone());
+        async move {
+            (
+                axum::http::StatusCode::from_u16(status).unwrap(),
+                [
+                    ("content-type".to_string(), content_type),
+                    ("request-id".to_string(), REQUEST_ID.to_string()),
+                ],
+                body,
+            )
+        }
+    }));
+    let handle = tokio::spawn(async move {
+        axum::serve(listener, app).await.unwrap();
+    });
+    (url, handle)
+}
+
+/// contracts/failures.md, Adapters: for each registered adapter and each recorded failure of
+/// that adapter, every leaf of the provider's payload is present in the failure. An adapter
+/// without recorded failures fails this test.
+#[tokio::test]
+async fn every_adapter_carries_each_recorded_provider_failure_whole() {
+    let fixtures = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/failures");
+    for provider in battersea_providers::builtin_registry().chat_provider_ids() {
+        if LOCAL_ADAPTERS.contains(&provider) {
+            continue;
+        }
+        let mut cases: Vec<_> = std::fs::read_dir(fixtures.join(provider))
+            .unwrap_or_else(|_| panic!("{provider} has no recorded failures"))
+            .map(|entry| entry.unwrap().path())
+            .collect();
+        cases.sort();
+        assert!(!cases.is_empty(), "{provider} has no recorded failures");
+        for case in cases {
+            let name = format!("{provider}/{}", case.file_name().unwrap().to_string_lossy());
+            let fixture: Value =
+                serde_json::from_str(&std::fs::read_to_string(&case).unwrap()).unwrap();
+            let body = if let Some(raw) = fixture["raw"].as_str() {
+                raw.to_owned()
+            } else if let Some(events) = fixture["sse"].as_array() {
+                stream_body(events)
+            } else if let Some(events) = fixture["sse_data"].as_array() {
+                events
+                    .iter()
+                    .map(|event| format!("data: {event}\n\n"))
+                    .collect()
+            } else {
+                fixture["body"].to_string()
+            };
+            let (url, server) = fixture_server(
+                fixture["status"].as_u64().unwrap() as u16,
+                fixture["content_type"].as_str().unwrap().to_owned(),
+                body,
+            )
+            .await;
+            let backend = backend(provider, &url, "stream");
+            let mut request = request(&backend, Arc::new(RecordingExecutor::default()));
+            request.local_tools.clear();
+            let failure = match observed_adapter(backend, None).stream_text(request).await {
+                Err(failure) => failure,
+                Ok(stream) => stream
+                    .collect::<Vec<_>>()
+                    .await
+                    .pop()
+                    .unwrap_or_else(|| panic!("{name} produced no events"))
+                    .expect_err(&name),
+            };
+            server.abort();
+            assert_eq!(
+                failure.kind.as_str(),
+                fixture["kind"],
+                "{name}: {failure:?}"
+            );
+            assert_eq!(
+                failure.exchange.request_id.as_deref(),
+                Some(REQUEST_ID),
+                "{name}"
+            );
+            if let Some(response_id) = fixture["response_id"].as_str() {
+                assert_eq!(
+                    failure.exchange.response_id.as_deref(),
+                    Some(response_id),
+                    "{name}"
+                );
+            }
+            assert_eq!(failure.origin.provider.as_deref(), Some(provider), "{name}");
+            assert_eq!(
+                failure.reporter,
+                battersea_model::Reporter::Provider,
+                "{name}"
+            );
+            let native = failure
+                .native
+                .present()
+                .unwrap_or_else(|| panic!("{name} has no native detail: {failure:?}"));
+            assert!(
+                carries(native, &fixture["payload"]),
+                "{name} lost part of the provider's payload: {native}"
+            );
         }
     }
 }

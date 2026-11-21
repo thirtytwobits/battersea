@@ -3,7 +3,7 @@
 use super::*;
 use battersea_model::{
     adapter::payload::check_payload, configuration_digest, ContentBlock, ConversationBinding,
-    ConversationRequest, ConversationToolResult, ConversationTurn, ErrorKind, StopReason, ToolCode,
+    ConversationRequest, ConversationToolResult, ConversationTurn, ErrorKind, StopClass, ToolCode,
 };
 use serde::{Deserialize, Serialize};
 
@@ -28,13 +28,14 @@ fn durable_includes(request: &ConversationRequest) -> Vec<&'static str> {
     include
 }
 
-fn invalid(message: &str) -> EngineAdapterRequestError {
-    EngineAdapterRequestError::invalid_response("openai", message)
+fn invalid(message: &'static str) -> Failure {
+    Failure::invalid_response("openai", message)
 }
 
-fn decode(state: &Value) -> Result<Checkpoint, EngineAdapterRequestError> {
+fn decode(state: &Value) -> Result<Checkpoint, Failure> {
     check_payload(state, "openai")?;
-    serde_json::from_value(state.clone()).map_err(|_| invalid("Invalid Responses checkpoint."))
+    serde_json::from_value(state.clone())
+        .map_err(|cause| invalid("Invalid Responses checkpoint.").caused_by(&cause))
 }
 
 impl OpenAiEngineAdapter {
@@ -42,12 +43,12 @@ impl OpenAiEngineAdapter {
         &self,
         request: &ConversationRequest,
         state: Option<&Value>,
-    ) -> Result<ConversationBinding, EngineAdapterRequestError> {
+    ) -> Result<ConversationBinding, Failure> {
         super::super::validate_chat_request(&self.backend, &request.to_request())?;
         if (self.background && self.background_mode != "poll")
             || (!self.background && !request.shared.chat.stream)
         {
-            return Err(EngineAdapterRequestError::new(
+            return Err(Failure::new(
                 &self.backend.provider,
                 "Durable Responses continuation requires foreground streaming or background polling.",
                 ErrorKind::InvalidRequest,
@@ -55,7 +56,7 @@ impl OpenAiEngineAdapter {
             .with_tool_code(ToolCode::UnsupportedToolContinuation));
         }
         if request.shared.chat.context_overflow != EngineContextOverflow::Error {
-            return Err(EngineAdapterRequestError::new(
+            return Err(Failure::new(
                 &self.backend.provider,
                 "Durable Responses continuation requires contextOverflow=error.",
                 ErrorKind::InvalidRequest,
@@ -106,7 +107,7 @@ impl OpenAiEngineAdapter {
         request: &ConversationRequest,
         previous: Option<&Value>,
         results: &[ConversationToolResult],
-    ) -> Result<Vec<Value>, EngineAdapterRequestError> {
+    ) -> Result<Vec<Value>, Failure> {
         let (mut input, calls) = if let Some(state) = previous {
             self.validate_durable_request(request, Some(state))?;
             let checkpoint = decode(state)?;
@@ -160,7 +161,7 @@ impl OpenAiEngineAdapter {
         previous: Option<&Value>,
         results: &[ConversationToolResult],
         turn: &ConversationTurn,
-    ) -> Result<ConversationBinding, EngineAdapterRequestError> {
+    ) -> Result<ConversationBinding, Failure> {
         check_payload(turn, "openai")?;
         let binding = self.validate_durable_request(request, Some(&turn.state))?;
         let checkpoint = decode(&turn.state)?;
@@ -218,9 +219,9 @@ impl OpenAiEngineAdapter {
         request: ConversationRequest,
         state: Option<Value>,
         results: Vec<ConversationToolResult>,
-    ) -> Result<ConversationTurn, EngineAdapterRequestError> {
+    ) -> Result<ConversationTurn, Failure> {
         if self.background {
-            return Err(EngineAdapterRequestError::new(
+            return Err(Failure::new(
                 &self.backend.provider,
                 "Background Responses requires the durable step interface.",
                 ErrorKind::InvalidRequest,
@@ -261,14 +262,32 @@ impl OpenAiEngineAdapter {
             self.stream_idle_timeout_ms,
         );
         tokio::pin!(work);
+        // The stream announces the identifiers; the completed response names its own.
+        let mut identifiers = crate::retry::Identifiers::default();
         let response = loop {
             tokio::select! {
-                result = &mut work => break result?,
-                Some(event) = rx.recv() => { event?; },
+                result = &mut work => break result,
+                Some(event) = rx.recv() => match event {
+                    Ok(event) => { identifiers.note(&event); }
+                    Err(failure) => break Err(failure),
+                },
             }
         };
-        self.completed_turn(&request, binding, input, response, true)
-            .await
+        let turn = match response {
+            Ok(response) => {
+                identifiers.name(response.get("id"));
+                self.completed_turn(&request, binding, input, response, true)
+                    .await
+            }
+            Err(failure) => Err(failure),
+        };
+        match turn {
+            Ok(mut turn) => {
+                identifiers.announce(&mut turn.events);
+                Ok(turn)
+            }
+            Err(failure) => Err(identifiers.stamp(failure)),
+        }
     }
 
     async fn completed_turn(
@@ -278,11 +297,13 @@ impl OpenAiEngineAdapter {
         input: Vec<Value>,
         response: Value,
         streaming: bool,
-    ) -> Result<ConversationTurn, EngineAdapterRequestError> {
+    ) -> Result<ConversationTurn, Failure> {
         // The completed native response determines durable events; partial stream observations
         // remain diagnostics and cannot disagree with restored output.
-        let events = response_events(&self.backend.provider, request, &response, false)?;
-        let calls = collect_openai_function_calls(&response)?;
+        let about = |failure| crate::http_payload::about(failure, &response);
+        let events =
+            response_events(&self.backend.provider, request, &response, false).map_err(about)?;
+        let calls = collect_openai_function_calls(&response).map_err(about)?;
         emit_response(
             self.logger.as_ref(),
             &self.context,
@@ -332,14 +353,20 @@ fn response_events(
     request: &ConversationRequest,
     response: &Value,
     structured: bool,
-) -> Result<Vec<EngineTextStreamEvent>, EngineAdapterRequestError> {
+) -> Result<Vec<EngineTextStreamEvent>, Failure> {
     // Recovery admits the same native schema as the live stream without reserialising it.
     serde_json::from_value::<async_openai::types::responses::Response>(response.clone())
-        .map_err(|_| invalid("Invalid native Responses response."))?;
-    if response["status"] != "completed"
-        || !response["error"].is_null()
-        || !response["incomplete_details"].is_null()
-    {
+        .map_err(|cause| invalid("Invalid native Responses response.").caused_by(&cause))?;
+    if response["status"] == "incomplete" || !response["incomplete_details"].is_null() {
+        // The response and the text it holds travel with the failure.
+        return Err(battersea_model::terminal_failure(
+            provider,
+            StopClass::Length,
+            response.clone(),
+            read_openai_output_text(response),
+        ));
+    }
+    if response["status"] != "completed" || !response["error"].is_null() {
         return Err(invalid("Responses turn is not successfully completed."));
     }
     let output = response["output"]
@@ -358,10 +385,16 @@ fn response_events(
                     .as_array()
                     .ok_or_else(|| invalid("Invalid Responses message content."))?
                 {
-                    if block["type"] != "output_text" {
-                        return Err(invalid(
-                            "Responses output was refused or contains unsupported content.",
+                    if block["type"] == "refusal" {
+                        return Err(battersea_model::terminal_failure(
+                            provider,
+                            StopClass::Refusal,
+                            response.clone(),
+                            String::new(),
                         ));
+                    }
+                    if block["type"] != "output_text" {
+                        return Err(invalid("Responses output contains unsupported content."));
                     }
                     text.push_str(
                         block["text"]
@@ -426,11 +459,12 @@ fn response_events(
         }
     }
     events.push(EngineTextStreamEvent::MessageStop {
-        reason: if calls.is_empty() {
-            StopReason::Complete
+        class: if calls.is_empty() {
+            StopClass::Complete
         } else {
-            StopReason::ToolUse
+            StopClass::ToolUse
         },
+        native: serde_json::Value::Null,
     });
     Ok(events)
 }

@@ -24,16 +24,21 @@ fn record_logic_action<H: ExecutionHost>(
 ) -> Result<(), H::Error> {
     let definition = battersea_flow::catalog::node_definition(&runtime.definitions, node)
         .ok_or_else(|| H::Error::internal("Flow runtime lost a logic definition."))?;
-    let action_ports =
-        battersea_flow::ports::expanded_action_ports_for_node(&runtime.definitions, node)
-            .map_err(H::Error::internal)?;
+    let action_ports = battersea_flow::ports::expanded_action_ports_for_node(
+        &runtime.definitions,
+        node,
+    )
+    .map_err(|text| {
+        H::Error::internal(
+            battersea_runtime::Failure::from("Node ports cannot be expanded.").caused_by_text(text),
+        )
+    })?;
     if !action_ports.iter().any(|port| port.name == action_port) {
         return Err(H::Error::invalid_request(
             error_codes::UNSUPPORTED_ACTION_PORT,
-            format!(
-                "{} does not support action port \"{}\".",
-                definition.class_name, action_port
-            ),
+            battersea_runtime::Failure::from("The definition does not support the action port.")
+                .with_context("definition", definition.class_name.as_str())
+                .with_context("port", action_port),
         ));
     }
     core.record_logic_action_signal(runtime, node, action_port);
@@ -150,10 +155,8 @@ pub fn prepare_logic_outputs(
         _ => {
             return Err(EngineError::invalid_request(
                 error_codes::UNSUPPORTED_HANDLER_OPERATION,
-                format!(
-                    "Flow handler \"{}\" does not support logic evaluation.",
-                    definition.handler_id
-                ),
+                battersea_runtime::Failure::from("Flow handler does not support logic evaluation.")
+                    .with_context("handler", definition.handler_id.as_str()),
             ));
         }
     })

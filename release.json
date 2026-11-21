@@ -126,6 +126,13 @@
       "NOTICE",
       "src/nodes.yaml"
     ],
+    "battersea-failure": [
+      "Cargo.toml",
+      "src/lib.rs",
+      "README.md",
+      "LICENSE",
+      "NOTICE"
+    ],
     "battersea-guard": [
       "Cargo.toml",
       "src/lib.rs",

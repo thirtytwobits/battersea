@@ -1,0 +1,916 @@
+pub mod battersea_failure
+pub enum battersea_failure::Cause
+pub battersea_failure::Cause::Failure(battersea_failure::Failure)
+pub battersea_failure::Cause::Foreign(battersea_failure::Detail<alloc::vec::Vec<alloc::string::String>>)
+impl core::clone::Clone for battersea_failure::Cause
+pub fn battersea_failure::Cause::clone(&self) -> Self
+impl core::cmp::Eq for battersea_failure::Cause
+impl core::cmp::PartialEq for battersea_failure::Cause
+pub fn battersea_failure::Cause::eq(&self, &Self) -> bool
+impl core::fmt::Debug for battersea_failure::Cause
+pub fn battersea_failure::Cause::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for battersea_failure::Cause
+impl schemars::JsonSchema for battersea_failure::Cause
+pub fn battersea_failure::Cause::inline_schema() -> bool
+pub fn battersea_failure::Cause::json_schema(&mut schemars::generate::SchemaGenerator) -> schemars::schema::Schema
+pub fn battersea_failure::Cause::schema_id() -> alloc::borrow::Cow<'static, str>
+pub fn battersea_failure::Cause::schema_name() -> alloc::borrow::Cow<'static, str>
+impl serde_core::ser::Serialize for battersea_failure::Cause
+pub fn battersea_failure::Cause::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for battersea_failure::Cause
+pub fn battersea_failure::Cause::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for battersea_failure::Cause
+impl core::marker::Send for battersea_failure::Cause
+impl core::marker::Sync for battersea_failure::Cause
+impl core::marker::Unpin for battersea_failure::Cause
+impl core::marker::UnsafeUnpin for battersea_failure::Cause
+impl core::panic::unwind_safe::RefUnwindSafe for battersea_failure::Cause
+impl core::panic::unwind_safe::UnwindSafe for battersea_failure::Cause
+impl<T, U> core::convert::Into<U> for battersea_failure::Cause where U: core::convert::From<T>
+pub fn battersea_failure::Cause::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_failure::Cause where U: core::convert::Into<T>
+pub type battersea_failure::Cause::Error = never
+pub fn battersea_failure::Cause::try_from(U) -> core::result::Result<T, never>
+impl<T, U> core::convert::TryInto<U> for battersea_failure::Cause where U: core::convert::TryFrom<T>
+pub type battersea_failure::Cause::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_failure::Cause::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for battersea_failure::Cause where T: core::clone::Clone
+pub type battersea_failure::Cause::Owned = T
+pub fn battersea_failure::Cause::clone_into(&self, &mut T)
+pub fn battersea_failure::Cause::to_owned(&self) -> T
+impl<T> core::any::Any for battersea_failure::Cause where T: 'static + ?core::marker::Sized
+pub fn battersea_failure::Cause::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_failure::Cause where T: ?core::marker::Sized
+pub fn battersea_failure::Cause::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_failure::Cause where T: ?core::marker::Sized
+pub fn battersea_failure::Cause::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for battersea_failure::Cause where T: core::clone::Clone
+pub unsafe fn battersea_failure::Cause::clone_to_uninit(&self, *mut u8)
+impl<T> core::convert::From<T> for battersea_failure::Cause
+pub fn battersea_failure::Cause::from(T) -> T
+impl<T> dyn_clone::DynClone for battersea_failure::Cause where T: core::clone::Clone
+pub fn battersea_failure::Cause::__clone_box(&self, dyn_clone::sealed::Private) -> *mut ()
+impl<T> serde_core::de::DeserializeOwned for battersea_failure::Cause where T: for<'de> serde_core::de::Deserialize<'de>
+pub enum battersea_failure::Detail<T>
+pub battersea_failure::Detail::Absent
+pub battersea_failure::Detail::Present(T)
+pub battersea_failure::Detail::Withheld
+impl<T> battersea_failure::Detail<T>
+pub fn battersea_failure::Detail<T>::is_absent(&self) -> bool
+pub fn battersea_failure::Detail<T>::present(&self) -> core::option::Option<&T>
+impl<'de, T> serde_core::de::Deserialize<'de> for battersea_failure::Detail<T> where T: serde_core::de::Deserialize<'de>
+pub fn battersea_failure::Detail<T>::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl<T: core::clone::Clone> core::clone::Clone for battersea_failure::Detail<T>
+pub fn battersea_failure::Detail<T>::clone(&self) -> Self
+impl<T: core::cmp::Eq> core::cmp::Eq for battersea_failure::Detail<T>
+impl<T: core::cmp::PartialEq> core::cmp::PartialEq for battersea_failure::Detail<T>
+pub fn battersea_failure::Detail<T>::eq(&self, &Self) -> bool
+impl<T: core::cmp::PartialEq> core::marker::StructuralPartialEq for battersea_failure::Detail<T>
+impl<T: core::fmt::Debug> core::fmt::Debug for battersea_failure::Detail<T>
+pub fn battersea_failure::Detail<T>::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl<T> core::default::Default for battersea_failure::Detail<T>
+pub fn battersea_failure::Detail<T>::default() -> Self
+impl<T> schemars::JsonSchema for battersea_failure::Detail<T> where T: schemars::JsonSchema
+pub fn battersea_failure::Detail<T>::inline_schema() -> bool
+pub fn battersea_failure::Detail<T>::json_schema(&mut schemars::generate::SchemaGenerator) -> schemars::schema::Schema
+pub fn battersea_failure::Detail<T>::schema_id() -> alloc::borrow::Cow<'static, str>
+pub fn battersea_failure::Detail<T>::schema_name() -> alloc::borrow::Cow<'static, str>
+impl<T> serde_core::ser::Serialize for battersea_failure::Detail<T> where T: serde_core::ser::Serialize
+pub fn battersea_failure::Detail<T>::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<T> core::marker::Freeze for battersea_failure::Detail<T> where T: core::marker::Freeze
+impl<T> core::marker::Send for battersea_failure::Detail<T> where T: core::marker::Send
+impl<T> core::marker::Sync for battersea_failure::Detail<T> where T: core::marker::Sync
+impl<T> core::marker::Unpin for battersea_failure::Detail<T> where T: core::marker::Unpin
+impl<T> core::marker::UnsafeUnpin for battersea_failure::Detail<T> where T: core::marker::UnsafeUnpin
+impl<T> core::panic::unwind_safe::RefUnwindSafe for battersea_failure::Detail<T> where T: core::panic::unwind_safe::RefUnwindSafe
+impl<T> core::panic::unwind_safe::UnwindSafe for battersea_failure::Detail<T> where T: core::panic::unwind_safe::UnwindSafe
+impl<T, U> core::convert::Into<U> for battersea_failure::Detail<T> where U: core::convert::From<T>
+pub fn battersea_failure::Detail<T>::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_failure::Detail<T> where U: core::convert::Into<T>
+pub type battersea_failure::Detail<T>::Error = never
+pub fn battersea_failure::Detail<T>::try_from(U) -> core::result::Result<T, never>
+impl<T, U> core::convert::TryInto<U> for battersea_failure::Detail<T> where U: core::convert::TryFrom<T>
+pub type battersea_failure::Detail<T>::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_failure::Detail<T>::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for battersea_failure::Detail<T> where T: core::clone::Clone
+pub type battersea_failure::Detail<T>::Owned = T
+pub fn battersea_failure::Detail<T>::clone_into(&self, &mut T)
+pub fn battersea_failure::Detail<T>::to_owned(&self) -> T
+impl<T> core::any::Any for battersea_failure::Detail<T> where T: 'static + ?core::marker::Sized
+pub fn battersea_failure::Detail<T>::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_failure::Detail<T> where T: ?core::marker::Sized
+pub fn battersea_failure::Detail<T>::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_failure::Detail<T> where T: ?core::marker::Sized
+pub fn battersea_failure::Detail<T>::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for battersea_failure::Detail<T> where T: core::clone::Clone
+pub unsafe fn battersea_failure::Detail<T>::clone_to_uninit(&self, *mut u8)
+impl<T> core::convert::From<T> for battersea_failure::Detail<T>
+pub fn battersea_failure::Detail<T>::from(T) -> T
+impl<T> dyn_clone::DynClone for battersea_failure::Detail<T> where T: core::clone::Clone
+pub fn battersea_failure::Detail<T>::__clone_box(&self, dyn_clone::sealed::Private) -> *mut ()
+impl<T> serde_core::de::DeserializeOwned for battersea_failure::Detail<T> where T: for<'de> serde_core::de::Deserialize<'de>
+pub enum battersea_failure::DispatchState
+pub battersea_failure::DispatchState::Accepted
+pub battersea_failure::DispatchState::NotSent
+pub battersea_failure::DispatchState::Rejected
+pub battersea_failure::DispatchState::Unknown
+impl core::clone::Clone for battersea_failure::DispatchState
+pub fn battersea_failure::DispatchState::clone(&self) -> Self
+impl core::cmp::Eq for battersea_failure::DispatchState
+impl core::cmp::PartialEq for battersea_failure::DispatchState
+pub fn battersea_failure::DispatchState::eq(&self, &Self) -> bool
+impl core::default::Default for battersea_failure::DispatchState
+pub fn battersea_failure::DispatchState::default() -> Self
+impl core::fmt::Debug for battersea_failure::DispatchState
+pub fn battersea_failure::DispatchState::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for battersea_failure::DispatchState
+impl core::marker::StructuralPartialEq for battersea_failure::DispatchState
+impl schemars::JsonSchema for battersea_failure::DispatchState
+pub fn battersea_failure::DispatchState::inline_schema() -> bool
+pub fn battersea_failure::DispatchState::json_schema(&mut schemars::generate::SchemaGenerator) -> schemars::schema::Schema
+pub fn battersea_failure::DispatchState::schema_id() -> alloc::borrow::Cow<'static, str>
+pub fn battersea_failure::DispatchState::schema_name() -> alloc::borrow::Cow<'static, str>
+impl serde_core::ser::Serialize for battersea_failure::DispatchState
+pub fn battersea_failure::DispatchState::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for battersea_failure::DispatchState
+pub fn battersea_failure::DispatchState::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for battersea_failure::DispatchState
+impl core::marker::Send for battersea_failure::DispatchState
+impl core::marker::Sync for battersea_failure::DispatchState
+impl core::marker::Unpin for battersea_failure::DispatchState
+impl core::marker::UnsafeUnpin for battersea_failure::DispatchState
+impl core::panic::unwind_safe::RefUnwindSafe for battersea_failure::DispatchState
+impl core::panic::unwind_safe::UnwindSafe for battersea_failure::DispatchState
+impl<T, U> core::convert::Into<U> for battersea_failure::DispatchState where U: core::convert::From<T>
+pub fn battersea_failure::DispatchState::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_failure::DispatchState where U: core::convert::Into<T>
+pub type battersea_failure::DispatchState::Error = never
+pub fn battersea_failure::DispatchState::try_from(U) -> core::result::Result<T, never>
+impl<T, U> core::convert::TryInto<U> for battersea_failure::DispatchState where U: core::convert::TryFrom<T>
+pub type battersea_failure::DispatchState::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_failure::DispatchState::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for battersea_failure::DispatchState where T: core::clone::Clone
+pub type battersea_failure::DispatchState::Owned = T
+pub fn battersea_failure::DispatchState::clone_into(&self, &mut T)
+pub fn battersea_failure::DispatchState::to_owned(&self) -> T
+impl<T> core::any::Any for battersea_failure::DispatchState where T: 'static + ?core::marker::Sized
+pub fn battersea_failure::DispatchState::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_failure::DispatchState where T: ?core::marker::Sized
+pub fn battersea_failure::DispatchState::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_failure::DispatchState where T: ?core::marker::Sized
+pub fn battersea_failure::DispatchState::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for battersea_failure::DispatchState where T: core::clone::Clone
+pub unsafe fn battersea_failure::DispatchState::clone_to_uninit(&self, *mut u8)
+impl<T> core::convert::From<T> for battersea_failure::DispatchState
+pub fn battersea_failure::DispatchState::from(T) -> T
+impl<T> dyn_clone::DynClone for battersea_failure::DispatchState where T: core::clone::Clone
+pub fn battersea_failure::DispatchState::__clone_box(&self, dyn_clone::sealed::Private) -> *mut ()
+impl<T> serde_core::de::DeserializeOwned for battersea_failure::DispatchState where T: for<'de> serde_core::de::Deserialize<'de>
+pub enum battersea_failure::ErrorKind
+pub battersea_failure::ErrorKind::Authentication
+pub battersea_failure::ErrorKind::Cancelled
+pub battersea_failure::ErrorKind::Expired
+pub battersea_failure::ErrorKind::Incomplete
+pub battersea_failure::ErrorKind::InvalidRequest
+pub battersea_failure::ErrorKind::InvalidResponse
+pub battersea_failure::ErrorKind::Mock
+pub battersea_failure::ErrorKind::Other(alloc::boxed::Box<str>)
+pub battersea_failure::ErrorKind::Permission
+pub battersea_failure::ErrorKind::Provider
+pub battersea_failure::ErrorKind::RateLimit
+pub battersea_failure::ErrorKind::Refusal
+pub battersea_failure::ErrorKind::Request
+pub battersea_failure::ErrorKind::Retrieval
+pub battersea_failure::ErrorKind::Runtime
+pub battersea_failure::ErrorKind::Server
+pub battersea_failure::ErrorKind::Timeout
+pub battersea_failure::ErrorKind::Transport
+impl battersea_failure::ErrorKind
+pub fn battersea_failure::ErrorKind::as_str(&self) -> &str
+impl core::clone::Clone for battersea_failure::ErrorKind
+pub fn battersea_failure::ErrorKind::clone(&self) -> Self
+impl core::cmp::Eq for battersea_failure::ErrorKind
+impl core::cmp::PartialEq for battersea_failure::ErrorKind
+pub fn battersea_failure::ErrorKind::eq(&self, &Self) -> bool
+impl core::convert::From<&str> for battersea_failure::ErrorKind
+pub fn battersea_failure::ErrorKind::from(&str) -> Self
+impl core::convert::From<alloc::string::String> for battersea_failure::ErrorKind
+pub fn battersea_failure::ErrorKind::from(alloc::string::String) -> Self
+impl core::fmt::Debug for battersea_failure::ErrorKind
+pub fn battersea_failure::ErrorKind::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for battersea_failure::ErrorKind
+pub fn battersea_failure::ErrorKind::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for battersea_failure::ErrorKind
+impl serde_core::ser::Serialize for battersea_failure::ErrorKind
+pub fn battersea_failure::ErrorKind::serialize<S: serde_core::ser::Serializer>(&self, S) -> core::result::Result<<S as serde_core::ser::Serializer>::Ok, <S as serde_core::ser::Serializer>::Error>
+impl<'de> serde_core::de::Deserialize<'de> for battersea_failure::ErrorKind
+pub fn battersea_failure::ErrorKind::deserialize<D: serde_core::de::Deserializer<'de>>(D) -> core::result::Result<Self, <D as serde_core::de::Deserializer>::Error>
+impl core::marker::Freeze for battersea_failure::ErrorKind
+impl core::marker::Send for battersea_failure::ErrorKind
+impl core::marker::Sync for battersea_failure::ErrorKind
+impl core::marker::Unpin for battersea_failure::ErrorKind
+impl core::marker::UnsafeUnpin for battersea_failure::ErrorKind
+impl core::panic::unwind_safe::RefUnwindSafe for battersea_failure::ErrorKind
+impl core::panic::unwind_safe::UnwindSafe for battersea_failure::ErrorKind
+impl<T, U> core::convert::Into<U> for battersea_failure::ErrorKind where U: core::convert::From<T>
+pub fn battersea_failure::ErrorKind::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_failure::ErrorKind where U: core::convert::Into<T>
+pub type battersea_failure::ErrorKind::Error = never
+pub fn battersea_failure::ErrorKind::try_from(U) -> core::result::Result<T, never>
+impl<T, U> core::convert::TryInto<U> for battersea_failure::ErrorKind where U: core::convert::TryFrom<T>
+pub type battersea_failure::ErrorKind::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_failure::ErrorKind::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for battersea_failure::ErrorKind where T: core::clone::Clone
+pub type battersea_failure::ErrorKind::Owned = T
+pub fn battersea_failure::ErrorKind::clone_into(&self, &mut T)
+pub fn battersea_failure::ErrorKind::to_owned(&self) -> T
+impl<T> alloc::string::ToString for battersea_failure::ErrorKind where T: core::fmt::Display + ?core::marker::Sized
+pub fn battersea_failure::ErrorKind::to_string(&self) -> alloc::string::String
+impl<T> core::any::Any for battersea_failure::ErrorKind where T: 'static + ?core::marker::Sized
+pub fn battersea_failure::ErrorKind::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_failure::ErrorKind where T: ?core::marker::Sized
+pub fn battersea_failure::ErrorKind::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_failure::ErrorKind where T: ?core::marker::Sized
+pub fn battersea_failure::ErrorKind::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for battersea_failure::ErrorKind where T: core::clone::Clone
+pub unsafe fn battersea_failure::ErrorKind::clone_to_uninit(&self, *mut u8)
+impl<T> core::convert::From<T> for battersea_failure::ErrorKind
+pub fn battersea_failure::ErrorKind::from(T) -> T
+impl<T> dyn_clone::DynClone for battersea_failure::ErrorKind where T: core::clone::Clone
+pub fn battersea_failure::ErrorKind::__clone_box(&self, dyn_clone::sealed::Private) -> *mut ()
+impl<T> serde_core::de::DeserializeOwned for battersea_failure::ErrorKind where T: for<'de> serde_core::de::Deserialize<'de>
+pub enum battersea_failure::FailureDisclosure
+pub battersea_failure::FailureDisclosure::Full
+pub battersea_failure::FailureDisclosure::Withheld
+impl core::clone::Clone for battersea_failure::FailureDisclosure
+pub fn battersea_failure::FailureDisclosure::clone(&self) -> Self
+impl core::cmp::Eq for battersea_failure::FailureDisclosure
+impl core::cmp::PartialEq for battersea_failure::FailureDisclosure
+pub fn battersea_failure::FailureDisclosure::eq(&self, &Self) -> bool
+impl core::default::Default for battersea_failure::FailureDisclosure
+pub fn battersea_failure::FailureDisclosure::default() -> Self
+impl core::fmt::Debug for battersea_failure::FailureDisclosure
+pub fn battersea_failure::FailureDisclosure::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for battersea_failure::FailureDisclosure
+impl core::marker::StructuralPartialEq for battersea_failure::FailureDisclosure
+impl schemars::JsonSchema for battersea_failure::FailureDisclosure
+pub fn battersea_failure::FailureDisclosure::inline_schema() -> bool
+pub fn battersea_failure::FailureDisclosure::json_schema(&mut schemars::generate::SchemaGenerator) -> schemars::schema::Schema
+pub fn battersea_failure::FailureDisclosure::schema_id() -> alloc::borrow::Cow<'static, str>
+pub fn battersea_failure::FailureDisclosure::schema_name() -> alloc::borrow::Cow<'static, str>
+impl serde_core::ser::Serialize for battersea_failure::FailureDisclosure
+pub fn battersea_failure::FailureDisclosure::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for battersea_failure::FailureDisclosure
+pub fn battersea_failure::FailureDisclosure::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for battersea_failure::FailureDisclosure
+impl core::marker::Send for battersea_failure::FailureDisclosure
+impl core::marker::Sync for battersea_failure::FailureDisclosure
+impl core::marker::Unpin for battersea_failure::FailureDisclosure
+impl core::marker::UnsafeUnpin for battersea_failure::FailureDisclosure
+impl core::panic::unwind_safe::RefUnwindSafe for battersea_failure::FailureDisclosure
+impl core::panic::unwind_safe::UnwindSafe for battersea_failure::FailureDisclosure
+impl<T, U> core::convert::Into<U> for battersea_failure::FailureDisclosure where U: core::convert::From<T>
+pub fn battersea_failure::FailureDisclosure::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_failure::FailureDisclosure where U: core::convert::Into<T>
+pub type battersea_failure::FailureDisclosure::Error = never
+pub fn battersea_failure::FailureDisclosure::try_from(U) -> core::result::Result<T, never>
+impl<T, U> core::convert::TryInto<U> for battersea_failure::FailureDisclosure where U: core::convert::TryFrom<T>
+pub type battersea_failure::FailureDisclosure::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_failure::FailureDisclosure::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for battersea_failure::FailureDisclosure where T: core::clone::Clone
+pub type battersea_failure::FailureDisclosure::Owned = T
+pub fn battersea_failure::FailureDisclosure::clone_into(&self, &mut T)
+pub fn battersea_failure::FailureDisclosure::to_owned(&self) -> T
+impl<T> core::any::Any for battersea_failure::FailureDisclosure where T: 'static + ?core::marker::Sized
+pub fn battersea_failure::FailureDisclosure::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_failure::FailureDisclosure where T: ?core::marker::Sized
+pub fn battersea_failure::FailureDisclosure::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_failure::FailureDisclosure where T: ?core::marker::Sized
+pub fn battersea_failure::FailureDisclosure::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for battersea_failure::FailureDisclosure where T: core::clone::Clone
+pub unsafe fn battersea_failure::FailureDisclosure::clone_to_uninit(&self, *mut u8)
+impl<T> core::convert::From<T> for battersea_failure::FailureDisclosure
+pub fn battersea_failure::FailureDisclosure::from(T) -> T
+impl<T> dyn_clone::DynClone for battersea_failure::FailureDisclosure where T: core::clone::Clone
+pub fn battersea_failure::FailureDisclosure::__clone_box(&self, dyn_clone::sealed::Private) -> *mut ()
+impl<T> serde_core::de::DeserializeOwned for battersea_failure::FailureDisclosure where T: for<'de> serde_core::de::Deserialize<'de>
+pub enum battersea_failure::Reporter
+pub battersea_failure::Reporter::Battersea
+pub battersea_failure::Reporter::Provider
+pub battersea_failure::Reporter::Tool
+impl core::clone::Clone for battersea_failure::Reporter
+pub fn battersea_failure::Reporter::clone(&self) -> Self
+impl core::cmp::Eq for battersea_failure::Reporter
+impl core::cmp::PartialEq for battersea_failure::Reporter
+pub fn battersea_failure::Reporter::eq(&self, &Self) -> bool
+impl core::default::Default for battersea_failure::Reporter
+pub fn battersea_failure::Reporter::default() -> Self
+impl core::fmt::Debug for battersea_failure::Reporter
+pub fn battersea_failure::Reporter::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for battersea_failure::Reporter
+impl core::marker::StructuralPartialEq for battersea_failure::Reporter
+impl schemars::JsonSchema for battersea_failure::Reporter
+pub fn battersea_failure::Reporter::inline_schema() -> bool
+pub fn battersea_failure::Reporter::json_schema(&mut schemars::generate::SchemaGenerator) -> schemars::schema::Schema
+pub fn battersea_failure::Reporter::schema_id() -> alloc::borrow::Cow<'static, str>
+pub fn battersea_failure::Reporter::schema_name() -> alloc::borrow::Cow<'static, str>
+impl serde_core::ser::Serialize for battersea_failure::Reporter
+pub fn battersea_failure::Reporter::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for battersea_failure::Reporter
+pub fn battersea_failure::Reporter::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for battersea_failure::Reporter
+impl core::marker::Send for battersea_failure::Reporter
+impl core::marker::Sync for battersea_failure::Reporter
+impl core::marker::Unpin for battersea_failure::Reporter
+impl core::marker::UnsafeUnpin for battersea_failure::Reporter
+impl core::panic::unwind_safe::RefUnwindSafe for battersea_failure::Reporter
+impl core::panic::unwind_safe::UnwindSafe for battersea_failure::Reporter
+impl<T, U> core::convert::Into<U> for battersea_failure::Reporter where U: core::convert::From<T>
+pub fn battersea_failure::Reporter::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_failure::Reporter where U: core::convert::Into<T>
+pub type battersea_failure::Reporter::Error = never
+pub fn battersea_failure::Reporter::try_from(U) -> core::result::Result<T, never>
+impl<T, U> core::convert::TryInto<U> for battersea_failure::Reporter where U: core::convert::TryFrom<T>
+pub type battersea_failure::Reporter::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_failure::Reporter::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for battersea_failure::Reporter where T: core::clone::Clone
+pub type battersea_failure::Reporter::Owned = T
+pub fn battersea_failure::Reporter::clone_into(&self, &mut T)
+pub fn battersea_failure::Reporter::to_owned(&self) -> T
+impl<T> core::any::Any for battersea_failure::Reporter where T: 'static + ?core::marker::Sized
+pub fn battersea_failure::Reporter::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_failure::Reporter where T: ?core::marker::Sized
+pub fn battersea_failure::Reporter::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_failure::Reporter where T: ?core::marker::Sized
+pub fn battersea_failure::Reporter::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for battersea_failure::Reporter where T: core::clone::Clone
+pub unsafe fn battersea_failure::Reporter::clone_to_uninit(&self, *mut u8)
+impl<T> core::convert::From<T> for battersea_failure::Reporter
+pub fn battersea_failure::Reporter::from(T) -> T
+impl<T> dyn_clone::DynClone for battersea_failure::Reporter where T: core::clone::Clone
+pub fn battersea_failure::Reporter::__clone_box(&self, dyn_clone::sealed::Private) -> *mut ()
+impl<T> serde_core::de::DeserializeOwned for battersea_failure::Reporter where T: for<'de> serde_core::de::Deserialize<'de>
+pub enum battersea_failure::ToolCallOutcome
+pub battersea_failure::ToolCallOutcome::Completed
+pub battersea_failure::ToolCallOutcome::NotDispatched
+pub battersea_failure::ToolCallOutcome::Uncertain
+impl core::clone::Clone for battersea_failure::ToolCallOutcome
+pub fn battersea_failure::ToolCallOutcome::clone(&self) -> Self
+impl core::cmp::Eq for battersea_failure::ToolCallOutcome
+impl core::cmp::PartialEq for battersea_failure::ToolCallOutcome
+pub fn battersea_failure::ToolCallOutcome::eq(&self, &Self) -> bool
+impl core::fmt::Debug for battersea_failure::ToolCallOutcome
+pub fn battersea_failure::ToolCallOutcome::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for battersea_failure::ToolCallOutcome
+impl core::marker::StructuralPartialEq for battersea_failure::ToolCallOutcome
+impl schemars::JsonSchema for battersea_failure::ToolCallOutcome
+pub fn battersea_failure::ToolCallOutcome::inline_schema() -> bool
+pub fn battersea_failure::ToolCallOutcome::json_schema(&mut schemars::generate::SchemaGenerator) -> schemars::schema::Schema
+pub fn battersea_failure::ToolCallOutcome::schema_id() -> alloc::borrow::Cow<'static, str>
+pub fn battersea_failure::ToolCallOutcome::schema_name() -> alloc::borrow::Cow<'static, str>
+impl serde_core::ser::Serialize for battersea_failure::ToolCallOutcome
+pub fn battersea_failure::ToolCallOutcome::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for battersea_failure::ToolCallOutcome
+pub fn battersea_failure::ToolCallOutcome::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for battersea_failure::ToolCallOutcome
+impl core::marker::Send for battersea_failure::ToolCallOutcome
+impl core::marker::Sync for battersea_failure::ToolCallOutcome
+impl core::marker::Unpin for battersea_failure::ToolCallOutcome
+impl core::marker::UnsafeUnpin for battersea_failure::ToolCallOutcome
+impl core::panic::unwind_safe::RefUnwindSafe for battersea_failure::ToolCallOutcome
+impl core::panic::unwind_safe::UnwindSafe for battersea_failure::ToolCallOutcome
+impl<T, U> core::convert::Into<U> for battersea_failure::ToolCallOutcome where U: core::convert::From<T>
+pub fn battersea_failure::ToolCallOutcome::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_failure::ToolCallOutcome where U: core::convert::Into<T>
+pub type battersea_failure::ToolCallOutcome::Error = never
+pub fn battersea_failure::ToolCallOutcome::try_from(U) -> core::result::Result<T, never>
+impl<T, U> core::convert::TryInto<U> for battersea_failure::ToolCallOutcome where U: core::convert::TryFrom<T>
+pub type battersea_failure::ToolCallOutcome::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_failure::ToolCallOutcome::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for battersea_failure::ToolCallOutcome where T: core::clone::Clone
+pub type battersea_failure::ToolCallOutcome::Owned = T
+pub fn battersea_failure::ToolCallOutcome::clone_into(&self, &mut T)
+pub fn battersea_failure::ToolCallOutcome::to_owned(&self) -> T
+impl<T> core::any::Any for battersea_failure::ToolCallOutcome where T: 'static + ?core::marker::Sized
+pub fn battersea_failure::ToolCallOutcome::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_failure::ToolCallOutcome where T: ?core::marker::Sized
+pub fn battersea_failure::ToolCallOutcome::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_failure::ToolCallOutcome where T: ?core::marker::Sized
+pub fn battersea_failure::ToolCallOutcome::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for battersea_failure::ToolCallOutcome where T: core::clone::Clone
+pub unsafe fn battersea_failure::ToolCallOutcome::clone_to_uninit(&self, *mut u8)
+impl<T> core::convert::From<T> for battersea_failure::ToolCallOutcome
+pub fn battersea_failure::ToolCallOutcome::from(T) -> T
+impl<T> dyn_clone::DynClone for battersea_failure::ToolCallOutcome where T: core::clone::Clone
+pub fn battersea_failure::ToolCallOutcome::__clone_box(&self, dyn_clone::sealed::Private) -> *mut ()
+impl<T> serde_core::de::DeserializeOwned for battersea_failure::ToolCallOutcome where T: for<'de> serde_core::de::Deserialize<'de>
+#[non_exhaustive] pub enum battersea_failure::ToolCode
+pub battersea_failure::ToolCode::DuplicateTool
+pub battersea_failure::ToolCode::InvalidToolApproval
+pub battersea_failure::ToolCode::InvalidToolArguments
+pub battersea_failure::ToolCode::InvalidToolCallId
+pub battersea_failure::ToolCode::InvalidToolContinuation
+pub battersea_failure::ToolCode::InvalidToolDefinition
+pub battersea_failure::ToolCode::InvalidToolResult
+pub battersea_failure::ToolCode::InvalidToolRounds
+pub battersea_failure::ToolCode::InvalidToolSchema
+pub battersea_failure::ToolCode::MalformedToolCall
+pub battersea_failure::ToolCode::ToolApprovalCapacity
+pub battersea_failure::ToolCode::ToolApprovalConflict
+pub battersea_failure::ToolCode::ToolApprovalDenied
+pub battersea_failure::ToolCode::ToolApprovalExpired
+pub battersea_failure::ToolCode::ToolApprovalPending
+pub battersea_failure::ToolCode::ToolApprovalStorage
+pub battersea_failure::ToolCode::ToolApprovalUnresolved
+pub battersea_failure::ToolCode::ToolContinuationConflict
+pub battersea_failure::ToolCode::ToolContinuationExpired
+pub battersea_failure::ToolCode::ToolContinuationStorage
+pub battersea_failure::ToolCode::ToolContinuationUnresolved
+pub battersea_failure::ToolCode::ToolOutsideChoice
+pub battersea_failure::ToolCode::ToolRoundsExceeded
+pub battersea_failure::ToolCode::ToolTranscriptTooLarge
+pub battersea_failure::ToolCode::ToolUseDisabled
+pub battersea_failure::ToolCode::UnofferedTool
+pub battersea_failure::ToolCode::UnofferedToolChoice
+pub battersea_failure::ToolCode::UnregisteredTool
+pub battersea_failure::ToolCode::UnsupportedToolContent
+pub battersea_failure::ToolCode::UnsupportedToolContinuation
+impl battersea_failure::ToolCode
+pub const battersea_failure::ToolCode::ALL: &[Self]
+pub fn battersea_failure::ToolCode::as_str(self) -> &'static str
+impl core::clone::Clone for battersea_failure::ToolCode
+pub fn battersea_failure::ToolCode::clone(&self) -> Self
+impl core::cmp::Eq for battersea_failure::ToolCode
+impl core::cmp::PartialEq for battersea_failure::ToolCode
+pub fn battersea_failure::ToolCode::eq(&self, &Self) -> bool
+impl core::fmt::Debug for battersea_failure::ToolCode
+pub fn battersea_failure::ToolCode::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for battersea_failure::ToolCode
+pub fn battersea_failure::ToolCode::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::hash::Hash for battersea_failure::ToolCode
+pub fn battersea_failure::ToolCode::hash<__H: core::hash::Hasher>(&self, &mut __H)
+impl core::marker::Copy for battersea_failure::ToolCode
+impl core::marker::StructuralPartialEq for battersea_failure::ToolCode
+impl schemars::JsonSchema for battersea_failure::ToolCode
+pub fn battersea_failure::ToolCode::inline_schema() -> bool
+pub fn battersea_failure::ToolCode::json_schema(&mut schemars::generate::SchemaGenerator) -> schemars::schema::Schema
+pub fn battersea_failure::ToolCode::schema_id() -> alloc::borrow::Cow<'static, str>
+pub fn battersea_failure::ToolCode::schema_name() -> alloc::borrow::Cow<'static, str>
+impl serde_core::ser::Serialize for battersea_failure::ToolCode
+pub fn battersea_failure::ToolCode::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for battersea_failure::ToolCode
+pub fn battersea_failure::ToolCode::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for battersea_failure::ToolCode
+impl core::marker::Send for battersea_failure::ToolCode
+impl core::marker::Sync for battersea_failure::ToolCode
+impl core::marker::Unpin for battersea_failure::ToolCode
+impl core::marker::UnsafeUnpin for battersea_failure::ToolCode
+impl core::panic::unwind_safe::RefUnwindSafe for battersea_failure::ToolCode
+impl core::panic::unwind_safe::UnwindSafe for battersea_failure::ToolCode
+impl<T, U> core::convert::Into<U> for battersea_failure::ToolCode where U: core::convert::From<T>
+pub fn battersea_failure::ToolCode::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_failure::ToolCode where U: core::convert::Into<T>
+pub type battersea_failure::ToolCode::Error = never
+pub fn battersea_failure::ToolCode::try_from(U) -> core::result::Result<T, never>
+impl<T, U> core::convert::TryInto<U> for battersea_failure::ToolCode where U: core::convert::TryFrom<T>
+pub type battersea_failure::ToolCode::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_failure::ToolCode::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for battersea_failure::ToolCode where T: core::clone::Clone
+pub type battersea_failure::ToolCode::Owned = T
+pub fn battersea_failure::ToolCode::clone_into(&self, &mut T)
+pub fn battersea_failure::ToolCode::to_owned(&self) -> T
+impl<T> alloc::string::ToString for battersea_failure::ToolCode where T: core::fmt::Display + ?core::marker::Sized
+pub fn battersea_failure::ToolCode::to_string(&self) -> alloc::string::String
+impl<T> core::any::Any for battersea_failure::ToolCode where T: 'static + ?core::marker::Sized
+pub fn battersea_failure::ToolCode::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_failure::ToolCode where T: ?core::marker::Sized
+pub fn battersea_failure::ToolCode::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_failure::ToolCode where T: ?core::marker::Sized
+pub fn battersea_failure::ToolCode::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for battersea_failure::ToolCode where T: core::clone::Clone
+pub unsafe fn battersea_failure::ToolCode::clone_to_uninit(&self, *mut u8)
+impl<T> core::convert::From<T> for battersea_failure::ToolCode
+pub fn battersea_failure::ToolCode::from(T) -> T
+impl<T> dyn_clone::DynClone for battersea_failure::ToolCode where T: core::clone::Clone
+pub fn battersea_failure::ToolCode::__clone_box(&self, dyn_clone::sealed::Private) -> *mut ()
+impl<T> serde_core::de::DeserializeOwned for battersea_failure::ToolCode where T: for<'de> serde_core::de::Deserialize<'de>
+pub struct battersea_failure::Exchange
+pub battersea_failure::Exchange::attempts: u32
+pub battersea_failure::Exchange::dispatch: battersea_failure::DispatchState
+pub battersea_failure::Exchange::request_id: core::option::Option<alloc::string::String>
+pub battersea_failure::Exchange::response_id: core::option::Option<alloc::string::String>
+pub battersea_failure::Exchange::retry_after_ms: core::option::Option<u64>
+pub battersea_failure::Exchange::status: core::option::Option<u16>
+impl core::clone::Clone for battersea_failure::Exchange
+pub fn battersea_failure::Exchange::clone(&self) -> Self
+impl core::cmp::Eq for battersea_failure::Exchange
+impl core::cmp::PartialEq for battersea_failure::Exchange
+pub fn battersea_failure::Exchange::eq(&self, &Self) -> bool
+impl core::default::Default for battersea_failure::Exchange
+pub fn battersea_failure::Exchange::default() -> Self
+impl core::fmt::Debug for battersea_failure::Exchange
+pub fn battersea_failure::Exchange::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for battersea_failure::Exchange
+impl schemars::JsonSchema for battersea_failure::Exchange
+pub fn battersea_failure::Exchange::inline_schema() -> bool
+pub fn battersea_failure::Exchange::json_schema(&mut schemars::generate::SchemaGenerator) -> schemars::schema::Schema
+pub fn battersea_failure::Exchange::schema_id() -> alloc::borrow::Cow<'static, str>
+pub fn battersea_failure::Exchange::schema_name() -> alloc::borrow::Cow<'static, str>
+impl serde_core::ser::Serialize for battersea_failure::Exchange
+pub fn battersea_failure::Exchange::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for battersea_failure::Exchange
+pub fn battersea_failure::Exchange::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for battersea_failure::Exchange
+impl core::marker::Send for battersea_failure::Exchange
+impl core::marker::Sync for battersea_failure::Exchange
+impl core::marker::Unpin for battersea_failure::Exchange
+impl core::marker::UnsafeUnpin for battersea_failure::Exchange
+impl core::panic::unwind_safe::RefUnwindSafe for battersea_failure::Exchange
+impl core::panic::unwind_safe::UnwindSafe for battersea_failure::Exchange
+impl<T, U> core::convert::Into<U> for battersea_failure::Exchange where U: core::convert::From<T>
+pub fn battersea_failure::Exchange::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_failure::Exchange where U: core::convert::Into<T>
+pub type battersea_failure::Exchange::Error = never
+pub fn battersea_failure::Exchange::try_from(U) -> core::result::Result<T, never>
+impl<T, U> core::convert::TryInto<U> for battersea_failure::Exchange where U: core::convert::TryFrom<T>
+pub type battersea_failure::Exchange::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_failure::Exchange::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for battersea_failure::Exchange where T: core::clone::Clone
+pub type battersea_failure::Exchange::Owned = T
+pub fn battersea_failure::Exchange::clone_into(&self, &mut T)
+pub fn battersea_failure::Exchange::to_owned(&self) -> T
+impl<T> core::any::Any for battersea_failure::Exchange where T: 'static + ?core::marker::Sized
+pub fn battersea_failure::Exchange::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_failure::Exchange where T: ?core::marker::Sized
+pub fn battersea_failure::Exchange::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_failure::Exchange where T: ?core::marker::Sized
+pub fn battersea_failure::Exchange::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for battersea_failure::Exchange where T: core::clone::Clone
+pub unsafe fn battersea_failure::Exchange::clone_to_uninit(&self, *mut u8)
+impl<T> core::convert::From<T> for battersea_failure::Exchange
+pub fn battersea_failure::Exchange::from(T) -> T
+impl<T> dyn_clone::DynClone for battersea_failure::Exchange where T: core::clone::Clone
+pub fn battersea_failure::Exchange::__clone_box(&self, dyn_clone::sealed::Private) -> *mut ()
+impl<T> serde_core::de::DeserializeOwned for battersea_failure::Exchange where T: for<'de> serde_core::de::Deserialize<'de>
+pub struct battersea_failure::Failure(_)
+impl battersea_failure::Failure
+pub fn battersea_failure::Failure::caused_by(self, &(dyn core::error::Error + 'static)) -> Self
+pub fn battersea_failure::Failure::caused_by_text(self, impl core::convert::Into<alloc::string::String>) -> Self
+pub fn battersea_failure::Failure::disclose(&self, battersea_failure::FailureDisclosure) -> Self
+pub fn battersea_failure::Failure::invalid_response(impl core::convert::Into<alloc::string::String>, &'static str) -> Self
+pub fn battersea_failure::Failure::local(&'static str, impl core::convert::Into<battersea_failure::ErrorKind>) -> Self
+pub fn battersea_failure::Failure::new(impl core::convert::Into<alloc::string::String>, &'static str, impl core::convert::Into<battersea_failure::ErrorKind>) -> Self
+pub fn battersea_failure::Failure::transport(impl core::convert::Into<alloc::string::String>, &'static str) -> Self
+pub fn battersea_failure::Failure::visit_text(&mut self, &mut dyn core::ops::function::FnMut(&mut alloc::string::String))
+pub fn battersea_failure::Failure::with_cause(self, battersea_failure::Failure) -> Self
+pub fn battersea_failure::Failure::with_cleanup(self, battersea_failure::Failure) -> Self
+pub fn battersea_failure::Failure::with_context(self, &'static str, impl core::convert::Into<serde_json::value::Value>) -> Self
+pub fn battersea_failure::Failure::with_dispatch(self, battersea_failure::DispatchState) -> Self
+pub fn battersea_failure::Failure::with_idle_watchdog(self, u64) -> Self
+pub fn battersea_failure::Failure::with_native(self, battersea_failure::Reporter, serde_json::value::Value) -> Self
+pub fn battersea_failure::Failure::with_partial(self, battersea_failure::PartialOutput) -> Self
+pub fn battersea_failure::Failure::with_request_id(self, core::option::Option<alloc::string::String>) -> Self
+pub fn battersea_failure::Failure::with_status_code(self, u16) -> Self
+pub fn battersea_failure::Failure::with_tool_call(self, battersea_failure::ToolCallEvidence) -> Self
+pub fn battersea_failure::Failure::with_tool_code(self, battersea_failure::ToolCode) -> Self
+impl core::clone::Clone for battersea_failure::Failure
+pub fn battersea_failure::Failure::clone(&self) -> Self
+impl core::cmp::Eq for battersea_failure::Failure
+impl core::cmp::PartialEq for battersea_failure::Failure
+pub fn battersea_failure::Failure::eq(&self, &Self) -> bool
+impl core::convert::From<&'static str> for battersea_failure::Failure
+pub fn battersea_failure::Failure::from(&'static str) -> Self
+impl core::error::Error for battersea_failure::Failure
+impl core::fmt::Debug for battersea_failure::Failure
+pub fn battersea_failure::Failure::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for battersea_failure::Failure
+pub fn battersea_failure::Failure::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for battersea_failure::Failure
+impl core::ops::deref::Deref for battersea_failure::Failure
+pub type battersea_failure::Failure::Target = battersea_failure::FailureParts
+pub fn battersea_failure::Failure::deref(&self) -> &battersea_failure::FailureParts
+impl core::ops::deref::DerefMut for battersea_failure::Failure
+pub fn battersea_failure::Failure::deref_mut(&mut self) -> &mut battersea_failure::FailureParts
+impl schemars::JsonSchema for battersea_failure::Failure
+pub fn battersea_failure::Failure::inline_schema() -> bool
+pub fn battersea_failure::Failure::json_schema(&mut schemars::generate::SchemaGenerator) -> schemars::schema::Schema
+pub fn battersea_failure::Failure::schema_id() -> alloc::borrow::Cow<'static, str>
+pub fn battersea_failure::Failure::schema_name() -> alloc::borrow::Cow<'static, str>
+impl serde_core::ser::Serialize for battersea_failure::Failure
+pub fn battersea_failure::Failure::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for battersea_failure::Failure
+pub fn battersea_failure::Failure::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for battersea_failure::Failure
+impl core::marker::Send for battersea_failure::Failure
+impl core::marker::Sync for battersea_failure::Failure
+impl core::marker::Unpin for battersea_failure::Failure
+impl core::marker::UnsafeUnpin for battersea_failure::Failure
+impl core::panic::unwind_safe::RefUnwindSafe for battersea_failure::Failure
+impl core::panic::unwind_safe::UnwindSafe for battersea_failure::Failure
+impl<P, T> core::ops::deref::Receiver for battersea_failure::Failure where P: core::ops::deref::Deref<Target = T> + ?core::marker::Sized, T: ?core::marker::Sized
+pub type battersea_failure::Failure::Target = T
+impl<T, U> core::convert::Into<U> for battersea_failure::Failure where U: core::convert::From<T>
+pub fn battersea_failure::Failure::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_failure::Failure where U: core::convert::Into<T>
+pub type battersea_failure::Failure::Error = never
+pub fn battersea_failure::Failure::try_from(U) -> core::result::Result<T, never>
+impl<T, U> core::convert::TryInto<U> for battersea_failure::Failure where U: core::convert::TryFrom<T>
+pub type battersea_failure::Failure::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_failure::Failure::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for battersea_failure::Failure where T: core::clone::Clone
+pub type battersea_failure::Failure::Owned = T
+pub fn battersea_failure::Failure::clone_into(&self, &mut T)
+pub fn battersea_failure::Failure::to_owned(&self) -> T
+impl<T> alloc::string::ToString for battersea_failure::Failure where T: core::fmt::Display + ?core::marker::Sized
+pub fn battersea_failure::Failure::to_string(&self) -> alloc::string::String
+impl<T> core::any::Any for battersea_failure::Failure where T: 'static + ?core::marker::Sized
+pub fn battersea_failure::Failure::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_failure::Failure where T: ?core::marker::Sized
+pub fn battersea_failure::Failure::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_failure::Failure where T: ?core::marker::Sized
+pub fn battersea_failure::Failure::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for battersea_failure::Failure where T: core::clone::Clone
+pub unsafe fn battersea_failure::Failure::clone_to_uninit(&self, *mut u8)
+impl<T> core::convert::From<T> for battersea_failure::Failure
+pub fn battersea_failure::Failure::from(T) -> T
+impl<T> dyn_clone::DynClone for battersea_failure::Failure where T: core::clone::Clone
+pub fn battersea_failure::Failure::__clone_box(&self, dyn_clone::sealed::Private) -> *mut ()
+impl<T> serde_core::de::DeserializeOwned for battersea_failure::Failure where T: for<'de> serde_core::de::Deserialize<'de>
+pub struct battersea_failure::FailureParts
+pub battersea_failure::FailureParts::cause: core::option::Option<battersea_failure::Cause>
+pub battersea_failure::FailureParts::cleanup: core::option::Option<battersea_failure::Failure>
+pub battersea_failure::FailureParts::context: alloc::collections::btree::map::BTreeMap<alloc::string::String, serde_json::value::Value>
+pub battersea_failure::FailureParts::exchange: battersea_failure::Exchange
+pub battersea_failure::FailureParts::kind: battersea_failure::ErrorKind
+pub battersea_failure::FailureParts::message: alloc::string::String
+pub battersea_failure::FailureParts::native: battersea_failure::Detail<serde_json::value::Value>
+pub battersea_failure::FailureParts::origin: battersea_failure::Origin
+pub battersea_failure::FailureParts::partial: battersea_failure::Detail<battersea_failure::PartialOutput>
+pub battersea_failure::FailureParts::reporter: battersea_failure::Reporter
+pub battersea_failure::FailureParts::tool_call: core::option::Option<alloc::boxed::Box<battersea_failure::ToolCallEvidence>>
+pub battersea_failure::FailureParts::tool_code: core::option::Option<battersea_failure::ToolCode>
+pub battersea_failure::FailureParts::watchdog: core::option::Option<battersea_failure::WatchdogFailure>
+impl core::clone::Clone for battersea_failure::FailureParts
+pub fn battersea_failure::FailureParts::clone(&self) -> Self
+impl core::cmp::Eq for battersea_failure::FailureParts
+impl core::cmp::PartialEq for battersea_failure::FailureParts
+pub fn battersea_failure::FailureParts::eq(&self, &Self) -> bool
+impl core::fmt::Debug for battersea_failure::FailureParts
+pub fn battersea_failure::FailureParts::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for battersea_failure::FailureParts
+impl schemars::JsonSchema for battersea_failure::FailureParts
+pub fn battersea_failure::FailureParts::inline_schema() -> bool
+pub fn battersea_failure::FailureParts::json_schema(&mut schemars::generate::SchemaGenerator) -> schemars::schema::Schema
+pub fn battersea_failure::FailureParts::schema_id() -> alloc::borrow::Cow<'static, str>
+pub fn battersea_failure::FailureParts::schema_name() -> alloc::borrow::Cow<'static, str>
+impl serde_core::ser::Serialize for battersea_failure::FailureParts
+pub fn battersea_failure::FailureParts::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for battersea_failure::FailureParts
+pub fn battersea_failure::FailureParts::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for battersea_failure::FailureParts
+impl core::marker::Send for battersea_failure::FailureParts
+impl core::marker::Sync for battersea_failure::FailureParts
+impl core::marker::Unpin for battersea_failure::FailureParts
+impl core::marker::UnsafeUnpin for battersea_failure::FailureParts
+impl core::panic::unwind_safe::RefUnwindSafe for battersea_failure::FailureParts
+impl core::panic::unwind_safe::UnwindSafe for battersea_failure::FailureParts
+impl<T, U> core::convert::Into<U> for battersea_failure::FailureParts where U: core::convert::From<T>
+pub fn battersea_failure::FailureParts::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_failure::FailureParts where U: core::convert::Into<T>
+pub type battersea_failure::FailureParts::Error = never
+pub fn battersea_failure::FailureParts::try_from(U) -> core::result::Result<T, never>
+impl<T, U> core::convert::TryInto<U> for battersea_failure::FailureParts where U: core::convert::TryFrom<T>
+pub type battersea_failure::FailureParts::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_failure::FailureParts::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for battersea_failure::FailureParts where T: core::clone::Clone
+pub type battersea_failure::FailureParts::Owned = T
+pub fn battersea_failure::FailureParts::clone_into(&self, &mut T)
+pub fn battersea_failure::FailureParts::to_owned(&self) -> T
+impl<T> core::any::Any for battersea_failure::FailureParts where T: 'static + ?core::marker::Sized
+pub fn battersea_failure::FailureParts::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_failure::FailureParts where T: ?core::marker::Sized
+pub fn battersea_failure::FailureParts::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_failure::FailureParts where T: ?core::marker::Sized
+pub fn battersea_failure::FailureParts::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for battersea_failure::FailureParts where T: core::clone::Clone
+pub unsafe fn battersea_failure::FailureParts::clone_to_uninit(&self, *mut u8)
+impl<T> core::convert::From<T> for battersea_failure::FailureParts
+pub fn battersea_failure::FailureParts::from(T) -> T
+impl<T> dyn_clone::DynClone for battersea_failure::FailureParts where T: core::clone::Clone
+pub fn battersea_failure::FailureParts::__clone_box(&self, dyn_clone::sealed::Private) -> *mut ()
+impl<T> serde_core::de::DeserializeOwned for battersea_failure::FailureParts where T: for<'de> serde_core::de::Deserialize<'de>
+pub struct battersea_failure::Origin
+pub battersea_failure::Origin::backend: core::option::Option<alloc::string::String>
+pub battersea_failure::Origin::model: core::option::Option<alloc::string::String>
+pub battersea_failure::Origin::operation: core::option::Option<alloc::string::String>
+pub battersea_failure::Origin::provider: core::option::Option<alloc::string::String>
+impl core::clone::Clone for battersea_failure::Origin
+pub fn battersea_failure::Origin::clone(&self) -> Self
+impl core::cmp::Eq for battersea_failure::Origin
+impl core::cmp::PartialEq for battersea_failure::Origin
+pub fn battersea_failure::Origin::eq(&self, &Self) -> bool
+impl core::default::Default for battersea_failure::Origin
+pub fn battersea_failure::Origin::default() -> Self
+impl core::fmt::Debug for battersea_failure::Origin
+pub fn battersea_failure::Origin::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for battersea_failure::Origin
+impl schemars::JsonSchema for battersea_failure::Origin
+pub fn battersea_failure::Origin::inline_schema() -> bool
+pub fn battersea_failure::Origin::json_schema(&mut schemars::generate::SchemaGenerator) -> schemars::schema::Schema
+pub fn battersea_failure::Origin::schema_id() -> alloc::borrow::Cow<'static, str>
+pub fn battersea_failure::Origin::schema_name() -> alloc::borrow::Cow<'static, str>
+impl serde_core::ser::Serialize for battersea_failure::Origin
+pub fn battersea_failure::Origin::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for battersea_failure::Origin
+pub fn battersea_failure::Origin::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for battersea_failure::Origin
+impl core::marker::Send for battersea_failure::Origin
+impl core::marker::Sync for battersea_failure::Origin
+impl core::marker::Unpin for battersea_failure::Origin
+impl core::marker::UnsafeUnpin for battersea_failure::Origin
+impl core::panic::unwind_safe::RefUnwindSafe for battersea_failure::Origin
+impl core::panic::unwind_safe::UnwindSafe for battersea_failure::Origin
+impl<T, U> core::convert::Into<U> for battersea_failure::Origin where U: core::convert::From<T>
+pub fn battersea_failure::Origin::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_failure::Origin where U: core::convert::Into<T>
+pub type battersea_failure::Origin::Error = never
+pub fn battersea_failure::Origin::try_from(U) -> core::result::Result<T, never>
+impl<T, U> core::convert::TryInto<U> for battersea_failure::Origin where U: core::convert::TryFrom<T>
+pub type battersea_failure::Origin::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_failure::Origin::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for battersea_failure::Origin where T: core::clone::Clone
+pub type battersea_failure::Origin::Owned = T
+pub fn battersea_failure::Origin::clone_into(&self, &mut T)
+pub fn battersea_failure::Origin::to_owned(&self) -> T
+impl<T> core::any::Any for battersea_failure::Origin where T: 'static + ?core::marker::Sized
+pub fn battersea_failure::Origin::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_failure::Origin where T: ?core::marker::Sized
+pub fn battersea_failure::Origin::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_failure::Origin where T: ?core::marker::Sized
+pub fn battersea_failure::Origin::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for battersea_failure::Origin where T: core::clone::Clone
+pub unsafe fn battersea_failure::Origin::clone_to_uninit(&self, *mut u8)
+impl<T> core::convert::From<T> for battersea_failure::Origin
+pub fn battersea_failure::Origin::from(T) -> T
+impl<T> dyn_clone::DynClone for battersea_failure::Origin where T: core::clone::Clone
+pub fn battersea_failure::Origin::__clone_box(&self, dyn_clone::sealed::Private) -> *mut ()
+impl<T> serde_core::de::DeserializeOwned for battersea_failure::Origin where T: for<'de> serde_core::de::Deserialize<'de>
+pub struct battersea_failure::PartialOutput
+pub battersea_failure::PartialOutput::blocks: alloc::vec::Vec<serde_json::value::Value>
+pub battersea_failure::PartialOutput::text: alloc::string::String
+impl core::clone::Clone for battersea_failure::PartialOutput
+pub fn battersea_failure::PartialOutput::clone(&self) -> Self
+impl core::cmp::Eq for battersea_failure::PartialOutput
+impl core::cmp::PartialEq for battersea_failure::PartialOutput
+pub fn battersea_failure::PartialOutput::eq(&self, &Self) -> bool
+impl core::default::Default for battersea_failure::PartialOutput
+pub fn battersea_failure::PartialOutput::default() -> Self
+impl core::fmt::Debug for battersea_failure::PartialOutput
+pub fn battersea_failure::PartialOutput::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for battersea_failure::PartialOutput
+impl schemars::JsonSchema for battersea_failure::PartialOutput
+pub fn battersea_failure::PartialOutput::inline_schema() -> bool
+pub fn battersea_failure::PartialOutput::json_schema(&mut schemars::generate::SchemaGenerator) -> schemars::schema::Schema
+pub fn battersea_failure::PartialOutput::schema_id() -> alloc::borrow::Cow<'static, str>
+pub fn battersea_failure::PartialOutput::schema_name() -> alloc::borrow::Cow<'static, str>
+impl serde_core::ser::Serialize for battersea_failure::PartialOutput
+pub fn battersea_failure::PartialOutput::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for battersea_failure::PartialOutput
+pub fn battersea_failure::PartialOutput::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for battersea_failure::PartialOutput
+impl core::marker::Send for battersea_failure::PartialOutput
+impl core::marker::Sync for battersea_failure::PartialOutput
+impl core::marker::Unpin for battersea_failure::PartialOutput
+impl core::marker::UnsafeUnpin for battersea_failure::PartialOutput
+impl core::panic::unwind_safe::RefUnwindSafe for battersea_failure::PartialOutput
+impl core::panic::unwind_safe::UnwindSafe for battersea_failure::PartialOutput
+impl<T, U> core::convert::Into<U> for battersea_failure::PartialOutput where U: core::convert::From<T>
+pub fn battersea_failure::PartialOutput::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_failure::PartialOutput where U: core::convert::Into<T>
+pub type battersea_failure::PartialOutput::Error = never
+pub fn battersea_failure::PartialOutput::try_from(U) -> core::result::Result<T, never>
+impl<T, U> core::convert::TryInto<U> for battersea_failure::PartialOutput where U: core::convert::TryFrom<T>
+pub type battersea_failure::PartialOutput::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_failure::PartialOutput::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for battersea_failure::PartialOutput where T: core::clone::Clone
+pub type battersea_failure::PartialOutput::Owned = T
+pub fn battersea_failure::PartialOutput::clone_into(&self, &mut T)
+pub fn battersea_failure::PartialOutput::to_owned(&self) -> T
+impl<T> core::any::Any for battersea_failure::PartialOutput where T: 'static + ?core::marker::Sized
+pub fn battersea_failure::PartialOutput::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_failure::PartialOutput where T: ?core::marker::Sized
+pub fn battersea_failure::PartialOutput::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_failure::PartialOutput where T: ?core::marker::Sized
+pub fn battersea_failure::PartialOutput::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for battersea_failure::PartialOutput where T: core::clone::Clone
+pub unsafe fn battersea_failure::PartialOutput::clone_to_uninit(&self, *mut u8)
+impl<T> core::convert::From<T> for battersea_failure::PartialOutput
+pub fn battersea_failure::PartialOutput::from(T) -> T
+impl<T> dyn_clone::DynClone for battersea_failure::PartialOutput where T: core::clone::Clone
+pub fn battersea_failure::PartialOutput::__clone_box(&self, dyn_clone::sealed::Private) -> *mut ()
+impl<T> serde_core::de::DeserializeOwned for battersea_failure::PartialOutput where T: for<'de> serde_core::de::Deserialize<'de>
+pub struct battersea_failure::ToolCallEvidence
+pub battersea_failure::ToolCallEvidence::call_id: alloc::string::String
+pub battersea_failure::ToolCallEvidence::outcome: battersea_failure::ToolCallOutcome
+pub battersea_failure::ToolCallEvidence::request_id: core::option::Option<alloc::string::String>
+pub battersea_failure::ToolCallEvidence::tool_name: alloc::string::String
+impl core::clone::Clone for battersea_failure::ToolCallEvidence
+pub fn battersea_failure::ToolCallEvidence::clone(&self) -> Self
+impl core::cmp::Eq for battersea_failure::ToolCallEvidence
+impl core::cmp::PartialEq for battersea_failure::ToolCallEvidence
+pub fn battersea_failure::ToolCallEvidence::eq(&self, &Self) -> bool
+impl core::fmt::Debug for battersea_failure::ToolCallEvidence
+pub fn battersea_failure::ToolCallEvidence::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for battersea_failure::ToolCallEvidence
+impl schemars::JsonSchema for battersea_failure::ToolCallEvidence
+pub fn battersea_failure::ToolCallEvidence::inline_schema() -> bool
+pub fn battersea_failure::ToolCallEvidence::json_schema(&mut schemars::generate::SchemaGenerator) -> schemars::schema::Schema
+pub fn battersea_failure::ToolCallEvidence::schema_id() -> alloc::borrow::Cow<'static, str>
+pub fn battersea_failure::ToolCallEvidence::schema_name() -> alloc::borrow::Cow<'static, str>
+impl serde_core::ser::Serialize for battersea_failure::ToolCallEvidence
+pub fn battersea_failure::ToolCallEvidence::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for battersea_failure::ToolCallEvidence
+pub fn battersea_failure::ToolCallEvidence::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for battersea_failure::ToolCallEvidence
+impl core::marker::Send for battersea_failure::ToolCallEvidence
+impl core::marker::Sync for battersea_failure::ToolCallEvidence
+impl core::marker::Unpin for battersea_failure::ToolCallEvidence
+impl core::marker::UnsafeUnpin for battersea_failure::ToolCallEvidence
+impl core::panic::unwind_safe::RefUnwindSafe for battersea_failure::ToolCallEvidence
+impl core::panic::unwind_safe::UnwindSafe for battersea_failure::ToolCallEvidence
+impl<T, U> core::convert::Into<U> for battersea_failure::ToolCallEvidence where U: core::convert::From<T>
+pub fn battersea_failure::ToolCallEvidence::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_failure::ToolCallEvidence where U: core::convert::Into<T>
+pub type battersea_failure::ToolCallEvidence::Error = never
+pub fn battersea_failure::ToolCallEvidence::try_from(U) -> core::result::Result<T, never>
+impl<T, U> core::convert::TryInto<U> for battersea_failure::ToolCallEvidence where U: core::convert::TryFrom<T>
+pub type battersea_failure::ToolCallEvidence::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_failure::ToolCallEvidence::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for battersea_failure::ToolCallEvidence where T: core::clone::Clone
+pub type battersea_failure::ToolCallEvidence::Owned = T
+pub fn battersea_failure::ToolCallEvidence::clone_into(&self, &mut T)
+pub fn battersea_failure::ToolCallEvidence::to_owned(&self) -> T
+impl<T> core::any::Any for battersea_failure::ToolCallEvidence where T: 'static + ?core::marker::Sized
+pub fn battersea_failure::ToolCallEvidence::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_failure::ToolCallEvidence where T: ?core::marker::Sized
+pub fn battersea_failure::ToolCallEvidence::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_failure::ToolCallEvidence where T: ?core::marker::Sized
+pub fn battersea_failure::ToolCallEvidence::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for battersea_failure::ToolCallEvidence where T: core::clone::Clone
+pub unsafe fn battersea_failure::ToolCallEvidence::clone_to_uninit(&self, *mut u8)
+impl<T> core::convert::From<T> for battersea_failure::ToolCallEvidence
+pub fn battersea_failure::ToolCallEvidence::from(T) -> T
+impl<T> dyn_clone::DynClone for battersea_failure::ToolCallEvidence where T: core::clone::Clone
+pub fn battersea_failure::ToolCallEvidence::__clone_box(&self, dyn_clone::sealed::Private) -> *mut ()
+impl<T> serde_core::de::DeserializeOwned for battersea_failure::ToolCallEvidence where T: for<'de> serde_core::de::Deserialize<'de>
+pub struct battersea_failure::WatchdogFailure
+pub battersea_failure::WatchdogFailure::limit_ms: u64
+impl core::clone::Clone for battersea_failure::WatchdogFailure
+pub fn battersea_failure::WatchdogFailure::clone(&self) -> Self
+impl core::cmp::Eq for battersea_failure::WatchdogFailure
+impl core::cmp::PartialEq for battersea_failure::WatchdogFailure
+pub fn battersea_failure::WatchdogFailure::eq(&self, &Self) -> bool
+impl core::fmt::Debug for battersea_failure::WatchdogFailure
+pub fn battersea_failure::WatchdogFailure::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for battersea_failure::WatchdogFailure
+impl schemars::JsonSchema for battersea_failure::WatchdogFailure
+pub fn battersea_failure::WatchdogFailure::inline_schema() -> bool
+pub fn battersea_failure::WatchdogFailure::json_schema(&mut schemars::generate::SchemaGenerator) -> schemars::schema::Schema
+pub fn battersea_failure::WatchdogFailure::schema_id() -> alloc::borrow::Cow<'static, str>
+pub fn battersea_failure::WatchdogFailure::schema_name() -> alloc::borrow::Cow<'static, str>
+impl serde_core::ser::Serialize for battersea_failure::WatchdogFailure
+pub fn battersea_failure::WatchdogFailure::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for battersea_failure::WatchdogFailure
+pub fn battersea_failure::WatchdogFailure::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for battersea_failure::WatchdogFailure
+impl core::marker::Send for battersea_failure::WatchdogFailure
+impl core::marker::Sync for battersea_failure::WatchdogFailure
+impl core::marker::Unpin for battersea_failure::WatchdogFailure
+impl core::marker::UnsafeUnpin for battersea_failure::WatchdogFailure
+impl core::panic::unwind_safe::RefUnwindSafe for battersea_failure::WatchdogFailure
+impl core::panic::unwind_safe::UnwindSafe for battersea_failure::WatchdogFailure
+impl<T, U> core::convert::Into<U> for battersea_failure::WatchdogFailure where U: core::convert::From<T>
+pub fn battersea_failure::WatchdogFailure::into(self) -> U
+impl<T, U> core::convert::TryFrom<U> for battersea_failure::WatchdogFailure where U: core::convert::Into<T>
+pub type battersea_failure::WatchdogFailure::Error = never
+pub fn battersea_failure::WatchdogFailure::try_from(U) -> core::result::Result<T, never>
+impl<T, U> core::convert::TryInto<U> for battersea_failure::WatchdogFailure where U: core::convert::TryFrom<T>
+pub type battersea_failure::WatchdogFailure::Error = <U as core::convert::TryFrom<T>>::Error
+pub fn battersea_failure::WatchdogFailure::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+impl<T> alloc::borrow::ToOwned for battersea_failure::WatchdogFailure where T: core::clone::Clone
+pub type battersea_failure::WatchdogFailure::Owned = T
+pub fn battersea_failure::WatchdogFailure::clone_into(&self, &mut T)
+pub fn battersea_failure::WatchdogFailure::to_owned(&self) -> T
+impl<T> core::any::Any for battersea_failure::WatchdogFailure where T: 'static + ?core::marker::Sized
+pub fn battersea_failure::WatchdogFailure::type_id(&self) -> core::any::TypeId
+impl<T> core::borrow::Borrow<T> for battersea_failure::WatchdogFailure where T: ?core::marker::Sized
+pub fn battersea_failure::WatchdogFailure::borrow(&self) -> &T
+impl<T> core::borrow::BorrowMut<T> for battersea_failure::WatchdogFailure where T: ?core::marker::Sized
+pub fn battersea_failure::WatchdogFailure::borrow_mut(&mut self) -> &mut T
+impl<T> core::clone::CloneToUninit for battersea_failure::WatchdogFailure where T: core::clone::Clone
+pub unsafe fn battersea_failure::WatchdogFailure::clone_to_uninit(&self, *mut u8)
+impl<T> core::convert::From<T> for battersea_failure::WatchdogFailure
+pub fn battersea_failure::WatchdogFailure::from(T) -> T
+impl<T> dyn_clone::DynClone for battersea_failure::WatchdogFailure where T: core::clone::Clone
+pub fn battersea_failure::WatchdogFailure::__clone_box(&self, dyn_clone::sealed::Private) -> *mut ()
+impl<T> serde_core::de::DeserializeOwned for battersea_failure::WatchdogFailure where T: for<'de> serde_core::de::Deserialize<'de>

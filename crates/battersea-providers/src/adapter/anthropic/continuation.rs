@@ -4,7 +4,7 @@ use super::*;
 use battersea_model::{
     adapter::payload::check_payload, configuration_digest, engine::EngineContextOverflow,
     ContentBlock, ConversationBinding, ConversationRequest, ConversationToolResult,
-    ConversationTurn, ErrorKind, StopReason,
+    ConversationTurn, ErrorKind, StopClass,
 };
 
 #[derive(serde::Serialize, Deserialize)]
@@ -21,13 +21,14 @@ struct Checkpoint {
 
 const CHECKPOINT_VERSION: u32 = 1;
 
-fn invalid(message: &str) -> EngineAdapterRequestError {
-    EngineAdapterRequestError::invalid_response("anthropic", message)
+fn invalid(message: &'static str) -> Failure {
+    Failure::invalid_response("anthropic", message)
 }
 
-fn decode(state: &Value) -> Result<Checkpoint, EngineAdapterRequestError> {
+fn decode(state: &Value) -> Result<Checkpoint, Failure> {
     check_payload(state, "anthropic")?;
-    serde_json::from_value(state.clone()).map_err(|_| invalid("Invalid Anthropic checkpoint."))
+    serde_json::from_value(state.clone())
+        .map_err(|cause| invalid("Invalid Anthropic checkpoint.").caused_by(&cause))
 }
 
 fn request_revision(request: &ConversationRequest) -> String {
@@ -48,7 +49,7 @@ fn same_calls<'a>(
 
 /// Classify one native assistant block. Durable turns admit text, signed thinking, redacted
 /// thinking and client tool use; every other field of an admitted block is retained verbatim.
-fn validate_block(block: &Value) -> Result<(), EngineAdapterRequestError> {
+fn validate_block(block: &Value) -> Result<(), Failure> {
     let valid = match anthropic_content_block_type(block) {
         Some("text") => block["text"].is_string(),
         Some("thinking") => block["thinking"].is_string() && block["signature"].is_string(),
@@ -69,7 +70,7 @@ fn validate_block(block: &Value) -> Result<(), EngineAdapterRequestError> {
 fn assistant_calls(
     request: &ConversationRequest,
     content: &Value,
-) -> Result<Vec<EngineLocalToolCall>, EngineAdapterRequestError> {
+) -> Result<Vec<EngineLocalToolCall>, Failure> {
     let blocks = content
         .as_array()
         .filter(|blocks| !blocks.is_empty())
@@ -82,9 +83,7 @@ fn assistant_calls(
     Ok(calls)
 }
 
-fn tool_result_message(
-    results: &[ConversationToolResult],
-) -> Result<Value, EngineAdapterRequestError> {
+fn tool_result_message(results: &[ConversationToolResult]) -> Result<Value, Failure> {
     let content = results
         .iter()
         .map(|item| {
@@ -92,7 +91,7 @@ fn tool_result_message(
                 "content": item.result.provider_content()?.to_string(),
                 "is_error": item.result.is_error()}))
         })
-        .collect::<Result<Vec<_>, EngineAdapterRequestError>>()?;
+        .collect::<Result<Vec<_>, Failure>>()?;
     Ok(json!({"role": "user", "content": content}))
 }
 
@@ -101,11 +100,11 @@ impl AnthropicEngineAdapter {
         &self,
         request: &ConversationRequest,
         state: Option<&Value>,
-    ) -> Result<ConversationBinding, EngineAdapterRequestError> {
+    ) -> Result<ConversationBinding, Failure> {
         super::super::validate_chat_request(&self.backend, &request.to_request())?;
         require_anthropic_max_tokens(&request.shared.chat)?;
         if request.shared.chat.context_overflow != EngineContextOverflow::Error {
-            return Err(EngineAdapterRequestError::new(
+            return Err(Failure::new(
                 "anthropic",
                 "Durable Anthropic continuation requires contextOverflow=error.",
                 ErrorKind::InvalidRequest,
@@ -177,7 +176,7 @@ impl AnthropicEngineAdapter {
         request: &ConversationRequest,
         previous: Option<&Value>,
         results: &[ConversationToolResult],
-    ) -> Result<Vec<Value>, EngineAdapterRequestError> {
+    ) -> Result<Vec<Value>, Failure> {
         let (mut messages, calls) = if let Some(state) = previous {
             self.validate_durable_request(request, Some(state))?;
             let checkpoint = decode(state)?;
@@ -215,7 +214,7 @@ impl AnthropicEngineAdapter {
         previous: Option<&Value>,
         results: &[ConversationToolResult],
         turn: &ConversationTurn,
-    ) -> Result<ConversationBinding, EngineAdapterRequestError> {
+    ) -> Result<ConversationBinding, Failure> {
         check_payload(turn, "anthropic")?;
         let binding = self.validate_durable_request(request, Some(&turn.state))?;
         let checkpoint = decode(&turn.state)?;
@@ -264,7 +263,7 @@ impl AnthropicEngineAdapter {
         request: ConversationRequest,
         state: Option<Value>,
         results: Vec<ConversationToolResult>,
-    ) -> Result<ConversationTurn, EngineAdapterRequestError> {
+    ) -> Result<ConversationTurn, Failure> {
         let binding = self.validate_durable_request(&request, state.as_ref())?;
         let messages = self.continuation_messages(&request, state.as_ref(), &results)?;
         let body = build_local_tool_body(&self.backend, &request.to_request(), messages.clone())?;
@@ -284,18 +283,40 @@ impl AnthropicEngineAdapter {
             self.clock.as_ref(),
         )
         .await?;
+        let mut identifiers = crate::retry::Identifiers::of(&response);
         let status = response.status().as_u16();
         let request_id = response
             .headers()
             .get("request-id")
             .and_then(|value| value.to_str().ok())
             .map(ToOwned::to_owned);
-        let native: Value =
-            read_anthropic_json(response, request_id.clone(), &self.context).await?;
+        let native: Value = read_anthropic_json(response, request_id.clone()).await?;
+        identifiers.name(native.get("id"));
+        let turn = self
+            .completed_turn(&request, binding, messages, native, status, request_id)
+            .await;
+        match turn {
+            Ok(mut turn) => {
+                identifiers.announce(&mut turn.events);
+                Ok(turn)
+            }
+            Err(failure) => Err(identifiers.stamp(failure)),
+        }
+    }
+
+    async fn completed_turn(
+        &self,
+        request: &ConversationRequest,
+        binding: ConversationBinding,
+        messages: Vec<Value>,
+        native: Value,
+        status: u16,
+        request_id: Option<String>,
+    ) -> Result<ConversationTurn, Failure> {
         // The completed native message determines durable events and calls.
-        let events = response_events(&request, &native, false)
-            .map_err(|error| error.with_request_id(request_id.clone()))?;
-        let calls = assistant_calls(&request, &native["content"])?;
+        let about = |failure| crate::http_payload::about(failure, &native);
+        let events = response_events(request, &native, false).map_err(about)?;
+        let calls = assistant_calls(request, &native["content"]).map_err(about)?;
         emit_response(
             self.logger.as_ref(),
             &self.context,
@@ -323,7 +344,7 @@ impl AnthropicEngineAdapter {
         let checkpoint = Checkpoint {
             version: CHECKPOINT_VERSION,
             binding,
-            request_revision: request_revision(&request),
+            request_revision: request_revision(request),
             messages,
             response: native,
         };
@@ -342,7 +363,7 @@ fn response_events(
     request: &ConversationRequest,
     response: &Value,
     structured: bool,
-) -> Result<Vec<EngineTextStreamEvent>, EngineAdapterRequestError> {
+) -> Result<Vec<EngineTextStreamEvent>, Failure> {
     if response["type"] != "message"
         || response["role"] != "assistant"
         || response["id"].as_str().is_none_or(|id| id.is_empty())
@@ -350,12 +371,27 @@ fn response_events(
         return Err(invalid("Anthropic turn lacks its message identity."));
     }
     let stop = match response["stop_reason"].as_str() {
-        Some("end_turn" | "stop_sequence") => StopReason::Complete,
-        Some("tool_use") => StopReason::ToolUse,
-        _ => return Err(invalid("Anthropic turn is not successfully completed.")),
+        Some("end_turn" | "stop_sequence") => StopClass::Complete,
+        Some("tool_use") => StopClass::ToolUse,
+        // A turn that stopped for another reason is refused or incomplete; the response and
+        // the text it holds travel with the failure.
+        Some(reason) => {
+            return Err(battersea_model::terminal_failure(
+                "anthropic",
+                stop_class(reason),
+                response.clone(),
+                response["content"]
+                    .as_array()
+                    .into_iter()
+                    .flatten()
+                    .filter_map(anthropic_content_block_text)
+                    .collect(),
+            ))
+        }
+        None => return Err(invalid("Anthropic turn is not successfully completed.")),
     };
     let calls = assistant_calls(request, &response["content"])?;
-    if calls.is_empty() == matches!(stop, StopReason::ToolUse) {
+    if calls.is_empty() == matches!(stop, StopClass::ToolUse) {
         return Err(invalid(
             "Anthropic stop reason disagrees with its tool calls.",
         ));
@@ -412,6 +448,9 @@ fn response_events(
             }
         }
     }
-    events.push(EngineTextStreamEvent::MessageStop { reason: stop });
+    events.push(EngineTextStreamEvent::MessageStop {
+        class: stop,
+        native: serde_json::Value::Null,
+    });
     Ok(events)
 }

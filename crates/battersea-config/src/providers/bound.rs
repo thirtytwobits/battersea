@@ -12,16 +12,13 @@ struct Context {
     secret: Option<SecretString>,
 }
 impl Context {
-    fn error(&self, error: EngineAdapterRequestError) -> EngineAdapterRequestError {
+    fn error(&self, error: Failure) -> Failure {
         self.binding.error(error, self.secret.as_deref())
     }
-    fn invalid(&self, message: &str) -> EngineAdapterRequestError {
-        EngineAdapterRequestError::new(&self.binding.provider, message, ErrorKind::InvalidRequest)
+    fn invalid(&self, message: &'static str) -> Failure {
+        Failure::new(&self.binding.provider, message, ErrorKind::InvalidRequest)
     }
-    fn admit(
-        &self,
-        request: &mut EngineTextStreamRequest,
-    ) -> Result<(), EngineAdapterRequestError> {
+    fn admit(&self, request: &mut EngineTextStreamRequest) -> Result<(), Failure> {
         for message in &mut request.shared.messages {
             for block in &mut message.content {
                 *block = match block.clone() {
@@ -54,10 +51,7 @@ impl Context {
         }
         Ok(())
     }
-    fn event(
-        &self,
-        event: EngineTextStreamEvent,
-    ) -> Result<EngineTextStreamEvent, EngineAdapterRequestError> {
+    fn event(&self, event: EngineTextStreamEvent) -> Result<EngineTextStreamEvent, Failure> {
         Ok(match event {
             EngineTextStreamEvent::ContentBlock { block } => EngineTextStreamEvent::ContentBlock {
                 block: match block {
@@ -81,6 +75,26 @@ impl Context {
                     block => block,
                 },
             },
+            // A tool's failure travels in the event as well as in the stream's error.
+            EngineTextStreamEvent::ToolCallCompleted {
+                id,
+                name,
+                ok,
+                result,
+                failure,
+                tool_result,
+                tool_call,
+                finished_at,
+            } => EngineTextStreamEvent::ToolCallCompleted {
+                id,
+                name,
+                ok,
+                result,
+                failure: failure.map(|failure| self.error(failure)),
+                tool_result,
+                tool_call,
+                finished_at,
+            },
             event => event,
         })
     }
@@ -102,8 +116,15 @@ impl Context {
                 }
             }
             serde_json::Value::Object(map) => {
-                for v in map.values_mut() {
-                    self.redact(v);
+                // A provider can echo a credential as an object key.
+                for (key, mut v) in std::mem::take(map) {
+                    let mut key = serde_json::Value::String(key);
+                    self.redact(&mut key);
+                    self.redact(&mut v);
+                    let serde_json::Value::String(key) = key else {
+                        unreachable!("a redacted string is a string")
+                    };
+                    map.insert(key, v);
                 }
             }
             _ => (),
@@ -138,7 +159,7 @@ impl EngineAdapter for Chat {
         &self,
         request: &ConversationRequest,
         state: Option<&serde_json::Value>,
-    ) -> Result<ConversationBinding, EngineAdapterRequestError> {
+    ) -> Result<ConversationBinding, Failure> {
         let mut runtime = request.to_request();
         self.context.admit(&mut runtime)?;
         let mut admitted = request.clone();
@@ -160,7 +181,7 @@ impl EngineAdapter for Chat {
         previous: Option<&serde_json::Value>,
         results: &[ConversationToolResult],
         turn: &ConversationTurn,
-    ) -> Result<ConversationBinding, EngineAdapterRequestError> {
+    ) -> Result<ConversationBinding, Failure> {
         let mut runtime = request.to_request();
         self.context.admit(&mut runtime)?;
         let mut admitted = request.clone();
@@ -183,7 +204,7 @@ impl EngineAdapter for Chat {
         results: &[ConversationToolResult],
         command: &ConversationCommand,
         step: &ConversationStep,
-    ) -> Result<ConversationBinding, EngineAdapterRequestError> {
+    ) -> Result<ConversationBinding, Failure> {
         let mut runtime = request.to_request();
         self.context.admit(&mut runtime)?;
         let mut admitted = request.clone();
@@ -205,7 +226,7 @@ impl EngineAdapter for Chat {
         previous: Option<serde_json::Value>,
         results: Vec<ConversationToolResult>,
         command: ConversationCommand,
-    ) -> Result<ConversationStep, EngineAdapterRequestError> {
+    ) -> Result<ConversationStep, Failure> {
         self.validate_conversation(&request, previous.as_ref())?;
         let mut runtime = request.to_request();
         self.context.admit(&mut runtime)?;
@@ -229,7 +250,7 @@ impl EngineAdapter for Chat {
         mut request: ConversationRequest,
         state: Option<serde_json::Value>,
         results: Vec<ConversationToolResult>,
-    ) -> Result<ConversationTurn, EngineAdapterRequestError> {
+    ) -> Result<ConversationTurn, Failure> {
         self.validate_conversation(&request, state.as_ref())?;
         let mut runtime = request.to_request();
         self.context.admit(&mut runtime)?;
@@ -256,7 +277,7 @@ impl EngineAdapter for Chat {
     async fn count_text_stream_input_tokens(
         &self,
         mut request: EngineTextStreamRequest,
-    ) -> Result<u64, EngineAdapterRequestError> {
+    ) -> Result<u64, Failure> {
         if self.counting == TokenCounting::Unavailable {
             return Err(self
                 .context
@@ -271,7 +292,7 @@ impl EngineAdapter for Chat {
     async fn stream_text(
         &self,
         mut request: EngineTextStreamRequest,
-    ) -> Result<EngineTextStream, EngineAdapterRequestError> {
+    ) -> Result<EngineTextStream, Failure> {
         self.context.admit(&mut request)?;
         let stream = self
             .inner
@@ -374,10 +395,7 @@ impl MediaGenerationAdapter for Media {
     fn clock(&self) -> Arc<dyn battersea_model::Clock> {
         self.inner.clock()
     }
-    fn prepare(
-        &self,
-        request: MediaRenderRequest,
-    ) -> Result<PreparedMediaRequest, EngineAdapterRequestError> {
+    fn prepare(&self, request: MediaRenderRequest) -> Result<PreparedMediaRequest, Failure> {
         let mut result = self
             .registry
             .prepare_media(&self.backend, request)
@@ -391,7 +409,7 @@ impl MediaGenerationAdapter for Media {
         cancellation: CancellationToken,
         activity: Option<Arc<dyn MediaGenerationActivityReporter>>,
         batch: Option<Arc<dyn MediaGenerationBatchReporter>>,
-    ) -> Result<MediaSubmission, EngineAdapterRequestError> {
+    ) -> Result<MediaSubmission, Failure> {
         if prepared.binding_revision.as_deref() != Some(&self.revision) {
             return Err(self
                 .context
@@ -412,7 +430,7 @@ impl MediaGenerationAdapter for Media {
             },
         )
     }
-    async fn cancel(&self, id: &str) -> Result<(), EngineAdapterRequestError> {
+    async fn cancel(&self, id: &str) -> Result<(), Failure> {
         self.inner
             .cancel(id)
             .await
@@ -443,16 +461,13 @@ impl MediaJob for Job {
     async fn wait(
         &mut self,
         cancellation: CancellationToken,
-    ) -> Result<MediaRenderResult, EngineAdapterRequestError> {
+    ) -> Result<MediaRenderResult, Failure> {
         self.inner
             .wait(cancellation)
             .await
             .map_err(|e| self.context.error(e))
     }
-    async fn poll(
-        &mut self,
-        cancellation: CancellationToken,
-    ) -> Result<MediaJobStatus, EngineAdapterRequestError> {
+    async fn poll(&mut self, cancellation: CancellationToken) -> Result<MediaJobStatus, Failure> {
         self.inner
             .poll(cancellation)
             .await
@@ -461,13 +476,13 @@ impl MediaJob for Job {
     async fn retrieve(
         &mut self,
         cancellation: CancellationToken,
-    ) -> Result<MediaRenderResult, EngineAdapterRequestError> {
+    ) -> Result<MediaRenderResult, Failure> {
         self.inner
             .retrieve(cancellation)
             .await
             .map_err(|e| self.context.error(e))
     }
-    async fn cancel(&mut self) -> Result<(), EngineAdapterRequestError> {
+    async fn cancel(&mut self) -> Result<(), Failure> {
         self.inner.cancel().await.map_err(|e| self.context.error(e))
     }
     async fn webhook(
@@ -475,7 +490,7 @@ impl MediaJob for Job {
         webhook: MediaWebhook<'_>,
         secret: &str,
         now: chrono::DateTime<chrono::Utc>,
-    ) -> Result<MediaJobStatus, EngineAdapterRequestError> {
+    ) -> Result<MediaJobStatus, Failure> {
         self.inner
             .webhook(webhook, secret, now)
             .await

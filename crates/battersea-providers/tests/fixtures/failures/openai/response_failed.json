@@ -1,0 +1,48 @@
+{
+  "status": 200,
+  "content_type": "text/event-stream",
+  "sse_data": [
+    {
+      "type": "response.created",
+      "sequence_number": 0,
+      "response": {
+        "id": "resp_fixture",
+        "object": "response",
+        "created_at": 1,
+        "status": "in_progress",
+        "model": "fixture-model",
+        "output": []
+      }
+    },
+    {
+      "type": "response.failed",
+      "sequence_number": 1,
+      "response": {
+        "id": "resp_fixture",
+        "object": "response",
+        "created_at": 1,
+        "status": "failed",
+        "model": "fixture-model",
+        "output": [],
+        "error": {
+          "code": "server_error",
+          "message": "The model failed to generate a response."
+        }
+      }
+    }
+  ],
+  "kind": "invalid_response",
+  "response_id": "resp_fixture",
+  "payload": {
+    "type": "response.failed",
+    "sequence_number": 1,
+    "response": {
+      "id": "resp_fixture",
+      "status": "failed",
+      "error": {
+        "code": "server_error",
+        "message": "The model failed to generate a response."
+      }
+    }
+  }
+}

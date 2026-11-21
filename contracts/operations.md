@@ -48,6 +48,8 @@ Every operation declares the same refusals, each under its Clapham category: the
 `ToolCode`. `codes::declared` lists them. A host builds a refusal with `codes::refusal`, which
 takes the code's declared category. A code Battersea does not declare becomes `host_failure`,
 carrying the original code in `details`, so no operation returns `undeclared_refusal`.
+An approval operation that refuses for a tool [failure](failures.md) carries that failure in
+`details.failure`.
 
 | Code | Category |
 |---|---|

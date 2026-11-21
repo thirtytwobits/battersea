@@ -1,5 +1,5 @@
 //! Finite encoded-payload admission for provider buffers and tool transcripts.
-use super::EngineAdapterRequestError;
+use super::Failure;
 use serde::Serialize;
 use std::io::{self, Write};
 
@@ -7,17 +7,13 @@ use std::io::{self, Write};
 pub const PROVIDER_PAYLOAD_BYTES: usize = 64 * 1024 * 1024;
 
 /// Count encoded bytes without allocating a second serialised copy.
-pub fn check_payload<T: Serialize + ?Sized>(
-    value: &T,
-    provider: &str,
-) -> Result<usize, EngineAdapterRequestError> {
+pub fn check_payload<T: Serialize + ?Sized>(value: &T, provider: &str) -> Result<usize, Failure> {
     check_limit(value, PROVIDER_PAYLOAD_BYTES).map_err(|error| {
-        EngineAdapterRequestError::invalid_response(
+        Failure::invalid_response(
             provider,
-            format!(
-                "Provider payload exceeds its encoded-byte limit or cannot be encoded: {error}"
-            ),
+            "Provider payload exceeds its encoded-byte limit or cannot be encoded.",
         )
+        .caused_by(&error)
     })
 }
 

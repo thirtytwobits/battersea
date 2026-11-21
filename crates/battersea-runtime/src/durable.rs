@@ -8,7 +8,7 @@ use sha2::{Digest, Sha256};
 use std::collections::BTreeMap;
 use std::sync::Arc;
 
-pub const EXECUTION_CHECKPOINT_VERSION: u32 = 2;
+pub const EXECUTION_CHECKPOINT_VERSION: u32 = 3;
 
 pub struct Durability {
     pub store: Arc<dyn JournalStore>,
@@ -132,7 +132,7 @@ impl DurableExecution {
 }
 
 pub(crate) fn recovery_error<H: ExecutionHost>(error: RecoveryError) -> H::Error {
-    H::Error::recovery_required(error.code(), error.to_string())
+    H::Error::recovery_required(error.code(), error.failure())
 }
 
 pub(crate) fn handler_versions<H: ExecutionHost>(

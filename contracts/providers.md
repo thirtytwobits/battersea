@@ -7,7 +7,8 @@
 bindings. Backends select a service, model, explicit capabilities and adapter options.
 Validation checks every declaration before credential resolution or adapter construction.
 Unknown IDs, duplicate registrations, incompatible operations, unsupported parameters and
-invalid options fail with `ProviderCode` and a declaration path.
+invalid options fail with `ProviderCode`, a declaration path and, where a lower check refused the
+declaration, that check's explanation as `cause`.
 
 Binding resolves each used service operation's credential once and constructs immutable adapters.
 The validated configuration retains its adapter registrations. The host retains the configured
@@ -47,7 +48,7 @@ Retries do not invoke the tool runner. A tool result is appended once; a rejecte
 resends that exact body. Background recovery retrieves the same response ID after the last
 accepted sequence, discarding duplicates and never moving the cursor backwards.
 
-Errors retain dispatch certainty, HTTP status, request identity and retry delay. A local tool fails
+Operations report failures as [the failure contract](failures.md) defines. A local tool fails
 after the provider turn that called it, so its failure never reports the request as not sent. Retry observations
 identify the attempt and delay. Unknown remote outcome remains unknown for spend accounting.
 Nested tool errors retain separate `ToolCallEvidence`; changing provider dispatch certainty
@@ -111,9 +112,9 @@ The host store bounds reads before decoding and atomically compares journal revi
 processes. Successful writes are durable. Failed or cancelled writes may have committed, so the
 next command inspects storage. Reads validate version, integrity, payload limits and transcript
 compatibility without upgrading stored values. The checksum detects accidental modification;
-the host owns storage integrity and access control. Shared checkpoint version 2 includes pending
-remote identities and cancellation receipts. Version 1 records remain readable and retain their
-version when resumed.
+the host owns storage integrity and access control. Shared checkpoint version 3 includes pending
+remote identities, cancellation receipts and each turn's terminal event with its provider
+payload. Other versions are refused.
 
 Each `resume` command performs one generation or one retrieval of a pending response. A dispatch
 intent is persisted before

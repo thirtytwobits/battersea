@@ -6,6 +6,10 @@ pub mod catalog;
 pub mod document;
 pub mod execution;
 pub mod failure;
+pub use battersea_failure::{
+    Cause, Detail, ErrorKind, Exchange, Failure, FailureDisclosure, FailureParts, Origin,
+    PartialOutput, Reporter,
+};
 pub use execution::{
     FlowExecutionLimits, FlowExecutionPolicy, FlowPortMode, FlowPortPhase, FlowQueueLimits,
     FlowQueuePolicy,

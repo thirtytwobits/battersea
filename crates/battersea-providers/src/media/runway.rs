@@ -3,7 +3,7 @@ use super::{
     MediaBackendConfig, MediaGenerationActivityReporter, MediaGenerationActivityUpdate,
     MediaGenerationAdapter, MediaRenderRequest, MediaTimingRecorder,
 };
-use crate::adapter::error::EngineAdapterRequestError;
+use crate::adapter::error::Failure;
 use crate::http_payload::BoundedResponse as _;
 use async_trait::async_trait;
 use battersea_model::media::ControllerActivityState;
@@ -18,7 +18,7 @@ use tokio_util::sync::CancellationToken;
 pub(crate) fn create_runway_media_generator(
     backend: MediaBackendConfig,
     clock: Arc<dyn battersea_model::Clock>,
-) -> Result<Arc<dyn MediaGenerationAdapter>, EngineAdapterRequestError> {
+) -> Result<Arc<dyn MediaGenerationAdapter>, Failure> {
     super::jobs::poll_policy(&backend)?;
     let timeout_ms = require_timeout_ms(&backend)?;
     for (name, value) in [
@@ -38,7 +38,7 @@ pub(crate) fn create_runway_media_generator(
         .redirect(reqwest::redirect::Policy::none())
         .default_headers(build_headers(&backend)?)
         .build()
-        .map_err(|error| EngineAdapterRequestError::transport("runway", error.to_string()))?;
+        .map_err(|error| crate::http_payload::client_failure("runway", error))?;
     Ok(Arc::new(RunwayMediaGenerator {
         client,
         clock,
@@ -60,32 +60,37 @@ struct RunwayMediaGenerator {
 /// Error for a Runway backend option that configuration must supply. There
 /// are no hardcoded defaults: if config does not provide the value, the
 /// request cannot proceed.
-fn missing_runway_option(key: &str) -> EngineAdapterRequestError {
-    EngineAdapterRequestError::new(
-        "runway",
-        format!("Runway backend must configure options.{key}."),
-        "invalid_request",
-    )
+/// A request Runway rejected, with Runway's body as native detail.
+fn rejected(message: &'static str, status: u16, body: String) -> Failure {
+    let failure =
+        Failure::new("runway", message, classify_http_status(status)).with_status_code(status);
+    match crate::http_payload::rejection_body(body) {
+        Some(native) => failure.with_native(battersea_model::Reporter::Provider, native),
+        None => failure,
+    }
 }
 
-fn require_timeout_ms(backend: &MediaBackendConfig) -> Result<u64, EngineAdapterRequestError> {
+fn missing_runway_option(key: &str) -> Failure {
+    Failure::new(
+        "runway",
+        "Runway backend lacks a required option.",
+        "invalid_request",
+    )
+    .with_context("option", key)
+}
+
+fn require_timeout_ms(backend: &MediaBackendConfig) -> Result<u64, Failure> {
     backend
         .options
         .timeout_ms
         .ok_or_else(|| missing_runway_option("timeoutMs"))
 }
 
-fn require_u64_option(
-    backend: &MediaBackendConfig,
-    key: &str,
-) -> Result<u64, EngineAdapterRequestError> {
+fn require_u64_option(backend: &MediaBackendConfig, key: &str) -> Result<u64, Failure> {
     read_u64_option_opt(&backend.options.extra, key).ok_or_else(|| missing_runway_option(key))
 }
 
-fn require_string_option(
-    backend: &MediaBackendConfig,
-    key: &str,
-) -> Result<String, EngineAdapterRequestError> {
+fn require_string_option(backend: &MediaBackendConfig, key: &str) -> Result<String, Failure> {
     read_string_option_opt(&backend.options.extra, key).ok_or_else(|| missing_runway_option(key))
 }
 
@@ -98,10 +103,7 @@ impl MediaGenerationAdapter for RunwayMediaGenerator {
         self.clock.clone()
     }
 
-    fn prepare(
-        &self,
-        request: MediaRenderRequest,
-    ) -> Result<super::PreparedMediaRequest, EngineAdapterRequestError> {
+    fn prepare(&self, request: MediaRenderRequest) -> Result<super::PreparedMediaRequest, Failure> {
         super::prepare_media_request(self.backend(), request)
     }
 
@@ -111,7 +113,7 @@ impl MediaGenerationAdapter for RunwayMediaGenerator {
         cancellation: CancellationToken,
         activity_reporter: Option<Arc<dyn MediaGenerationActivityReporter>>,
         _batch_reporter: Option<Arc<dyn super::MediaGenerationBatchReporter>>,
-    ) -> Result<super::MediaSubmission, EngineAdapterRequestError> {
+    ) -> Result<super::MediaSubmission, Failure> {
         let request = prepared.render_input.clone();
         if let Some(reporter) = &activity_reporter {
             reporter
@@ -143,33 +145,23 @@ impl MediaGenerationAdapter for RunwayMediaGenerator {
         )?
         .json(&submit_body);
         let submit = super::within_request_deadline(&self.backend, self.clock.as_ref(), async {
-            let submit_response = submit_request.send().await.map_err(|error| {
-                EngineAdapterRequestError::transport("runway", error.to_string())
-            })?;
+            let submit_response = submit_request
+                .send()
+                .await
+                .map_err(|error| crate::http_payload::send_failure("runway", error))?;
             let submit_status = submit_response.status().as_u16();
             if !submit_response.status().is_success() {
-                let error_body = submit_response.bounded_text().await.unwrap_or_default();
-                return Err(EngineAdapterRequestError::new(
-                    "runway",
-                    if error_body.trim().is_empty() {
-                        format!("Runway task submission failed with HTTP {submit_status}.")
-                    } else {
-                        error_body
-                    },
-                    classify_http_status(submit_status),
-                )
-                .with_status_code(submit_status));
+                return Err(rejected(
+                    "Runway rejected the task submission.",
+                    submit_status,
+                    submit_response.bounded_text().await?,
+                ));
             }
-            submit_response
-                .bounded_json::<Value>()
-                .await
-                .map_err(|error| {
-                    EngineAdapterRequestError::invalid_response("runway", error.to_string())
-                })
+            submit_response.bounded_json::<Value>().await
         });
         let raw = tokio::select! {
             _ = cancellation.cancelled() => {
-                return Err(EngineAdapterRequestError::new("runway", "Media generation cancelled.", "cancelled"));
+                return Err(Failure::new("runway", "Media generation cancelled.", "cancelled"));
             }
             result = submit => result?
         };
@@ -195,7 +187,7 @@ impl MediaGenerationAdapter for RunwayMediaGenerator {
         Ok(super::MediaSubmission::Pending(Box::new(job)))
     }
 
-    async fn cancel(&self, provider_job_id: &str) -> Result<(), crate::EngineAdapterRequestError> {
+    async fn cancel(&self, provider_job_id: &str) -> Result<(), crate::Failure> {
         super::jobs::validate_id("runway", provider_job_id)?;
         let request = crate::connection::authenticate(
             self.client
@@ -207,19 +199,15 @@ impl MediaGenerationAdapter for RunwayMediaGenerator {
             request
                 .send()
                 .await
-                .map_err(|error| EngineAdapterRequestError::transport("runway", error.to_string()))
+                .map_err(|error| crate::http_payload::send_failure("runway", error))
         })
         .await?;
         if !response.status().is_success() {
-            return Err(EngineAdapterRequestError::new(
-                "runway",
-                format!(
-                    "Runway task cancellation failed with HTTP {}.",
-                    response.status().as_u16()
-                ),
-                classify_http_status(response.status().as_u16()),
-            )
-            .with_status_code(response.status().as_u16()));
+            return Err(rejected(
+                "Runway rejected the task cancellation.",
+                response.status().as_u16(),
+                response.bounded_text().await?,
+            ));
         }
         Ok(())
     }
@@ -314,32 +302,29 @@ pub(crate) fn accepts_image_ratio(value: &str) -> bool {
 pub(crate) fn build_submit_body(
     backend: &MediaBackendConfig,
     request: &MediaRenderRequest,
-) -> Result<Value, EngineAdapterRequestError> {
+) -> Result<Value, Failure> {
     let prompt_text = request.prompt_text.trim();
     if prompt_text.is_empty() {
-        return Err(EngineAdapterRequestError::new(
+        return Err(Failure::new(
             "runway",
             "Runway prompt text must not be empty.",
             "invalid_request",
         ));
     }
     let max_prompt_chars = usize::try_from(require_u64_option(backend, "maxPromptChars")?)
-        .map_err(|_| missing_runway_option("maxPromptChars"))?;
+        .map_err(|_overflow| missing_runway_option("maxPromptChars"))?;
     if prompt_text.len() > max_prompt_chars {
-        return Err(EngineAdapterRequestError::new(
+        return Err(Failure::new(
             "runway",
-            format!(
-                "Runway prompt text is {} characters but the limit is {}. \
-                 Shorten the prompt in your flow before sending to Runway.",
-                prompt_text.len(),
-                max_prompt_chars
-            ),
+            "Runway prompt text exceeds its character limit.",
             "invalid_request",
-        ));
+        )
+        .with_context("characters", prompt_text.len())
+        .with_context("limit", max_prompt_chars));
     }
 
     match request.kind {
-        MediaKind::Audio => Err(EngineAdapterRequestError::new(
+        MediaKind::Audio => Err(Failure::new(
             "runway",
             "Runway transport does not support audio generation.",
             "invalid_request",
@@ -348,13 +333,15 @@ pub(crate) fn build_submit_body(
             if backend.options.transport.as_deref() == Some("model-router") {
                 let config_id = require_string_option(backend, "configId")?;
                 let requested_ratio = request.options.aspect_ratio.as_deref().unwrap_or("1:1");
-                let aspect_ratio = normalize_router_aspect_ratio(requested_ratio).ok_or_else(|| {
-                    EngineAdapterRequestError::new(
-                        "runway",
-                        format!("Runway Model Router does not support image aspect ratio \"{requested_ratio}\"."),
-                        "invalid_request",
-                    )
-                })?;
+                let aspect_ratio =
+                    normalize_router_aspect_ratio(requested_ratio).ok_or_else(|| {
+                        Failure::new(
+                            "runway",
+                            "Runway Model Router does not support the image aspect ratio.",
+                            "invalid_request",
+                        )
+                        .with_context("aspectRatio", requested_ratio)
+                    })?;
                 let mut input = json!({
                     "promptText": prompt_text,
                     "aspectRatio": aspect_ratio,
@@ -381,11 +368,12 @@ pub(crate) fn build_submit_body(
                 None => require_string_option(backend, "defaultAspectRatio")?,
             };
             let ratio = normalize_runway_image_ratio(&requested_ratio).ok_or_else(|| {
-                EngineAdapterRequestError::new(
+                Failure::new(
                     "runway",
-                    format!("Runway does not support image aspect ratio \"{requested_ratio}\"."),
+                    "Runway does not support the image aspect ratio.",
                     "invalid_request",
                 )
+                .with_context("aspectRatio", requested_ratio.as_str())
             })?;
             let mut body = json!({
                 "model": backend.model,
@@ -411,7 +399,7 @@ pub(crate) fn build_submit_body(
             let duration = match request.options.duration_seconds {
                 Some(duration) => duration,
                 None => u32::try_from(require_u64_option(backend, "defaultVideoDurationSeconds")?)
-                    .map_err(|_| missing_runway_option("defaultVideoDurationSeconds"))?,
+                    .map_err(|_overflow| missing_runway_option("defaultVideoDurationSeconds"))?,
             };
             let ratio = match request.options.aspect_ratio.clone() {
                 Some(ratio) => ratio,
@@ -465,10 +453,10 @@ fn normalize_router_aspect_ratio(value: &str) -> Option<&'static str> {
 pub(crate) fn build_submit_path(
     backend: &MediaBackendConfig,
     request: &MediaRenderRequest,
-) -> Result<&'static str, EngineAdapterRequestError> {
+) -> Result<&'static str, Failure> {
     if backend.options.transport.as_deref() == Some("model-router") {
         return match request.kind {
-            MediaKind::Audio => Err(EngineAdapterRequestError::new(
+            MediaKind::Audio => Err(Failure::new(
                 "runway",
                 "Unsupported audio generation.",
                 "invalid_request",
@@ -479,7 +467,7 @@ pub(crate) fn build_submit_path(
     }
     Ok(match request.kind {
         MediaKind::Audio => {
-            return Err(EngineAdapterRequestError::new(
+            return Err(Failure::new(
                 "runway",
                 "Unsupported audio generation.",
                 "invalid_request",
@@ -535,7 +523,7 @@ fn derive_base_url(endpoint: &str) -> String {
 
 /// Builds the default Runway request headers, applying provider defaults for the version header and
 /// optional trace diagnostics.
-fn build_headers(backend: &MediaBackendConfig) -> Result<HeaderMap, EngineAdapterRequestError> {
+fn build_headers(backend: &MediaBackendConfig) -> Result<HeaderMap, Failure> {
     if let Some(binding) = &backend.binding {
         return crate::connection::headers(binding, &backend.auth);
     }
@@ -543,29 +531,32 @@ fn build_headers(backend: &MediaBackendConfig) -> Result<HeaderMap, EngineAdapte
     let api_key = backend.auth.api_key.as_deref().unwrap_or("");
     headers.insert(
         AUTHORIZATION,
-        HeaderValue::from_str(&format!("Bearer {api_key}"))
-            .map_err(|error| EngineAdapterRequestError::transport("runway", error.to_string()))?,
+        HeaderValue::from_str(&format!("Bearer {api_key}")).map_err(|error| {
+            Failure::transport("runway", "Invalid authorisation header value.").caused_by(&error)
+        })?,
     );
 
     let version_header = backend.auth.version_header.clone().ok_or_else(|| {
-        EngineAdapterRequestError::new(
+        Failure::new(
             "runway",
             "Runway backend must configure auth.versionHeader.",
             "invalid_request",
         )
     })?;
     let version = backend.auth.version.clone().ok_or_else(|| {
-        EngineAdapterRequestError::new(
+        Failure::new(
             "runway",
             "Runway backend must configure auth.version.",
             "invalid_request",
         )
     })?;
     headers.insert(
-        HeaderName::from_bytes(version_header.as_bytes())
-            .map_err(|error| EngineAdapterRequestError::transport("runway", error.to_string()))?,
-        HeaderValue::from_str(&version)
-            .map_err(|error| EngineAdapterRequestError::transport("runway", error.to_string()))?,
+        HeaderName::from_bytes(version_header.as_bytes()).map_err(|error| {
+            Failure::transport("runway", "Invalid header name.").caused_by(&error)
+        })?,
+        HeaderValue::from_str(&version).map_err(|error| {
+            Failure::transport("runway", "Invalid header value.").caused_by(&error)
+        })?,
     );
     headers.insert(CONTENT_TYPE, HeaderValue::from_static("application/json"));
     if read_bool_option(&backend.options.extra, "trace", false) {
@@ -603,15 +594,11 @@ impl super::jobs::JobTransport for RunwayTransport {
     fn clock(&self) -> Arc<dyn battersea_model::Clock> {
         self.adapter.clock.clone()
     }
-    fn decode(
-        &self,
-        raw: Value,
-        submission: bool,
-    ) -> Result<super::jobs::RemoteUpdate, EngineAdapterRequestError> {
+    fn decode(&self, raw: Value, submission: bool) -> Result<super::jobs::RemoteUpdate, Failure> {
         let now = battersea_model::clock::utc_now(self.adapter.clock.as_ref());
         decode_task(raw, self.kind.clone(), submission, now)
     }
-    async fn poll(&self, id: &str) -> Result<super::jobs::RemoteUpdate, EngineAdapterRequestError> {
+    async fn poll(&self, id: &str) -> Result<super::jobs::RemoteUpdate, Failure> {
         let request = crate::connection::authenticate(
             self.adapter
                 .client
@@ -624,7 +611,7 @@ impl super::jobs::JobTransport for RunwayTransport {
             let response = request
                 .send()
                 .await
-                .map_err(|e| EngineAdapterRequestError::transport("runway", e.to_string()))?;
+                .map_err(|e| crate::http_payload::send_failure("runway", e))?;
             super::jobs::json_response("runway", response, clock).await
         })
         .await?;
@@ -635,7 +622,7 @@ impl super::jobs::JobTransport for RunwayTransport {
             battersea_model::clock::utc_now(self.adapter.clock.as_ref()),
         )
     }
-    async fn cancel(&self, id: &str) -> Result<super::MediaJobStatus, EngineAdapterRequestError> {
+    async fn cancel(&self, id: &str) -> Result<super::MediaJobStatus, Failure> {
         self.adapter.cancel(id).await?;
         Ok(super::MediaJobStatus::Cancelled)
     }
@@ -646,9 +633,9 @@ fn decode_task(
     kind: MediaKind,
     submission: bool,
     now: chrono::DateTime<chrono::Utc>,
-) -> Result<super::jobs::RemoteUpdate, EngineAdapterRequestError> {
+) -> Result<super::jobs::RemoteUpdate, Failure> {
     use super::MediaJobStatus as Status;
-    let bad = |message| EngineAdapterRequestError::invalid_response("runway", message);
+    let bad = |message| Failure::invalid_response("runway", message);
     let id = raw["id"]
         .as_str()
         .ok_or_else(|| bad("Task has no identity."))?
@@ -673,7 +660,8 @@ fn decode_task(
             let url = output
                 .as_str()
                 .ok_or_else(|| bad("Task output must be a URL."))?;
-            reqwest::Url::parse(url).map_err(|_| bad("Invalid task output URL."))?;
+            reqwest::Url::parse(url)
+                .map_err(|cause| bad("Invalid task output URL.").caused_by(&cause))?;
             assets.push(MediaAsset {
                 url: url.into(),
                 mime_type: None,
@@ -695,10 +683,6 @@ fn decode_task(
         assets,
         expires_at: (status == Status::Succeeded).then(|| now + chrono::Duration::hours(24)),
         expiry_is_estimate: true,
-        failure: raw["failure"]
-            .as_str()
-            .or_else(|| raw["failure"]["message"].as_str())
-            .map(str::to_owned),
         progress: raw["progress"]
             .as_f64()
             .filter(|v| v.is_finite())
@@ -849,8 +833,8 @@ mod tests {
             Ok(_) => panic!("invalid header should fail"),
             Err(error) => error,
         };
-        assert_eq!(&*error.provider, "runway");
-        assert_eq!(error.classification.as_str(), "transport");
+        assert_eq!(error.origin.provider.as_deref(), Some("runway"));
+        assert_eq!(error.kind.as_str(), "transport");
     }
 
     #[test]
@@ -859,12 +843,9 @@ mod tests {
         let mut request = image_request();
         request.prompt_text = "x".repeat(1001);
         let error = build_submit_body(&backend, &request).expect_err("over-long prompt");
-        assert_eq!(error.classification.as_str(), "invalid_request");
-        assert!(
-            error.message.contains("1001"),
-            "should report actual length"
-        );
-        assert!(error.message.contains("1000"), "should report limit");
+        assert_eq!(error.kind.as_str(), "invalid_request");
+        assert_eq!(error.context["characters"], 1001);
+        assert_eq!(error.context["limit"], 1000);
 
         // Exactly at the limit is accepted
         let mut at_limit = image_request();
@@ -878,7 +859,7 @@ mod tests {
         let mut blank = image_request();
         blank.prompt_text = "   ".to_string();
         let error = build_submit_body(&backend, &blank).expect_err("blank prompt");
-        assert_eq!(error.classification.as_str(), "invalid_request");
+        assert_eq!(error.kind.as_str(), "invalid_request");
 
         let body = build_submit_body(&backend, &image_request()).expect("image body");
         assert_eq!(body["model"], json!("gen4"));
@@ -1106,7 +1087,7 @@ mod tests {
         assert_eq!(
             build_headers(&invalid_value)
                 .expect_err("invalid value")
-                .classification
+                .kind
                 .as_str(),
             "transport"
         );

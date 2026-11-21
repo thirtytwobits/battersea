@@ -5,8 +5,7 @@
 )]
 use base64::Engine as _;
 use battersea_model::{
-    ContentBlock, ContentCapabilities, EngineAdapterRequestError, Message, Modality, Role,
-    StructuredOutputMode,
+    ContentBlock, ContentCapabilities, Failure, Message, Modality, Role, StructuredOutputMode,
 };
 use serde_json::{json, Value};
 
@@ -36,15 +35,15 @@ pub(crate) fn capabilities(provider: &str) -> ContentCapabilities {
         prompt_caching: provider != "mock",
     }
 }
-fn invalid(provider: &str, message: &str) -> EngineAdapterRequestError {
-    EngineAdapterRequestError::new(provider, message, "invalid_request")
+fn invalid(provider: &str, message: &'static str) -> Failure {
+    Failure::new(provider, message, "invalid_request")
 }
 pub(crate) fn media_source<'a>(
     protocol: &str,
     provider: &str,
     url: &'a str,
     mime: &str,
-) -> Result<Option<&'a str>, EngineAdapterRequestError> {
+) -> Result<Option<&'a str>, Failure> {
     if url.starts_with("data:") {
         let data = url
             .strip_prefix(&format!("data:{mime};base64,"))
@@ -61,8 +60,9 @@ pub(crate) fn media_source<'a>(
         }
         Ok(Some(data))
     } else if url.starts_with("https://") || (protocol == "google" && url.starts_with("gs://")) {
-        let parsed = reqwest::Url::parse(url)
-            .map_err(|_| invalid(provider, "Invalid remote media reference."))?;
+        let parsed = reqwest::Url::parse(url).map_err(|cause| {
+            invalid(provider, "Invalid remote media reference.").caused_by(&cause)
+        })?;
         if parsed.host_str().is_none()
             || !parsed.username().is_empty()
             || parsed.password().is_some()
@@ -103,7 +103,7 @@ pub(crate) fn messages(
     protocol: &str,
     provider: &str,
     messages: &[Message],
-) -> Result<Vec<Value>, EngineAdapterRequestError> {
+) -> Result<Vec<Value>, Failure> {
     let mut result = Vec::new();
     let mut tool_names = std::collections::HashMap::new();
     for message in messages.iter().filter(|m| m.role != Role::System) {

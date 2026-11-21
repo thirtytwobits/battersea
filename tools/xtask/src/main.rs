@@ -1,5 +1,6 @@
 mod bindings;
 mod docs;
+mod gate;
 use clap::{Parser, Subcommand};
 use serde_json::Value;
 use std::{
@@ -20,8 +21,10 @@ struct Cli {
 }
 #[derive(Subcommand)]
 enum Task {
-    /// Format, check dependencies/versions, test and build Rust documentation. Needs no Node.
+    /// Format, check dependencies/versions, test, lint and build Rust documentation. Needs no Node.
     Check,
+    /// The regression subset of `check`: its preflight checks and every test binary.
+    Regression,
     /// Check dependency direction and synchronised Cargo/npm versions.
     Boundaries,
     /// Scan AI-facing source against declared prompt roots.
@@ -66,8 +69,26 @@ fn json(path: impl AsRef<Path>) -> Result<Value> {
 fn toml(path: impl AsRef<Path>) -> Result<toml::Value> {
     Ok(toml::from_str(&fs::read_to_string(path)?)?)
 }
+/// A command without the package variables Cargo set for this xtask process. A build script
+/// that tracks one of those variables would otherwise rebuild its crate, and every crate above
+/// it, whenever Cargo is run through xtask after being run directly.
+fn command(program: &str) -> Command {
+    let mut command = Command::new(program);
+    for (name, _) in std::env::vars_os() {
+        let text = name.to_string_lossy();
+        if text.starts_with("CARGO_PKG_")
+            || text.starts_with("CARGO_MANIFEST_")
+            || text == "CARGO_CRATE_NAME"
+            || text == "CARGO_BIN_NAME"
+            || text == "CARGO_PRIMARY_PACKAGE"
+        {
+            command.env_remove(name);
+        }
+    }
+    command
+}
 fn run(root: &Path, command: &str, args: &[&str]) -> Result<()> {
-    if !Command::new(command)
+    if !self::command(command)
         .args(args)
         .current_dir(root)
         .status()?
@@ -78,7 +99,7 @@ fn run(root: &Path, command: &str, args: &[&str]) -> Result<()> {
     Ok(())
 }
 fn output(root: &Path, command: &str, args: &[&str]) -> Result<String> {
-    let out = Command::new(command)
+    let out = self::command(command)
         .args(args)
         .current_dir(root)
         .stderr(Stdio::inherit())
@@ -677,69 +698,8 @@ fn main() -> Result<()> {
         Task::Bindings { check } => bindings::generate(&root, check),
         Task::Boundaries => boundaries(&root),
         Task::ScanPrompts => scan_prompts(&root),
-        Task::Check => {
-            run(&root, "cargo", &["fmt", "--all", "--check"])?;
-            boundaries(&root)?;
-            bindings::generate(&root, true)?;
-            scan_prompts(&root)?;
-            run(
-                &root,
-                "cargo",
-                &[
-                    "check",
-                    "-p",
-                    "battersea-providers",
-                    "--no-default-features",
-                    "--locked",
-                ],
-            )?;
-            for feature in [
-                "openai",
-                "anthropic",
-                "google",
-                "runway",
-                "replicate",
-                "mock",
-            ] {
-                run(
-                    &root,
-                    "cargo",
-                    &[
-                        "check",
-                        "-p",
-                        "battersea-providers",
-                        "--no-default-features",
-                        "--features",
-                        feature,
-                        "--locked",
-                    ],
-                )?;
-            }
-            run(
-                &root,
-                "cargo",
-                &["test", "--workspace", "--all-features", "--locked"],
-            )?;
-            run(
-                &root,
-                "cargo",
-                &[
-                    "clippy",
-                    "--workspace",
-                    "--all-targets",
-                    "--all-features",
-                    "--locked",
-                    "--",
-                    "-D",
-                    "warnings",
-                ],
-            )?;
-            run(
-                &root,
-                "cargo",
-                &["doc", "--workspace", "--no-deps", "--locked"],
-            )
-        }
+        Task::Check => gate::check(&root),
+        Task::Regression => gate::regression(&root),
         Task::Api { update } => api(&root, update),
         Task::Package => package(&root),
         Task::ReleaseCheck => release_check(&root),

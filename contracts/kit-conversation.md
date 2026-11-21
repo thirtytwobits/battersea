@@ -142,7 +142,8 @@ outputs close. The activation token cancels the stream; cancellation retains its
 outcome, records no call and leaves the reservation open for the application to settle. A
 provider error ends the call with the failed status published and the reservation settled with
 the usage reported: `conversation.tool_rounds_exhausted` where the model crate names exhausted
-tool rounds, `conversation.provider_failed` otherwise. The error's tool-call evidence, where it
+tool rounds, `conversation.provider_failed` otherwise. Either code carries the adapter's
+[failure](failures.md) unchanged. The error's tool-call evidence, where it
 carries any, is attached to the call it names in `tool_rounds`.
 
 `ConversationMemory` fits turns newest first until adding one would exceed `budget`, measured by

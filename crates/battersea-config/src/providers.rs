@@ -217,18 +217,19 @@ impl ProviderConfiguration {
                         )
                     })?;
                     if let Some(content) = &binding.content {
-                        content.validate_subset(&chat.content).map_err(|_| {
+                        content.validate_subset(&chat.content).map_err(|cause| {
                             error(
                                 ProviderCode::UnsupportedCapability,
                                 &format!("{base}.content"),
                                 id,
                                 &binding.adapter,
                             )
+                            .caused_by(&cause)
                         })?;
                         chat.content = content.clone();
                     }
                     restrict_parameters(&mut chat.parameters, binding.parameters.as_ref())
-                        .map_err(|_| {
+                        .map_err(|_unsupported| {
                             error(
                                 ProviderCode::UnsupportedCapability,
                                 &format!("{base}.parameters"),
@@ -236,8 +237,9 @@ impl ProviderConfiguration {
                                 &binding.adapter,
                             )
                         })?;
-                    registry.register_chat(id, chat).map_err(|_| {
+                    registry.register_chat(id, chat).map_err(|cause| {
                         error(ProviderCode::DuplicateIdentity, &base, id, &binding.adapter)
+                            .caused_by(&cause)
                     })?;
                 } else {
                     let mut media = adapter.media.clone().ok_or_else(|| {
@@ -257,7 +259,7 @@ impl ProviderConfiguration {
                         ));
                     }
                     restrict_parameters(&mut media.parameters, binding.parameters.as_ref())
-                        .map_err(|_| {
+                        .map_err(|_unsupported| {
                             error(
                                 ProviderCode::UnsupportedCapability,
                                 &format!("{base}.parameters"),
@@ -265,8 +267,9 @@ impl ProviderConfiguration {
                                 &binding.adapter,
                             )
                         })?;
-                    registry.register_media(id, media).map_err(|_| {
+                    registry.register_media(id, media).map_err(|cause| {
                         error(ProviderCode::DuplicateIdentity, &base, id, &binding.adapter)
+                            .caused_by(&cause)
                     })?;
                 }
                 adapters.insert((id.clone(), kind.into()), adapter.clone());
@@ -285,13 +288,14 @@ impl ProviderConfiguration {
             let adapter = adapters
                 .get(&(file.provider.clone(), "chat".into()))
                 .ok_or_else(|| error(ProviderCode::UnknownProvider, &path, &file.provider, ""))?;
-            let mut backend = crate::merge_backend(id, file.clone()).map_err(|_| {
+            let mut backend = crate::merge_backend(id, file.clone()).map_err(|cause| {
                 error(
                     ProviderCode::UnsupportedCapability,
                     &path,
                     &file.provider,
                     &adapter.id,
                 )
+                .caused_by(&cause)
             })?;
             backend.enabled = true;
             if !adapter.chat_streaming.contains(&backend.chat.stream)
@@ -310,21 +314,23 @@ impl ProviderConfiguration {
             backend
                 .capabilities
                 .validate_declared_chat_parameters(&backend.chat)
-                .map_err(|_| {
+                .map_err(|cause| {
                     error(
                         ProviderCode::UnsupportedCapability,
                         &format!("{path}.properties"),
                         &file.provider,
                         &adapter.id,
                     )
+                    .caused_by(&cause)
                 })?;
-            registry.validate_chat_backend(&backend).map_err(|_| {
+            registry.validate_chat_backend(&backend).map_err(|cause| {
                 error(
                     ProviderCode::UnsupportedCapability,
                     &path,
                     &file.provider,
                     &adapter.id,
                 )
+                .caused_by(&cause)
             })?;
             options(adapter, &backend.options).map_err(|e| {
                 error(
@@ -371,13 +377,14 @@ impl ProviderConfiguration {
                     &adapter.id,
                 ));
             }
-            registry.validate_media_backend(&backend).map_err(|_| {
+            registry.validate_media_backend(&backend).map_err(|cause| {
                 error(
                     ProviderCode::UnsupportedCapability,
                     &path,
                     &file.provider,
                     &adapter.id,
                 )
+                .caused_by(&cause)
             })?;
             options(adapter, &backend.options).map_err(|e| {
                 error(
@@ -573,13 +580,14 @@ impl ValidatedProviderConfiguration {
             let logger = logger.clone().map(|logger| bound::logger(&backend, logger));
             let inner = registry
                 .create_chat(backend.clone(), logger, clock.clone())
-                .map_err(|_| {
+                .map_err(|cause| {
                     error(
                         ProviderCode::InvalidOptions,
                         &format!("backends.{id}"),
                         &file.provider,
                         &adapter.id,
                     )
+                    .caused_by(&cause)
                 })?;
             chat.insert(
                 id.clone(),
@@ -617,13 +625,14 @@ impl ValidatedProviderConfiguration {
                 .expect("unique provider");
             let inner = registry
                 .create_media(backend.clone(), clock.clone())
-                .map_err(|_| {
+                .map_err(|cause| {
                     error(
                         ProviderCode::InvalidOptions,
                         &format!("mediaBackends.{id}"),
                         &file.provider,
                         &adapter.id,
                     )
+                    .caused_by(&cause)
                 })?;
             media.insert(id.clone(), bound::media(backend, inner, registered));
         }

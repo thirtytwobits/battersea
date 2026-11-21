@@ -32,7 +32,7 @@ fn rate(value: &Value) -> Result<u64> {
     }
     let digits: u128 = format!("{whole}{fraction}")
         .parse()
-        .map_err(|_| Error::Overflow)?;
+        .map_err(|_unparsable| Error::Overflow)?;
     let scale = 12i32
         .checked_add(exponent)
         .and_then(|v| v.checked_sub(fraction.len() as i32))
@@ -47,7 +47,7 @@ fn rate(value: &Value) -> Result<u64> {
             .ok_or(Error::Overflow)?;
         digits.checked_add(divisor - 1).ok_or(Error::Overflow)? / divisor
     };
-    u64::try_from(scaled).map_err(|_| Error::Overflow)
+    u64::try_from(scaled).map_err(|_overflow| Error::Overflow)
 }
 impl PriceCatalogue {
     pub fn from_litellm_json(input: &[u8], effective_date: String) -> Result<Self> {

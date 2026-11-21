@@ -1,0 +1,27 @@
+{
+  "status": 200,
+  "content_type": "text/event-stream",
+  "sse_data": [
+    {
+      "type": "error",
+      "error": {
+        "type": "server_error",
+        "code": "server_error",
+        "message": "The server had an error.",
+        "param": null
+      },
+      "sequence_number": 2
+    }
+  ],
+  "kind": "request",
+  "payload": {
+    "type": "error",
+    "error": {
+      "type": "server_error",
+      "code": "server_error",
+      "message": "The server had an error.",
+      "param": null
+    },
+    "sequence_number": 2
+  }
+}

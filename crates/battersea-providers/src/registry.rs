@@ -43,9 +43,7 @@ pub fn builtin_registry() -> &'static ProviderRegistry {
         registry
     })
 }
-pub fn register_builtin_providers(
-    registry: &mut ProviderRegistry,
-) -> Result<(), error::EngineAdapterRequestError> {
+pub fn register_builtin_providers(registry: &mut ProviderRegistry) -> Result<(), error::Failure> {
     #[cfg(not(any(
         feature = "openai",
         feature = "anthropic",
@@ -225,12 +223,12 @@ fn prepared(
     body: serde_json::Value,
     prompt_pointer: &str,
     provider: &str,
-) -> Result<PreparedMediaRequest, error::EngineAdapterRequestError> {
+) -> Result<PreparedMediaRequest, error::Failure> {
     let prompt_text = body
         .pointer(prompt_pointer)
         .and_then(serde_json::Value::as_str)
         .ok_or_else(|| {
-            error::EngineAdapterRequestError::new(
+            error::Failure::new(
                 provider,
                 "Prepared request has no prompt text.",
                 "invalid_request",

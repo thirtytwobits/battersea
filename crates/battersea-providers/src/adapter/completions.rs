@@ -24,7 +24,7 @@ fn create(
     backend: EngineBackendConfig,
     logger: Option<Arc<dyn EngineAdapterLogger>>,
     clock: Arc<dyn Clock>,
-) -> Result<Arc<dyn EngineAdapter>, EngineAdapterRequestError> {
+) -> Result<Arc<dyn EngineAdapter>, Failure> {
     crate::retry::validate(&backend)?;
     let binding = backend
         .binding
@@ -32,7 +32,7 @@ fn create(
         .ok_or_else(|| missing_backend_option(&backend.provider, "binding"))?;
     crate::connection::headers(binding, &backend.auth)?;
     if backend.chat.context_overflow != EngineContextOverflow::Error {
-        return Err(EngineAdapterRequestError::new(
+        return Err(Failure::new(
             &backend.provider,
             "Chat Completions requires contextOverflow=error.",
             ErrorKind::InvalidRequest,
@@ -46,12 +46,13 @@ fn create(
         .retry(reqwest::retry::never())
         .redirect(reqwest::redirect::Policy::none())
         .build()
-        .map_err(|_| {
-            EngineAdapterRequestError::new(
+        .map_err(|cause| {
+            Failure::new(
                 &backend.provider,
                 "Could not construct HTTP client.",
                 ErrorKind::InvalidRequest,
             )
+            .caused_by(&cause)
         })?;
     Ok(Arc::new(Completions {
         backend,
@@ -72,7 +73,7 @@ impl EngineAdapter for Completions {
         &self,
         request: &ConversationRequest,
         state: Option<&Value>,
-    ) -> Result<ConversationBinding, EngineAdapterRequestError> {
+    ) -> Result<ConversationBinding, Failure> {
         validate_chat_request(&self.backend, &request.to_request())?;
         if request.shared.chat.context_overflow != EngineContextOverflow::Error {
             return Err(invalid(
@@ -98,8 +99,11 @@ impl EngineAdapter for Completions {
         };
         let original = messages(&self.backend.provider, &request.shared.messages)?;
         if let Some(state) = state {
-            let checkpoint: CompletionCheckpoint = serde_json::from_value(state.clone())
-                .map_err(|_| invalid(&self.backend.provider, "Invalid completion checkpoint."))?;
+            let checkpoint: CompletionCheckpoint =
+                serde_json::from_value(state.clone()).map_err(|cause| {
+                    invalid(&self.backend.provider, "Invalid completion checkpoint.")
+                        .caused_by(&cause)
+                })?;
             if checkpoint.version != 2
                 || checkpoint.binding != binding
                 || checkpoint.request_revision
@@ -165,10 +169,12 @@ impl EngineAdapter for Completions {
         previous: Option<&Value>,
         results: &[ConversationToolResult],
         turn: &ConversationTurn,
-    ) -> Result<ConversationBinding, EngineAdapterRequestError> {
+    ) -> Result<ConversationBinding, Failure> {
         let binding = self.validate_conversation(request, Some(&turn.state))?;
-        let checkpoint: CompletionCheckpoint = serde_json::from_value(turn.state.clone())
-            .map_err(|_| invalid(&self.backend.provider, "Invalid completion checkpoint."))?;
+        let checkpoint: CompletionCheckpoint =
+            serde_json::from_value(turn.state.clone()).map_err(|cause| {
+                invalid(&self.backend.provider, "Invalid completion checkpoint.").caused_by(&cause)
+            })?;
         let calls = completion_calls(
             &self.backend.provider,
             checkpoint.messages.last().expect("validated transcript"),
@@ -186,7 +192,10 @@ impl EngineAdapter for Completions {
         let mut prefix = if let Some(previous) = previous {
             self.validate_conversation(request, Some(previous))?;
             serde_json::from_value::<CompletionCheckpoint>(previous.clone())
-                .map_err(|_| invalid(&self.backend.provider, "Invalid predecessor checkpoint."))?
+                .map_err(|cause| {
+                    invalid(&self.backend.provider, "Invalid predecessor checkpoint.")
+                        .caused_by(&cause)
+                })?
                 .messages
         } else {
             messages(&self.backend.provider, &request.shared.messages)?
@@ -230,12 +239,15 @@ impl EngineAdapter for Completions {
         request: ConversationRequest,
         state: Option<Value>,
         results: Vec<ConversationToolResult>,
-    ) -> Result<ConversationTurn, EngineAdapterRequestError> {
+    ) -> Result<ConversationTurn, Failure> {
         let binding = self.validate_conversation(&request, state.as_ref())?;
         let messages = match state {
             Some(state) => {
                 serde_json::from_value::<CompletionCheckpoint>(state)
-                    .map_err(|_| invalid(&self.backend.provider, "Invalid completion checkpoint."))?
+                    .map_err(|cause| {
+                        invalid(&self.backend.provider, "Invalid completion checkpoint.")
+                            .caused_by(&cause)
+                    })?
                     .messages
             }
             None => messages(&self.backend.provider, &request.shared.messages)?,
@@ -267,7 +279,7 @@ impl EngineAdapter for Completions {
                     provider_content,
                 })
             })
-            .collect::<Result<Vec<_>, EngineAdapterRequestError>>()?;
+            .collect::<Result<Vec<_>, Failure>>()?;
         let context = self.describe_debug_context();
         let mut conversation = Conversation {
             backend: self.backend.clone(),
@@ -277,6 +289,7 @@ impl EngineAdapter for Completions {
             messages,
             context,
             usage: Value::Null,
+            begun: BegunTools::default(),
         };
         let runtime = request.to_request();
         let (tx, mut rx) = tokio::sync::mpsc::channel(1);
@@ -288,6 +301,8 @@ impl EngineAdapter for Completions {
                 .stream_idle_timeout_ms
                 .unwrap_or(binding.timeout_ms),
         );
+        let mut identifiers = crate::retry::Identifiers::default();
+        let turn = async {
         let calls = {
             let work = conversation.next_turn(&runtime, results, &tx);
             tokio::pin!(work);
@@ -298,25 +313,26 @@ impl EngineAdapter for Completions {
                 tokio::select! {
                     result=&mut work=> {
                         rx.close();
-                        while let Some(event)=rx.recv().await { retain_event(&self.backend.provider,&mut events,&mut retained,event?)?; }
+                        while let Some(event)=rx.recv().await { retain_event(&self.backend.provider,&mut events,&mut retained,&mut identifiers,event?)?; }
                         break result?;
                     },
                     Some(event)=rx.recv()=> {
-                        retain_event(&self.backend.provider,&mut events,&mut retained,event?)?;
+                        retain_event(&self.backend.provider,&mut events,&mut retained,&mut identifiers,event?)?;
                         timer = battersea_model::clock::deadline_after(self.clock.as_ref(), idle)
                             .map(|deadline| self.clock.sleep_until(deadline))
                             .unwrap_or_else(|| Box::pin(std::future::pending()));
                     },
-                    _=&mut timer=>return Err(EngineAdapterRequestError::new(&self.backend.provider,"Durable provider turn exceeded its idle timeout.",ErrorKind::Timeout)),
+                    _=&mut timer=>return Err(Failure::new(&self.backend.provider,"Durable provider turn exceeded its idle timeout.",ErrorKind::Timeout)),
                 }
             }
         };
         events.push(EngineTextStreamEvent::MessageStop {
-            reason: if calls.is_empty() {
-                StopReason::Complete
+            class: if calls.is_empty() {
+                StopClass::Complete
             } else {
-                StopReason::ToolUse
+                StopClass::ToolUse
             },
+            native: serde_json::Value::Null,
         });
         let state = serde_json::to_value(CompletionCheckpoint {
             version: 2,
@@ -334,7 +350,16 @@ impl EngineAdapter for Completions {
             events,
         };
         payload::check_payload(&turn, &self.backend.provider)?;
-        Ok(turn)
+            Ok(turn)
+        }
+        .await;
+        match turn {
+            Ok(mut turn) => {
+                identifiers.announce(&mut turn.events);
+                Ok(turn)
+            }
+            Err(failure) => Err(identifiers.stamp(failure)),
+        }
     }
 
     fn describe_debug_context(&self) -> EngineAdapterDebugContext {
@@ -351,8 +376,8 @@ impl EngineAdapter for Completions {
     async fn count_text_stream_input_tokens(
         &self,
         _request: EngineTextStreamRequest,
-    ) -> Result<u64, EngineAdapterRequestError> {
-        Err(EngineAdapterRequestError::new(
+    ) -> Result<u64, Failure> {
+        Err(Failure::new(
             &self.backend.provider,
             "Chat Completions does not implement preflight input counting.",
             ErrorKind::InvalidRequest,
@@ -361,10 +386,17 @@ impl EngineAdapter for Completions {
     async fn stream_text(
         &self,
         request: EngineTextStreamRequest,
-    ) -> Result<EngineTextStream, EngineAdapterRequestError> {
+    ) -> Result<EngineTextStream, Failure> {
+        Ok(self.open_text_stream(request).await?.stream)
+    }
+
+    async fn open_text_stream(
+        &self,
+        request: EngineTextStreamRequest,
+    ) -> Result<battersea_model::OpenedTextStream, Failure> {
         validate_chat_request(&self.backend, &request)?;
         if request.shared.chat.context_overflow != EngineContextOverflow::Error {
-            return Err(EngineAdapterRequestError::new(
+            return Err(Failure::new(
                 &self.backend.provider,
                 "Chat Completions requires contextOverflow=error.",
                 ErrorKind::InvalidRequest,
@@ -380,7 +412,9 @@ impl EngineAdapter for Completions {
             messages,
             context: context.clone(),
             usage: Value::Null,
+            begun: BegunTools::default(),
         };
+        let begun = conversation.begun.clone();
         let executor = request
             .local_tool_executor
             .clone()
@@ -395,10 +429,24 @@ impl EngineAdapter for Completions {
             self.clock.clone(),
             tx,
         ));
-        Ok(Box::pin(ReceiverStream::new(rx)))
+        Ok(battersea_model::OpenedTextStream {
+            stream: Box::pin(ReceiverStream::new(rx)),
+            unfinished: Some(Arc::new(move || take_begun(&begun))),
+        })
     }
 }
-fn messages(provider: &str, messages: &[Message]) -> Result<Vec<Value>, EngineAdapterRequestError> {
+
+/// The tool calls a streamed completion has begun, by index, until its terminal event.
+type BegunTools = Arc<std::sync::Mutex<BTreeMap<u64, Value>>>;
+
+/// Takes the tool calls a streamed completion had begun.
+fn take_begun(begun: &BegunTools) -> Vec<Value> {
+    let mut begun = begun
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner);
+    std::mem::take(&mut *begun).into_values().collect()
+}
+fn messages(provider: &str, messages: &[Message]) -> Result<Vec<Value>, Failure> {
     let mut result = Vec::new();
     for message in messages {
         let role = match message.role {
@@ -415,7 +463,7 @@ fn messages(provider: &str, messages: &[Message]) -> Result<Vec<Value>, EngineAd
                 ContentBlock::Text { text } => content.push(json!({"type":"text","text":text})),
                 ContentBlock::Image { url,mime_type } => {
                     if !crate::content::OPENAI_IMAGE_MIME_TYPES.contains(&mime_type.as_str()) {
-                        return Err(EngineAdapterRequestError::new(provider,"Chat Completions does not support the requested image type.",ErrorKind::InvalidRequest));
+                        return Err(Failure::new(provider,"Chat Completions does not support the requested image type.",ErrorKind::InvalidRequest));
                     }
                     crate::content::media_source("openai",provider,url,mime_type)?;
                     content.push(json!({"type":"image_url","image_url":{"url":url}}));
@@ -423,11 +471,11 @@ fn messages(provider: &str, messages: &[Message]) -> Result<Vec<Value>, EngineAd
                 ContentBlock::ToolCall { id,name,arguments } => calls.push(json!({"id":id,"type":"function","function":{"name":local_tool_name(name),"arguments":arguments.to_string()}})),
                 ContentBlock::ToolResult { id,content } => { special=true;result.push(json!({"role":"tool","tool_call_id":id,"content":content.to_string()})); },
                 ContentBlock::Native { provider:owner,payload } if owner == provider && payload["role"] == "assistant" => { special=true;result.push(payload.clone()); },
-                _ => return Err(EngineAdapterRequestError::new(provider,"Unsupported Chat Completions content.",ErrorKind::InvalidRequest)),
+                _ => return Err(Failure::new(provider,"Unsupported Chat Completions content.",ErrorKind::InvalidRequest)),
             }
         }
         if special && (!content.is_empty() || !calls.is_empty()) {
-            return Err(EngineAdapterRequestError::new(
+            return Err(Failure::new(
                 provider,
                 "Native or tool-result messages must retain their own envelope.",
                 ErrorKind::InvalidRequest,
@@ -451,6 +499,7 @@ struct Conversation {
     messages: Vec<Value>,
     context: EngineAdapterDebugContext,
     usage: Value,
+    begun: BegunTools,
 }
 #[async_trait]
 impl ToolConversation for Conversation {
@@ -459,7 +508,7 @@ impl ToolConversation for Conversation {
         request: &EngineTextStreamRequest,
         results: Vec<ExecutedToolCall>,
         events: &ToolEventSender,
-    ) -> Result<Vec<EngineLocalToolCall>, EngineAdapterRequestError> {
+    ) -> Result<Vec<EngineLocalToolCall>, Failure> {
         let provider = &self.backend.provider;
         for result in results {
             self.messages.push(json!({"role":"tool","tool_call_id":result.call.id,"content":result.provider_content.to_string()}));
@@ -533,41 +582,84 @@ impl ToolConversation for Conversation {
             self.clock.as_ref(),
         )
         .await?;
+        send_event(events, crate::retry::opened(&response)).await?;
         let request_id = response
             .headers()
             .get("x-request-id")
             .and_then(|v| v.to_str().ok())
             .map(str::to_owned);
         let status = response.status().as_u16();
-        let (message, finish, usage) = if chat.stream {
-            decode_stream(provider, response, events).await?
+        // `native` is the provider's account of the turn's end: its response, or for a stream
+        // the chunk that named the finish reason.
+        let (message, finish, usage, native) = if chat.stream {
+            decode_stream(provider, response, events, &self.begun).await?
         } else {
             let value: Value = response.bounded_json().await?;
+            if let Some(identified) = crate::retry::identified(value.get("id")) {
+                send_event(events, identified).await?;
+            }
             if value["choices"].as_array().is_none_or(|v| v.len() != 1) {
-                return Err(invalid(provider, "Expected one completion choice."));
+                return Err(crate::http_payload::about(
+                    invalid(provider, "Expected one completion choice."),
+                    &value,
+                ));
             }
             let choice = &value["choices"][0];
             (
                 choice["message"].clone(),
                 choice["finish_reason"].as_str().unwrap_or("").to_owned(),
                 value["usage"].clone(),
+                value,
             )
+        };
+        // A stream's native account is its terminal chunk, so a failure of the assembled turn
+        // also carries the tool calls the stream delivered in fragments.
+        let begun = match &message["tool_calls"] {
+            Value::Array(calls) if chat.stream => calls.clone(),
+            _ => vec![],
+        };
+        let about = |failure| {
+            let mut failure: Failure = crate::http_payload::about(failure, &native);
+            if !begun.is_empty() {
+                match &mut failure.partial {
+                    battersea_model::Detail::Present(partial) if partial.blocks.is_empty() => {
+                        partial.blocks.clone_from(&begun);
+                    }
+                    battersea_model::Detail::Absent => {
+                        failure = failure.with_partial(battersea_model::PartialOutput {
+                            text: String::new(),
+                            blocks: begun.clone(),
+                        });
+                    }
+                    _ => {}
+                }
+            }
+            failure
         };
         if !matches!(finish.as_str(), "stop" | "tool_calls")
             || message["role"] != "assistant"
             || !message["refusal"].is_null()
         {
-            return Err(invalid(
+            let class = if !message["refusal"].is_null() || finish == "content_filter" {
+                StopClass::Refusal
+            } else if finish == "length" {
+                StopClass::Length
+            } else {
+                StopClass::Other
+            };
+            return Err(about(terminal_failure(
                 provider,
-                "Completion was refused, incomplete or malformed.",
-            ));
+                class,
+                native.clone(),
+                String::new(),
+            )));
         }
-        let calls = completion_calls(provider, &message)?;
+        let calls = completion_calls(provider, &message).map_err(about)?;
         if (finish == "tool_calls") == calls.is_empty() {
-            return Err(invalid(
+            return Err(about(invalid(
                 provider,
                 "Finish reason disagrees with the tool calls.",
-            ));
+            )));
         }
         if !chat.stream {
             if let Some(text) = message["content"].as_str() {
@@ -577,7 +669,7 @@ impl ToolConversation for Conversation {
                 )
                 .await?;
             } else if !message["content"].is_null() {
-                return Err(invalid(provider, "Unsupported completion content."));
+                return Err(about(invalid(provider, "Unsupported completion content.")));
             }
         }
         if usage.is_object() {
@@ -620,13 +712,13 @@ impl ToolConversation for Conversation {
         Ok(calls)
     }
 }
-fn invalid(provider: &str, message: &str) -> EngineAdapterRequestError {
-    EngineAdapterRequestError::invalid_response(provider, message)
+fn invalid(provider: &str, message: &'static str) -> Failure {
+    Failure::invalid_response(provider, message)
 }
 
 struct CompletionBuffer {
     text: String,
-    tools: BTreeMap<u64, Value>,
+    tools: BegunTools,
     budget: CompletionBudget,
 }
 struct CompletionBudget {
@@ -634,7 +726,7 @@ struct CompletionBudget {
     limit: usize,
 }
 impl CompletionBudget {
-    fn reserve(&mut self, bytes: usize, provider: &str) -> Result<(), EngineAdapterRequestError> {
+    fn reserve(&mut self, bytes: usize, provider: &str) -> Result<(), Failure> {
         if bytes > self.limit.saturating_sub(self.encoded_bytes) {
             return Err(invalid(
                 provider,
@@ -644,40 +736,40 @@ impl CompletionBudget {
         self.encoded_bytes += bytes;
         Ok(())
     }
-    fn reserve_string(
-        &mut self,
-        part: &str,
-        provider: &str,
-    ) -> Result<(), EngineAdapterRequestError> {
+    fn reserve_string(&mut self, part: &str, provider: &str) -> Result<(), Failure> {
         // Fragment quotes already belong to the retained string's envelope.
         self.reserve(payload::check_payload(part, provider)? - 2, provider)
     }
 }
 impl CompletionBuffer {
-    fn new(limit: usize) -> Self {
+    fn new(limit: usize, tools: BegunTools) -> Self {
         Self {
             text: String::new(),
-            tools: BTreeMap::new(),
+            tools,
             budget: CompletionBudget {
                 encoded_bytes: b"[\"\",{}]".len(),
                 limit,
             },
         }
     }
-    fn push_text(&mut self, part: &str, provider: &str) -> Result<(), EngineAdapterRequestError> {
+    fn push_text(&mut self, part: &str, provider: &str) -> Result<(), Failure> {
         self.budget.reserve_string(part, provider)?;
         self.text.push_str(part);
         Ok(())
     }
-    fn push_tool(&mut self, call: &Value, provider: &str) -> Result<(), EngineAdapterRequestError> {
+    fn push_tool(&mut self, call: &Value, provider: &str) -> Result<(), Failure> {
         if !call["type"].is_null() && call["type"] != "function" {
             return Err(invalid(provider, "Unsupported streamed tool type."));
         }
         let index = call["index"]
             .as_u64()
             .ok_or_else(|| invalid(provider, "Missing tool index."))?;
-        let separator = usize::from(!self.tools.is_empty());
-        if let Entry::Vacant(entry) = self.tools.entry(index) {
+        let mut tools = self
+            .tools
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
+        let separator = usize::from(!tools.is_empty());
+        if let Entry::Vacant(entry) = tools.entry(index) {
             let tool = json!({"id":"","type":"function","function":{"name":"","arguments":""}});
             let entry_bytes = payload::check_payload(&tool, provider)?
                 + index.to_string().len()
@@ -695,12 +787,8 @@ impl CompletionBuffer {
             }
             if let Some(part) = call.pointer(pointer).and_then(Value::as_str) {
                 self.budget.reserve_string(part, provider)?;
-                let Value::String(target) = self
-                    .tools
-                    .get_mut(&index)
-                    .unwrap()
-                    .pointer_mut(pointer)
-                    .unwrap()
+                let Value::String(target) =
+                    tools.get_mut(&index).unwrap().pointer_mut(pointer).unwrap()
                 else {
                     unreachable!("tool string fields retain their type")
                 };
@@ -711,25 +799,89 @@ impl CompletionBuffer {
     }
 }
 
+/// Decodes a streamed completion into its message, finish reason, usage and the chunk that
+/// named the finish reason. A failure carries
+/// the event Battersea was handling as native detail and the tool calls the stream had begun as
+/// partial output.
 async fn decode_stream(
     provider: &str,
     response: reqwest::Response,
     events: &ToolEventSender,
-) -> Result<(Value, String, Value), EngineAdapterRequestError> {
+    begun: &BegunTools,
+) -> Result<(Value, String, Value, Value), Failure> {
+    take_begun(begun);
+    let mut buffer = CompletionBuffer::new(payload::PROVIDER_PAYLOAD_BYTES, begun.clone());
+    let mut current = Value::Null;
+    match decode_events(provider, response, events, &mut buffer, &mut current).await {
+        Ok((finish, usage, terminal)) => {
+            let mut message = json!({"role":"assistant","content":buffer.text});
+            let tools = take_begun(begun);
+            if !tools.is_empty() {
+                message["tool_calls"] = json!(tools);
+            }
+            Ok((message, finish, usage, terminal))
+        }
+        Err(failure) => {
+            let failure = crate::http_payload::about(failure, &current);
+            let blocks = take_begun(begun);
+            if blocks.is_empty() || !failure.partial.is_absent() {
+                return Err(failure);
+            }
+            Err(failure.with_partial(battersea_model::PartialOutput {
+                text: String::new(),
+                blocks,
+            }))
+        }
+    }
+}
+
+/// Reads the stream's events into `buffer`. `current` holds the event being handled, and is
+/// null while the next event is read.
+async fn decode_events(
+    provider: &str,
+    response: reqwest::Response,
+    events: &ToolEventSender,
+    buffer: &mut CompletionBuffer,
+    current: &mut Value,
+) -> Result<(String, Value, Value), Failure> {
     let stream = crate::http_payload::bounded_stream(response).eventsource();
     futures_util::pin_mut!(stream);
-    let mut buffer = CompletionBuffer::new(payload::PROVIDER_PAYLOAD_BYTES);
     let mut finish = String::new();
+    let mut terminal = Value::Null;
     let mut usage = Value::Null;
     let mut done = false;
-    while let Some(event) = stream.next().await {
-        let event = event.map_err(|_| invalid(provider, "Interrupted completion stream."))?;
+    let mut identified = false;
+    loop {
+        *current = Value::Null;
+        let Some(event) = stream.next().await else {
+            break;
+        };
+        let event = event.map_err(|cause| {
+            crate::http_payload::event_stream_failure(
+                invalid(provider, "Interrupted completion stream."),
+                cause,
+            )
+        })?;
         if event.data == "[DONE]" {
             done = true;
             break;
         }
-        let value: Value = serde_json::from_str(&event.data)
-            .map_err(|_| invalid(provider, "Malformed completion event."))?;
+        *current = serde_json::from_str(&event.data).map_err(|cause| {
+            invalid(provider, "Malformed completion event.")
+                .with_native(
+                    battersea_model::Reporter::Provider,
+                    Value::String(event.data.clone()),
+                )
+                .caused_by(&cause)
+        })?;
+        let value = &*current;
+        // Every chunk of a completion repeats its identifier.
+        if !identified {
+            if let Some(event) = crate::retry::identified(value.get("id")) {
+                identified = true;
+                send_event(events, event).await?;
+            }
+        }
         if value["usage"].is_object() {
             usage = value["usage"].clone();
         }
@@ -765,7 +917,12 @@ async fn decode_stream(
             return Err(invalid(provider, "Unsupported completion delta field."));
         }
         if !delta["refusal"].is_null() {
-            return Err(invalid(provider, "Completion refused."));
+            return Err(terminal_failure(
+                provider,
+                StopClass::Refusal,
+                value.clone(),
+                buffer.text.clone(),
+            ));
         }
         if let Some(part) = delta["content"].as_str() {
             buffer.push_text(part, provider)?;
@@ -785,6 +942,7 @@ async fn decode_stream(
                 return Err(invalid(provider, "Repeated completion finish."));
             }
             finish = reason.into();
+            terminal = value.clone();
         }
     }
     if !done || finish.is_empty() {
@@ -793,11 +951,7 @@ async fn decode_stream(
             "Completion stream ended before its terminal event.",
         ));
     }
-    let mut message = json!({"role":"assistant","content":buffer.text});
-    if !buffer.tools.is_empty() {
-        message["tool_calls"] = json!(buffer.tools.into_values().collect::<Vec<_>>());
-    }
-    Ok((message, finish, usage))
+    Ok((finish, usage, terminal))
 }
 
 #[derive(serde::Serialize, serde::Deserialize)]
@@ -825,7 +979,7 @@ fn validate_completion_events(
     request: &ConversationRequest,
     checkpoint: &CompletionCheckpoint,
     events: &[EngineTextStreamEvent],
-) -> Result<(), EngineAdapterRequestError> {
+) -> Result<(), Failure> {
     let message = checkpoint.messages.last().expect("validated transcript");
     let mut text = String::new();
     let mut native = 0;
@@ -894,10 +1048,7 @@ fn validate_completion_events(
     }
     Ok(())
 }
-fn completion_calls(
-    provider: &str,
-    message: &Value,
-) -> Result<Vec<EngineLocalToolCall>, EngineAdapterRequestError> {
+fn completion_calls(provider: &str, message: &Value) -> Result<Vec<EngineLocalToolCall>, Failure> {
     let mut calls = Vec::new();
     if !message["tool_calls"].is_null() && !message["tool_calls"].is_array() {
         return Err(invalid(provider, "Malformed completion tool calls."));
@@ -924,8 +1075,13 @@ fn retain_event(
     provider: &str,
     events: &mut Vec<EngineTextStreamEvent>,
     retained: &mut usize,
+    identifiers: &mut crate::retry::Identifiers,
     event: EngineTextStreamEvent,
-) -> Result<(), EngineAdapterRequestError> {
+) -> Result<(), Failure> {
+    // The opened response is an observation of the exchange, not part of the durable turn.
+    if identifiers.note(&event) {
+        return Ok(());
+    }
     *retained = retained.saturating_add(payload::check_payload(&event, provider)?);
     if *retained > payload::PROVIDER_PAYLOAD_BYTES {
         return Err(invalid(
@@ -952,7 +1108,8 @@ mod tests {
 
     #[test]
     fn stream_budget_counts_escaping_and_each_tool_map_envelope() {
-        let mut buffer = CompletionBuffer::new(payload::PROVIDER_PAYLOAD_BYTES);
+        let mut buffer =
+            CompletionBuffer::new(payload::PROVIDER_PAYLOAD_BYTES, BegunTools::default());
         assert_encoded_size(&buffer);
         for part in ["plain", "\"\\\n\r\t\u{0008}\u{000c}\0", "\u{001f}é🦀", ""] {
             buffer.push_text(part, "test").unwrap();
@@ -973,11 +1130,12 @@ mod tests {
     #[test]
     fn stream_budget_accepts_the_limit_and_refuses_growth_before_retaining_it() {
         let call = json!({"index":10,"id":"call","function":{"name":"echo","arguments":"{\"value\":\"é\\\n\"}"}});
-        let mut reference = CompletionBuffer::new(payload::PROVIDER_PAYLOAD_BYTES);
+        let mut reference =
+            CompletionBuffer::new(payload::PROVIDER_PAYLOAD_BYTES, BegunTools::default());
         reference.push_text("answer\n", "test").unwrap();
         reference.push_tool(&call, "test").unwrap();
         let limit = reference.budget.encoded_bytes;
-        let mut exact = CompletionBuffer::new(limit);
+        let mut exact = CompletionBuffer::new(limit, BegunTools::default());
         exact.push_text("answer\n", "test").unwrap();
         exact.push_tool(&call, "test").unwrap();
         assert_encoded_size(&exact);
@@ -988,9 +1146,12 @@ mod tests {
             .is_err());
         assert_eq!(exact.budget.encoded_bytes, limit);
         assert_eq!(exact.text, reference.text);
-        assert_eq!(exact.tools, reference.tools);
+        assert_eq!(
+            *exact.tools.lock().unwrap(),
+            *reference.tools.lock().unwrap()
+        );
 
-        let mut smaller = CompletionBuffer::new(limit - 1);
+        let mut smaller = CompletionBuffer::new(limit - 1, BegunTools::default());
         smaller.push_text("answer\n", "test").unwrap();
         assert!(smaller.push_tool(&call, "test").is_err());
         assert_encoded_size(&smaller);
@@ -999,7 +1160,8 @@ mod tests {
 
     #[test]
     fn fragmented_text_and_tool_arguments_append_to_the_retained_buffers() {
-        let mut buffer = CompletionBuffer::new(payload::PROVIDER_PAYLOAD_BYTES);
+        let mut buffer =
+            CompletionBuffer::new(payload::PROVIDER_PAYLOAD_BYTES, BegunTools::default());
         let call = json!({"index":0,"function":{"arguments":"é\n\""}});
         for _ in 0..20_000 {
             buffer.push_text("text", "test").unwrap();
@@ -1007,7 +1169,7 @@ mod tests {
         }
         assert_eq!(buffer.text, "text".repeat(20_000));
         assert_eq!(
-            buffer.tools[&0]["function"]["arguments"],
+            buffer.tools.lock().unwrap()[&0]["function"]["arguments"],
             "é\n\"".repeat(20_000)
         );
         assert_encoded_size(&buffer);

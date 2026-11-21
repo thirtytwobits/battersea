@@ -29,7 +29,7 @@ fn refused(error: Error, missing: &str) -> Refusal {
         "internal" => ops::HOST_FAILURE,
         code => code,
     };
-    ops::refusal(code, error.message)
+    ops::refusal(code, error.failure.message.clone())
 }
 
 fn flow(error: Error) -> Refusal {
@@ -110,7 +110,8 @@ impl FlowHost for Host {
     }
     async fn get(&self, flow_key: &str) -> Result<FlowDocument, Refusal> {
         self.exists(flow_key)?;
-        read(&self.0, flow_key).map_err(|error| ops::refusal(ops::INVALID_FLOW, error.message))
+        read(&self.0, flow_key)
+            .map_err(|error| ops::refusal(ops::INVALID_FLOW, error.failure.message.clone()))
     }
     async fn validate(&self, flow_key: &str) -> Result<FlowValidationResult, Refusal> {
         let document = self.get(flow_key).await?;

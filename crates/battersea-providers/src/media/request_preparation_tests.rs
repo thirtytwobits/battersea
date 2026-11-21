@@ -140,7 +140,7 @@ async fn runway_pending_job_keeps_remote_identity_through_completion_and_cancell
             .await;
         if mode != "complete" {
             assert_eq!(
-                result.unwrap_err().classification,
+                result.unwrap_err().kind,
                 if mode == "cancel" {
                     battersea_model::ErrorKind::Cancelled
                 } else {
@@ -180,7 +180,7 @@ fn unsupported_media_parameters_fail_before_adapter_creation_or_submission() {
             .create_media(config, crate::test_clock())
             .err()
             .unwrap()
-            .classification,
+            .kind,
         battersea_model::ErrorKind::InvalidRequest
     );
     let request = MediaRenderRequest {
@@ -197,7 +197,7 @@ fn unsupported_media_parameters_fail_before_adapter_creation_or_submission() {
         registry
             .prepare_media(&backend("openai"), request)
             .unwrap_err()
-            .classification,
+            .kind,
         battersea_model::ErrorKind::InvalidRequest
     );
 }
@@ -348,7 +348,7 @@ async fn a_submit_without_a_reply_fails_at_the_backend_timeout_on_the_adapter_cl
         let (result, _connection) = tokio::join!(submit, unanswered);
         let error = result.err().expect("an unanswered submit fails");
         assert_eq!(
-            error.classification,
+            error.kind,
             battersea_model::ErrorKind::Timeout,
             "{provider} count {count}: {}",
             error.message

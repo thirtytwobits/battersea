@@ -2,6 +2,7 @@
 mod delivery;
 mod failure;
 pub use battersea_flow::FlowFailurePolicy;
+pub use battersea_flow::{Failure, FailureDisclosure};
 pub use delivery::ProviderEvent;
 pub use failure::{HandledNodeFailure, RecoverableNodeFailure};
 pub mod checkpoint;
@@ -47,23 +48,27 @@ pub trait ExecutionError: std::error::Error + Send + Sync + 'static {
         None
     }
     /// The request cannot be carried out.
-    fn invalid_request(reason: &'static str, message: impl Into<String>) -> Self;
+    fn invalid_request(reason: &'static str, failure: impl Into<Failure>) -> Self;
     /// A fault in the runtime or host.
-    fn internal(message: impl Into<String>) -> Self;
+    fn internal(failure: impl Into<Failure>) -> Self;
     /// The activation was cancelled.
-    fn cancelled(reason: &'static str, message: impl Into<String>) -> Self;
+    fn cancelled(reason: &'static str, failure: impl Into<Failure>) -> Self;
     /// The activation stopped before an outcome was decided.
-    fn interrupted(reason: &'static str, message: impl Into<String>) -> Self;
+    fn interrupted(reason: &'static str, failure: impl Into<Failure>) -> Self;
     /// The activation stopped where its journal must be recovered before it can continue.
-    fn recovery_required(reason: &'static str, message: impl Into<String>) -> Self
+    fn recovery_required(reason: &'static str, failure: impl Into<Failure>) -> Self
     where
         Self: Sized,
     {
-        Self::interrupted(reason, message)
+        Self::interrupted(reason, failure)
     }
     /// The error's class, chosen by the host for each constructor.
     fn code(&self) -> &str;
     /// The reason the error was raised with; `None` for an [`internal`](Self::internal) fault.
     fn reason_code(&self) -> Option<&str>;
-    fn message(&self) -> &str;
+    /// What failed, complete. A constructor given text holds a failure of kind `runtime`.
+    fn failure(&self) -> &Failure;
+    fn message(&self) -> &str {
+        &self.failure().message
+    }
 }

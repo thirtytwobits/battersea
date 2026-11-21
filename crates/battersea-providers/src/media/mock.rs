@@ -3,7 +3,7 @@ use super::{
     MediaGenerationActivityUpdate, MediaGenerationAdapter, MediaGenerationBatchReporter,
     MediaRenderRequest, MediaRenderResult, MediaTimingRecorder,
 };
-use crate::adapter::error::EngineAdapterRequestError;
+use crate::adapter::error::Failure;
 use ab_glyph::{point, Font, FontArc, PxScale, ScaleFont};
 use async_trait::async_trait;
 use base64::Engine as _;
@@ -16,7 +16,7 @@ use tokio_util::sync::CancellationToken;
 pub(crate) fn create_mock_media_generator(
     backend: MediaBackendConfig,
     clock: Arc<dyn battersea_model::Clock>,
-) -> Result<Arc<dyn MediaGenerationAdapter>, EngineAdapterRequestError> {
+) -> Result<Arc<dyn MediaGenerationAdapter>, Failure> {
     let configured_url = backend
         .options
         .extra
@@ -60,10 +60,7 @@ impl MediaGenerationAdapter for MockMediaGenerator {
         self.clock.clone()
     }
 
-    fn prepare(
-        &self,
-        request: MediaRenderRequest,
-    ) -> Result<super::PreparedMediaRequest, EngineAdapterRequestError> {
+    fn prepare(&self, request: MediaRenderRequest) -> Result<super::PreparedMediaRequest, Failure> {
         super::prepare_media_request(self.backend(), request)
     }
 
@@ -73,7 +70,7 @@ impl MediaGenerationAdapter for MockMediaGenerator {
         cancellation: CancellationToken,
         activity_reporter: Option<Arc<dyn MediaGenerationActivityReporter>>,
         batch_reporter: Option<Arc<dyn super::MediaGenerationBatchReporter>>,
-    ) -> Result<super::MediaSubmission, EngineAdapterRequestError> {
+    ) -> Result<super::MediaSubmission, Failure> {
         self.render(prepared, cancellation, activity_reporter, batch_reporter)
             .await
             .map(super::MediaSubmission::Complete)
@@ -86,7 +83,7 @@ impl MockMediaGenerator {
         cancellation: CancellationToken,
         activity_reporter: Option<Arc<dyn MediaGenerationActivityReporter>>,
         batch_reporter: Option<Arc<dyn MediaGenerationBatchReporter>>,
-    ) -> Result<MediaRenderResult, EngineAdapterRequestError> {
+    ) -> Result<MediaRenderResult, Failure> {
         let request = prepared.render_input.clone();
         if let Some(reporter) = &activity_reporter {
             reporter
@@ -353,10 +350,10 @@ async fn sleep_with_cancellation(
     delay_ms: u64,
     cancellation: &CancellationToken,
     clock: &dyn battersea_model::Clock,
-) -> Result<(), crate::EngineAdapterRequestError> {
+) -> Result<(), crate::Failure> {
     if delay_ms == 0 {
         if cancellation.is_cancelled() {
-            return Err(EngineAdapterRequestError::new(
+            return Err(Failure::new(
                 "mock",
                 "Media generation cancelled.",
                 "cancelled",
@@ -366,7 +363,7 @@ async fn sleep_with_cancellation(
     }
     tokio::select! {
         _ = cancellation.cancelled() => {
-            Err(EngineAdapterRequestError::new("mock", "Media generation cancelled.", "cancelled"))
+            Err(Failure::new("mock", "Media generation cancelled.", "cancelled"))
         }
         _ = battersea_model::clock::sleep(clock, std::time::Duration::from_millis(delay_ms)) => Ok(())
     }
@@ -386,7 +383,7 @@ async fn emit_mock_progress_ticks(
     step_count: u64,
     cancellation: &CancellationToken,
     clock: &dyn battersea_model::Clock,
-) -> Result<(), crate::EngineAdapterRequestError> {
+) -> Result<(), crate::Failure> {
     let Some(reporter) = activity_reporter else {
         return Ok(());
     };
@@ -500,9 +497,7 @@ fn build_mock_asset(
     }
 }
 
-fn load_mock_prompt_font(
-    backend: &MediaBackendConfig,
-) -> Result<FontArc, EngineAdapterRequestError> {
+fn load_mock_prompt_font(backend: &MediaBackendConfig) -> Result<FontArc, Failure> {
     let font_path = backend
         .options
         .extra
@@ -511,34 +506,26 @@ fn load_mock_prompt_font(
         .map(str::trim)
         .filter(|value| !value.is_empty())
         .ok_or_else(|| {
-            EngineAdapterRequestError::new(
+            Failure::new(
                 "mock",
-                format!(
-                    "Mock image backend \"{}\" requires options.fontPath when options.mockUrl is not set.",
-                    backend.id
-                ),
+                "Mock image backend requires options.fontPath when options.mockUrl is not set.",
                 "invalid_request",
             )
+            .with_context("backend", backend.id.as_str())
         })?;
 
     let bytes = std::fs::read(font_path).map_err(|error| {
-        EngineAdapterRequestError::transport(
-            "mock",
-            format!(
-                "Mock image backend \"{}\" could not read font at \"{}\": {}",
-                backend.id, font_path, error
-            ),
-        )
+        Failure::transport("mock", "Mock image backend could not read its font.")
+            .with_context("backend", backend.id.as_str())
+            .with_context("fontPath", font_path)
+            .caused_by(&error)
     })?;
 
     FontArc::try_from_vec(bytes).map_err(|error| {
-        EngineAdapterRequestError::invalid_response(
-            "mock",
-            format!(
-                "Mock image backend \"{}\" could not load font at \"{}\": {}",
-                backend.id, font_path, error
-            ),
-        )
+        Failure::invalid_response("mock", "Mock image backend could not load its font.")
+            .with_context("backend", backend.id.as_str())
+            .with_context("fontPath", font_path)
+            .caused_by(&error)
     })
 }
 
@@ -838,7 +825,7 @@ mod tests {
         async fn report_activity(
             &self,
             update: MediaGenerationActivityUpdate,
-        ) -> Result<(), crate::EngineAdapterRequestError> {
+        ) -> Result<(), crate::Failure> {
             self.updates.lock().expect("updates lock").push(update);
             Ok(())
         }

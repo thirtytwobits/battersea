@@ -2,7 +2,7 @@
 use super::tool_loop::*;
 use super::*;
 use async_trait::async_trait;
-use battersea_model::{EngineAdapterRequestError, Role};
+use battersea_model::{Failure, Role};
 use std::sync::Arc;
 use tokio_stream::wrappers::ReceiverStream;
 
@@ -10,7 +10,7 @@ pub(crate) fn create_mock_adapter(
     backend: EngineBackendConfig,
     logger: Option<Arc<dyn EngineAdapterLogger>>,
     clock: Arc<dyn battersea_model::Clock>,
-) -> Result<Arc<dyn EngineAdapter>, EngineAdapterRequestError> {
+) -> Result<Arc<dyn EngineAdapter>, Failure> {
     Ok(Arc::new(MockAdapter {
         backend,
         logger,
@@ -38,7 +38,7 @@ impl EngineAdapter for MockAdapter {
     async fn count_text_stream_input_tokens(
         &self,
         request: EngineTextStreamRequest,
-    ) -> Result<u64, EngineAdapterRequestError> {
+    ) -> Result<u64, Failure> {
         validate_chat_request(&self.backend, &request)?;
         Ok(request
             .shared
@@ -50,17 +50,21 @@ impl EngineAdapter for MockAdapter {
     async fn stream_text(
         &self,
         request: EngineTextStreamRequest,
-    ) -> Result<EngineTextStream, EngineAdapterRequestError> {
+    ) -> Result<EngineTextStream, Failure> {
         validate_chat_request(&self.backend, &request)?;
         let failure = self.backend.options.mock_failure.clone();
         if let Some(failure) = failure
             .as_ref()
             .filter(|failure| failure.after_chunks.is_none())
         {
-            return Err(EngineAdapterRequestError::new(
+            return Err(Failure::new(
                 "mock",
-                failure.message.clone(),
+                "Mock provider reported its configured failure.",
                 failure.classification.clone(),
+            )
+            .with_native(
+                battersea_model::Reporter::Provider,
+                serde_json::json!({"message": failure.message}),
             ));
         }
         let context = self.describe_debug_context();
@@ -122,7 +126,7 @@ impl ToolConversation for MockConversation {
         request: &EngineTextStreamRequest,
         results: Vec<ExecutedToolCall>,
         events: &ToolEventSender,
-    ) -> Result<Vec<EngineLocalToolCall>, EngineAdapterRequestError> {
+    ) -> Result<Vec<EngineLocalToolCall>, Failure> {
         for result in results {
             let serialized = result.provider_content.to_string();
             let collapsed = serialized.split_whitespace().collect::<Vec<_>>().join(" ");
@@ -227,10 +231,14 @@ impl ToolConversation for MockConversation {
                 .as_ref()
                 .filter(|failure| failure.after_chunks == Some(index as u32 + 1))
             {
-                return Err(EngineAdapterRequestError::new(
+                return Err(Failure::new(
                     "mock",
-                    failure.message.clone(),
+                    "Mock provider reported its configured failure.",
                     failure.classification.clone(),
+                )
+                .with_native(
+                    battersea_model::Reporter::Provider,
+                    serde_json::json!({"message": failure.message}),
                 ));
             }
         }

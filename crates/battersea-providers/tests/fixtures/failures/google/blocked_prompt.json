@@ -1,0 +1,41 @@
+{
+  "status": 200,
+  "content_type": "text/event-stream",
+  "sse_data": [
+    {
+      "promptFeedback": {
+        "blockReason": "PROHIBITED_CONTENT",
+        "safetyRatings": [
+          {
+            "category": "HARM_CATEGORY_DANGEROUS_CONTENT",
+            "probability": "HIGH",
+            "blocked": true
+          }
+        ]
+      },
+      "usageMetadata": {
+        "promptTokenCount": 7,
+        "totalTokenCount": 7
+      },
+      "modelVersion": "fixture-model"
+    }
+  ],
+  "kind": "refusal",
+  "payload": {
+    "promptFeedback": {
+      "blockReason": "PROHIBITED_CONTENT",
+      "safetyRatings": [
+        {
+          "category": "HARM_CATEGORY_DANGEROUS_CONTENT",
+          "probability": "HIGH",
+          "blocked": true
+        }
+      ]
+    },
+    "usageMetadata": {
+      "promptTokenCount": 7,
+      "totalTokenCount": 7
+    },
+    "modelVersion": "fixture-model"
+  }
+}

@@ -9,18 +9,16 @@ use serde_json::json;
 use sha2::{Digest, Sha256};
 
 /// A host confirms that a node failure is recoverable and all effects have settled.
-/// Messages must be sanitised before constructing this classification.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct RecoverableNodeFailure {
     pub code: String,
-    pub message: String,
+    pub failure: Failure,
 }
 impl RecoverableNodeFailure {
     pub fn validate(&self) -> bool {
         !self.code.trim().is_empty()
             && self.code.len() <= FAILURE_CODE_BYTES
-            && self.message.len() <= FAILURE_MESSAGE_BYTES
             && !error_codes::ALL.contains(&self.code.as_str())
     }
 }
@@ -44,6 +42,31 @@ pub(crate) fn identity(run: &str, node: &str, sequence: u64) -> String {
     base16ct::lower::encode_string(&Sha256::digest(
         serde_json::to_vec(&(run, node, sequence)).expect("failure identity"),
     ))
+}
+
+/// Passes a node failure, complete, to the host's observer under its `node_failure` identity
+/// and returns that identity. The driver calls this before it applies the node's policy.
+pub(crate) async fn observe<H: ExecutionHost>(
+    host: &H,
+    runtime: &mut H::State,
+    node_id: &str,
+    failure: &Failure,
+) -> Result<String, H::Error> {
+    let id = identity(&runtime.run_id, node_id, runtime.delivery_sequence);
+    if let Err(error) = host.observe_failure(runtime, &id, node_id, failure).await {
+        runtime.unhandled_node = Some(node_id.into());
+        return Err(error);
+    }
+    Ok(id)
+}
+
+/// The `error` detail of a failure record, as the host's disclosure lets records hold it.
+pub(crate) fn error_detail<H: ExecutionHost>(host: &H, code: &str, failure: &Failure) -> Value {
+    json!({
+        "code": code,
+        "message": failure.message,
+        "failure": failure.disclose(host.failure_disclosure()),
+    })
 }
 
 pub(crate) async fn handle_error<H: ExecutionHost>(
@@ -70,10 +93,22 @@ pub(crate) async fn handle_error<H: ExecutionHost>(
     if eligible && node.failure_policy != FlowFailurePolicy::Fail {
         handle_failure(host, runtime, node, definition, operation, failure.unwrap()).await
     } else {
+        let id = observe(host, runtime, &node.id, error.failure()).await?;
         runtime.unhandled_node = Some(node.id.clone());
-        host.publish_execution_record(runtime, &node.id, EventKind::NodeError,
-            error.message().into(), Some(json!({"policy":node.failure_policy,"handled":false,
-                "operation":operation,"error":{"code":error.reason_code().unwrap_or(error.code()),"message":error.message()}}))).await;
+        let detail = error_detail(
+            host,
+            error.reason_code().unwrap_or(error.code()),
+            error.failure(),
+        );
+        host.publish_execution_record(
+            runtime,
+            &node.id,
+            EventKind::NodeError,
+            error.message().into(),
+            Some(json!({"policy":node.failure_policy,"handled":false,
+                "operation":operation,"failureId":id,"error":detail})),
+        )
+        .await;
         Err(error)
     }
 }
@@ -97,20 +132,22 @@ pub(crate) async fn handle_failure<H: ExecutionHost>(
             "Invalid or recursively handled node failure.",
         ));
     }
+    let id = observe(host, runtime, &node.id, &failure.failure).await?;
+    let detail = error_detail(host, &failure.code, &failure.failure);
     if node.failure_policy == FlowFailurePolicy::Fail {
         runtime.unhandled_node = Some(node.id.clone());
         host.publish_execution_record(
             runtime,
             &node.id,
             EventKind::NodeError,
-            failure.message.clone(),
+            failure.failure.message.clone(),
             Some(
                 json!({"policy":node.failure_policy,"handled":false,"operation":operation,
-                "error":{"code":failure.code,"message":failure.message}}),
+                "failureId":id,"error":detail}),
             ),
         )
         .await;
-        return Err(H::Error::internal(failure.message));
+        return Err(H::Error::internal(failure.failure));
     }
     if runtime.stopped_nodes.contains(&node.id) {
         return Ok(());
@@ -124,28 +161,33 @@ pub(crate) async fn handle_failure<H: ExecutionHost>(
         sequence: runtime.delivery_sequence,
         policy: node.failure_policy,
         failure: FlowNodeFailure {
-            id: identity(&runtime.run_id, &node.id, runtime.delivery_sequence),
+            id,
             node_id: node.id.clone(),
             phase,
             operation: operation.into(),
             code: failure.code,
-            message: failure.message,
+            failure: failure.failure.disclose(host.failure_disclosure()),
         },
     };
     host.publish_execution_record(
         runtime,
         &node.id,
         EventKind::NodeError,
-        record.failure.message.clone(),
+        record.failure.failure.message.clone(),
         Some(json!({"policy":record.policy,"handled":false,
             "operation":operation,"phase":phase,"failureId":record.failure.id,
-            "error":{"code":record.failure.code,"message":record.failure.message}})),
+            "error":detail})),
     )
     .await;
     let retained = runtime
         .retention
         .retain(&node.id, record.clone())
-        .map_err(|message| H::Error::invalid_request(error_codes::CAPACITY_EXHAUSTED, message))?;
+        .map_err(|message| {
+            H::Error::invalid_request(
+                error_codes::CAPACITY_EXHAUSTED,
+                wrapping("Node retention capacity is exhausted.", message),
+            )
+        })?;
     runtime.handled_failures.insert(node.id.clone(), retained);
     runtime.handling_failures.insert(node.id.clone());
     let result = async {
@@ -184,10 +226,10 @@ pub(crate) async fn handle_failure<H: ExecutionHost>(
             runtime,
             &node.id,
             EventKind::NodeFailureHandled,
-            record.failure.message.clone(),
+            record.failure.failure.message.clone(),
             Some(json!({"policy":record.policy,"handled":true,
                 "operation":operation,"phase":phase,"failureId":record.failure.id,
-                "error":{"code":record.failure.code,"message":record.failure.message}})),
+                "error":detail})),
         )
         .await;
         Ok(())
@@ -253,7 +295,7 @@ async fn settle_outputs<H: ExecutionHost>(
     failed: bool,
 ) -> Result<(), H::Error> {
     for port in battersea_flow::ports::expanded_output_ports_for_node(&runtime.definitions, node)
-        .map_err(H::Error::internal)?
+        .map_err(unexpandable_ports::<H::Error>)?
     {
         let key = (node.id.clone(), port.name.clone());
         if failed && port.mode == FlowPortMode::Stream && !runtime.closed_outputs.contains(&key) {
@@ -313,4 +355,14 @@ async fn skip_input<H: ExecutionHost>(
     )
     .await;
     Ok(())
+}
+
+/// A failure in Battersea's wording that wraps the text of a lower layer's error.
+pub(crate) fn wrapping(message: &'static str, text: impl Into<String>) -> Failure {
+    Failure::from(message).caused_by_text(text)
+}
+
+/// The fault of a node whose ports cannot be expanded from its definition.
+pub(crate) fn unexpandable_ports<E: ExecutionError>(text: String) -> E {
+    E::internal(wrapping("Node ports cannot be expanded.", text))
 }

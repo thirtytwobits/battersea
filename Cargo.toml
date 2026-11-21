@@ -1,5 +1,5 @@
 [workspace]
-members = ["crates/battersea-derive", "crates/battersea-telemetry", "crates/battersea-pianola", "crates/battersea-flow", "crates/battersea-runtime", "crates/battersea-model", "crates/battersea-tools", "crates/battersea-ops", "crates/battersea-providers", "crates/battersea-config", "crates/battersea-kit", "crates/battersea-kit-conversation", "crates/battersea-nodes", "crates/battersea-guard", "tools/xtask", "examples/*"]
+members = ["crates/battersea-failure", "crates/battersea-derive", "crates/battersea-telemetry", "crates/battersea-pianola", "crates/battersea-flow", "crates/battersea-runtime", "crates/battersea-model", "crates/battersea-tools", "crates/battersea-ops", "crates/battersea-providers", "crates/battersea-config", "crates/battersea-kit", "crates/battersea-kit-conversation", "crates/battersea-nodes", "crates/battersea-guard", "tools/xtask", "examples/*"]
 resolver = "2"
 
 [workspace.package]
@@ -8,6 +8,9 @@ edition = "2021"
 rust-version = "1.95"
 license = "MIT"
 repository = "https://github.com/thirtytwobits/battersea"
+
+[workspace.lints.clippy]
+map_err_ignore = "deny"
 
 [workspace.dependencies]
 clapham = { git = "https://github.com/thirtytwobits/clapham", tag = "v0.6.0", version = "0.6.0" }

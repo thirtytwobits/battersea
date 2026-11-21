@@ -364,7 +364,7 @@ impl Exporter {
             self.deliver(signal, body),
         )
         .await
-        .map_err(|_| Error::Delivery(format!("OTLP {signal}: deadline exceeded")))?
+        .map_err(|_elapsed| Error::Delivery(format!("OTLP {signal}: deadline exceeded")))?
     }
     async fn deliver(&self, signal: &str, body: Vec<u8>) -> Result<()> {
         let mut response = self

@@ -14,7 +14,6 @@ pub(crate) struct RemoteUpdate {
     pub raw: Value,
     pub expires_at: Option<DateTime<Utc>>,
     pub expiry_is_estimate: bool,
-    pub failure: Option<String>,
     pub progress: Option<f32>,
 }
 #[allow(clippy::double_must_use)] // async_trait annotates its boxed futures.
@@ -24,13 +23,9 @@ pub(crate) trait JobTransport: Send + Sync {
     fn backend(&self) -> &MediaBackendConfig;
     /// The adapter's clock; it judges output expiry, provider delays and cleanup deadlines.
     fn clock(&self) -> Arc<dyn battersea_model::Clock>;
-    fn decode(
-        &self,
-        raw: Value,
-        submission: bool,
-    ) -> Result<RemoteUpdate, EngineAdapterRequestError>;
-    async fn poll(&self, id: &str) -> Result<RemoteUpdate, EngineAdapterRequestError>;
-    async fn cancel(&self, id: &str) -> Result<MediaJobStatus, EngineAdapterRequestError>;
+    fn decode(&self, raw: Value, submission: bool) -> Result<RemoteUpdate, Failure>;
+    async fn poll(&self, id: &str) -> Result<RemoteUpdate, Failure>;
+    async fn cancel(&self, id: &str) -> Result<MediaJobStatus, Failure>;
     fn asset_auth(&self, _url: &Url) -> Option<&str> {
         None
     }
@@ -39,8 +34,8 @@ pub(crate) trait JobTransport: Send + Sync {
         _webhook: MediaWebhook<'_>,
         _secret: &str,
         _now: DateTime<Utc>,
-    ) -> Result<RemoteUpdate, EngineAdapterRequestError> {
-        Err(EngineAdapterRequestError::new(
+    ) -> Result<RemoteUpdate, Failure> {
+        Err(Failure::new(
             self.provider(),
             "Provider does not support webhooks.",
             ErrorKind::InvalidRequest,
@@ -48,9 +43,7 @@ pub(crate) trait JobTransport: Send + Sync {
     }
 }
 
-pub(crate) fn poll_policy(
-    backend: &MediaBackendConfig,
-) -> Result<MediaPollPolicy, EngineAdapterRequestError> {
+pub(crate) fn poll_policy(backend: &MediaBackendConfig) -> Result<MediaPollPolicy, Failure> {
     let option = |key: &str| {
         backend
             .options
@@ -59,11 +52,12 @@ pub(crate) fn poll_policy(
             .and_then(|v| v.as_u64().or_else(|| v.as_str()?.parse().ok()))
     };
     let missing = |key| {
-        EngineAdapterRequestError::new(
+        Failure::new(
             &backend.provider,
-            format!("Media backend must configure options.{key}."),
+            "Media backend lacks a required option.",
             ErrorKind::InvalidRequest,
         )
+        .with_context("option", key)
     };
     let interval_ms = option("pollIntervalMs").ok_or_else(|| missing("pollIntervalMs"))?;
     let retry_delay_ms = option("pollRetryDelayMs").unwrap_or(interval_ms);
@@ -75,7 +69,7 @@ pub(crate) fn poll_policy(
         max_retries: u32::try_from(
             option("maxPollRetryCount").ok_or_else(|| missing("maxPollRetryCount"))?,
         )
-        .map_err(|_| missing("maxPollRetryCount"))?,
+        .map_err(|_overflow| missing("maxPollRetryCount"))?,
     };
     policy.validate()?;
     if let Some(value) = backend.options.extra.get("maxOutputBytes") {
@@ -114,14 +108,11 @@ impl RemoteJob {
         reporter: Option<Arc<dyn MediaGenerationActivityReporter>>,
         slot_count: u8,
         timing: MediaTimingRecorder,
-    ) -> Result<Self, EngineAdapterRequestError> {
+    ) -> Result<Self, Failure> {
         let id = raw["id"]
             .as_str()
             .ok_or_else(|| {
-                EngineAdapterRequestError::invalid_response(
-                    transport.provider(),
-                    "Submission has no job identity.",
-                )
+                Failure::invalid_response(transport.provider(), "Submission has no job identity.")
             })?
             .to_owned();
         validate_id(transport.provider(), &id)?;
@@ -132,7 +123,6 @@ impl RemoteJob {
             raw: Value::Null,
             expires_at: None,
             expiry_is_estimate: false,
-            failure: None,
             progress: None,
         };
         let policy = poll_policy(transport.backend())?;
@@ -164,15 +154,12 @@ impl RemoteJob {
         let _ = job.accept(update);
         Ok(job)
     }
-    fn error(&self, kind: ErrorKind, message: impl Into<String>) -> EngineAdapterRequestError {
-        EngineAdapterRequestError::new(self.transport.provider(), message, kind)
+    fn error(&self, kind: ErrorKind, message: &'static str) -> Failure {
+        Failure::new(self.transport.provider(), message, kind)
             .with_request_id(Some(self.snapshot.id.clone()))
             .with_dispatch(DispatchState::Accepted)
     }
-    fn accept(
-        &mut self,
-        update: RemoteUpdate,
-    ) -> Result<MediaJobStatus, EngineAdapterRequestError> {
+    fn accept(&mut self, update: RemoteUpdate) -> Result<MediaJobStatus, Failure> {
         if update.id != self.snapshot.id {
             return Err(self.error(
                 ErrorKind::InvalidResponse,
@@ -199,35 +186,28 @@ impl RemoteJob {
         self.update = update;
         self.checked_status()
     }
-    fn checked_status(&self) -> Result<MediaJobStatus, EngineAdapterRequestError> {
+    fn checked_status(&self) -> Result<MediaJobStatus, Failure> {
         match self.snapshot.status {
-            MediaJobStatus::Failed => Err(self.error(
-                ErrorKind::Provider,
-                self.update
-                    .failure
-                    .as_deref()
-                    .unwrap_or("Media job failed."),
-            )),
+            MediaJobStatus::Failed => Err(self.error(ErrorKind::Provider, "Media job failed.")),
             MediaJobStatus::Cancelled => {
                 Err(self.error(ErrorKind::Cancelled, "Provider cancelled media job."))
             }
             MediaJobStatus::Expired => {
                 Err(self.error(ErrorKind::Expired, "Media job outputs expired."))
             }
-            status => Ok(status),
+            status => return Ok(status),
         }
+        // The terminal response is the provider's account of the ending.
+        .map_err(|failure| crate::http_payload::about(failure, &self.update.raw))
     }
-    pub(crate) async fn announce(
-        &self,
-        cancellation: CancellationToken,
-    ) -> Result<(), EngineAdapterRequestError> {
+    pub(crate) async fn announce(&self, cancellation: CancellationToken) -> Result<(), Failure> {
         tokio::select! {
             biased;
             _ = cancellation.cancelled() => Err(self.error(ErrorKind::Cancelled, "Media job reporting cancelled.")),
             result = self.report() => result,
         }
     }
-    async fn report(&self) -> Result<(), EngineAdapterRequestError> {
+    async fn report(&self) -> Result<(), Failure> {
         let Some(reporter) = &self.reporter else {
             return Ok(());
         };
@@ -254,7 +234,7 @@ impl RemoteJob {
         }
         Ok(())
     }
-    async fn retrieve_outputs(&mut self) -> Result<MediaRenderResult, EngineAdapterRequestError> {
+    async fn retrieve_outputs(&mut self) -> Result<MediaRenderResult, Failure> {
         if let Some(result) = &self.result {
             return Ok(result.clone());
         }
@@ -271,7 +251,10 @@ impl RemoteJob {
         let client = reqwest::Client::builder()
             .redirect(reqwest::redirect::Policy::none())
             .build()
-            .map_err(|error| self.error(ErrorKind::Retrieval, error.to_string()))?;
+            .map_err(|error| {
+                self.error(ErrorKind::Retrieval, "HTTP client could not be built.")
+                    .caused_by(&error.without_url())
+            })?;
         let mut remaining = self
             .transport
             .backend()
@@ -295,8 +278,9 @@ impl RemoteJob {
             }
             let clock = self.transport.clock();
             let download = async {
-                let mut url = Url::parse(&asset.url).map_err(|_| {
+                let mut url = Url::parse(&asset.url).map_err(|cause| {
                     self.error(ErrorKind::InvalidResponse, "Invalid media output URL.")
+                        .caused_by(&cause)
                 })?;
                 let mut redirects = 0;
                 let response = loop {
@@ -328,10 +312,10 @@ impl RemoteJob {
                     } else if let Some(key) = self.transport.asset_auth(&url) {
                         request = request.bearer_auth(key);
                     }
-                    let response = request
-                        .send()
-                        .await
-                        .map_err(|error| self.error(ErrorKind::Retrieval, error.to_string()))?;
+                    let response = request.send().await.map_err(|error| {
+                        self.error(ErrorKind::Retrieval, "Media output request failed.")
+                            .caused_by(&error.without_url())
+                    })?;
                     if response.status().is_redirection() {
                         if redirects >= 5 {
                             return Err(
@@ -345,8 +329,9 @@ impl RemoteJob {
                             .ok_or_else(|| {
                                 self.error(ErrorKind::Retrieval, "Output redirect has no location.")
                             })?;
-                        let next = url.join(location).map_err(|_| {
+                        let next = url.join(location).map_err(|cause| {
                             self.error(ErrorKind::Retrieval, "Invalid output redirect.")
+                                .caused_by(&cause)
                         })?;
                         if url.scheme() == "https" && next.scheme() != "https" {
                             return Err(
@@ -367,10 +352,7 @@ impl RemoteJob {
                             } else {
                                 ErrorKind::Retrieval
                             },
-                            format!(
-                                "Media output retrieval failed with HTTP {}.",
-                                response.status().as_u16()
-                            ),
+                            "Media output retrieval was rejected.",
                         )
                         .with_status_code(response.status().as_u16()));
                 }
@@ -398,8 +380,10 @@ impl RemoteJob {
                 let mut bytes = Vec::new();
                 let mut stream = response.bytes_stream();
                 while let Some(chunk) = stream.next().await {
-                    let chunk = chunk
-                        .map_err(|error| self.error(ErrorKind::Retrieval, error.to_string()))?;
+                    let chunk = chunk.map_err(|error| {
+                        self.error(ErrorKind::Retrieval, "Media output stream failed.")
+                            .caused_by(&error.without_url())
+                    })?;
                     // Reserve enough space for the returned base64 representation before retaining bytes.
                     if bytes.len().saturating_add(chunk.len()).saturating_add(2) / 3 * 4
                         > remaining.saturating_sub(mime.len() + 13)
@@ -467,10 +451,7 @@ impl MediaJob for RemoteJob {
     fn poll_policy(&self) -> MediaPollPolicy {
         self.policy
     }
-    async fn poll(
-        &mut self,
-        cancellation: CancellationToken,
-    ) -> Result<MediaJobStatus, EngineAdapterRequestError> {
+    async fn poll(&mut self, cancellation: CancellationToken) -> Result<MediaJobStatus, Failure> {
         if self.snapshot.status.is_terminal() {
             return self.checked_status();
         }
@@ -480,7 +461,7 @@ impl MediaJob for RemoteJob {
             result = self.transport.poll(&self.snapshot.id) => match result {
                 Ok(update) => update,
                 Err(error) => {
-                    if error.classification == ErrorKind::Expired { self.snapshot.status = MediaJobStatus::Expired; }
+                    if error.kind == ErrorKind::Expired { self.snapshot.status = MediaJobStatus::Expired; }
                     return Err(error.with_request_id(Some(self.snapshot.id.clone())).with_dispatch(DispatchState::Accepted));
                 }
             },
@@ -496,14 +477,14 @@ impl MediaJob for RemoteJob {
     async fn retrieve(
         &mut self,
         cancellation: CancellationToken,
-    ) -> Result<MediaRenderResult, EngineAdapterRequestError> {
+    ) -> Result<MediaRenderResult, Failure> {
         tokio::select! {
             biased;
             _ = cancellation.cancelled() => Err(self.error(ErrorKind::Cancelled, "Media retrieval cancelled.")),
             result = self.retrieve_outputs() => result,
         }
     }
-    async fn cancel(&mut self) -> Result<(), EngineAdapterRequestError> {
+    async fn cancel(&mut self) -> Result<(), Failure> {
         if self.snapshot.status.is_terminal() {
             return Ok(());
         }
@@ -524,7 +505,7 @@ impl MediaJob for RemoteJob {
         webhook: MediaWebhook<'_>,
         secret: &str,
         now: DateTime<Utc>,
-    ) -> Result<MediaJobStatus, EngineAdapterRequestError> {
+    ) -> Result<MediaJobStatus, Failure> {
         let update = self.transport.webhook(webhook, secret, now)?;
         self.accept(update)
     }
@@ -547,13 +528,13 @@ impl Drop for RemoteJob {
     }
 }
 
-pub(crate) fn validate_id(provider: &str, id: &str) -> Result<(), EngineAdapterRequestError> {
+pub(crate) fn validate_id(provider: &str, id: &str) -> Result<(), Failure> {
     if id.is_empty()
         || !id
             .bytes()
             .all(|c| c.is_ascii_alphanumeric() || matches!(c, b'-' | b'_'))
     {
-        return Err(EngineAdapterRequestError::invalid_response(
+        return Err(Failure::invalid_response(
             provider,
             "Invalid provider job identity.",
         ));
@@ -565,13 +546,13 @@ pub(crate) async fn json_response(
     provider: &str,
     response: reqwest::Response,
     clock: &dyn battersea_model::Clock,
-) -> Result<Value, EngineAdapterRequestError> {
+) -> Result<Value, Failure> {
     use crate::http_payload::BoundedResponse as _;
     let status = response.status();
     if !status.is_success() {
-        let mut error = EngineAdapterRequestError::new(
+        let mut error = Failure::new(
             provider,
-            format!("Media job operation failed with HTTP {}.", status.as_u16()),
+            "The provider rejected the media job operation.",
             match status.as_u16() {
                 401 => ErrorKind::Authentication,
                 403 => ErrorKind::Permission,
@@ -600,14 +581,44 @@ pub(crate) async fn json_response(
                         })
                 })
                 .ok_or_else(|| {
-                    EngineAdapterRequestError::invalid_response(
-                        provider,
-                        "Invalid Retry-After header.",
-                    )
+                    Failure::invalid_response(provider, "Invalid Retry-After header.")
                 })?;
-            error.retry_after_ms = Some(delay);
+            error.exchange.retry_after_ms = Some(delay);
+        }
+        error.reporter = battersea_model::Reporter::Provider;
+        match response.bounded_text().await {
+            Ok(body) => {
+                if let Some(native) = crate::http_payload::rejection_body(body) {
+                    error.native = battersea_model::Detail::Present(native);
+                }
+            }
+            Err(unreadable) => error = error.with_cause(unreadable),
         }
         return Err(error);
     }
     response.bounded_json().await
+}
+
+#[cfg(test)]
+mod response_tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn a_rejection_with_an_unreadable_body_keeps_its_status_and_delay() {
+        let response = axum::http::Response::builder()
+            .status(429)
+            .header("retry-after", "7")
+            .body(vec![0xff])
+            .unwrap();
+        let clock = battersea_model::ManualClock::new(0);
+        let error = json_response("fixture", response.into(), &clock)
+            .await
+            .unwrap_err();
+        assert_eq!(error.kind, ErrorKind::RateLimit);
+        assert_eq!(error.exchange.status, Some(429));
+        assert_eq!(error.exchange.retry_after_ms, Some(7000));
+        assert!(
+            matches!(&error.cause, Some(battersea_model::Cause::Failure(cause)) if cause.message == "Provider response is not UTF-8.")
+        );
+    }
 }

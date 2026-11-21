@@ -1,4 +1,6 @@
 pub mod battersea_runtime
+pub use battersea_runtime::Failure
+pub use battersea_runtime::FailureDisclosure
 pub use battersea_runtime::FlowFailurePolicy
 pub mod battersea_runtime::checkpoint
 pub struct battersea_runtime::checkpoint::SchedulerCheckpoint
@@ -335,6 +337,7 @@ pub battersea_runtime::pump::PumpError::ProducerStopped
 pub battersea_runtime::pump::PumpError::Serialization(alloc::string::String)
 impl battersea_runtime::pump::PumpError
 pub fn battersea_runtime::pump::PumpError::code(&self) -> &'static str
+pub fn battersea_runtime::pump::PumpError::failure(&self) -> battersea_failure::Failure
 impl core::clone::Clone for battersea_runtime::pump::PumpError
 pub fn battersea_runtime::pump::PumpError::clone(&self) -> Self
 impl core::cmp::Eq for battersea_runtime::pump::PumpError
@@ -577,6 +580,7 @@ pub battersea_runtime::recovery::RecoveryError::Terminal
 pub battersea_runtime::recovery::RecoveryError::UnresolvedEffects(alloc::vec::Vec<alloc::string::String>)
 impl battersea_runtime::recovery::RecoveryError
 pub fn battersea_runtime::recovery::RecoveryError::code(&self) -> &'static str
+pub fn battersea_runtime::recovery::RecoveryError::failure(&self) -> battersea_failure::Failure
 impl core::clone::Clone for battersea_runtime::recovery::RecoveryError
 pub fn battersea_runtime::recovery::RecoveryError::clone(&self) -> Self
 impl core::cmp::Eq for battersea_runtime::recovery::RecoveryError
@@ -1352,7 +1356,7 @@ pub enum battersea_runtime::ProviderEvent
 pub battersea_runtime::ProviderEvent::Data
 pub battersea_runtime::ProviderEvent::Data::value: serde_json::value::Value
 pub battersea_runtime::ProviderEvent::Failure
-pub battersea_runtime::ProviderEvent::Failure::message: alloc::string::String
+pub battersea_runtime::ProviderEvent::Failure::failure: battersea_failure::Failure
 pub battersea_runtime::ProviderEvent::RecoverableFailure
 pub battersea_runtime::ProviderEvent::RecoverableFailure::failure: battersea_runtime::RecoverableNodeFailure
 pub battersea_runtime::ProviderEvent::Signal
@@ -1634,7 +1638,7 @@ pub type battersea_runtime::HandlerRegistry<H>::Output = T
 impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_runtime::HandlerRegistry<H> where T: ?core::marker::Sized
 pub struct battersea_runtime::RecoverableNodeFailure
 pub battersea_runtime::RecoverableNodeFailure::code: alloc::string::String
-pub battersea_runtime::RecoverableNodeFailure::message: alloc::string::String
+pub battersea_runtime::RecoverableNodeFailure::failure: battersea_failure::Failure
 impl battersea_runtime::RecoverableNodeFailure
 pub fn battersea_runtime::RecoverableNodeFailure::validate(&self) -> bool
 impl core::clone::Clone for battersea_runtime::RecoverableNodeFailure
@@ -2049,15 +2053,16 @@ pub fn battersea_runtime::ActivationHost::retain_execution_phase<'life0, 'life1,
 pub fn battersea_runtime::ActivationHost::run_activation<'life0, 'life1, 'life2, 'async_trait>(&'life0 self, &'life1 mut Self::State, &'life2 str, std::collections::hash::map::HashMap<alloc::string::String, serde_json::value::Value>, tokio_util::sync::cancellation_token::CancellationToken) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<(), Self::Error>> + core::marker::Send + 'async_trait)>> where Self: core::marker::Sync + 'async_trait, 'life0: 'async_trait, 'life1: 'async_trait, 'life2: 'async_trait
 pub fn battersea_runtime::ActivationHost::validate_activation(&self, &Self::State) -> core::result::Result<(), Self::Error>
 pub trait battersea_runtime::ExecutionError: core::error::Error + core::marker::Send + core::marker::Sync + 'static
-pub fn battersea_runtime::ExecutionError::cancelled(&'static str, impl core::convert::Into<alloc::string::String>) -> Self
+pub fn battersea_runtime::ExecutionError::cancelled(&'static str, impl core::convert::Into<battersea_failure::Failure>) -> Self
 pub fn battersea_runtime::ExecutionError::code(&self) -> &str
-pub fn battersea_runtime::ExecutionError::internal(impl core::convert::Into<alloc::string::String>) -> Self
-pub fn battersea_runtime::ExecutionError::interrupted(&'static str, impl core::convert::Into<alloc::string::String>) -> Self
-pub fn battersea_runtime::ExecutionError::invalid_request(&'static str, impl core::convert::Into<alloc::string::String>) -> Self
+pub fn battersea_runtime::ExecutionError::failure(&self) -> &battersea_failure::Failure
+pub fn battersea_runtime::ExecutionError::internal(impl core::convert::Into<battersea_failure::Failure>) -> Self
+pub fn battersea_runtime::ExecutionError::interrupted(&'static str, impl core::convert::Into<battersea_failure::Failure>) -> Self
+pub fn battersea_runtime::ExecutionError::invalid_request(&'static str, impl core::convert::Into<battersea_failure::Failure>) -> Self
 pub fn battersea_runtime::ExecutionError::message(&self) -> &str
 pub fn battersea_runtime::ExecutionError::reason_code(&self) -> core::option::Option<&str>
 pub fn battersea_runtime::ExecutionError::recoverable_node_failure(&self) -> core::option::Option<battersea_runtime::RecoverableNodeFailure>
-pub fn battersea_runtime::ExecutionError::recovery_required(&'static str, impl core::convert::Into<alloc::string::String>) -> Self where Self: core::marker::Sized
+pub fn battersea_runtime::ExecutionError::recovery_required(&'static str, impl core::convert::Into<battersea_failure::Failure>) -> Self where Self: core::marker::Sized
 pub trait battersea_runtime::ExecutionHost: core::marker::Sized + core::marker::Send + core::marker::Sync
 pub type battersea_runtime::ExecutionHost::Error: battersea_runtime::ExecutionError
 pub type battersea_runtime::ExecutionHost::State: core::ops::deref::Deref<Target = battersea_runtime::SchedulerState> + core::ops::deref::DerefMut + core::marker::Send + core::marker::Sync
@@ -2086,6 +2091,7 @@ pub fn battersea_runtime::ExecutionHost::execute_flow_node<'life0, 'life1, 'life
 pub fn battersea_runtime::ExecutionHost::execute_ready_inline<'life0, 'life1, 'life2, 'async_trait>(&'life0 self, &'life1 mut Self::State, &'life2 tokio_util::sync::cancellation_token::CancellationToken) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<bool, Self::Error>> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait, 'life1: 'async_trait, 'life2: 'async_trait
 pub fn battersea_runtime::ExecutionHost::execute_sink_port<'life0, 'life1, 'life2, 'life3, 'async_trait>(&'life0 self, &'life1 mut Self::State, &'life2 battersea_flow::types::FlowNode, &'life3 str, battersea_runtime::retention::Retained<battersea_runtime::Token>) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<(), Self::Error>> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait, 'life1: 'async_trait, 'life2: 'async_trait, 'life3: 'async_trait
 pub fn battersea_runtime::ExecutionHost::execution_event<'life0, 'life1, 'async_trait>(&'life0 self, &'life1 Self::State, battersea_runtime::ExecutionEvent) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = ()> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait, 'life1: 'async_trait
+pub fn battersea_runtime::ExecutionHost::failure_disclosure(&self) -> battersea_failure::FailureDisclosure
 pub fn battersea_runtime::ExecutionHost::finish_node_phase<'life0, 'life1, 'life2, 'async_trait>(&'life0 self, &'life1 mut Self::State, &'life2 battersea_flow::types::FlowNode, battersea_flow::execution::FlowPortPhase) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<(), Self::Error>> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait, 'life1: 'async_trait, 'life2: 'async_trait
 pub fn battersea_runtime::ExecutionHost::finish_sink_if_ready<'life0, 'life1, 'life2, 'async_trait>(&'life0 self, &'life1 mut Self::State, &'life2 battersea_flow::types::FlowNode) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<(), Self::Error>> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait, 'life1: 'async_trait, 'life2: 'async_trait
 pub fn battersea_runtime::ExecutionHost::flow_token_excerpt(&serde_json::value::Value) -> core::option::Option<alloc::string::String>
@@ -2099,12 +2105,13 @@ pub fn battersea_runtime::ExecutionHost::mark_node_signal_ports_settled_except(&
 pub fn battersea_runtime::ExecutionHost::materialize_snapshot_sources<'life0, 'life1, 'life2, 'life3, 'async_trait>(&'life0 self, &'life1 mut Self::State, &'life2 str, &'life3 tokio_util::sync::cancellation_token::CancellationToken) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<(), Self::Error>> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait, 'life1: 'async_trait, 'life2: 'async_trait, 'life3: 'async_trait
 pub fn battersea_runtime::ExecutionHost::next_provider_event<'life0, 'life1, 'life2, 'async_trait>(&'life0 self, &'life1 mut Self::State, &'life2 tokio_util::sync::cancellation_token::CancellationToken) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<(), Self::Error>> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait, 'life1: 'async_trait, 'life2: 'async_trait
 pub fn battersea_runtime::ExecutionHost::node_is_disabled_output_capable(&self, &Self::State, &battersea_flow::types::FlowNode, &battersea_flow::types::FlowNodeDefinition) -> bool
+pub fn battersea_runtime::ExecutionHost::observe_failure<'life0, 'life1, 'life2, 'life3, 'life4, 'async_trait>(&'life0 self, &'life1 Self::State, &'life2 str, &'life3 str, &'life4 battersea_failure::Failure) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<(), Self::Error>> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait, 'life1: 'async_trait, 'life2: 'async_trait, 'life3: 'async_trait, 'life4: 'async_trait
 pub fn battersea_runtime::ExecutionHost::observe_token(&self, &Self::State, &str, &str, &battersea_runtime::Token)
 pub fn battersea_runtime::ExecutionHost::prepare_logic_outputs(&self, &battersea_flow::types::FlowNode, &battersea_flow::types::FlowNodeDefinition, &[battersea_flow::types::FlowActionPortDefinition], &[battersea_flow::types::FlowSignalPortDefinition], &std::collections::hash::set::HashSet<alloc::string::String>, bool) -> core::result::Result<alloc::vec::Vec<alloc::string::String>, Self::Error>
 pub fn battersea_runtime::ExecutionHost::progress_delivery<'life0, 'life1, 'life2, 'async_trait>(&'life0 self, &'life1 mut Self::State, &'life2 tokio_util::sync::cancellation_token::CancellationToken) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<bool, Self::Error>> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait, 'life1: 'async_trait, 'life2: 'async_trait
 pub fn battersea_runtime::ExecutionHost::publish_execution_record<'life0, 'life1, 'life2, 'async_trait>(&'life0 self, &'life1 Self::State, &'life2 str, battersea_runtime::EventKind, alloc::string::String, core::option::Option<serde_json::value::Value>) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = ()> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait, 'life1: 'async_trait, 'life2: 'async_trait
 pub fn battersea_runtime::ExecutionHost::record_logic_action_signal(&self, &mut Self::State, &battersea_flow::types::FlowNode, &str)
-pub fn battersea_runtime::ExecutionHost::request_activation_cancel(&self, &mut Self::State, &str) -> core::result::Result<(), Self::Error>
+pub fn battersea_runtime::ExecutionHost::request_activation_cancel(&self, &mut Self::State, &'static str) -> core::result::Result<(), Self::Error>
 pub fn battersea_runtime::ExecutionHost::resolve_parameter_write<'life0, 'life1, 'life2, 'life3, 'life4, 'async_trait>(&'life0 self, &'life1 Self::State, &'life2 battersea_flow::types::FlowNode, &'life3 battersea_flow::types::FlowParameterDefinition, &'life4 serde_json::value::Value) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<serde_json::value::Value, Self::Error>> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait, 'life1: 'async_trait, 'life2: 'async_trait, 'life3: 'async_trait, 'life4: 'async_trait
 pub fn battersea_runtime::ExecutionHost::start_provider<'life0, 'life1, 'life2, 'async_trait>(&'life0 self, &'life1 mut Self::State, &'life2 str, impl 'async_trait + futures_core::stream::Stream<Item = battersea_runtime::ProviderEvent> + core::marker::Send + 'static) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<(), Self::Error>> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait, 'life1: 'async_trait, 'life2: 'async_trait
 pub fn battersea_runtime::ExecutionHost::take_flow_input_token(&self, &mut Self::State, &str, &str) -> core::result::Result<battersea_runtime::retention::Retained<battersea_runtime::Token>, Self::Error>

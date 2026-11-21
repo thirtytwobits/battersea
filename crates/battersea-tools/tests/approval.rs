@@ -30,10 +30,7 @@ struct Effect {
 }
 #[async_trait]
 impl EngineLocalToolExecutor for Effect {
-    async fn call(
-        &self,
-        call: EngineLocalToolCall,
-    ) -> Result<EngineLocalToolResult, EngineAdapterRequestError> {
+    async fn call(&self, call: EngineLocalToolCall) -> Result<EngineLocalToolResult, Failure> {
         self.calls.fetch_add(1, Ordering::SeqCst);
         if self.wait {
             std::future::pending::<()>().await;
@@ -78,10 +75,10 @@ fn call(id: &str, value: serde_json::Value) -> EngineLocalToolCall {
         arguments: json!({"value":value}),
     }
 }
-fn refused(error: EngineAdapterRequestError, code: ToolCode) {
+fn refused(error: Failure, code: ToolCode) {
     assert_eq!(error.tool_code, Some(code));
     assert_eq!(
-        error.tool_call.unwrap().outcome,
+        error.tool_call.clone().unwrap().outcome,
         ToolCallOutcome::NotDispatched
     );
 }
@@ -302,8 +299,11 @@ async fn cancelled_and_timed_out_executions_cannot_be_repeated() {
             assert!(!task.is_finished());
             clock.advance(Duration::from_millis(1));
             let error = task.await.unwrap().unwrap_err();
-            assert_eq!(error.classification, ErrorKind::Timeout);
-            assert_eq!(error.tool_call.unwrap().outcome, ToolCallOutcome::Uncertain);
+            assert_eq!(error.kind, ErrorKind::Timeout);
+            assert_eq!(
+                error.tool_call.clone().unwrap().outcome,
+                ToolCallOutcome::Uncertain
+            );
         } else {
             task.abort();
             assert!(task.await.unwrap_err().is_cancelled());
@@ -350,7 +350,10 @@ async fn approval_keeps_registry_output_validation_and_snapshot() {
     assert_eq!(executor.definitions().len(), 1);
     let error = executor.call(call("one", json!(1))).await.unwrap_err();
     assert_eq!(error.tool_code, Some(ToolCode::InvalidToolResult));
-    assert_eq!(error.tool_call.unwrap().outcome, ToolCallOutcome::Completed);
+    assert_eq!(
+        error.tool_call.clone().unwrap().outcome,
+        ToolCallOutcome::Completed
+    );
     refused(
         executor.call(call("one", json!(1))).await.unwrap_err(),
         ToolCode::InvalidToolCallId,

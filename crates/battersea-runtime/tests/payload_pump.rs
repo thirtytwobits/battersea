@@ -111,7 +111,7 @@ async fn provider_event_variants_round_trip_without_losing_metadata() {
             port: "done".into(),
         },
         ProviderEvent::Failure {
-            message: "provider failed".into(),
+            failure: "provider failed".into(),
         },
     ];
     let expected = serde_json::to_value(&input).unwrap();

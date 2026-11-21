@@ -1,6 +1,6 @@
 //! Copyright (c) Scott A Dixon
 //! Tool output admitted independently from its provider representation.
-use crate::{EngineAdapterRequestError, ErrorKind, ToolCode};
+use crate::{ErrorKind, Failure, ToolCode};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Map, Value};
 
@@ -108,7 +108,7 @@ impl EngineLocalToolResult {
     ///
     /// Text, resource references and embedded text retain their order. Binary content requires
     /// a provider-specific content translation and is refused before the next provider request.
-    pub fn provider_content(&self) -> Result<Value, EngineAdapterRequestError> {
+    pub fn provider_content(&self) -> Result<Value, Failure> {
         match self {
             Self::Json { content } => Ok(content.clone()),
             Self::Content(result) => {
@@ -123,7 +123,7 @@ impl EngineLocalToolResult {
                             }
                     )
                 }) {
-                    return Err(EngineAdapterRequestError::new(
+                    return Err(Failure::new(
                         "tools",
                         "The tool returned content unsupported by the text tool conversation.",
                         ErrorKind::InvalidResponse,

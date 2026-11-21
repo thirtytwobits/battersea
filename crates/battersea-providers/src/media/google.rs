@@ -9,7 +9,7 @@ use super::{
     MediaGenerationActivityReporter, MediaGenerationActivityUpdate, MediaGenerationAdapter,
     MediaGenerationBatchReporter, MediaRenderRequest, MediaRenderResult, MediaTimingRecorder,
 };
-use crate::adapter::error::EngineAdapterRequestError;
+use crate::adapter::error::Failure;
 use crate::http_payload::BoundedResponse as _;
 use async_trait::async_trait;
 use battersea_model::media::ControllerActivityState;
@@ -24,7 +24,7 @@ const PROVIDER: &str = "google";
 pub(crate) fn create_google_media_generator(
     backend: MediaBackendConfig,
     clock: Arc<dyn battersea_model::Clock>,
-) -> Result<Arc<dyn MediaGenerationAdapter>, EngineAdapterRequestError> {
+) -> Result<Arc<dyn MediaGenerationAdapter>, Failure> {
     backend
         .options
         .timeout_ms
@@ -36,7 +36,7 @@ pub(crate) fn create_google_media_generator(
         .retry(reqwest::retry::never())
         .redirect(reqwest::redirect::Policy::none())
         .build()
-        .map_err(|error| EngineAdapterRequestError::transport(PROVIDER, error.to_string()))?;
+        .map_err(|error| crate::http_payload::client_failure(PROVIDER, error))?;
     Ok(Arc::new(GoogleMediaGenerator {
         client,
         clock,
@@ -67,10 +67,7 @@ impl MediaGenerationAdapter for GoogleMediaGenerator {
         self.clock.clone()
     }
 
-    fn prepare(
-        &self,
-        request: MediaRenderRequest,
-    ) -> Result<super::PreparedMediaRequest, EngineAdapterRequestError> {
+    fn prepare(&self, request: MediaRenderRequest) -> Result<super::PreparedMediaRequest, Failure> {
         super::prepare_media_request(self.backend(), request)
     }
 
@@ -80,7 +77,7 @@ impl MediaGenerationAdapter for GoogleMediaGenerator {
         cancellation: CancellationToken,
         activity_reporter: Option<Arc<dyn MediaGenerationActivityReporter>>,
         batch_reporter: Option<Arc<dyn super::MediaGenerationBatchReporter>>,
-    ) -> Result<super::MediaSubmission, EngineAdapterRequestError> {
+    ) -> Result<super::MediaSubmission, Failure> {
         self.render(prepared, cancellation, activity_reporter, batch_reporter)
             .await
             .map(super::MediaSubmission::Complete)
@@ -93,17 +90,17 @@ impl GoogleMediaGenerator {
         cancellation: CancellationToken,
         activity_reporter: Option<Arc<dyn MediaGenerationActivityReporter>>,
         _batch_reporter: Option<Arc<dyn MediaGenerationBatchReporter>>,
-    ) -> Result<MediaRenderResult, EngineAdapterRequestError> {
+    ) -> Result<MediaRenderResult, Failure> {
         let request = prepared.render_input.clone();
         if request.kind != MediaKind::Image {
-            return Err(EngineAdapterRequestError::new(
+            return Err(Failure::new(
                 PROVIDER,
                 "Gemini media backend only supports image generation.",
                 "invalid_request",
             ));
         }
         if !request.references.is_empty() {
-            return Err(EngineAdapterRequestError::new(
+            return Err(Failure::new(
                 PROVIDER,
                 "Gemini image references require a persisted interaction and are not supported by this one-shot backend.",
                 "invalid_request",
@@ -149,18 +146,17 @@ impl GoogleMediaGenerator {
                 } else {
                     request.header("x-goog-api-key", &self.api_key)
                 };
-                let response = request.send().await.map_err(|error| {
-                    EngineAdapterRequestError::transport(PROVIDER, error.to_string())
-                })?;
+                let response = request
+                    .send()
+                    .await
+                    .map_err(|error| crate::http_payload::send_failure(PROVIDER, error))?;
                 if !response.status().is_success() {
                     return Err(normalize_google_http_error(
                         response.status().as_u16(),
-                        response.bounded_text().await.ok(),
+                        response.bounded_text().await?,
                     ));
                 }
-                response.bounded_json().await.map_err(|error| {
-                    EngineAdapterRequestError::invalid_response(PROVIDER, error.to_string())
-                })
+                response.bounded_json().await
             }),
         )
         .await?;
@@ -196,21 +192,22 @@ impl GoogleMediaGenerator {
     }
 }
 
-fn missing_google_media(field: &str) -> EngineAdapterRequestError {
-    EngineAdapterRequestError::new(
+fn missing_google_media(field: &str) -> Failure {
+    Failure::new(
         PROVIDER,
-        format!("Gemini media backend must configure {field}."),
+        "Gemini media backend lacks a required field.",
         "invalid_request",
     )
+    .with_context("field", field)
 }
 
 pub(crate) fn build_interaction_body(
     backend: &MediaBackendConfig,
     request: &MediaRenderRequest,
-) -> Result<Value, EngineAdapterRequestError> {
+) -> Result<Value, Failure> {
     let prompt = request.prompt_text.trim();
     if prompt.is_empty() {
-        return Err(EngineAdapterRequestError::new(
+        return Err(Failure::new(
             PROVIDER,
             "Gemini image prompt text must not be empty.",
             "invalid_request",
@@ -269,9 +266,7 @@ fn resolve_google_base_url(endpoint: &str) -> String {
     endpoint.trim().trim_end_matches('/').to_string()
 }
 
-fn resolve_google_api_key(
-    backend: &MediaBackendConfig,
-) -> Result<String, EngineAdapterRequestError> {
+fn resolve_google_api_key(backend: &MediaBackendConfig) -> Result<String, Failure> {
     let env_var = backend.auth.api_key_env.as_str();
     if !env_var.is_empty() {
         if let Ok(value) = std::env::var(env_var) {
@@ -288,36 +283,29 @@ fn resolve_google_api_key(
     {
         return Ok(value.trim().to_string());
     }
-    Err(EngineAdapterRequestError::transport(
+    Err(Failure::transport(
         PROVIDER,
-        format!(
-            "Gemini media backend \"{}\" has no API key. Set {} or configure auth.apiKey.",
-            backend.id,
-            if env_var.is_empty() {
-                "GOOGLE_API_KEY"
-            } else {
-                env_var
-            }
-        ),
+        "Gemini media backend has no API key: set the named variable or configure auth.apiKey.",
+    )
+    .with_context("backend", backend.id.as_str())
+    .with_context(
+        "variable",
+        if env_var.is_empty() {
+            "GOOGLE_API_KEY"
+        } else {
+            env_var
+        },
     ))
 }
 
-fn normalize_google_http_error(status: u16, body: Option<String>) -> EngineAdapterRequestError {
-    let message = body
-        .as_deref()
-        .and_then(|raw| serde_json::from_str::<Value>(raw).ok())
-        .and_then(|value| {
-            value
-                .get("error")?
-                .get("message")?
-                .as_str()
-                .map(ToOwned::to_owned)
-        })
-        .or(body)
-        .unwrap_or_else(|| format!("Gemini image request failed with HTTP {status}."));
-    let mut error = EngineAdapterRequestError::transport(PROVIDER, message);
-    error.status_code = Some(status);
-    error
+/// An image request the provider rejected, with the provider's body as native detail.
+fn normalize_google_http_error(status: u16, body: String) -> Failure {
+    let mut error = Failure::transport(PROVIDER, "Gemini rejected the image request.");
+    error.exchange.status = Some(status);
+    match crate::http_payload::rejection_body(body) {
+        Some(native) => error.with_native(battersea_model::Reporter::Provider, native),
+        None => error,
+    }
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -338,12 +326,9 @@ struct GeminiOutputImage {
 fn interaction_to_asset(
     response: &GeminiInteractionResponse,
     default_mime_type: &str,
-) -> Result<MediaAsset, EngineAdapterRequestError> {
+) -> Result<MediaAsset, Failure> {
     let image = response.output_image.as_ref().ok_or_else(|| {
-        EngineAdapterRequestError::invalid_response(
-            PROVIDER,
-            "Gemini interaction did not contain output_image.",
-        )
+        Failure::invalid_response(PROVIDER, "Gemini interaction did not contain output_image.")
     })?;
     let mime_type = image.mime_type.as_deref().unwrap_or(default_mime_type);
     Ok(MediaAsset {
@@ -447,6 +432,6 @@ mod tests {
             Ok(_) => panic!("missing key should fail"),
             Err(error) => error,
         };
-        assert_eq!(&*error.provider, PROVIDER);
+        assert_eq!(error.origin.provider.as_deref(), Some(PROVIDER));
     }
 }

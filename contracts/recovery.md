@@ -1,6 +1,6 @@
 # Durable execution recovery
 
-Status: implemented. Execution and scheduler checkpoints use version 2.
+Status: implemented. Execution and scheduler checkpoints use version 3.
 
 An accepted run has one identity, pinned graph/catalogue/configuration revisions, versioned
 node and host state, and a revision-fenced journal. Its checkpoint contains a resumable driver
@@ -73,7 +73,7 @@ handled node again nor constructs another error token. Already consumed error de
 and settled signal/action latches remain consumed and settled. Failure identities survive
 observation attempts; observation event identities retain their attempt component.
 
-Execution and scheduler checkpoints use version 2 for failure state. Unsupported versions remain
+Execution and scheduler checkpoints use version 3 for failure state. Unsupported versions remain
 inspectable and refuse resume. Inspection cannot upgrade a journal or replace its pinned
 graph. Explicit authored-flow upgrades apply to new activations.
 

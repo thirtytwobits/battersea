@@ -105,6 +105,28 @@ impl std::fmt::Display for RecoveryError {
 impl std::error::Error for RecoveryError {}
 
 impl RecoveryError {
+    /// This failure in fixed wording, with the effects it names as context and a lower
+    /// layer's text as its cause.
+    pub fn failure(&self) -> crate::Failure {
+        let failure = |message: &'static str| crate::Failure::from(message);
+        match self {
+            Self::Missing => failure("Execution journal is unavailable."),
+            Self::Conflict => failure("Execution journal revision changed."),
+            Self::Incompatible(text) => {
+                failure("Incompatible execution journal.").caused_by_text(text)
+            }
+            Self::Invalid(text) => failure("Invalid recovery operation.").caused_by_text(text),
+            Self::Storage(text) => {
+                failure("Execution journal storage failed.").caused_by_text(text)
+            }
+            Self::UnresolvedEffects(ids) => {
+                failure("Effects require explicit resolution.").with_context("effects", ids.clone())
+            }
+            Self::CommitPending => failure("Host commit requires reconciliation."),
+            Self::Terminal => failure("Execution already has a terminal outcome."),
+            Self::Poisoned => failure("Reopen the journal after its failed write."),
+        }
+    }
     /// The [`error_codes`](crate::error_codes) code naming this failure.
     pub fn code(&self) -> &'static str {
         use crate::error_codes::*;

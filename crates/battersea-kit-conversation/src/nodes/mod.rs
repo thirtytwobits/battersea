@@ -10,8 +10,8 @@ use battersea_flow::{
     FlowNode, FlowNodeDefinition,
 };
 use battersea_model::{
-    engine::EngineChatParameters, EngineAdapter, EngineAdapterRequest, EngineAdapterRequestError,
-    EngineOperation, EngineTextStreamRequest, Message,
+    engine::EngineChatParameters, EngineAdapter, EngineAdapterRequest, EngineOperation,
+    EngineTextStreamRequest, Failure, Message,
 };
 use battersea_runtime::{error_codes, ExecutionError, RegistryBuilder, Token};
 use serde::{de::DeserializeOwned, Serialize};
@@ -75,7 +75,8 @@ pub(crate) fn text_of<E: ExecutionError>(token: &Token) -> Result<String, E> {
     prompt_fragment_text(&token.value).ok_or_else(|| {
         E::invalid_request(
             error_codes::INCOMPATIBLE_TOKEN_TYPE,
-            format!("A {} token carries no text.", token.token_type),
+            battersea_model::Failure::from("The token carries no text.")
+                .with_context("tokenType", token.token_type.as_str()),
         )
     })
 }
@@ -87,7 +88,12 @@ pub(crate) fn token<E: ExecutionError>(
 ) -> Result<Token, E> {
     Ok(Token {
         token_type: token_type.into(),
-        value: serde_json::to_value(record).map_err(|error| E::internal(error.to_string()))?,
+        value: serde_json::to_value(record).map_err(|error| {
+            E::internal(
+                battersea_model::Failure::from("The record cannot be serialised.")
+                    .caused_by(&error),
+            )
+        })?,
     })
 }
 
@@ -96,7 +102,9 @@ pub(crate) fn record<T: DeserializeOwned, E: ExecutionError>(token: &Token) -> R
     serde_json::from_value(token.value.clone()).map_err(|error| {
         E::invalid_request(
             error_codes::INCOMPATIBLE_TOKEN_TYPE,
-            format!("A {} token is malformed: {error}", token.token_type),
+            battersea_model::Failure::from("The token is malformed.")
+                .with_context("tokenType", token.token_type.as_str())
+                .caused_by(&error),
         )
     })
 }
@@ -149,7 +157,7 @@ pub(crate) fn request(
 pub(crate) async fn count(
     engine: &dyn EngineAdapter,
     messages: Vec<Message>,
-) -> Result<u64, EngineAdapterRequestError> {
+) -> Result<u64, Failure> {
     if messages.is_empty() {
         return Ok(0);
     }
@@ -161,8 +169,8 @@ pub(crate) async fn count(
 }
 
 /// A provider's refusal as the kit's `conversation.provider_failed`.
-pub(crate) fn provider_failed<E: ExecutionError>(error: &EngineAdapterRequestError) -> E {
-    E::invalid_request(codes::PROVIDER_FAILED, error.message.to_string())
+pub(crate) fn provider_failed<E: ExecutionError>(error: &Failure) -> E {
+    E::invalid_request(codes::PROVIDER_FAILED, error.clone())
 }
 
 /// What the formatter blocks bind for one turn.
@@ -182,16 +190,19 @@ pub(crate) fn render<E: ExecutionError>(
         .iter()
         .find(|candidate| candidate.name == port)
         .ok_or_else(|| {
-            E::internal(format!(
-                "{} declares no output port {port:?}.",
-                definition.class_name
-            ))
+            E::internal(
+                battersea_model::Failure::from("The definition declares no such output port.")
+                    .with_context("definition", definition.class_name.as_str())
+                    .with_context("port", port),
+            )
         })?;
     render_port_formatter(port, variant, &bindings).map_err(|error| {
-        E::internal(format!(
-            "Rendering {}.{} failed: {error}",
-            definition.class_name, port.name
-        ))
+        E::internal(
+            battersea_model::Failure::from("Rendering the output port failed.")
+                .with_context("definition", definition.class_name.as_str())
+                .with_context("port", port.name.as_str())
+                .caused_by_text(error.to_string()),
+        )
     })
 }
 
@@ -203,8 +214,11 @@ pub(crate) fn now<H: Port>(host: &H) -> Result<u64, H::Error> {
 }
 
 /// A refusal with one of the kit's codes.
-pub(crate) fn refuse<E: ExecutionError>(code: &'static str, message: impl Into<String>) -> E {
-    E::invalid_request(code, message)
+pub(crate) fn refuse<E: ExecutionError>(
+    code: &'static str,
+    failure: impl Into<battersea_model::Failure>,
+) -> E {
+    E::invalid_request(code, failure)
 }
 
 #[cfg(test)]
@@ -215,6 +229,33 @@ mod tests {
         engine::EngineBackendCapabilities, EngineAdapterDebugContext, EngineAuthConfig,
         EngineBackendConfig, EngineTextStream, Role,
     };
+
+    /// contracts/failures.md, Kits: a kit's provider failure carries the adapter's failure
+    /// unchanged, so the host holds the provider's refusal detail and its request identifier.
+    #[test]
+    fn a_provider_failure_reaches_the_host_unchanged() {
+        use battersea_kit::reference::ReferenceError;
+        use battersea_model::{ErrorKind, Reporter};
+        let mut failure = Failure::new(
+            "anthropic",
+            "Provider refused the request.",
+            ErrorKind::Refusal,
+        )
+        .with_native(
+            Reporter::Provider,
+            json!({"delta": {"stop_reason": "refusal", "stop_details": {
+                    "category": "fixture_category", "explanation": "A fixture policy applies."}}}),
+        );
+        failure.exchange.request_id = Some("req-fixture".into());
+        let error: ReferenceError = provider_failed(&failure);
+        assert_eq!(error.failure(), &failure);
+        assert_eq!(error.reason_code(), Some(codes::PROVIDER_FAILED));
+        let classified = error
+            .recoverable_node_failure()
+            .expect("a recoverable failure");
+        assert_eq!(classified.code, codes::PROVIDER_FAILED);
+        assert_eq!(classified.failure, failure);
+    }
 
     /// Counts as the built-in adapters do: the request is validated first.
     struct Validating;
@@ -234,7 +275,7 @@ mod tests {
         async fn count_text_stream_input_tokens(
             &self,
             request: EngineTextStreamRequest,
-        ) -> Result<u64, EngineAdapterRequestError> {
+        ) -> Result<u64, Failure> {
             let backend = EngineBackendConfig {
                 binding: None,
                 id: "test".into(),
@@ -266,7 +307,7 @@ mod tests {
         async fn stream_text(
             &self,
             _request: EngineTextStreamRequest,
-        ) -> Result<EngineTextStream, EngineAdapterRequestError> {
+        ) -> Result<EngineTextStream, Failure> {
             unreachable!("counting only")
         }
     }

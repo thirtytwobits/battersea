@@ -1,8 +1,6 @@
 //! Retries of immutable HTTP requests, below the conversation/tool-effect boundary.
 use crate::http_payload::BoundedResponse as _;
-use crate::{
-    EngineAdapterLogger, EngineAdapterRequestError, EngineAdapterRetryLog, EngineBackendConfig,
-};
+use crate::{EngineAdapterLogger, EngineAdapterRetryLog, EngineBackendConfig, Failure};
 use battersea_model::{
     adapter::error::{DispatchState, ErrorKind},
     Clock,
@@ -10,11 +8,11 @@ use battersea_model::{
 use reqwest::{RequestBuilder, Response};
 use std::{sync::Arc, time::Duration};
 
-pub(crate) fn validate(backend: &EngineBackendConfig) -> Result<(), EngineAdapterRequestError> {
+pub(crate) fn validate(backend: &EngineBackendConfig) -> Result<(), Failure> {
     if backend.options.max_retries.unwrap_or(0) > 0 {
         match (backend.options.retry_initial_delay_ms, backend.options.retry_max_delay_ms) {
             (Some(initial), Some(maximum)) if initial > 0 && maximum >= initial => {},
-            _ => return Err(EngineAdapterRequestError::new(&backend.provider,
+            _ => return Err(Failure::new(&backend.provider,
                 "Retries require positive retryInitialDelayMs and retryMaxDelayMs >= retryInitialDelayMs.", ErrorKind::InvalidRequest)),
         }
     }
@@ -46,13 +44,98 @@ fn retry_after(headers: &reqwest::header::HeaderMap, clock: &dyn Clock) -> Optio
     Some(date.timestamp_millis().saturating_sub(now).max(0) as u64)
 }
 
-/// The provider's own message for a refused request: the `error.message` field of its JSON
-/// error body. A rejection's body may contain credentials or prompt material, so nothing else
-/// from it reaches the failure.
-fn provider_reason(body: &str) -> Option<String> {
-    let value: serde_json::Value = serde_json::from_str(body).ok()?;
-    let message = value.get("error")?.get("message")?.as_str()?.trim();
-    (!message.is_empty()).then(|| message.to_owned())
+/// The identifier a provider issued for a request, from its response headers.
+fn request_id(headers: &reqwest::header::HeaderMap) -> Option<String> {
+    ["request-id", "x-request-id"].iter().find_map(|name| {
+        headers
+            .get(*name)
+            .and_then(|value| value.to_str().ok())
+            .map(str::to_owned)
+    })
+}
+
+/// The event that announces the identifiers `response` carries. An adapter emits it before
+/// any other event of the response, so a later failure of the stream carries them.
+pub(crate) fn opened(response: &Response) -> battersea_model::EngineTextStreamEvent {
+    battersea_model::EngineTextStreamEvent::ResponseOpened {
+        request_id: request_id(response.headers()),
+        response_id: None,
+    }
+}
+
+/// The event that announces the response identifier a provider payload holds at `id`.
+pub(crate) fn identified(
+    id: Option<&serde_json::Value>,
+) -> Option<battersea_model::EngineTextStreamEvent> {
+    let id = id?.as_str()?;
+    Some(battersea_model::EngineTextStreamEvent::ResponseOpened {
+        request_id: None,
+        response_id: Some(id.to_owned()),
+    })
+}
+
+/// The identifiers a provider issued for one exchange, kept for the failures a durable turn or
+/// step raises after the response arrives.
+#[derive(Default)]
+pub(crate) struct Identifiers {
+    request_id: Option<String>,
+    response_id: Option<String>,
+}
+impl Identifiers {
+    /// The identifiers the headers of `response` carry.
+    pub(crate) fn of(response: &Response) -> Self {
+        Self {
+            request_id: request_id(response.headers()),
+            response_id: None,
+        }
+    }
+    /// Records the response identifier a provider payload holds at `id`.
+    pub(crate) fn name(&mut self, id: Option<&serde_json::Value>) {
+        if let Some(id) = id.and_then(serde_json::Value::as_str) {
+            self.response_id = Some(id.to_owned());
+        }
+    }
+    /// Records the identifiers `event` announces and reports whether it announced any.
+    pub(crate) fn note(&mut self, event: &battersea_model::EngineTextStreamEvent) -> bool {
+        let battersea_model::EngineTextStreamEvent::ResponseOpened {
+            request_id,
+            response_id,
+        } = event
+        else {
+            return false;
+        };
+        if request_id.is_some() {
+            self.request_id.clone_from(request_id);
+        }
+        if response_id.is_some() {
+            self.response_id.clone_from(response_id);
+        }
+        true
+    }
+    /// Carries the identifiers on `failure` where the failure names none of its own.
+    pub(crate) fn stamp(&self, mut failure: battersea_model::Failure) -> battersea_model::Failure {
+        let exchange = &mut failure.exchange;
+        if exchange.request_id.is_none() {
+            exchange.request_id.clone_from(&self.request_id);
+        }
+        if exchange.response_id.is_none() {
+            exchange.response_id.clone_from(&self.response_id);
+        }
+        failure
+    }
+    /// Announces the identifiers at the head of a completed turn's events, where the registry
+    /// reads them for the failures of its own validation.
+    pub(crate) fn announce(self, events: &mut Vec<battersea_model::EngineTextStreamEvent>) {
+        if self.request_id.is_some() || self.response_id.is_some() {
+            events.insert(
+                0,
+                battersea_model::EngineTextStreamEvent::ResponseOpened {
+                    request_id: self.request_id,
+                    response_id: self.response_id,
+                },
+            );
+        }
+    }
 }
 
 /// Sends `request`, retrying safe failures with backoff timed by `clock`. The caller's operation
@@ -62,24 +145,25 @@ pub(crate) async fn send(
     backend: &EngineBackendConfig,
     logger: Option<&Arc<dyn EngineAdapterLogger>>,
     clock: &dyn Clock,
-) -> Result<Response, EngineAdapterRequestError> {
+) -> Result<Response, Failure> {
     validate(backend)?;
     // Building before sending separates malformed requests from ambiguous transport failures.
     let request =
         crate::connection::authenticate(request, backend.binding.as_ref(), &backend.auth)?;
     let (client, prepared) = request.build_split();
     let prepared = prepared.map_err(|e| {
-        EngineAdapterRequestError::new(
+        Failure::new(
             &backend.provider,
-            e.without_url().to_string(),
+            "HTTP request could not be built.",
             ErrorKind::InvalidRequest,
         )
+        .caused_by(&e.without_url())
     })?;
     let retrieval = prepared.method() == reqwest::Method::GET;
     let retries = backend.options.max_retries.unwrap_or(0);
     for retry in 0..=retries {
         let attempt = prepared.try_clone().ok_or_else(|| {
-            EngineAdapterRequestError::new(
+            Failure::new(
                 &backend.provider,
                 "Request body cannot be replayed.",
                 ErrorKind::InvalidRequest,
@@ -96,31 +180,19 @@ pub(crate) async fn send(
                     500..=599 => ErrorKind::Server,
                     _ => ErrorKind::Request,
                 };
-                let request_id = ["request-id", "x-request-id"].iter().find_map(|name| {
-                    response
-                        .headers()
-                        .get(*name)
-                        .and_then(|v| v.to_str().ok())
-                        .map(str::to_owned)
-                });
+                let request_id = request_id(response.headers());
                 let delay_named = response
                     .headers()
                     .contains_key(reqwest::header::RETRY_AFTER);
                 let retry_after_ms = retry_after(response.headers(), clock);
-                let reason = response
+                // An unreadable body leaves the status as the whole account of the rejection.
+                let body = response
                     .bounded_text()
                     .await
-                    .ok()
-                    .as_deref()
-                    .and_then(provider_reason);
-                let mut error = EngineAdapterRequestError::new(
+                    .map(crate::http_payload::rejection_body);
+                let mut error = Failure::new(
                     &backend.provider,
-                    match reason {
-                        Some(reason) => {
-                            format!("Provider HTTP request failed with status {status}: {reason}")
-                        }
-                        None => format!("Provider HTTP request failed with status {status}."),
-                    },
+                    "Provider rejected the HTTP request.",
                     classification,
                 )
                 .with_status_code(status)
@@ -129,11 +201,17 @@ pub(crate) async fn send(
                 } else {
                     DispatchState::Unknown
                 });
-                error.request_id = request_id.map(String::into_boxed_str);
-                error.retry_after_ms = retry_after_ms;
-                if delay_named && error.retry_after_ms.is_none() {
+                error.reporter = battersea_model::Reporter::Provider;
+                match body {
+                    Ok(Some(body)) => error.native = battersea_model::Detail::Present(body),
+                    Ok(None) => {}
+                    Err(unreadable) => error = error.with_cause(unreadable),
+                }
+                error.exchange.request_id = request_id;
+                error.exchange.retry_after_ms = retry_after_ms;
+                if delay_named && error.exchange.retry_after_ms.is_none() {
                     // An unreadable provider delay cannot authorise an earlier retry.
-                    error.retry_after_ms = Some(u64::MAX);
+                    error.exchange.retry_after_ms = Some(u64::MAX);
                 }
                 error
             }
@@ -146,31 +224,28 @@ pub(crate) async fn send(
                 } else {
                     ErrorKind::Transport
                 };
-                EngineAdapterRequestError::new(
-                    &backend.provider,
-                    error.without_url().to_string(),
-                    kind,
-                )
-                .with_dispatch(if not_sent {
-                    DispatchState::NotSent
-                } else {
-                    DispatchState::Unknown
-                })
+                Failure::new(&backend.provider, "HTTP request failed.", kind)
+                    .caused_by(&error.without_url())
+                    .with_dispatch(if not_sent {
+                        DispatchState::NotSent
+                    } else {
+                        DispatchState::Unknown
+                    })
             }
         };
-        failure.attempts = retry.saturating_add(1);
-        let safe = (failure.dispatch == DispatchState::NotSent
-            && failure.classification != ErrorKind::InvalidRequest)
-            || failure.status_code == Some(429)
+        failure.exchange.attempts = retry.saturating_add(1);
+        let safe = (failure.exchange.dispatch == DispatchState::NotSent
+            && failure.kind != ErrorKind::InvalidRequest)
+            || failure.exchange.status == Some(429)
             || (retrieval
                 && matches!(
-                    failure.classification,
+                    failure.kind,
                     ErrorKind::Transport | ErrorKind::Timeout | ErrorKind::Server
                 ));
         if retry == retries || !safe {
             return Err(failure);
         }
-        let Some(delay_ms) = delay_ms(backend, retry, failure.retry_after_ms) else {
+        let Some(delay_ms) = delay_ms(backend, retry, failure.exchange.retry_after_ms) else {
             return Err(failure);
         };
         if let Some(logger) = logger {
@@ -180,9 +255,9 @@ pub(crate) async fn send(
                     backend: backend.id.clone(),
                     attempt: retry.saturating_add(2),
                     delay_ms,
-                    dispatch: failure.dispatch,
-                    status_code: failure.status_code,
-                    request_id: failure.request_id.as_deref().map(str::to_owned),
+                    dispatch: failure.exchange.dispatch,
+                    status_code: failure.exchange.status,
+                    request_id: failure.exchange.request_id.as_deref().map(str::to_owned),
                     resume: retrieval,
                 })
                 .await;
@@ -196,34 +271,19 @@ pub(crate) async fn send(
 mod tests {
     use super::*;
 
+    /// contracts/failures.md: native detail is the body the provider sent, whole.
     #[test]
-    fn provider_reason_reads_only_the_error_message() {
-        for (body, reason) in [
-            (
-                r#"{"type":"error","error":{"type":"authentication_error","message":"invalid x-api-key"}}"#,
-                "invalid x-api-key",
-            ),
-            (
-                r#"{"error":{"message":"Incorrect API key provided.","type":"invalid_request_error","code":"invalid_api_key"}}"#,
-                "Incorrect API key provided.",
-            ),
-            (
-                r#"{"error":{"code":403,"message":" API key not valid. ","status":"PERMISSION_DENIED"}}"#,
-                "API key not valid.",
-            ),
-        ] {
-            assert_eq!(provider_reason(body).as_deref(), Some(reason), "{body}");
-        }
-        for body in [
-            "",
-            "not json",
-            "{}",
-            r#"{"error":"bare"}"#,
-            r#"{"error":{"message":"  "}}"#,
-            r#"{"message":"top level"}"#,
-        ] {
-            assert_eq!(provider_reason(body), None, "{body:?}");
-        }
+    fn a_rejection_body_is_kept_whole_as_json_or_as_text() {
+        let json = r#"{"type":"error","error":{"type":"authentication_error","message":"invalid x-api-key"},"request_id":"req_1"}"#;
+        assert_eq!(
+            crate::http_payload::rejection_body(json.into()),
+            Some(serde_json::from_str(json).unwrap())
+        );
+        assert_eq!(
+            crate::http_payload::rejection_body("upstream unavailable".into()),
+            Some(serde_json::Value::String("upstream unavailable".into()))
+        );
+        assert_eq!(crate::http_payload::rejection_body(String::new()), None);
     }
     #[test]
     fn retry_after_is_a_lower_bound_including_http_dates() {

@@ -13,10 +13,7 @@ use support::{object, operation, with_output};
 struct Recorder(Mutex<Vec<EngineLocalToolCall>>);
 #[async_trait]
 impl EngineLocalToolExecutor for Recorder {
-    async fn call(
-        &self,
-        call: EngineLocalToolCall,
-    ) -> Result<EngineLocalToolResult, EngineAdapterRequestError> {
+    async fn call(&self, call: EngineLocalToolCall) -> Result<EngineLocalToolResult, Failure> {
         let content = call.arguments.clone();
         self.0.lock().unwrap().push(call);
         Ok(EngineLocalToolResult::json(content))
@@ -83,6 +80,23 @@ async fn a_call_is_checked_against_its_operation_before_its_handler_runs() {
         assert_eq!(error.tool_code, Some(code), "{name}");
     }
     assert!(recorder.calls().is_empty());
+}
+
+#[tokio::test]
+async fn a_refusal_carries_the_tools_error_as_native_detail() {
+    let recorder = Arc::new(Recorder::default());
+    let registry = recorded(&recorder, [lookup("example.lookup")]);
+    let error = registry
+        .call(call("example.lookup", json!({"key": false})))
+        .await
+        .unwrap_err();
+    assert_eq!(error.reporter, Reporter::Tool);
+    let Detail::Present(native) = &error.native else {
+        panic!("the refusal is absent: {error:?}");
+    };
+    assert_eq!(native["code"], "invalid_input");
+    assert_eq!(native["evidence"], "not_dispatched");
+    assert!(native["message"].is_string());
 }
 
 #[test]
@@ -242,7 +256,10 @@ async fn a_result_outside_the_declared_output_schema_is_refused() {
         .await
         .unwrap_err();
     assert_eq!(error.tool_code, Some(ToolCode::InvalidToolResult));
-    assert_eq!(error.tool_call.unwrap().outcome, ToolCallOutcome::Completed);
+    assert_eq!(
+        error.tool_call.clone().unwrap().outcome,
+        ToolCallOutcome::Completed
+    );
     assert_eq!(
         recorder.calls().len(),
         2,
@@ -253,10 +270,7 @@ async fn a_result_outside_the_declared_output_schema_is_refused() {
 struct FixedResult(EngineLocalToolResult);
 #[async_trait]
 impl EngineLocalToolExecutor for FixedResult {
-    async fn call(
-        &self,
-        _: EngineLocalToolCall,
-    ) -> Result<EngineLocalToolResult, EngineAdapterRequestError> {
+    async fn call(&self, _: EngineLocalToolCall) -> Result<EngineLocalToolResult, Failure> {
         Ok(self.0.clone())
     }
 }
@@ -291,7 +305,10 @@ async fn content_results_validate_structured_output_and_preserve_tool_errors() {
         } else {
             let error = returned.unwrap_err();
             assert_eq!(error.tool_code, Some(ToolCode::InvalidToolResult));
-            assert_eq!(error.tool_call.unwrap().outcome, ToolCallOutcome::Completed);
+            assert_eq!(
+                error.tool_call.clone().unwrap().outcome,
+                ToolCallOutcome::Completed
+            );
         }
     }
 }
@@ -305,7 +322,7 @@ async fn registry_refusals_retain_not_dispatched_evidence() {
         ("example.lookup", json!({"key": 3})),
     ] {
         let error = registry.call(call(name, arguments)).await.unwrap_err();
-        let evidence = error.tool_call.unwrap();
+        let evidence = error.tool_call.clone().unwrap();
         assert_eq!(evidence.call_id, "call");
         assert_eq!(evidence.outcome, ToolCallOutcome::NotDispatched);
     }
@@ -322,10 +339,10 @@ async fn a_refusal_reaches_the_tool_loop_with_its_code_and_evidence() {
         .call(call("example.scoped", json!({"key": "selected"})))
         .await
         .unwrap_err();
-    assert_eq!(error.classification.as_str(), "insufficient_scope");
+    assert_eq!(error.kind.as_str(), "insufficient_scope");
     assert_eq!(error.tool_code, None);
     assert_eq!(
-        error.tool_call.unwrap().outcome,
+        error.tool_call.clone().unwrap().outcome,
         ToolCallOutcome::NotDispatched
     );
     assert!(recorder.calls().is_empty());

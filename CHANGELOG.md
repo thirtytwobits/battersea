@@ -1,5 +1,57 @@
 # Changelog
 
+## Unreleased
+
+### Breaking
+
+- `battersea-failure` is a new crate. `Failure` replaces `EngineAdapterRequestError` and
+  `EngineAdapterErrorInfo`, and carries the reporter, origin, exchange, native detail, partial
+  output and cause described in `contracts/failures.md`. `battersea-model` and `battersea-flow`
+  re-export it.
+- `ExecutionError` constructors take `impl Into<Failure>`, and `failure()` replaces `message()` as
+  the required method. `NodeError`, `RecoverableNodeFailure` and `FlowNodeFailure` hold a `Failure`
+  in place of a message; `FAILURE_MESSAGE_BYTES` is removed. The `node_failure` token and the
+  TypeScript `FlowNodeFailure` carry `failure`.
+- `MessageStop` carries `class: StopClass` and the provider's terminal payload as `native`;
+  `StopReason` is removed. `EngineTextStreamEvent::ResponseOpened` is a new variant.
+- Scheduler, execution and conversation checkpoints are version 3, and tool approval journals
+  are version 2. Records of other versions are refused.
+- Failure messages use fixed wording, and the `Failure` constructors take `&'static str`. A
+  provider's message, a response body and a lower error's text are in native detail or the cause.
+  A node, an edge, a limit or another value Battersea names is in the new `context` part, which
+  `Failure::with_context` sets and `Display` prints after the message. `From<String>` for `Failure`
+  is removed.
+- `ExecutionHost::request_activation_cancel` takes `&'static str`. `PumpError::failure` and
+  `RecoveryError::failure` give each error as a `Failure`.
+- `ProviderEvent::Failure` carries a `Failure` in place of a message.
+  `EngineTextStreamEvent::ToolCallCompleted` carries `failure` in place of `error_message` and
+  `error_classification`.
+- `ProviderConfigurationError` has a `cause` field.
+- `battersea_kit::conformance::Failure` is renamed `CaseFailure`.
+
+### Added
+
+- `ExecutionHost::observe_failure` receives every node failure complete before the node's failure
+  policy applies. `ExecutionHost::failure_disclosure` chooses `full` or `withheld` for the token,
+  the checkpoint and the runtime records.
+- Every adapter failure carries its operation's origin and, once response headers arrive, the
+  identifiers the provider issued.
+- `Failure` has a `cleanup` part: the failure of the cleanup Battersea attempted after the
+  operation failed, such as a rejected remote cancellation.
+- `EngineAdapter::open_text_stream` opens a stream with a report of its unfinished content
+  blocks. The registry carries those blocks as partial output on any failure that ends the stream.
+- A tool refusal carries Clapham's refusal as native detail, and an approval operation's refusal
+  carries the tool failure in `details.failure`.
+- `cargo xtask regression` runs the preflight checks and every test binary.
+
+### Fixed
+
+- A refusal, a truncation, a stream error and an HTTP rejection keep the provider's whole payload
+  in place of a fixed sentence (issue 99).
+- Credential masking covers native detail, partial output and causes.
+- `cargo xtask check` runs test binaries and static steps concurrently, and no longer rebuilds
+  `ring` when Cargo is run through xtask after being run directly.
+
 ## 0.26.0
 
 ### Breaking

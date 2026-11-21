@@ -5,6 +5,10 @@ edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 publish = false
+
+[lints]
+workspace = true
+
 [dependencies]
 battersea-derive = { path = "../../crates/battersea-derive" }
 battersea-nodes = { path = "../../crates/battersea-nodes", features = ["conformance"] }
