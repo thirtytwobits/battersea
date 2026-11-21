@@ -22,6 +22,7 @@ use eventsource_stream::Eventsource;
 use futures_util::{stream, StreamExt};
 use reqwest::header::{HeaderMap, HeaderName, HeaderValue};
 use serde_json::{json, Value};
+use std::collections::BTreeMap;
 use std::sync::Arc;
 use tokio::sync::mpsc;
 use tokio_stream::wrappers::ReceiverStream;
@@ -917,12 +918,28 @@ impl ToolConversation for OpenAiToolConversation {
 }
 
 impl OpenAiToolConversation {
+    /// Streams one turn to its completed response. A failure that ends the stream carries the
+    /// function calls the stream had begun as partial output.
     async fn stream_turn(
         &self,
         body: &Value,
         operation: super::EngineOperation,
         events: &ToolEventSender,
         idle_ms: u64,
+    ) -> Result<Value, Failure> {
+        let mut begun = BTreeMap::new();
+        self.read_turn(body, operation, events, idle_ms, &mut begun)
+            .await
+            .map_err(|failure| with_begun_calls(failure, begun))
+    }
+
+    async fn read_turn(
+        &self,
+        body: &Value,
+        operation: super::EngineOperation,
+        events: &ToolEventSender,
+        idle_ms: u64,
+        begun: &mut BTreeMap<u64, Value>,
     ) -> Result<Value, Failure> {
         let (opened, mut stream) = open_response_stream(
             &self.http_client,
@@ -961,6 +978,7 @@ impl OpenAiToolConversation {
                 value.clone(),
             )
             .await;
+            note_begun_call(begun, &value);
             let Some(event) = event else {
                 continue;
             };
@@ -996,6 +1014,54 @@ impl OpenAiToolConversation {
             }
         }
     }
+}
+
+/// Records the function call items of a Responses stream by output index, each with the
+/// arguments received for it. The completed response delivers these calls; no stream event does.
+fn note_begun_call(begun: &mut BTreeMap<u64, Value>, event: &Value) {
+    let Some(index) = event.get("output_index").and_then(Value::as_u64) else {
+        return;
+    };
+    match stream_event_type(event) {
+        "response.output_item.added" | "response.output_item.done"
+            if event["item"]["type"] == "function_call" =>
+        {
+            begun.insert(index, event["item"].clone());
+        }
+        "response.function_call_arguments.delta" => {
+            let call = begun.get_mut(&index).and_then(Value::as_object_mut);
+            if let (Some(call), Some(delta)) = (call, event["delta"].as_str()) {
+                let arguments = call
+                    .entry("arguments")
+                    .or_insert_with(|| Value::String(String::new()));
+                if let Value::String(arguments) = arguments {
+                    arguments.push_str(delta);
+                }
+            }
+        }
+        _ => {}
+    }
+}
+
+/// Attaches the function calls a turn's stream had begun to the failure that ended the stream.
+fn with_begun_calls(mut failure: Failure, begun: BTreeMap<u64, Value>) -> Failure {
+    if begun.is_empty() {
+        return failure;
+    }
+    let blocks = begun.into_values().collect();
+    match &mut failure.partial {
+        battersea_model::Detail::Present(partial) if partial.blocks.is_empty() => {
+            partial.blocks = blocks;
+        }
+        battersea_model::Detail::Absent => {
+            failure = failure.with_partial(battersea_model::PartialOutput {
+                text: String::new(),
+                blocks,
+            });
+        }
+        _ => {}
+    }
+    failure
 }
 
 async fn open_response_stream(
@@ -3031,8 +3097,11 @@ mod tests {
     /// Mock server that serves two SSE connections. Each connection sends
     /// one `response.created` event (carrying the response id and
     /// `sequence_number: 2`) then closes, forcing the adapter to reconnect
-    /// from the cursor. Captures each connection's request line.
-    fn spawn_background_reconnect_server() -> (
+    /// from the cursor. Captures each connection's request line. A `truncated` server declares
+    /// a longer body than it sends, so each connection ends in a read error.
+    fn spawn_background_reconnect_server(
+        truncated: bool,
+    ) -> (
         String,
         std::sync::mpsc::Receiver<String>,
         thread::JoinHandle<()>,
@@ -3043,8 +3112,13 @@ mod tests {
         let (req_tx, req_rx) = std::sync::mpsc::channel::<String>();
         let handle = thread::spawn(move || {
             let sse = r#"data: {"type":"response.created","response":{"id":"resp_test","created_at":1,"model":"fixture-model","object":"response","status":"in_progress","output":[]},"sequence_number":2}"#.to_string() + "\n\n";
+            let length = if truncated {
+                format!("Content-Length: {}\r\n", sse.len() + 64)
+            } else {
+                String::new()
+            };
             let http = format!(
-                "HTTP/1.1 200 OK\r\nContent-Type: text/event-stream\r\nConnection: close\r\n\r\n{sse}"
+                "HTTP/1.1 200 OK\r\nContent-Type: text/event-stream\r\n{length}Connection: close\r\n\r\n{sse}"
             );
             for _ in 0..2 {
                 let (mut stream, _) = match listener.accept() {
@@ -3061,9 +3135,46 @@ mod tests {
         (format!("http://{address}"), req_rx, handle)
     }
 
+    /// contracts/failures.md, Cause: a background stream that passes its reconnect limit after
+    /// a read error carries that error as its cause.
+    #[tokio::test]
+    async fn a_reconnect_limit_failure_carries_the_read_error_that_interrupted_the_stream() {
+        let (base, _req_rx, handle) = spawn_background_reconnect_server(true);
+        let mut backend = background_backend();
+        backend.endpoint = format!("{base}/responses");
+        let base_url = crate::connection::base(backend.binding.as_ref(), || {
+            resolve_openai_base_url(&backend.endpoint)
+        });
+        let body =
+            json!({ "model": backend.model, "stream": true, "background": true, "input": [] });
+        let (tx, _rx) = tokio::sync::mpsc::channel(64);
+        let error = drive_background_stream(
+            &reqwest::Client::new(),
+            &base_url,
+            &backend,
+            &body,
+            60_000,
+            1,
+            60_000,
+            &None,
+            &test_debug_context(),
+            EngineOperation::FlowTextStream,
+            &crate::test_clock(),
+            &tx,
+        )
+        .await
+        .expect_err("bounded reconnect");
+        assert_eq!(error.context["reason"], json!("stream error"), "{error:?}");
+        assert!(
+            matches!(error.cause, Some(battersea_model::Cause::Failure(_))),
+            "{error:?}"
+        );
+        handle.join().ok();
+    }
+
     #[tokio::test]
     async fn background_stream_reconnects_from_cursor_and_honours_max_reconnects() {
-        let (base, req_rx, handle) = spawn_background_reconnect_server();
+        let (base, req_rx, handle) = spawn_background_reconnect_server(false);
         let mut backend = background_backend();
         backend.endpoint = format!("{base}/responses");
         let base_url = crate::connection::base(backend.binding.as_ref(), || {
