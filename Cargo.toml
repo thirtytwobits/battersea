@@ -24,7 +24,7 @@ toml = "1.2"
 tempfile = "3.20"
 
 anyhow = "1.0.100"
-async-openai = { version = "0.33.0", features = ["byot", "responses", "image"] }
+async-openai = { version = "0.43.0", features = ["byot", "responses", "image"] }
 async-trait = "0.1.89"
 axum = { version = "0.8.6", features = ["ws", "json"] }
 chrono = { version = "0.4.42", features = ["serde"] }
