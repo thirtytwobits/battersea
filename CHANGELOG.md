@@ -50,7 +50,7 @@
   in place of a fixed sentence (issue 99).
 - Credential masking covers native detail, partial output and causes.
 - An OpenAI tool turn whose stream fails carries the function calls the stream had begun as
-  partial output.
+  partial output, and a durable turn carries the text the stream delivered.
 - `cargo xtask check` runs test binaries and static steps concurrently, and no longer rebuilds
   `ring` when Cargo is run through xtask after being run directly.
 

@@ -32,6 +32,26 @@ fn invalid(message: &'static str) -> Failure {
     Failure::invalid_response("openai", message)
 }
 
+/// Attaches the text a durable turn's stream delivered before the failure that ended the stream.
+fn with_held_text(mut failure: Failure, text: String) -> Failure {
+    if text.is_empty() {
+        return failure;
+    }
+    match &mut failure.partial {
+        battersea_model::Detail::Present(partial) if partial.text.is_empty() => {
+            partial.text = text;
+        }
+        battersea_model::Detail::Absent => {
+            failure = failure.with_partial(battersea_model::PartialOutput {
+                text,
+                blocks: vec![],
+            });
+        }
+        _ => {}
+    }
+    failure
+}
+
 fn decode(state: &Value) -> Result<Checkpoint, Failure> {
     check_payload(state, "openai")?;
     serde_json::from_value(state.clone())
@@ -264,22 +284,36 @@ impl OpenAiEngineAdapter {
         tokio::pin!(work);
         // The stream announces the identifiers; the completed response names its own.
         let mut identifiers = crate::retry::Identifiers::default();
+        // A durable turn delivers its text with the completed turn, so text streamed before a
+        // failure is held output.
+        let mut text = String::new();
+        let mut note = |event: &EngineTextStreamEvent,
+                        identifiers: &mut crate::retry::Identifiers| {
+            if let EngineTextStreamEvent::TextDelta { text: delta } = event {
+                text.push_str(delta);
+            }
+            identifiers.note(event);
+        };
         let response = loop {
             tokio::select! {
                 result = &mut work => break result,
                 Some(event) = rx.recv() => match event {
-                    Ok(event) => { identifiers.note(&event); }
+                    Ok(event) => note(&event, &mut identifiers),
                     Err(failure) => break Err(failure),
                 },
             }
         };
+        // The turn can end with its last event still in the channel.
+        while let Ok(Ok(event)) = rx.try_recv() {
+            note(&event, &mut identifiers);
+        }
         let turn = match response {
             Ok(response) => {
                 identifiers.name(response.get("id"));
                 self.completed_turn(&request, binding, input, response, true)
                     .await
             }
-            Err(failure) => Err(failure),
+            Err(failure) => Err(with_held_text(failure, text)),
         };
         match turn {
             Ok(mut turn) => {

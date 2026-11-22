@@ -728,6 +728,55 @@ async fn a_durable_turn_failure_after_the_response_carries_the_issued_identifier
     }
 }
 
+/// contracts/failures.md, Partial output: a durable Responses turn whose stream fails carries the
+/// text the stream delivered before the failure.
+#[tokio::test]
+async fn a_failed_durable_stream_carries_the_text_it_delivered() {
+    let reported = json!({"type":"error", "sequence_number":2, "code":"server_error",
+        "message":"Overloaded", "param":null});
+    let (url, _, task) = server(vec![sse(
+        vec![
+            json!({"type":"response.output_text.delta", "sequence_number":1,
+                "item_id":"message-fixture", "output_index":0, "content_index":0,
+                "delta":"Partial", "logprobs":[]}),
+            reported.clone(),
+        ],
+        false,
+    )])
+    .await;
+    let config = configuration("openai-responses", &url);
+    let configured = config
+        .validate(&protocols())
+        .unwrap()
+        .bind(&Secrets::new(), None, clock())
+        .unwrap();
+    let failure = configured
+        .chat("office-chat")
+        .unwrap()
+        .conversation_turn(
+            ConversationRequest {
+                shared: request(&config).shared,
+                tools: vec![],
+                max_turns: 2,
+            },
+            None,
+            vec![],
+        )
+        .await
+        .err()
+        .expect("the turn fails");
+    task.abort();
+    assert_eq!(failure.native, Detail::Present(reported), "{failure:?}");
+    assert_eq!(
+        failure
+            .partial
+            .present()
+            .map(|partial| partial.text.as_str()),
+        Some("Partial"),
+        "{failure:?}"
+    );
+}
+
 /// contracts/failures.md, Native detail: a durable turn the provider truncates or refuses fails
 /// with the kind `incomplete` or `refusal` and the provider's response whole.
 #[tokio::test]
