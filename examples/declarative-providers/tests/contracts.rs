@@ -557,44 +557,52 @@ async fn a_tool_failure_is_masked_in_its_completion_event_and_in_the_stream_erro
     }
 }
 
-/// contracts/failures.md, Partial output: a streamed completion truncated after tool-call
-/// fragments fails with its terminal chunk and the tool calls it had begun.
+/// contracts/failures.md, Partial output: a streamed completion that is truncated, whose tool
+/// arguments are malformed or whose finish reason disagrees with its tool calls fails with its
+/// terminal chunk and the tool calls it had begun.
 #[tokio::test]
-async fn a_truncated_completion_stream_carries_its_begun_tool_calls() {
-    let terminal = json!({"choices":[{"index":0,"delta":{},"finish_reason":"length"}]});
-    let (url, _, task) = server(vec![sse(
-        vec![
-            json!({"choices":[{"index":0,"delta":{"role":"assistant","tool_calls":[
-                {"index":0,"id":"call-1","type":"function",
-                    "function":{"name":"echo","arguments":"{\"value\":"}}]},"finish_reason":null}]}),
-            terminal.clone(),
-        ],
-        true,
-    )])
-    .await;
-    let config = configuration("openai-chat-completions", &url);
-    let configured = config
-        .validate(&protocols())
-        .unwrap()
-        .bind(&Secrets::new(), None, clock())
-        .unwrap();
-    let mut req = request(&config);
-    req.local_tools = vec![EngineLocalToolDefinition {
-        name: "echo".into(),
-        description: "Echo".into(),
-        input_schema: json!({"type":"object"}),
-    }];
-    let failure = events(configured.chat("office-chat").unwrap(), req)
-        .await
-        .unwrap_err();
-    task.abort();
-    assert_eq!(failure.kind, ErrorKind::Incomplete, "{failure:?}");
-    assert_eq!(failure.native, Detail::Present(terminal));
-    assert_eq!(
-        failure.partial.present().map(|partial| &partial.blocks),
-        Some(&vec![json!({"id":"call-1","type":"function",
-            "function":{"name":"echo","arguments":"{\"value\":"}})])
-    );
+async fn a_completion_stream_with_an_unusable_ending_carries_its_begun_tool_calls() {
+    for (finish, kind) in [
+        ("length", ErrorKind::Incomplete),
+        ("tool_calls", ErrorKind::InvalidResponse),
+        ("stop", ErrorKind::InvalidResponse),
+    ] {
+        let terminal = json!({"choices":[{"index":0,"delta":{},"finish_reason":finish}]});
+        let (url, _, task) = server(vec![sse(
+            vec![
+                json!({"choices":[{"index":0,"delta":{"role":"assistant","tool_calls":[
+                    {"index":0,"id":"call-1","type":"function",
+                        "function":{"name":"echo","arguments":"{\"value\":"}}]},"finish_reason":null}]}),
+                terminal.clone(),
+            ],
+            true,
+        )])
+        .await;
+        let config = configuration("openai-chat-completions", &url);
+        let configured = config
+            .validate(&protocols())
+            .unwrap()
+            .bind(&Secrets::new(), None, clock())
+            .unwrap();
+        let mut req = request(&config);
+        req.local_tools = vec![EngineLocalToolDefinition {
+            name: "echo".into(),
+            description: "Echo".into(),
+            input_schema: json!({"type":"object"}),
+        }];
+        let failure = events(configured.chat("office-chat").unwrap(), req)
+            .await
+            .unwrap_err();
+        task.abort();
+        assert_eq!(failure.kind, kind, "{finish}: {failure:?}");
+        assert_eq!(failure.native, Detail::Present(terminal), "{finish}");
+        assert_eq!(
+            failure.partial.present().map(|partial| &partial.blocks),
+            Some(&vec![json!({"id":"call-1","type":"function",
+                "function":{"name":"echo","arguments":"{\"value\":"}})]),
+            "{finish}"
+        );
+    }
 }
 
 /// contracts/failures.md, Native detail: a streamed completion the provider filters fails with
@@ -718,6 +726,55 @@ async fn a_durable_turn_failure_after_the_response_carries_the_issued_identifier
             );
         }
     }
+}
+
+/// contracts/failures.md, Partial output: a durable Responses turn whose stream fails carries the
+/// text the stream delivered before the failure.
+#[tokio::test]
+async fn a_failed_durable_stream_carries_the_text_it_delivered() {
+    let reported = json!({"type":"error", "sequence_number":2, "code":"server_error",
+        "message":"Overloaded", "param":null});
+    let (url, _, task) = server(vec![sse(
+        vec![
+            json!({"type":"response.output_text.delta", "sequence_number":1,
+                "item_id":"message-fixture", "output_index":0, "content_index":0,
+                "delta":"Partial", "logprobs":[]}),
+            reported.clone(),
+        ],
+        false,
+    )])
+    .await;
+    let config = configuration("openai-responses", &url);
+    let configured = config
+        .validate(&protocols())
+        .unwrap()
+        .bind(&Secrets::new(), None, clock())
+        .unwrap();
+    let failure = configured
+        .chat("office-chat")
+        .unwrap()
+        .conversation_turn(
+            ConversationRequest {
+                shared: request(&config).shared,
+                tools: vec![],
+                max_turns: 2,
+            },
+            None,
+            vec![],
+        )
+        .await
+        .err()
+        .expect("the turn fails");
+    task.abort();
+    assert_eq!(failure.native, Detail::Present(reported), "{failure:?}");
+    assert_eq!(
+        failure
+            .partial
+            .present()
+            .map(|partial| partial.text.as_str()),
+        Some("Partial"),
+        "{failure:?}"
+    );
 }
 
 /// contracts/failures.md, Native detail: a durable turn the provider truncates or refuses fails

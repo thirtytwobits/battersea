@@ -611,6 +611,15 @@ async fn truncation_and_malformed_calls_never_reach_the_executor() {
             events.last(),
             Some(Err(error)) if matches!(error.kind.as_str(), "invalid_response" | "incomplete")
         ));
+        // contracts/failures.md, Native detail: the failure carries the response it refused.
+        let failure = events.last().unwrap().as_ref().unwrap_err();
+        assert!(
+            failure
+                .native
+                .present()
+                .is_some_and(|native| carries(native, &response)),
+            "{provider}: {failure:?}"
+        );
         assert!(!events.iter().any(|event| matches!(
             event,
             Ok(EngineTextStreamEvent::ToolCallStarted { .. }
@@ -1156,6 +1165,72 @@ async fn an_anthropic_stream_failure_carries_its_unfinished_blocks() {
     }
 }
 
+/// contracts/failures.md, Partial output: an OpenAI tool turn whose stream fails carries the
+/// function calls the stream had begun, each with the arguments received for it.
+#[tokio::test]
+async fn an_openai_tool_stream_failure_carries_its_begun_function_calls() {
+    let call = |arguments: &str, status: &str| {
+        json!({"type":"function_call", "id":"call-item", "call_id":"call-fixture",
+            "name":"session_get", "arguments":arguments, "status":status})
+    };
+    let delta = |sequence: u64, text: &str| {
+        json!({"type":"response.function_call_arguments.delta", "sequence_number":sequence,
+            "item_id":"call-item", "output_index":0, "delta":text})
+    };
+    let begun = [
+        json!({"type":"response.output_item.added", "sequence_number":1, "output_index":0,
+            "item":call("", "in_progress")}),
+        delta(2, "{\"key\":"),
+        delta(3, "\"na"),
+    ];
+    let reported = json!({"type":"error", "sequence_number":4, "code":"server_error",
+        "message":"Overloaded", "param":null});
+    for (name, tail, held) in [
+        (
+            "stream ends",
+            String::new(),
+            call("{\"key\":\"na", "in_progress"),
+        ),
+        (
+            "provider error",
+            stream_body(std::slice::from_ref(&reported)),
+            call("{\"key\":\"na", "in_progress"),
+        ),
+        (
+            "malformed event",
+            "event: response.output_text.delta\ndata: {malformed\n\n".to_string(),
+            call("{\"key\":\"na", "in_progress"),
+        ),
+        (
+            "call finished",
+            stream_body(&[
+                json!({"type":"response.output_item.done", "sequence_number":4, "output_index":0,
+                    "item":call("{\"key\":\"name\"}", "completed")}),
+            ]),
+            call("{\"key\":\"name\"}", "completed"),
+        ),
+    ] {
+        let (url, _, server) =
+            server(vec![("text/event-stream", stream_body(&begun) + &tail)]).await;
+        let backend = backend("openai", &url, "stream");
+        let executor = Arc::new(RecordingExecutor::default());
+        let events: Vec<_> = adapter(backend.clone())
+            .stream_text(request(&backend, executor.clone()))
+            .await
+            .unwrap()
+            .collect()
+            .await;
+        server.abort();
+        let failure = events.last().unwrap().as_ref().expect_err(name);
+        assert_eq!(
+            failure.partial.present().map(|partial| &partial.blocks),
+            Some(&vec![held]),
+            "{name}: {failure:?}"
+        );
+        assert!(executor.0.lock().unwrap().is_empty(), "{name}");
+    }
+}
+
 /// contracts/failures.md, Native detail: a background response that completes with a refusal
 /// fails with the provider's terminal response whole, in the stream and the poll mode.
 #[tokio::test]
@@ -1217,6 +1292,75 @@ async fn a_malformed_background_stream_event_fails_with_its_text() {
         battersea_model::Detail::Present(json!("{malformed"))
     );
     assert!(failure.cause.is_some());
+}
+
+/// contracts/failures.md, Native detail: a stream event Battersea refuses is the native detail
+/// of the failure, whole.
+#[tokio::test]
+async fn a_refused_stream_event_is_carried_whole() {
+    let created = |id: &str| {
+        json!({"type":"response.created", "response":{"id":id, "created_at":1,
+            "model":"fixture-model", "object":"response", "status":"in_progress", "output":[]}})
+    };
+    let mut numbered = created("response-fixture");
+    numbered["sequence_number"] = json!(1);
+    let mut renamed = created("response-other");
+    renamed["sequence_number"] = json!(2);
+    let media = json!({"responseId":"response-fixture", "candidates":[{"content":{"role":"model",
+        "parts":[{"inlineData":{"mimeType":"video/mp4", "data":"AAAA"}}]}}]});
+    for (name, provider, mode, body, refused) in [
+        (
+            "stop without a reason",
+            "anthropic",
+            "stream",
+            stream_body(&[json!({"type":"message_stop"})]),
+            json!({"type":"message_stop"}),
+        ),
+        (
+            "unsupported media",
+            "google",
+            "stream",
+            format!("data: {media}\n\n"),
+            media.clone(),
+        ),
+        (
+            "no sequence number",
+            "openai",
+            "background-stream",
+            stream_body(&[created("response-fixture")]),
+            created("response-fixture"),
+        ),
+        (
+            "changed identity",
+            "openai",
+            "background-stream",
+            stream_body(&[numbered, renamed.clone()]),
+            renamed,
+        ),
+    ] {
+        let (url, _, server) = server(vec![("text/event-stream", body)]).await;
+        let backend = backend(provider, &url, mode);
+        let mut request = request(&backend, Arc::new(RecordingExecutor::default()));
+        request.local_tools.clear();
+        let events: Vec<_> = adapter(backend)
+            .stream_text(request)
+            .await
+            .unwrap()
+            .collect()
+            .await;
+        server.abort();
+        let failure = events.last().unwrap().as_ref().expect_err(name);
+        assert_eq!(
+            failure.kind,
+            battersea_model::ErrorKind::InvalidResponse,
+            "{name}: {failure:?}"
+        );
+        assert_eq!(
+            failure.native,
+            battersea_model::Detail::Present(refused),
+            "{name}: {failure:?}"
+        );
+    }
 }
 
 #[tokio::test]
