@@ -870,7 +870,7 @@ impl crate::media::MediaJob for AdmittedJob {
         &mut self,
         webhook: crate::media::MediaWebhook<'_>,
         secret: &str,
-        now: chrono::DateTime<chrono::Utc>,
+        now: jiff::Timestamp,
     ) -> Result<crate::media::MediaJobStatus, Failure> {
         self.inner
             .webhook(webhook, secret, now)

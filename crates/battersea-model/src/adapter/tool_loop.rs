@@ -231,7 +231,7 @@ async fn drive_tool_loop(
                     id: call.id.clone(),
                     name: call.name.clone(),
                     arguments: call.arguments.clone(),
-                    started_at: crate::clock::utc_now(clock).to_rfc3339(),
+                    started_at: crate::clock::rfc3339(crate::clock::utc_now(clock)),
                 },
             )
             .await?;
@@ -321,7 +321,7 @@ async fn drive_tool_loop(
                     failure,
                     tool_result: host_result,
                     tool_call: Some(evidence.clone()),
-                    finished_at: crate::clock::utc_now(clock).to_rfc3339(),
+                    finished_at: crate::clock::rfc3339(crate::clock::utc_now(clock)),
                 },
             )
             .await

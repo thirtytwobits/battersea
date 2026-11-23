@@ -25,7 +25,10 @@ use crate::adapter::error::Failure;
 #[cfg(test)]
 use crate::adapter::{EngineAuthConfig, EngineBackendOptions};
 
-use battersea_model::{clock::utc_now, Clock};
+use battersea_model::{
+    clock::{rfc3339, utc_now},
+    Clock,
+};
 use serde_json::Value;
 use std::collections::BTreeMap;
 use std::sync::Arc;
@@ -50,7 +53,7 @@ pub type MediaRenderTiming = MediaProvenanceTiming;
 /// Records generation timing by the adapter's clock.
 pub struct MediaTimingRecorder {
     clock: Arc<dyn Clock>,
-    started_at: chrono::DateTime<chrono::Utc>,
+    started_at: jiff::Timestamp,
     started_instant: Instant,
     phases: Vec<MediaProvenanceTimingPhase>,
 }
@@ -67,7 +70,7 @@ impl MediaTimingRecorder {
     }
 
     /// The current wall time and instant, to mark the start of a phase.
-    pub fn now(&self) -> (chrono::DateTime<chrono::Utc>, Instant) {
+    pub fn now(&self) -> (jiff::Timestamp, Instant) {
         (utc_now(self.clock.as_ref()), self.clock.instant())
     }
 
@@ -80,15 +83,15 @@ impl MediaTimingRecorder {
         name: impl Into<String>,
         category: impl Into<String>,
         included_in_model_processing: bool,
-        started_at: chrono::DateTime<chrono::Utc>,
+        started_at: jiff::Timestamp,
         started_instant: Instant,
     ) {
         let completed_at = utc_now(self.clock.as_ref());
         let duration_ms = duration_ms(self.elapsed_since(started_instant));
         self.phases.push(MediaProvenanceTimingPhase {
             name: name.into(),
-            started_at: started_at.to_rfc3339(),
-            completed_at: completed_at.to_rfc3339(),
+            started_at: rfc3339(started_at),
+            completed_at: rfc3339(completed_at),
             duration_ms,
             category: category.into(),
             included_in_model_processing,
@@ -115,8 +118,8 @@ impl MediaTimingRecorder {
             None
         };
         MediaProvenanceTiming {
-            started_at: self.started_at.to_rfc3339(),
-            completed_at: completed_at.to_rfc3339(),
+            started_at: rfc3339(self.started_at),
+            completed_at: rfc3339(completed_at),
             elapsed_ms,
             model_processing_ms,
             model_processing_source: if model_processing_ms.is_some() {

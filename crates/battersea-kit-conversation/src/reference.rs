@@ -430,7 +430,7 @@ impl ScriptedEngine {
             .sum()
     }
     fn now(&self) -> String {
-        utc_now(self.clock.as_ref()).to_rfc3339()
+        battersea_model::clock::rfc3339(utc_now(self.clock.as_ref()))
     }
 }
 

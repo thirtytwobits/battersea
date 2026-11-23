@@ -395,7 +395,7 @@ fn captures_are_timestamped_by_the_tap_clock() {
     assert_eq!(
         tap.emissions_from(0)
             .iter()
-            .map(|emission| emission.at.timestamp_millis())
+            .map(|emission| emission.at.as_millisecond())
             .collect::<Vec<_>>(),
         [784_111_777_000, 784_111_778_250]
     );

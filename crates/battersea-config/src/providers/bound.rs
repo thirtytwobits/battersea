@@ -489,7 +489,7 @@ impl MediaJob for Job {
         &mut self,
         webhook: MediaWebhook<'_>,
         secret: &str,
-        now: chrono::DateTime<chrono::Utc>,
+        now: jiff::Timestamp,
     ) -> Result<MediaJobStatus, Failure> {
         self.inner
             .webhook(webhook, secret, now)

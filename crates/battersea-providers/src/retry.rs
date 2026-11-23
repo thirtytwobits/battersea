@@ -39,9 +39,11 @@ fn retry_after(headers: &reqwest::header::HeaderMap, clock: &dyn Clock) -> Optio
     if let Ok(seconds) = value.parse::<u64>() {
         return Some(seconds.saturating_mul(1000));
     }
-    let date = chrono::DateTime::parse_from_rfc2822(value).ok()?;
+    let date = jiff::fmt::rfc2822::DateTimeParser::new()
+        .parse_timestamp(value)
+        .ok()?;
     let now = i64::try_from(clock.unix_ms()?).ok()?;
-    Some(date.timestamp_millis().saturating_sub(now).max(0) as u64)
+    Some(date.as_millisecond().saturating_sub(now).max(0) as u64)
 }
 
 /// The identifier a provider issued for a request, from its response headers.
