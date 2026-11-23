@@ -23,5 +23,5 @@ proc-macro2 = "1"
 serde_yaml = "0.9"
 
 [dev-dependencies]
-flow-sdk = { package = "battersea-flow", path = "../battersea-flow", version = "0.26.0" }
+flow-sdk = { package = "battersea-flow", path = "../battersea-flow", version = "0.27.0" }
 serde_json.workspace = true
