@@ -9,8 +9,6 @@ use super::{
     EngineTextStreamRequest, EngineTokenUsage,
 };
 use crate::http_payload::BoundedResponse as _;
-use async_openai::error::OpenAIError;
-use async_openai::traits::EventType;
 use async_openai::types::responses::ResponseStreamEvent;
 use async_trait::async_trait;
 use battersea_model::engine::{
@@ -432,7 +430,7 @@ impl EngineAdapter for OpenAiEngineAdapter {
                                     logger.as_ref(),
                                     &context,
                                     operation,
-                                    event.event_type(),
+                                    stream_event_type(&event_value),
                                     event_value.clone(),
                                 )
                                 .await;
@@ -1099,12 +1097,8 @@ async fn open_response_stream(
             match event {
                 Ok(event) if event.data.trim() == "[DONE]" || event.data.is_empty() => None,
                 Ok(event) => Some((|| {
-                    let raw: Value = serde_json::from_str(&event.data).map_err(|error| {
-                        normalize_openai_error(OpenAIError::JSONDeserialize(
-                            error,
-                            event.data.clone(),
-                        ))
-                    })?;
+                    let raw: Value = serde_json::from_str(&event.data)
+                        .map_err(|error| undecodable_openai_body(error, event.data.clone()))?;
                     Ok((decode_stream_event(&raw)?, raw))
                 })()),
                 Err(error) => Some(Err(crate::http_payload::event_stream_failure(
@@ -1123,10 +1117,7 @@ fn decode_stream_event(raw: &Value) -> Result<Option<ResponseStreamEvent>, Failu
     match serde_json::from_value(raw.clone()) {
         Ok(event) => Ok(Some(event)),
         Err(_) if !is_modelled_stream_event_type(raw) => Ok(None),
-        Err(error) => Err(normalize_openai_error(OpenAIError::JSONDeserialize(
-            error,
-            raw.to_string(),
-        ))),
+        Err(error) => Err(undecodable_openai_body(error, raw.to_string())),
     }
 }
 
@@ -1497,12 +1488,8 @@ async fn drive_background_stream(
                     if event.data.trim() == "[DONE]" || event.data.is_empty() {
                         continue;
                     }
-                    let value: Value = serde_json::from_str(&event.data).map_err(|error| {
-                        normalize_openai_error(OpenAIError::JSONDeserialize(
-                            error,
-                            event.data.clone(),
-                        ))
-                    })?;
+                    let value: Value = serde_json::from_str(&event.data)
+                        .map_err(|error| undecodable_openai_body(error, event.data.clone()))?;
                     let seq = value
                         .get("sequence_number")
                         .and_then(Value::as_i64)
@@ -2041,65 +2028,31 @@ fn describe_missing_output_text(response: &Value) -> Failure {
     Failure::invalid_response("openai", "OpenAI response did not include output text.")
 }
 
-/// Normalises OpenAI client, API, transport, and deserialisation failures into the shared
-/// provider-neutral error shape.
-fn normalize_openai_error(error: OpenAIError) -> Failure {
-    match error {
-        OpenAIError::Reqwest(inner) => {
-            let status = inner.status();
-            let mut normalized = Failure::transport("openai", "OpenAI HTTP request failed.")
-                .caused_by(&inner.without_url());
-            if let Some(status) = status {
-                normalized.exchange.status = Some(status.as_u16());
-                normalized.kind = classify_status(status.as_u16()).into();
-            }
-            normalized
+/// Normalises an OpenAI body that does not decode as the expected payload. A provider error
+/// envelope is classified by its error type and code; any other body is an invalid response.
+fn undecodable_openai_body(error: serde_json::Error, content: String) -> Failure {
+    // The Responses API streams errors as:
+    //   {"type":"error","error":{"type":...,"code":...,"message":...},"sequence_number":N}
+    // The Chat Completions API uses:
+    //   {"error":{"type":...,"code":...,"message":...}}
+    if let Ok(body) = serde_json::from_str::<Value>(&content) {
+        if let Some(error_obj) = body.get("error") {
+            let error_type = error_obj.get("type").and_then(Value::as_str);
+            let error_code = error_obj.get("code").and_then(Value::as_str);
+            return Failure::new(
+                "openai",
+                "OpenAI reported an error.",
+                classify_openai_message(error_type, error_code),
+            )
+            .with_native(battersea_model::Reporter::Provider, body.clone());
         }
-        OpenAIError::ApiError(inner) => Failure::new(
-            "openai",
-            "OpenAI reported an error.",
-            classify_openai_message(inner.r#type.as_deref(), inner.code.as_deref()),
-        )
+    }
+    Failure::invalid_response("openai", "Failed to deserialize OpenAI response.")
         .with_native(
             battersea_model::Reporter::Provider,
-            serde_json::to_value(&inner).unwrap_or_else(|_| Value::String(inner.to_string())),
-        ),
-        OpenAIError::JSONDeserialize(error, content) => {
-            // Before treating as a generic parse failure, check for a provider error envelope.
-            // The Responses API streams errors as:
-            //   {"type":"error","error":{"type":...,"code":...,"message":...},"sequence_number":N}
-            // The Chat Completions API uses:
-            //   {"error":{"type":...,"code":...,"message":...}}
-            // Both arrive as JSONDeserialize because they don't match the success schema.
-            if let Ok(body) = serde_json::from_str::<serde_json::Value>(&content) {
-                if let Some(error_obj) = body.get("error") {
-                    let error_type = error_obj.get("type").and_then(serde_json::Value::as_str);
-                    let error_code = error_obj.get("code").and_then(serde_json::Value::as_str);
-                    return Failure::new(
-                        "openai",
-                        "OpenAI reported an error.",
-                        classify_openai_message(error_type, error_code),
-                    )
-                    .with_native(battersea_model::Reporter::Provider, body.clone());
-                }
-            }
-            Failure::invalid_response("openai", "Failed to deserialize OpenAI response.")
-                .with_native(
-                    battersea_model::Reporter::Provider,
-                    serde_json::from_str(&content).unwrap_or(Value::String(content)),
-                )
-                .caused_by(&error)
-        }
-        OpenAIError::StreamError(inner) => {
-            Failure::transport("openai", "OpenAI event stream failed.")
-                .caused_by_text(inner.to_string())
-        }
-        OpenAIError::InvalidArgument(message) => {
-            Failure::new("openai", "Invalid OpenAI request argument.", "request")
-                .caused_by_text(message)
-        }
-        other => Failure::transport("openai", "OpenAI client failed.").caused_by(&other),
-    }
+            serde_json::from_str(&content).unwrap_or(Value::String(content)),
+        )
+        .caused_by(&error)
 }
 
 /// Classifies structured OpenAI API errors by provider error type and error code.
@@ -2111,19 +2064,6 @@ fn classify_openai_message(error_type: Option<&str>, code: Option<&str>) -> &'st
         || matches!(code, Some("rate_limit_exceeded"))
     {
         "rate_limit"
-    } else {
-        "request"
-    }
-}
-
-/// Classifies OpenAI HTTP status codes into the shared adapter error categories.
-fn classify_status(status_code: u16) -> &'static str {
-    if matches!(status_code, 401 | 403) {
-        "auth"
-    } else if status_code == 429 {
-        "rate_limit"
-    } else if status_code >= 500 {
-        "server"
     } else {
         "request"
     }
@@ -2152,19 +2092,18 @@ fn resolve_openai_base_url(endpoint: &str) -> String {
 mod tests {
     use super::{
         background_resume_url, build_input_token_count_body, build_local_tool_body,
-        build_stream_body, classify_openai_message, classify_status, collect_openai_function_calls,
+        build_stream_body, classify_openai_message, collect_openai_function_calls,
         create_openai_adapter, drive_background_stream, emit_background_terminal_response,
         extract_token_usage, finalize_background_response, is_terminal_background_status,
-        normalize_openai_error, openai_missing_output_text_error, openai_text_stream_events,
-        read_openai_output_text, resolve_openai_base_url, to_background_body,
-        to_background_stream_body,
+        openai_missing_output_text_error, openai_text_stream_events, read_openai_output_text,
+        resolve_openai_base_url, to_background_body, to_background_stream_body,
+        undecodable_openai_body,
     };
     use crate::adapter::{
         EngineAdapterDebugContext, EngineAdapterRequest, EngineAuthConfig, EngineBackendConfig,
         EngineBackendOptions, EngineLocalToolDefinition, EngineOperation, EngineTextStreamEvent,
         EngineTextStreamRequest,
     };
-    use async_openai::error::{ApiError, OpenAIError, StreamError};
     use async_openai::types::responses::{
         ResponseRefusalDoneEvent, ResponseStreamEvent, ResponseTextDeltaEvent,
         ResponseTextDoneEvent,
@@ -2378,33 +2317,6 @@ mod tests {
         assert_eq!(calls[0].id, "call-1");
         assert_eq!(calls[0].name, "session.get");
         assert_eq!(calls[0].arguments, json!({"limit": 2}));
-    }
-
-    fn spawn_status_server(status: u16, body: &'static str) -> (String, thread::JoinHandle<()>) {
-        let listener =
-            TcpListener::bind(crate::test_endpoints::TEST_BIND_ADDRESS).expect("bind loopback");
-        let address = listener.local_addr().expect("local addr");
-        let status_line = match status {
-            401 => "401 Unauthorized",
-            429 => "429 Too Many Requests",
-            500 => "500 Internal Server Error",
-            _ => "400 Bad Request",
-        };
-        let response = format!(
-            "HTTP/1.1 {status_line}\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
-            body.len(),
-            body
-        );
-        let handle = thread::spawn(move || {
-            let (mut stream, _) = listener.accept().expect("accept request");
-            let mut request = [0_u8; 1024];
-            let _ = stream.read(&mut request);
-            stream
-                .write_all(response.as_bytes())
-                .expect("write response");
-            stream.flush().expect("flush response");
-        });
-        (format!("http://{address}/responses"), handle)
     }
 
     fn spawn_input_token_count_server() -> (String, thread::JoinHandle<()>) {
@@ -2708,51 +2620,6 @@ mod tests {
         );
     }
 
-    #[tokio::test(flavor = "current_thread")]
-    async fn normalize_openai_error_maps_reqwest_status_api_and_transport_failures() {
-        let (url, handle) = spawn_status_server(429, "rate limited");
-        let reqwest_error = reqwest::get(url)
-            .await
-            .expect("response")
-            .error_for_status()
-            .expect_err("status error");
-        handle.join().expect("join server");
-        let normalized = normalize_openai_error(OpenAIError::Reqwest(reqwest_error));
-        assert_eq!(normalized.kind.as_str(), "rate_limit");
-        assert_eq!(normalized.exchange.status, Some(429));
-
-        let api_auth = normalize_openai_error(OpenAIError::ApiError(ApiError {
-            message: "bad key".to_string(),
-            r#type: Some("authentication_error".to_string()),
-            param: None,
-            code: None,
-        }));
-        assert_eq!(api_auth.kind.as_str(), "auth");
-        assert_eq!(api_auth.native.present().unwrap()["message"], "bad key");
-
-        let api_rate_limit = normalize_openai_error(OpenAIError::ApiError(ApiError {
-            message: "slow down".to_string(),
-            r#type: Some("rate_limit_error".to_string()),
-            param: None,
-            code: None,
-        }));
-        assert_eq!(api_rate_limit.kind.as_str(), "rate_limit");
-
-        let invalid_response = normalize_openai_error(OpenAIError::JSONDeserialize(
-            serde_json::from_str::<serde_json::Value>("{").expect_err("json error"),
-            "{\"bad\":".to_string(),
-        ));
-        assert_eq!(invalid_response.kind.as_str(), "invalid_response");
-        assert!(invalid_response
-            .message
-            .contains("Failed to deserialize OpenAI response"));
-
-        let stream = normalize_openai_error(OpenAIError::StreamError(Box::new(
-            StreamError::EventStream("stream broke".to_string()),
-        )));
-        assert_eq!(stream.kind.as_str(), "transport");
-    }
-
     #[test]
     fn classify_helpers_and_base_url_resolution_cover_known_cases() {
         assert_eq!(
@@ -2773,11 +2640,6 @@ mod tests {
         );
         assert_eq!(classify_openai_message(Some("other"), None), "request");
 
-        assert_eq!(classify_status(401), "auth");
-        assert_eq!(classify_status(429), "rate_limit");
-        assert_eq!(classify_status(500), "server");
-        assert_eq!(classify_status(400), "request");
-
         assert_eq!(
             resolve_openai_base_url("https://api.openai.com/v1/responses?foo=1#frag"),
             "https://api.openai.com/v1"
@@ -2786,15 +2648,12 @@ mod tests {
     }
 
     #[test]
-    fn normalize_openai_error_detects_rate_limit_in_provider_error_envelopes() {
+    fn undecodable_openai_body_classifies_provider_error_envelopes() {
         let parse_err = || serde_json::from_str::<serde_json::Value>("{").expect_err("json error");
 
         // Responses API error: {"type":"error","error":{...},"sequence_number":N}
         // This is the exact shape observed in the wild (MarksGate-comely-Bellingham session).
-        let responses_api = normalize_openai_error(OpenAIError::JSONDeserialize(
-            parse_err(),
-            r#"{"type":"error","error":{"type":"invalid_request_error","code":"rate_limit_exceeded","message":"You've exceeded the rate limit, please slow down and try again after 0.0 seconds.","param":null},"sequence_number":2}"#.to_string(),
-        ));
+        let responses_api = undecodable_openai_body(parse_err(), r#"{"type":"error","error":{"type":"invalid_request_error","code":"rate_limit_exceeded","message":"You've exceeded the rate limit, please slow down and try again after 0.0 seconds.","param":null},"sequence_number":2}"#.to_string());
         assert_eq!(responses_api.kind.as_str(), "rate_limit");
         assert!(responses_api.native.present().unwrap()["error"]["message"]
             .as_str()
@@ -2803,29 +2662,30 @@ mod tests {
         assert_eq!(responses_api.origin.provider.as_deref(), Some("openai"));
 
         // OpenAI Chat Completions API error: {"error":{"type":"rate_limit_error",...}}
-        let completions_api = normalize_openai_error(OpenAIError::JSONDeserialize(
-            parse_err(),
-            r#"{"error":{"type":"rate_limit_error","code":null,"message":"Rate limit reached for requests.","param":null}}"#.to_string(),
-        ));
+        let completions_api = undecodable_openai_body(parse_err(), r#"{"error":{"type":"rate_limit_error","code":null,"message":"Rate limit reached for requests.","param":null}}"#.to_string());
         assert_eq!(completions_api.kind.as_str(), "rate_limit");
         assert_eq!(completions_api.origin.provider.as_deref(), Some("openai"));
 
         // Auth error in envelope form
-        let auth_envelope = normalize_openai_error(OpenAIError::JSONDeserialize(
-            parse_err(),
-            r#"{"error":{"type":"authentication_error","code":null,"message":"Invalid API key.","param":null}}"#.to_string(),
-        ));
+        let auth_envelope = undecodable_openai_body(parse_err(), r#"{"error":{"type":"authentication_error","code":null,"message":"Invalid API key.","param":null}}"#.to_string());
         assert_eq!(auth_envelope.kind.as_str(), "auth");
 
         // Unrecognised body still falls back to invalid_response
-        let unrecognised = normalize_openai_error(OpenAIError::JSONDeserialize(
-            parse_err(),
-            r#"{"something_else":"value"}"#.to_string(),
-        ));
+        let unrecognised =
+            undecodable_openai_body(parse_err(), r#"{"something_else":"value"}"#.to_string());
         assert_eq!(unrecognised.kind.as_str(), "invalid_response");
         assert!(unrecognised
             .message
             .contains("Failed to deserialize OpenAI response"));
+
+        // A body that is not JSON is kept as text
+        let truncated = "{\"bad\":".to_string();
+        let not_json = undecodable_openai_body(parse_err(), truncated.clone());
+        assert_eq!(not_json.kind.as_str(), "invalid_response");
+        assert_eq!(
+            not_json.native.present().unwrap(),
+            &serde_json::Value::String(truncated)
+        );
     }
 
     // ---- Background mode ("pro" models) ----

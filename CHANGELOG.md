@@ -8,6 +8,8 @@
   (RUSTSEC-2026-0543). It is the type of `clock::utc_now`, of `MediaJob::webhook`'s `now`, of
   `MediaJobSnapshot::output_expires_at`, of `MediaTimingRecorder::now` and `record_phase`'s start,
   and of the pianola `TappedEmission`, `PortEmission` and `ToolObservation` `at` fields.
+- The `openai-images` option `user` is replaced by `safetyIdentifier`, sent as
+  `safety_identifier`.
 
 ### Added
 
@@ -20,6 +22,7 @@
 - The lockfile takes `url` 2.5.9 for RUSTSEC-2026-0592, `rustls` 0.23.46 for RUSTSEC-2026-0285,
   RUSTSEC-2026-0346, RUSTSEC-2026-0348 and RUSTSEC-2026-0349, `rustls-webpki` 0.103.17 for
   RUSTSEC-2026-0382 and `webpki-roots` 1.0.12 for RUSTSEC-2026-0381.
+- The OpenAI adapters take async-openai 0.43.0's Responses and image types, without its client.
 
 ## 0.27.0
 

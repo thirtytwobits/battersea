@@ -45,8 +45,6 @@ impl<T> tracing::instrument::WithSubscriber for battersea_providers::media::Medi
 impl<T> typenum::type_operators::Same for battersea_providers::media::MediaTimingRecorder
 pub type battersea_providers::media::MediaTimingRecorder::Output = T
 impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_providers::media::MediaTimingRecorder where T: ?core::marker::Sized
-impl<V, T> ppv_lite86::types::VZip<V> for battersea_providers::media::MediaTimingRecorder where V: ppv_lite86::types::MultiLane<T>
-pub fn battersea_providers::media::MediaTimingRecorder::vzip(self) -> V
 pub fn battersea_providers::media::accepts_aspect_ratio(&str, &str, &str) -> bool
 pub fn battersea_providers::media::accepts_size(&str, &str, &str) -> bool
 pub fn battersea_providers::media::duration_ms(core::time::Duration) -> u64

@@ -657,10 +657,9 @@ pub(crate) fn prepare_body(
     )?;
     let create_request = CreateImageRequest {
         prompt: request.prompt_text,
-        model: Some(ImageModel::Other(backend.model.clone())),
+        model: ImageModel::Other(backend.model.clone()),
         n: Some(requested_asset_count),
         quality: parse_quality(Some(&configured_quality)),
-        response_format: None,
         output_format: parse_output_format(
             backend
                 .options
@@ -695,13 +694,13 @@ pub(crate) fn prepare_body(
                 .get("background")
                 .and_then(serde_json::Value::as_str),
         ),
-        style: None,
-        user: backend
+        safety_identifier: backend
             .options
             .extra
-            .get("user")
+            .get("safetyIdentifier")
             .and_then(serde_json::Value::as_str)
             .map(ToOwned::to_owned),
+        ..CreateImageRequest::default()
     };
 
     // Capture the request body before it's moved into the SDK
@@ -724,7 +723,7 @@ mod tests {
     use super::{
         configured_openai_quality, create_openai_media_generator, parse_background,
         parse_dimensions, parse_explicit_size, parse_moderation, parse_openai_images_response_body,
-        parse_output_format, parse_quality, parse_size,
+        parse_output_format, parse_quality, parse_size, prepare_body,
     };
     use crate::adapter::{EngineAuthConfig, EngineBackendOptions};
     use crate::media::{
@@ -1172,6 +1171,30 @@ mod tests {
         );
         assert_eq!(parse_background(Some("auto")), Some(ImageBackground::Auto));
         assert_eq!(parse_background(Some("other")), None);
+    }
+
+    #[test]
+    fn prepared_body_names_the_model_and_carries_the_configured_safety_identifier() {
+        let identifier = "fixture-player";
+        let mut backend = sample_backend();
+        backend
+            .options
+            .extra
+            .insert("safetyIdentifier".to_string(), json!(identifier));
+        let body = prepare_body(
+            &backend,
+            MediaRenderRequest {
+                kind: MediaKind::Image,
+                prompt_text: "Fixture input".into(),
+                negative_prompt: None,
+                references: vec![],
+                options: MediaGenerationHints::default(),
+            },
+        )
+        .expect("prepared body");
+
+        assert_eq!(body["model"], json!(backend.model));
+        assert_eq!(body["safety_identifier"], json!(identifier));
     }
 
     #[test]
