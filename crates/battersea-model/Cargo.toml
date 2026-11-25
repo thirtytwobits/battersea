@@ -25,7 +25,7 @@ thiserror.workspace = true
 tokio.workspace = true
 tokio-stream.workspace = true
 tokio-util.workspace = true
-jsonschema = { version = "0.60", default-features = false }
+jsonschema = { version = "0.61", default-features = false }
 url = "2.5"
 http = "1"
 base16ct = { version = "1", features = ["alloc"] }
