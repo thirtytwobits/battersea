@@ -15,8 +15,8 @@ use battersea_model::{
     media::*,
     ErrorKind, ManualClock,
 };
-use chrono::Utc;
 use hmac::{Hmac, KeyInit, Mac};
+use jiff::{fmt::rfc2822::DateTimePrinter, SignedDuration, Timestamp};
 use serde_json::{json, Value};
 use sha2::Sha256;
 use std::{
@@ -140,15 +140,15 @@ fn request(kind: MediaKind) -> MediaRenderRequest {
 }
 fn update(provider: &str, status: &str, output: Value) -> Value {
     if provider == "replicate" {
-        json!({"id":"accepted-job","status":status,"output":output,"completed_at":start().to_rfc3339()})
+        json!({"id":"accepted-job","status":status,"output":output,"completed_at":start().to_string()})
     } else {
         json!({"id":"accepted-job","status":status,"output":output})
     }
 }
 /// The time each test starts at.
 const START_MS: u64 = 1_800_000_000_000;
-fn start() -> chrono::DateTime<Utc> {
-    chrono::DateTime::from_timestamp_millis(START_MS as i64).unwrap()
+fn start() -> Timestamp {
+    Timestamp::from_millisecond(START_MS as i64).unwrap()
 }
 /// A clock standing at the start. Each 1ms poll interval or retry delay completes once it is
 /// scheduled; operation and job deadlines elapse only when a test advances to them.
@@ -304,7 +304,9 @@ async fn transient_poll_errors_retry_only_gets_and_respect_retry_after_bound() {
         });
         if rate_limited {
             transient.retry = Some(if mode == "date" {
-                (start() + chrono::Duration::seconds(60)).to_rfc2822()
+                DateTimePrinter::new()
+                    .timestamp_to_rfc9110_string(&(start() + SignedDuration::from_secs(60)))
+                    .unwrap()
             } else {
                 "60".into()
             });
@@ -648,7 +650,7 @@ async fn retrieval_failure_is_repeatable_without_regenerating_or_publishing_part
         .timing
         .expect("provider timing survives retrieval retries");
     assert!(
-        chrono::DateTime::parse_from_rfc3339(&timing.completed_at).unwrap() <= retrieval_started,
+        timing.completed_at.parse::<Timestamp>().unwrap() <= retrieval_started,
         "provider timing excludes output download and retrieval retries"
     );
     assert_eq!(
@@ -670,7 +672,7 @@ async fn expired_removed_and_malformed_results_never_produce_success_or_new_gene
         let (url, state, task) = server().await;
         let mut terminal = update("replicate", "succeeded", json!([format!("{url}/asset")]));
         if mode == "expired" {
-            terminal["completed_at"] = json!((start() - chrono::Duration::hours(2)).to_rfc3339());
+            terminal["completed_at"] = json!((start() - SignedDuration::from_hours(2)).to_string());
         }
         if mode == "removed" {
             terminal["data_removed"] = json!(true);
@@ -740,7 +742,7 @@ async fn signed_callbacks_are_idempotent_reject_replays_and_preserve_terminal_re
         base64::engine::general_purpose::STANDARD.encode(key)
     );
     let now = start();
-    let timestamp = now.timestamp().to_string();
+    let timestamp = now.as_second().to_string();
     let id = "delivery-id";
     let body = serde_json::to_vec(&update(
         "replicate",
@@ -770,7 +772,7 @@ async fn signed_callbacks_are_idempotent_reject_replays_and_preserve_terminal_re
     for (body, when, sig) in [
         (
             body.clone(),
-            now + chrono::Duration::minutes(6),
+            now + SignedDuration::from_mins(6),
             signed.clone(),
         ),
         (body.clone(), now, "v1,AAAA".into()),

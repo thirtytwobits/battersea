@@ -3,8 +3,8 @@ use super::{jobs::*, *};
 use async_trait::async_trait;
 use base64::Engine as _;
 use battersea_model::{adapter::error::DispatchState, ErrorKind};
-use chrono::{DateTime, Utc};
 use hmac::{Hmac, KeyInit, Mac};
+use jiff::{SignedDuration, Timestamp};
 use serde_json::json;
 use sha2::Sha256;
 
@@ -231,10 +231,10 @@ impl Replicate {
         let removed = raw["data_removed"].as_bool().unwrap_or(false);
         let expires_at = match raw["completed_at"].as_str() {
             Some(value) => Some(
-                DateTime::parse_from_rfc3339(value)
+                value
+                    .parse::<Timestamp>()
                     .map_err(|cause| bad("Invalid completion timestamp.").caused_by(&cause))?
-                    .with_timezone(&Utc)
-                    + chrono::Duration::hours(1),
+                    + SignedDuration::from_hours(1),
             ),
             None => None,
         };
@@ -426,7 +426,7 @@ impl JobTransport for Replicate {
         &self,
         webhook: MediaWebhook<'_>,
         secret: &str,
-        now: DateTime<Utc>,
+        now: Timestamp,
     ) -> Result<RemoteUpdate, Failure> {
         verify_webhook(&webhook, secret, now)?;
         self.decode(serde_json::from_slice(webhook.body).map_err(|e| {
@@ -435,11 +435,7 @@ impl JobTransport for Replicate {
         })?)
     }
 }
-fn verify_webhook(
-    webhook: &MediaWebhook<'_>,
-    secret: &str,
-    now: DateTime<Utc>,
-) -> Result<(), Failure> {
+fn verify_webhook(webhook: &MediaWebhook<'_>, secret: &str, now: Timestamp) -> Result<(), Failure> {
     let fail = || {
         Failure::new(
             "replicate",
@@ -458,7 +454,7 @@ fn verify_webhook(
         .timestamp
         .parse()
         .map_err(|cause| fail().caused_by(&cause))?;
-    if now.timestamp().abs_diff(timestamp) > 300 {
+    if now.as_second().abs_diff(timestamp) > 300 {
         return Err(fail());
     }
     let key = base64::engine::general_purpose::STANDARD

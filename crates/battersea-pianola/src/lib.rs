@@ -1,5 +1,5 @@
 //! Copyright (c) Scott A Dixon
-use chrono::{DateTime, Utc};
+use jiff::Timestamp;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::HashMap;
@@ -244,7 +244,7 @@ pub struct TappedEmission {
     pub port: String,
     pub token_type: String,
     pub value: Value,
-    pub at: DateTime<Utc>,
+    pub at: Timestamp,
     pub ordinal: u64,
 }
 
@@ -372,7 +372,7 @@ pub struct ExpectationReport {
 pub struct PortEmission {
     pub port: String,
     pub value: Value,
-    pub at: Option<DateTime<Utc>>,
+    pub at: Option<Timestamp>,
 }
 
 /// One observed tool call, in engine-recorded time.
@@ -381,7 +381,7 @@ pub struct ToolObservation {
     pub name: String,
     pub status: String,
     pub arguments_json: String,
-    pub at: Option<DateTime<Utc>>,
+    pub at: Option<Timestamp>,
 }
 
 /// The raw result of running one assertion, before severity is folded
@@ -970,7 +970,7 @@ pub fn evaluate_generic<C: Observation>(
             let summary = description
                 .clone()
                 .unwrap_or_else(|| format!("order {before:?} before {after:?}"));
-            let resolve = |reference: &EventRef| -> Option<DateTime<Utc>> {
+            let resolve = |reference: &EventRef| -> Option<Timestamp> {
                 let tl = if reference.step == step_id {
                     Some(timeline)
                 } else {

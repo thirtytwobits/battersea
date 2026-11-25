@@ -27,12 +27,12 @@ anyhow = "1.0.100"
 async-openai = { version = "0.33.0", features = ["byot", "responses", "image"] }
 async-trait = "0.1.89"
 axum = { version = "0.8.6", features = ["ws", "json"] }
-chrono = { version = "0.4.42", features = ["serde"] }
 eventsource-stream = "0.2.3"
 futures-util = "0.3.31"
+jiff = { version = "1.0.2", default-features = false, features = ["serde", "std"] }
 reqwest = { version = "0.12.28", default-features = false, features = ["json", "stream", "rustls-tls"] }
 regex-lite = "0.1.8"
-schemars = { version = "1.0.4", features = ["chrono04", "uuid1"] }
+schemars = { version = "1.0.4", features = ["uuid1"] }
 serde = { version = "1.0.228", features = ["derive"] }
 serde_yaml = "0.9.34"
 thiserror = "2.0.17"

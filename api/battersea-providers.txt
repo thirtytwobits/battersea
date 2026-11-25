@@ -9,8 +9,8 @@ pub use battersea_providers::media::<<battersea_model::media::*>>
 pub struct battersea_providers::media::MediaTimingRecorder
 impl battersea_providers::media::MediaTimingRecorder
 pub fn battersea_providers::media::MediaTimingRecorder::finish_client_estimate(self) -> battersea_providers::media::MediaRenderTiming
-pub fn battersea_providers::media::MediaTimingRecorder::now(&self) -> (chrono::datetime::DateTime<chrono::offset::utc::Utc>, tokio::time::instant::Instant)
-pub fn battersea_providers::media::MediaTimingRecorder::record_phase(&mut self, impl core::convert::Into<alloc::string::String>, impl core::convert::Into<alloc::string::String>, bool, chrono::datetime::DateTime<chrono::offset::utc::Utc>, tokio::time::instant::Instant)
+pub fn battersea_providers::media::MediaTimingRecorder::now(&self) -> (jiff::timestamp::Timestamp, tokio::time::instant::Instant)
+pub fn battersea_providers::media::MediaTimingRecorder::record_phase(&mut self, impl core::convert::Into<alloc::string::String>, impl core::convert::Into<alloc::string::String>, bool, jiff::timestamp::Timestamp, tokio::time::instant::Instant)
 pub fn battersea_providers::media::MediaTimingRecorder::start(alloc::rcs::arc::Arc<dyn battersea_model::clock::Clock>) -> Self
 impl core::marker::Freeze for battersea_providers::media::MediaTimingRecorder
 impl core::marker::Send for battersea_providers::media::MediaTimingRecorder

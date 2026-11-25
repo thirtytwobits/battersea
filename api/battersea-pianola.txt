@@ -746,7 +746,7 @@ impl<T> typenum::type_operators::Same for battersea_pianola::PianolaTapTarget
 pub type battersea_pianola::PianolaTapTarget::Output = T
 impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_pianola::PianolaTapTarget where T: ?core::marker::Sized
 pub struct battersea_pianola::PortEmission
-pub battersea_pianola::PortEmission::at: core::option::Option<chrono::datetime::DateTime<chrono::offset::utc::Utc>>
+pub battersea_pianola::PortEmission::at: core::option::Option<jiff::timestamp::Timestamp>
 pub battersea_pianola::PortEmission::port: alloc::string::String
 pub battersea_pianola::PortEmission::value: serde_json::value::Value
 impl core::clone::Clone for battersea_pianola::PortEmission
@@ -1342,7 +1342,7 @@ impl<T> typenum::type_operators::Same for battersea_pianola::StepReport
 pub type battersea_pianola::StepReport::Output = T
 impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_pianola::StepReport where T: ?core::marker::Sized
 pub struct battersea_pianola::TappedEmission
-pub battersea_pianola::TappedEmission::at: chrono::datetime::DateTime<chrono::offset::utc::Utc>
+pub battersea_pianola::TappedEmission::at: jiff::timestamp::Timestamp
 pub battersea_pianola::TappedEmission::node_id: alloc::string::String
 pub battersea_pianola::TappedEmission::ordinal: u64
 pub battersea_pianola::TappedEmission::port: alloc::string::String
@@ -1441,7 +1441,7 @@ pub type battersea_pianola::Timeline::Output = T
 impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_pianola::Timeline where T: ?core::marker::Sized
 pub struct battersea_pianola::ToolObservation
 pub battersea_pianola::ToolObservation::arguments_json: alloc::string::String
-pub battersea_pianola::ToolObservation::at: core::option::Option<chrono::datetime::DateTime<chrono::offset::utc::Utc>>
+pub battersea_pianola::ToolObservation::at: core::option::Option<jiff::timestamp::Timestamp>
 pub battersea_pianola::ToolObservation::name: alloc::string::String
 pub battersea_pianola::ToolObservation::status: alloc::string::String
 impl core::clone::Clone for battersea_pianola::ToolObservation

@@ -3,8 +3,8 @@ use super::*;
 use async_trait::async_trait;
 use base64::Engine as _;
 use battersea_model::{adapter::error::DispatchState, ErrorKind};
-use chrono::{DateTime, Utc};
 use futures_util::StreamExt;
+use jiff::{fmt::rfc2822::DateTimeParser, Timestamp};
 use reqwest::{header::CONTENT_TYPE, Url};
 
 pub(crate) struct RemoteUpdate {
@@ -12,7 +12,7 @@ pub(crate) struct RemoteUpdate {
     pub status: MediaJobStatus,
     pub assets: Vec<MediaAsset>,
     pub raw: Value,
-    pub expires_at: Option<DateTime<Utc>>,
+    pub expires_at: Option<Timestamp>,
     pub expiry_is_estimate: bool,
     pub progress: Option<f32>,
 }
@@ -33,7 +33,7 @@ pub(crate) trait JobTransport: Send + Sync {
         &self,
         _webhook: MediaWebhook<'_>,
         _secret: &str,
-        _now: DateTime<Utc>,
+        _now: Timestamp,
     ) -> Result<RemoteUpdate, Failure> {
         Err(Failure::new(
             self.provider(),
@@ -504,7 +504,7 @@ impl MediaJob for RemoteJob {
         &mut self,
         webhook: MediaWebhook<'_>,
         secret: &str,
-        now: DateTime<Utc>,
+        now: Timestamp,
     ) -> Result<MediaJobStatus, Failure> {
         let update = self.transport.webhook(webhook, secret, now)?;
         self.accept(update)
@@ -573,9 +573,9 @@ pub(crate) async fn json_response(
                         .ok()
                         .map(|seconds| seconds.saturating_mul(1000))
                         .or_else(|| {
-                            DateTime::parse_from_rfc2822(value).ok().map(|at| {
-                                at.timestamp_millis()
-                                    .saturating_sub(utc_now(clock).timestamp_millis())
+                            DateTimeParser::new().parse_timestamp(value).ok().map(|at| {
+                                at.as_millisecond()
+                                    .saturating_sub(utc_now(clock).as_millisecond())
                                     .max(0) as u64
                             })
                         })

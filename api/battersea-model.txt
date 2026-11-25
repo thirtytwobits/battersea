@@ -2479,6 +2479,9 @@ pub type battersea_model::adapter::EngineTextStream = futures_core::stream::BoxS
 pub type battersea_model::adapter::MockResponseRenderer = (dyn core::ops::function::Fn(&str) -> alloc::string::String + core::marker::Send + core::marker::Sync)
 pub type battersea_model::adapter::UnfinishedBlocks = alloc::rcs::arc::Arc<(dyn core::ops::function::Fn() -> alloc::vec::Vec<serde_json::value::Value> + core::marker::Send + core::marker::Sync)>
 pub mod battersea_model::clock
+pub mod battersea_model::clock::optional_utc_rfc3339
+pub fn battersea_model::clock::optional_utc_rfc3339::deserialize<'de, D: serde_core::de::Deserializer<'de>>(D) -> core::result::Result<core::option::Option<jiff::timestamp::Timestamp>, <D as serde_core::de::Deserializer>::Error>
+pub fn battersea_model::clock::optional_utc_rfc3339::serialize<S: serde_core::ser::Serializer>(&core::option::Option<jiff::timestamp::Timestamp>, S) -> core::result::Result<<S as serde_core::ser::Serializer>::Ok, <S as serde_core::ser::Serializer>::Error>
 pub struct battersea_model::clock::Elapsed
 impl core::clone::Clone for battersea_model::Elapsed
 pub fn battersea_model::Elapsed::clone(&self) -> Self
@@ -2644,10 +2647,11 @@ pub fn battersea_model::SystemClock::instant(&self) -> tokio::time::instant::Ins
 pub fn battersea_model::SystemClock::sleep_until(&self, tokio::time::instant::Instant) -> battersea_model::Sleep
 pub fn battersea_model::SystemClock::unix_ms(&self) -> core::option::Option<u64>
 pub fn battersea_model::clock::deadline_after(&dyn battersea_model::Clock, core::time::Duration) -> core::option::Option<tokio::time::instant::Instant>
+pub fn battersea_model::clock::rfc3339(jiff::timestamp::Timestamp) -> alloc::string::String
 pub async fn battersea_model::clock::sleep(&dyn battersea_model::Clock, core::time::Duration)
 pub async fn battersea_model::clock::timeout<F: core::future::future::Future>(&dyn battersea_model::Clock, core::time::Duration, F) -> core::result::Result<<F as core::future::future::Future>::Output, battersea_model::Elapsed>
 pub async fn battersea_model::clock::timeout_at<F: core::future::future::Future>(&dyn battersea_model::Clock, tokio::time::instant::Instant, F) -> core::result::Result<<F as core::future::future::Future>::Output, battersea_model::Elapsed>
-pub fn battersea_model::clock::utc_now(&dyn battersea_model::Clock) -> chrono::datetime::DateTime<chrono::offset::utc::Utc>
+pub fn battersea_model::clock::utc_now(&dyn battersea_model::Clock) -> jiff::timestamp::Timestamp
 pub type battersea_model::clock::Sleep = core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = ()> + core::marker::Send + 'static)>>
 pub mod battersea_model::content
 pub enum battersea_model::content::Modality
@@ -4831,7 +4835,7 @@ impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusi
 pub struct battersea_model::media::MediaJobSnapshot
 pub battersea_model::media::MediaJobSnapshot::expiry_is_estimate: bool
 pub battersea_model::media::MediaJobSnapshot::id: alloc::string::String
-pub battersea_model::media::MediaJobSnapshot::output_expires_at: core::option::Option<chrono::datetime::DateTime<chrono::offset::utc::Utc>>
+pub battersea_model::media::MediaJobSnapshot::output_expires_at: core::option::Option<jiff::timestamp::Timestamp>
 pub battersea_model::media::MediaJobSnapshot::outputs_retrieved: bool
 pub battersea_model::media::MediaJobSnapshot::status: battersea_model::media::MediaJobStatus
 impl core::clone::Clone for battersea_model::media::MediaJobSnapshot
@@ -5331,7 +5335,7 @@ pub fn battersea_model::media::MediaJob::provider(&self) -> &str
 pub fn battersea_model::media::MediaJob::retrieve<'life0, 'async_trait>(&'life0 mut self, tokio_util::sync::cancellation_token::CancellationToken) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<battersea_model::media::MediaRenderResult, battersea_failure::Failure>> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait
 pub fn battersea_model::media::MediaJob::snapshot(&self) -> battersea_model::media::MediaJobSnapshot
 pub fn battersea_model::media::MediaJob::wait<'life0, 'async_trait>(&'life0 mut self, tokio_util::sync::cancellation_token::CancellationToken) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<battersea_model::media::MediaRenderResult, battersea_failure::Failure>> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait
-pub fn battersea_model::media::MediaJob::webhook<'life0, 'life1, 'life2, 'async_trait>(&'life0 mut self, battersea_model::media::MediaWebhook<'life1>, &'life2 str, chrono::datetime::DateTime<chrono::offset::utc::Utc>) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<battersea_model::media::MediaJobStatus, battersea_failure::Failure>> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait, 'life1: 'async_trait, 'life2: 'async_trait
+pub fn battersea_model::media::MediaJob::webhook<'life0, 'life1, 'life2, 'async_trait>(&'life0 mut self, battersea_model::media::MediaWebhook<'life1>, &'life2 str, jiff::timestamp::Timestamp) -> core::pin::Pin<alloc::boxed::Box<(dyn core::future::future::Future<Output = core::result::Result<battersea_model::media::MediaJobStatus, battersea_failure::Failure>> + core::marker::Send + 'async_trait)>> where Self: 'async_trait, 'life0: 'async_trait, 'life1: 'async_trait, 'life2: 'async_trait
 pub mod battersea_model::messages
 pub enum battersea_model::messages::ContentBlock
 pub battersea_model::messages::ContentBlock::Audio
@@ -5552,6 +5556,9 @@ impl<T> serde_core::de::DeserializeOwned for battersea_model::Message where T: f
 impl<T> typenum::type_operators::Same for battersea_model::Message
 pub type battersea_model::Message::Output = T
 impl<T> zerocopy::pointer::invariant::Read<zerocopy::pointer::invariant::Exclusive, zerocopy::pointer::invariant::BecauseExclusive> for battersea_model::Message where T: ?core::marker::Sized
+pub mod battersea_model::optional_utc_rfc3339
+pub fn battersea_model::optional_utc_rfc3339::deserialize<'de, D: serde_core::de::Deserializer<'de>>(D) -> core::result::Result<core::option::Option<jiff::timestamp::Timestamp>, <D as serde_core::de::Deserializer>::Error>
+pub fn battersea_model::optional_utc_rfc3339::serialize<S: serde_core::ser::Serializer>(&core::option::Option<jiff::timestamp::Timestamp>, S) -> core::result::Result<<S as serde_core::ser::Serializer>::Ok, <S as serde_core::ser::Serializer>::Error>
 pub mod battersea_model::output
 pub enum battersea_model::output::StopClass
 pub battersea_model::output::StopClass::Complete
@@ -10475,12 +10482,13 @@ pub async fn battersea_model::emit_response(core::option::Option<&alloc::rcs::ar
 pub async fn battersea_model::emit_stream_event(core::option::Option<&alloc::rcs::arc::Arc<dyn battersea_model::EngineAdapterLogger>>, &battersea_model::EngineAdapterDebugContext, battersea_model::EngineOperation, impl core::convert::Into<alloc::string::String>, serde_json::value::Value)
 pub fn battersea_model::local_tool_name(&str) -> alloc::string::String
 pub fn battersea_model::missing_backend_option(&str, &str) -> battersea_failure::Failure
+pub fn battersea_model::rfc3339(jiff::timestamp::Timestamp) -> alloc::string::String
 pub async fn battersea_model::sleep(&dyn battersea_model::Clock, core::time::Duration)
 pub fn battersea_model::terminal_failure(&str, battersea_model::output::StopClass, serde_json::value::Value, alloc::string::String) -> battersea_failure::Failure
 pub async fn battersea_model::timeout<F: core::future::future::Future>(&dyn battersea_model::Clock, core::time::Duration, F) -> core::result::Result<<F as core::future::future::Future>::Output, battersea_model::Elapsed>
 pub async fn battersea_model::timeout_at<F: core::future::future::Future>(&dyn battersea_model::Clock, tokio::time::instant::Instant, F) -> core::result::Result<<F as core::future::future::Future>::Output, battersea_model::Elapsed>
 pub fn battersea_model::upgrade_provider_content(&battersea_model::Message, &str, &battersea_model::ProviderContentOrigin) -> core::result::Result<battersea_model::Message, battersea_model::ProviderConfigurationError>
-pub fn battersea_model::utc_now(&dyn battersea_model::Clock) -> chrono::datetime::DateTime<chrono::offset::utc::Utc>
+pub fn battersea_model::utc_now(&dyn battersea_model::Clock) -> jiff::timestamp::Timestamp
 pub fn battersea_model::validate_chat_request(&battersea_model::EngineBackendConfig, &battersea_model::EngineTextStreamRequest) -> core::result::Result<(), battersea_failure::Failure>
 pub fn battersea_model::validate_messages(&str, &battersea_model::ContentCapabilities, &[battersea_model::Message]) -> core::result::Result<(), battersea_failure::Failure>
 pub fn battersea_model::with_stream_idle_watchdog(battersea_model::EngineTextStream, core::time::Duration, impl core::convert::Into<alloc::string::String>, alloc::rcs::arc::Arc<dyn battersea_model::Clock>) -> battersea_model::EngineTextStream

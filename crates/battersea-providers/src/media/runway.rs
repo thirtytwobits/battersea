@@ -632,7 +632,7 @@ fn decode_task(
     raw: Value,
     kind: MediaKind,
     submission: bool,
-    now: chrono::DateTime<chrono::Utc>,
+    now: jiff::Timestamp,
 ) -> Result<super::jobs::RemoteUpdate, Failure> {
     use super::MediaJobStatus as Status;
     let bad = |message| Failure::invalid_response("runway", message);
@@ -681,7 +681,8 @@ fn decode_task(
         id,
         status,
         assets,
-        expires_at: (status == Status::Succeeded).then(|| now + chrono::Duration::hours(24)),
+        expires_at: (status == Status::Succeeded)
+            .then(|| now + jiff::SignedDuration::from_hours(24)),
         expiry_is_estimate: true,
         progress: raw["progress"]
             .as_f64()

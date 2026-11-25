@@ -1,5 +1,6 @@
 //! Copyright (c) Scott A Dixon
 //! The time and timers Battersea judges deadlines, backoff and expiry by.
+use jiff::{tz::Offset, Timestamp};
 use std::{
     collections::BTreeMap,
     future::Future,
@@ -36,12 +37,68 @@ pub fn deadline_after(clock: &dyn Clock, duration: Duration) -> Option<Instant> 
 }
 
 /// The wall time of `clock`. A clock without a representable Unix time reads the epoch.
-pub fn utc_now(clock: &dyn Clock) -> chrono::DateTime<chrono::Utc> {
+pub fn utc_now(clock: &dyn Clock) -> Timestamp {
     clock
         .unix_ms()
         .and_then(|ms| i64::try_from(ms).ok())
-        .and_then(chrono::DateTime::from_timestamp_millis)
-        .unwrap_or_default()
+        .and_then(|ms| Timestamp::from_millisecond(ms).ok())
+        .unwrap_or(Timestamp::UNIX_EPOCH)
+}
+
+/// `timestamp` in RFC 3339 at `+00:00`, its fraction of a second in whole milli-, micro- or
+/// nanoseconds.
+pub fn rfc3339(timestamp: Timestamp) -> String {
+    format!(
+        "{:.*}",
+        fraction_digits(timestamp),
+        timestamp.display_with_offset(Offset::UTC)
+    )
+}
+
+/// The digits of `timestamp`'s fraction of a second: none, or whole milli-, micro- or
+/// nanoseconds.
+fn fraction_digits(timestamp: Timestamp) -> usize {
+    match timestamp.subsec_nanosecond().unsigned_abs() {
+        0 => 0,
+        nanos if nanos % 1_000_000 == 0 => 3,
+        nanos if nanos % 1_000 == 0 => 6,
+        _ => 9,
+    }
+}
+
+/// Serde for an optional [`Timestamp`] as RFC 3339 in UTC, written with `Z` and its fraction of
+/// a second in whole milli-, micro- or nanoseconds. It reads any RFC 3339 timestamp.
+pub mod optional_utc_rfc3339 {
+    use jiff::Timestamp;
+    use serde::{Deserialize, Deserializer, Serialize, Serializer};
+
+    struct Utc(Timestamp);
+
+    impl Serialize for Utc {
+        fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+            serializer.collect_str(&format_args!(
+                "{:.*}",
+                super::fraction_digits(self.0),
+                self.0
+            ))
+        }
+    }
+
+    pub fn serialize<S: Serializer>(
+        timestamp: &Option<Timestamp>,
+        serializer: S,
+    ) -> Result<S::Ok, S::Error> {
+        match timestamp {
+            Some(timestamp) => serializer.serialize_some(&Utc(*timestamp)),
+            None => serializer.serialize_none(),
+        }
+    }
+
+    pub fn deserialize<'de, D: Deserializer<'de>>(
+        deserializer: D,
+    ) -> Result<Option<Timestamp>, D::Error> {
+        Option::<Timestamp>::deserialize(deserializer)
+    }
 }
 
 /// Completes once `duration` has passed on `clock`. An unrepresentable duration never completes.
@@ -275,14 +332,61 @@ mod tests {
 
     #[test]
     fn wall_time_follows_the_clock() {
-        let clock = ManualClock::new(784_111_777_000);
-        assert_eq!(
-            utc_now(&clock).to_rfc2822(),
-            "Sun, 6 Nov 1994 08:49:37 +0000"
-        );
+        let start = 784_111_777_000;
+        let clock = ManualClock::new(start);
+        assert_eq!(utc_now(&clock).as_millisecond(), start as i64);
         clock.advance(Duration::from_millis(1_500));
-        assert_eq!(utc_now(&clock).timestamp_millis(), 784_111_778_500);
-        assert_eq!(utc_now(&ManualClock::new(u64::MAX)).timestamp_millis(), 0);
+        assert_eq!(utc_now(&clock).as_millisecond(), start as i64 + 1_500);
+        assert_eq!(utc_now(&ManualClock::new(u64::MAX)), Timestamp::UNIX_EPOCH);
+    }
+
+    /// Times across a second's fractions.
+    fn timestamps() -> impl Iterator<Item = Timestamp> {
+        [0, 120_000_000, 123_400_000, 123_456_789]
+            .into_iter()
+            .map(|nanos| Timestamp::new(784_111_777, nanos).unwrap())
+    }
+
+    /// The digits after the decimal point of an RFC 3339 `timestamp` ending in `offset`.
+    fn fraction(timestamp: &str, offset: &str) -> usize {
+        timestamp
+            .strip_suffix(offset)
+            .and_then(|rest| rest.split_once('.'))
+            .map_or(0, |(_, digits)| digits.len())
+    }
+
+    #[test]
+    fn an_rfc3339_time_is_at_utc_and_reads_back() {
+        for timestamp in timestamps() {
+            let written = rfc3339(timestamp);
+            assert_eq!(
+                written.parse::<Timestamp>().unwrap(),
+                timestamp,
+                "{written}"
+            );
+            assert!(written.ends_with("+00:00"), "{written}");
+            assert!(
+                [0, 3, 6, 9].contains(&fraction(&written, "+00:00")),
+                "{written}"
+            );
+        }
+    }
+
+    #[test]
+    fn a_serialised_optional_time_reads_back() {
+        #[derive(serde::Serialize, serde::Deserialize)]
+        struct Expiry(#[serde(with = "optional_utc_rfc3339")] Option<Timestamp>);
+
+        for timestamp in timestamps().map(Some).chain([None]) {
+            let json = serde_json::to_value(Expiry(timestamp)).unwrap();
+            let written = json.as_str().map(str::to_owned);
+            let Expiry(read) = serde_json::from_value(json).unwrap();
+            assert_eq!(read, timestamp, "{written:?}");
+            if let Some(written) = written {
+                assert!(written.ends_with('Z'), "{written}");
+                assert!([0, 3, 6, 9].contains(&fraction(&written, "Z")), "{written}");
+            }
+        }
     }
 
     #[test]

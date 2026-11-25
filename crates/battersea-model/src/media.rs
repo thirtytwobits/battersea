@@ -508,7 +508,7 @@ pub trait MediaJob: Send + Sync {
         &mut self,
         _webhook: MediaWebhook<'_>,
         _secret: &str,
-        _now: chrono::DateTime<chrono::Utc>,
+        _now: jiff::Timestamp,
     ) -> Result<MediaJobStatus, Failure> {
         Err(Failure::new(
             "media",
@@ -594,7 +594,8 @@ impl MediaJobStatus {
 pub struct MediaJobSnapshot {
     pub id: String,
     pub status: MediaJobStatus,
-    pub output_expires_at: Option<chrono::DateTime<chrono::Utc>>,
+    #[serde(default, with = "crate::clock::optional_utc_rfc3339")]
+    pub output_expires_at: Option<jiff::Timestamp>,
     pub expiry_is_estimate: bool,
     pub outputs_retrieved: bool,
 }

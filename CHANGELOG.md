@@ -1,5 +1,26 @@
 # Changelog
 
+## Unreleased
+
+### Breaking
+
+- `jiff::Timestamp` replaces `chrono::DateTime<Utc>`, as `chrono` is unmaintained
+  (RUSTSEC-2026-0543). It is the type of `clock::utc_now`, of `MediaJob::webhook`'s `now`, of
+  `MediaJobSnapshot::output_expires_at`, of `MediaTimingRecorder::now` and `record_phase`'s start,
+  and of the pianola `TappedEmission`, `PortEmission` and `ToolObservation` `at` fields.
+
+### Added
+
+- `clock::rfc3339` writes a timestamp as `chrono`'s `to_rfc3339` did, and
+  `clock::optional_utc_rfc3339` serialises an optional one as `chrono`'s serde did. Media timing,
+  tool-loop and conversation timestamps and `MediaJobSnapshot::output_expires_at` keep their text.
+
+### Fixed
+
+- The lockfile takes `url` 2.5.9 for RUSTSEC-2026-0592, `rustls` 0.23.46 for RUSTSEC-2026-0285,
+  RUSTSEC-2026-0346, RUSTSEC-2026-0348 and RUSTSEC-2026-0349, `rustls-webpki` 0.103.17 for
+  RUSTSEC-2026-0382 and `webpki-roots` 1.0.12 for RUSTSEC-2026-0381.
+
 ## 0.27.0
 
 ### Breaking
