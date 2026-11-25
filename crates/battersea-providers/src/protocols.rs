@@ -190,7 +190,7 @@ fn options_schema(id: &str) -> Value {
             );
             add("outputFormat", json!({"enum":["png","jpeg","jpg","webp"]}));
             add("moderation", json!({"enum":["auto","low"]}));
-            add("user", json!({"type":"string"}));
+            add("safetyIdentifier", json!({"type":"string"}));
         }
         "google-interactions" => {
             add(
