@@ -14,7 +14,7 @@ include = ["src/**", "fixtures/**", "schemas/**", "Cargo.toml", "LICENSE", "NOTI
 workspace = true
 
 [dependencies]
-battersea-failure = { path = "../battersea-failure", version = "0.27.0" }
+battersea-failure = { path = "../battersea-failure", version = "0.28.0" }
 anyhow = "1"
 regex-lite = "0.1"
 schemars = { version = "1", features = ["derive"] }
