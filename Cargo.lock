@@ -657,8 +657,8 @@ checksum = "1c133bc6a41be0d194c306b5506d15e6feeea7b1d6604bd3f8310dfb2ca96486"
 
 [[package]]
 name = "clapham"
-version = "0.6.0"
-source = "git+https://github.com/thirtytwobits/clapham?tag=v0.6.0#658623f24b65e67feb49da21eec0c3b2e38ecf9c"
+version = "0.7.0"
+source = "git+https://github.com/thirtytwobits/clapham?tag=v0.7.0#ffc788a554ec46b951e483e6f4816710fc36744b"
 dependencies = [
  "base16ct",
  "futures-util",
@@ -672,8 +672,8 @@ dependencies = [
 
 [[package]]
 name = "clapham-cli"
-version = "0.6.0"
-source = "git+https://github.com/thirtytwobits/clapham?tag=v0.6.0#658623f24b65e67feb49da21eec0c3b2e38ecf9c"
+version = "0.7.0"
+source = "git+https://github.com/thirtytwobits/clapham?tag=v0.7.0#ffc788a554ec46b951e483e6f4816710fc36744b"
 dependencies = [
  "clap",
  "clap_complete",
@@ -681,7 +681,7 @@ dependencies = [
  "clapham-mcp-client",
  "futures-timer",
  "futures-util",
- "humantime",
+ "jiff",
  "schemars",
  "serde",
  "serde_json",
@@ -690,8 +690,8 @@ dependencies = [
 
 [[package]]
 name = "clapham-conformance"
-version = "0.6.0"
-source = "git+https://github.com/thirtytwobits/clapham?tag=v0.6.0#658623f24b65e67feb49da21eec0c3b2e38ecf9c"
+version = "0.7.0"
+source = "git+https://github.com/thirtytwobits/clapham?tag=v0.7.0#ffc788a554ec46b951e483e6f4816710fc36744b"
 dependencies = [
  "clapham",
  "clapham-cli",
@@ -709,8 +709,8 @@ dependencies = [
 
 [[package]]
 name = "clapham-mcp-client"
-version = "0.6.0"
-source = "git+https://github.com/thirtytwobits/clapham?tag=v0.6.0#658623f24b65e67feb49da21eec0c3b2e38ecf9c"
+version = "0.7.0"
+source = "git+https://github.com/thirtytwobits/clapham?tag=v0.7.0#ffc788a554ec46b951e483e6f4816710fc36744b"
 dependencies = [
  "base16ct",
  "bytes",
@@ -732,8 +732,8 @@ dependencies = [
 
 [[package]]
 name = "clapham-mcp-server"
-version = "0.6.0"
-source = "git+https://github.com/thirtytwobits/clapham?tag=v0.6.0#658623f24b65e67feb49da21eec0c3b2e38ecf9c"
+version = "0.7.0"
+source = "git+https://github.com/thirtytwobits/clapham?tag=v0.7.0#ffc788a554ec46b951e483e6f4816710fc36744b"
 dependencies = [
  "axum",
  "base16ct",
@@ -1432,12 +1432,6 @@ name = "httpdate"
 version = "1.0.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "df3b46402a9d5adb4c86a0cf463f42e19994e3ee891101b1841f30a545cb49a9"
-
-[[package]]
-name = "humantime"
-version = "2.4.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "15cdd26707701c53297e2fa6afb323d55fbc1d0810c3aec078ae3ef0424c3c15"
 
 [[package]]
 name = "hybrid-array"
