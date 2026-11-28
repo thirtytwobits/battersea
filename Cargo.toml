@@ -3,7 +3,7 @@ members = ["crates/battersea-failure", "crates/battersea-derive", "crates/batter
 resolver = "2"
 
 [workspace.package]
-version = "0.28.0"
+version = "0.29.0"
 edition = "2021"
 rust-version = "1.95"
 license = "MIT"
@@ -13,11 +13,11 @@ repository = "https://github.com/thirtytwobits/battersea"
 map_err_ignore = "deny"
 
 [workspace.dependencies]
-clapham = { git = "https://github.com/thirtytwobits/clapham", tag = "v0.6.0", version = "0.6.0" }
-clapham-mcp-client = { git = "https://github.com/thirtytwobits/clapham", tag = "v0.6.0", version = "0.6.0", default-features = false }
-clapham-cli = { git = "https://github.com/thirtytwobits/clapham", tag = "v0.6.0", version = "0.6.0" }
-clapham-conformance = { git = "https://github.com/thirtytwobits/clapham", tag = "v0.6.0", version = "0.6.0" }
-clapham-mcp-server = { git = "https://github.com/thirtytwobits/clapham", tag = "v0.6.0", version = "0.6.0" }
+clapham = { git = "https://github.com/thirtytwobits/clapham", tag = "v0.7.0", version = "0.7.0" }
+clapham-mcp-client = { git = "https://github.com/thirtytwobits/clapham", tag = "v0.7.0", version = "0.7.0", default-features = false }
+clapham-cli = { git = "https://github.com/thirtytwobits/clapham", tag = "v0.7.0", version = "0.7.0" }
+clapham-conformance = { git = "https://github.com/thirtytwobits/clapham", tag = "v0.7.0", version = "0.7.0" }
+clapham-mcp-server = { git = "https://github.com/thirtytwobits/clapham", tag = "v0.7.0", version = "0.7.0" }
 clap = { version = "4.5", features = ["derive"] }
 serde_json = "1.0"
 toml = "1.2"
